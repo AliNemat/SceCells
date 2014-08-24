@@ -1,0 +1,6 @@
+*
+/CMakeFiles
+!.gitignore
+!*.cu
+!*.h
+!*.cpp

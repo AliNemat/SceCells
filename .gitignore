@@ -1,0 +1,9 @@
+*
+!*/
+/CMakeFiles
+!*.cpp
+!*.cu
+!*.h
+!CMakeLists.txt
+!Doxyfile.in
+!.gitignore
