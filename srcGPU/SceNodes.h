@@ -76,11 +76,10 @@ enum CellType {
 /**
  * This structure is for visualization purpose only.
  */
-struct Point {
-	CellType type;
-	int rank;
-};
-
+//struct Point {
+//	CellType type;
+//	int rank;
+//};
 /**
  * Depreciated.
  */

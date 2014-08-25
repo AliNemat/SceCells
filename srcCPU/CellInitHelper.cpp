@@ -1138,3 +1138,6 @@ CellInitHelper::~CellInitHelper() {
 	 */
 }
 
+std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
+		double radius, int precision) {
+}

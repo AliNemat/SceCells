@@ -14,6 +14,8 @@
 #include "SceCells.h"
 #include <time.h>
 #include <stdlib.h>
+#include <string>
+//#include "MeshGen.h"
 
 const double numericalErrorEps = 1.0e-10;
 
@@ -53,6 +55,12 @@ class CellPlacementInfo {
 public:
 	CVector centerLocation;
 	CellType cellType;
+};
+
+class CellInitHelper2 {
+public:
+	std::vector<CellPlacementInfo> obtainCentersInCircle(double radius,
+			int precision);
 };
 
 struct CellInitHelperException: public std::exception {
