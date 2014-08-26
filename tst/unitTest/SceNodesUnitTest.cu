@@ -179,7 +179,7 @@ protected:
 	double sceIntraParaCPU[4];
 	virtual void SetUp() {
 		ConfigParser parser;
-		std::string configFileName = "../sceCell.config";
+		std::string configFileName = "../../sceCell.config";
 		globalConfigVars = parser.parseConfigFile(configFileName);
 		cudaSetDevice(
 				globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
