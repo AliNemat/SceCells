@@ -23,6 +23,7 @@
 #include <cuda_runtime.h>
 #include "ConfigParser.h"
 #include <assert.h>
+#include "commonData.h"
 
 /**
  * @mainpage chicken beak development project main documentation page
@@ -45,7 +46,7 @@
  *  3) The approximate time scale of our simulation is several days. (day 8 - day 11)?
  */
 
-typedef unsigned int uint;
+
 typedef thrust::tuple<double, double> CVec2;
 typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, uint, double> BoolUID;
@@ -69,9 +70,9 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 /**
  * enum type cell type.
  */
-enum CellType {
-	Boundary, Profile, ECM, FNM, MX
-};
+//enum CellType {
+//	Boundary, Profile, ECM, FNM, MX
+//};
 
 /**
  * This structure is for visualization purpose only.

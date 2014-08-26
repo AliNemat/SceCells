@@ -1,34 +1,42 @@
 cmake_minimum_required (VERSION 2.8.7)
-set(PROJECT_NAME_STR beakDevGPU)
+set(PROJECT_NAME_STR SceCellsGPU)
 project(${PROJECT_NAME_STR} C CXX)
+
+find_package(CUDA REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
         add_definitions(-Wall -ansi -Wno-deprecated -pthread -fpermissive -frounding-math)
 endif()
 
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
+
+SET(CMAKE_BUILD_TYPE DEBUG)
 SET(EXECUTABLE_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_PATH})
+SET(PROJECT_BINARY_DIR ${PROJECT_SOURCE_DIR}/build)
 
+
+SET(BUILD_DOCUMENTATION ON)
 #cuda files and corresponding .h files are placed together in this folder
-set(COMMON_CUDA_INCLUDES ${PROJECT_SOURCE_DIR}/srcGPU)
+#set(COMMON_CUDA_INCLUDES ${PROJECT_SOURCE_DIR}/srcGPU)
 #cpp files and corresponding .h files are placed together in this folder
 #set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/srcCPU ${PROJECT_SOURCE_DIR}/srcGPU)
-set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/srcCPU ${PROJECT_SOURCE_DIR}/srcCPU/Util)
+set(COMMON_INCLUDES ${PROJECT_SOURCE_DIR}/src/common)
 # source code dir for GPU code
-set(GPU_SOURCE_DIR ${PROJECT_SOURCE_DIR}/srcGPU)
+set(GPU_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src/srcGPU)
 # source code dir for CPU code
-set(CPU_SOURCE_DIR ${PROJECT_SOURCE_DIR}/srcCPU)
+set(CPU_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src/srcCPU)
 # source code dir for CPU Utils code
-set(CPU_SOURCE_UTIL_DIR ${PROJECT_SOURCE_DIR}/srcCPU/Utils)
+#set(CPU_SOURCE_UTIL_DIR ${PROJECT_SOURCE_DIR}/srcCPU/Utils)
 #folder for external dependencies
-set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/ext)
+set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/src/ext)
 #set(PROJECT_EXE_DIR ${PROJECT_SOURCE_DIR}/exeFiles)
 #location of executables
 SET(CMAKE_BUILD_DIR ${CMAKE_SOURCE_DIR}/bin)
 #location of unit test files
-SET(CMAKE_UNITTEST_DIR ${CMAKE_SOURCE_DIR}/unitTest)
+SET(CMAKE_UNITTEST_DIR ${CMAKE_SOURCE_DIR}/tst/unitTest)
 #location of model test files
-SET(CMAKE_MODELTEST_DIR ${CMAKE_SOURCE_DIR}/modelTest)
+#SET(CMAKE_MODELTEST_DIR ${CMAKE_SOURCE_DIR}/modelTest)
 
 
 # make VERBOSE =1
@@ -40,7 +48,6 @@ SET(STL_INCLUDE_PATH "${STDIO_INCLUDE_PATH}/c++/4.6")
 SET(CMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT TRUE)
 #include_directories(${STL_INCLUDE_PATH} ${STDIO_INCLUDE_PATH})
 
-SET(CMAKE_BUILD_TYPE DEBUG)
 #MESSAGE("${CMAKE_INCLUDE_PATH}")
 #MESSAGE("${CMAKE_BUILD_PATH}")
 #SET(CMAKE_SRC_PATH "${CMAKE_SOURCE_DIR}/src/")
@@ -48,12 +55,10 @@ SET(CMAKE_BUILD_TYPE DEBUG)
 #SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModule")
 #MESSAGE(CMAKE_MODULE_PATH)
 
-find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
         include_directories(${CUDA_INCLUDE_DIRS})
 endif (CUDA_FOUND)
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
 CUDA_INCLUDE_DIRECTORIES(
 	${CMAKE_SOURCE_DIR}
 	${CUDA_INSTALL_PREFIX}/include
@@ -63,7 +68,6 @@ CUDA_INCLUDE_DIRECTORIES(
 SET(CUDA_LIBRARIES "${CUDA_LIBRARIES};${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcusparse.so")
 
 #-- Add an Option to toggle the generation of the API documentation
-SET(BUILD_DOCUMENTATION ON)
 if(BUILD_DOCUMENTATION)
   message("Building documentation!")
   FIND_PACKAGE(Doxygen)
@@ -83,16 +87,14 @@ if(BUILD_DOCUMENTATION)
 endif()
 
 add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
-ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/srcCPU)
-ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/srcGPU)
-ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/unitTest)
-ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/main)
+ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/src)
+ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/tst)
 
 # start CPack logic for source code distribution
-INCLUDE(CPack)
-SET(CPACK_SOURCE_GENERATOR "TGZ")
-SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CUDA code for cell simulations")
-SET(CPACK_PACKAGE_VENDOR "Wenzhao Sun, ACMS Dept, University of Notre Dame")
+#INCLUDE(CPack)
+#SET(CPACK_SOURCE_GENERATOR "TGZ")
+#SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CUDA code for cell simulations")
+#SET(CPACK_PACKAGE_VENDOR "Wenzhao Sun, ACMS Dept, University of Notre Dame")
 
 #LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/src  ${CMAKE_SOURCE_DIR}/srcCUDA)
 

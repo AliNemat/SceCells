@@ -3,7 +3,8 @@
 
 #include "SceNodes.h"
 #include "SceCells.h"
-#include "CellInitHelper.h"
+//#include "CellInitHelper.h"
+#include "commonData.h"
 
 #include <sstream>
 #include <iomanip>

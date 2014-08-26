@@ -1,0 +1,9 @@
+add_library(SceUtils
+      GeoVector.h
+      GeoVector.cpp
+      Point2D.h
+      Point2D.cpp
+      ConfigParser.h      
+      ConfigParser.cpp
+      commonData.h
+)

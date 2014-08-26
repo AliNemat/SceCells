@@ -5,6 +5,7 @@
 !*.cu
 !*.h
 !CMakeLists.txt
+!README.txt
 !Doxyfile.in
 !.gitignore
 !sceCell.config
