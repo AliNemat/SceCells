@@ -9,6 +9,15 @@
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
 #include <tr1/functional>
+#include <list>
+
+// C++ sucks; declaring these static class members here is so counter-intuitive.
+//std::list<Point> initList = std::list<Point>();
+//initList.push_back(Point(9999999, 0));
+std::list<Point> GEOMETRY::MeshGen::default_list_of_seeds = std::list<Point>();
+//GEOMETRY::MeshGen::default_list_of_seeds.
+//.push_back(Point(9999999, 0));
+Criteria GEOMETRY::MeshGen::default_criteria = Criteria(0.125, 0.5);
 
 struct HandleHashFunc {
 	std::size_t operator()(const CDT::Vertex_handle& vHandle) const {
@@ -31,10 +40,15 @@ typedef std::tr1::unordered_set<std::pair<int, int>, IntPairHashFunc> EdgeHashSe
 namespace GEOMETRY {
 
 MeshGen::MeshGen() {
-
+	if (default_list_of_seeds.size() == 0) {
+		default_list_of_seeds.push_back(Point(9999999, 0));
+	}
+	//default_list_of_seeds.push_back(Point(9999999, 0));
+	//default_criteria = Criteria(0.125, 0.5);
 }
 
-UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints) {
+UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints,
+		std::list<Point> list_of_seeds, Criteria criteria) {
 	UnstructMesh2D result;
 	CDT cdt;
 
@@ -54,10 +68,10 @@ UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints) {
 			<< std::endl;
 	std::cout << "Meshing the triangulation ..." << std::endl;
 
-	std::list<Point> list_of_seeds;
-	list_of_seeds.push_back(Point(9999999, 0));
+	//std::list<Point> list_of_seeds;
+	//list_of_seeds.push_back(Point(9999999, 0));
 	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(),
-			list_of_seeds.end(), Criteria(0.125, 0.5));
+			list_of_seeds.end(), criteria);
 	std::cout << "Number of vertices: " << cdt.number_of_vertices()
 			<< std::endl;
 	VertexHashMap vertexHandleToIndex;

@@ -127,9 +127,8 @@ GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 	std::ifstream infile(configFileName.c_str());
 	if (!infile.is_open()) {
 		throw ConfigParserException("Fatal error: Config file not found!");
-	} else {
-
 	}
+
 	std::string line;
 	std::vector<std::string> tmpReading;
 	GlobalConfigVars result;

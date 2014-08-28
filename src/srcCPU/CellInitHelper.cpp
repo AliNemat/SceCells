@@ -864,7 +864,50 @@ SimulationInitData CellInitHelper::generateInput(std::string meshInput) {
 	RawDataInput rawData = generateRawInput(meshInput);
 	return initInputsV2(rawData);
 }
-//TODO
+
+SimulationInitData CellInitHelper::generateDiskInput(std::string meshInput) {
+	RawDataInput rawData = generateDiskRawInput(meshInput);
+	return initInputsV2(rawData);
+}
+
+RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
+
+	RawDataInput rawData;
+	GEOMETRY::MeshGen meshGen;
+	std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
+			10);
+	Criteria criteria(0.125, 3.0);
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
+			GEOMETRY::MeshGen::default_list_of_seeds, criteria);
+	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
+	mesh.outputVtkFile("testVTK");
+
+	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+
+	vector<CVector> insideCellCenters;
+	for (unsigned int i = 0; i < centerPoints.size(); i++) {
+		insideCellCenters.push_back(
+				CVector(centerPoints[i].getX() + 25,
+						centerPoints[i].getY() + 25, 0));
+	}
+	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		CVector centerPos = insideCellCenters[i];
+		rawData.MXCellCenters.push_back(centerPos);
+	}
+
+	cout << "Number of boundary nodes: " << rawData.bdryNodes.size()
+			<< "Number of MX cells: " << rawData.MXCellCenters.size()
+			<< " and number of FNM cells:" << rawData.FNMCellCenters.size()
+			<< endl;
+
+	//int jj;
+	//cin >> jj;
+
+	return rawData;
+}
+
 void CellInitHelper::generateProfileNodesArray(
 		vector<CVector> &initProfileNodes, double profileNodeInterval) {
 
@@ -1139,5 +1182,19 @@ CellInitHelper::~CellInitHelper() {
 }
 
 std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
-		double radius, int precision) {
+		double radius, int precision, Criteria criteria) {
+	std::vector<CellPlacementInfo> result;
+	GEOMETRY::MeshGen meshGen;
+	std::vector<GEOMETRY::Point2D> bdryPoints =
+			meshGen.createBdryPointsOnCircle(radius, precision);
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(bdryPoints);
+	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
+	CellPlacementInfo info;
+	for (uint i = 0; i < centerPoints.size(); i++) {
+		info.centerLocation = CVector(centerPoints[i].getX(),
+				centerPoints[i].getY(), 0);
+		info.cellType = Base;
+		result.push_back(info);
+	}
+	return result;
 }

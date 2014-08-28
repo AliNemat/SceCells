@@ -17,12 +17,11 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string>
-//#include "MeshGen.h"
+#include "MeshGen.h"
 
 const double numericalErrorEps = 1.0e-10;
 
 using namespace std;
-
 
 /*
  * This class helps the simulation domain to determine
@@ -37,7 +36,7 @@ public:
 class CellInitHelper2 {
 public:
 	std::vector<CellPlacementInfo> obtainCentersInCircle(double radius,
-			int precision);
+			int precision, Criteria criteria);
 };
 
 struct CellInitHelperException: public std::exception {
@@ -459,8 +458,12 @@ public:
 			vector<CVector> &initCellNodePoss);
 
 	RawDataInput generateRawInput(std::string meshInput);
-	SimulationInitData initInputsV2(RawDataInput &rawData);
 	SimulationInitData generateInput(std::string meshInput);
+
+	RawDataInput generateDiskRawInput(std::string meshInput);
+	SimulationInitData generateDiskInput(std::string meshInput);
+
+	SimulationInitData initInputsV2(RawDataInput &rawData);
 };
 
 #endif /* CELLINITHELPER_H_ */

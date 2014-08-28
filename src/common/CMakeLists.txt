@@ -6,4 +6,5 @@ add_library(SceUtils
       ConfigParser.h      
       ConfigParser.cpp
       commonData.h
+      commonData.cpp
 )

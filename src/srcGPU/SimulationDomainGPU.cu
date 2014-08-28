@@ -326,10 +326,17 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	// set cell types
 	thrust::device_vector<CellType> cellTypesToPass = cellTypes;
 
+	cout << "Break point 1111" << endl;
+
+	cout << "size1 = " << numOfInitActiveNodesOfCells.size() << endl;
+	cout << "size2 = " << cells_m.activeNodeCountOfThisCell.size() << endl;
+
 	// copy initial active node count info to GPU
 	thrust::copy(numOfInitActiveNodesOfCells.begin(),
 			numOfInitActiveNodesOfCells.end(),
 			cells_m.activeNodeCountOfThisCell.begin());
+
+	cout << "Break point 2222" << endl;
 
 	cout << "number of initial cells: " << numOfInitActiveNodesOfCells.size();
 
@@ -401,6 +408,7 @@ void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
 			initData.initECMNodePosY, initData.initFNMCellNodePosX,
 			initData.initFNMCellNodePosY, initData.initMXCellNodePosX,
 			initData.initMXCellNodePosY);
+	cout << "finished init cells of five types" << endl;
 	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
 }
 

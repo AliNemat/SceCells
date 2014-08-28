@@ -10,13 +10,12 @@ endif()
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
 
-SET(CMAKE_BUILD_TYPE DEBUG)
+SET(CMAKE_BUILD_TYPE Debug)
 SET(EXECUTABLE_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_PATH})
 SET(PROJECT_BINARY_DIR ${PROJECT_SOURCE_DIR}/build)
-
-
 SET(BUILD_DOCUMENTATION ON)
+
 #cuda files and corresponding .h files are placed together in this folder
 #set(COMMON_CUDA_INCLUDES ${PROJECT_SOURCE_DIR}/srcGPU)
 #cpp files and corresponding .h files are placed together in this folder
@@ -44,10 +43,17 @@ SET(CMAKE_UNITTEST_DIR ${CMAKE_SOURCE_DIR}/tst/unitTest)
 #find_path(STL_INCLUDE_PATH exception)
 find_path(STDIO_INCLUDE_PATH stdio.h)
 # later version c++ seems to be incompatible with the CUDA version we are using. 
-SET(STL_INCLUDE_PATH "${STDIO_INCLUDE_PATH}/c++/4.6")
+SET(STL_INCLUDE_PATH "${STDIO_INCLUDE_PATH}/c++")
+#find_path(STL_INCLUDE_PATH vector)
 SET(CMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT TRUE)
-#include_directories(${STL_INCLUDE_PATH} ${STDIO_INCLUDE_PATH})
+include_directories(${STL_INCLUDE_PATH} ${STDIO_INCLUDE_PATH})
 
+find_package(CGAL QUIET COMPONENTS Core)
+#set(CGAL_INCLUDE_DIR "/usr/include/CGAL")
+#MESSAGE(${CGAL_USE_FILE})
+include(${CGAL_USE_FILE})
+#MESSAGE(${CGAL_INCLUDE_DIRS})
+include_directories(${CGAL_INCLUDE_DIRS})
 #MESSAGE("${CMAKE_INCLUDE_PATH}")
 #MESSAGE("${CMAKE_BUILD_PATH}")
 #SET(CMAKE_SRC_PATH "${CMAKE_SOURCE_DIR}/src/")

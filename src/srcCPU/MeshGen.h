@@ -31,10 +31,14 @@ namespace GEOMETRY {
 
 class MeshGen {
 public:
+	static std::list<Point> default_list_of_seeds;
+	static Criteria default_criteria;
 	MeshGen();
 	std::vector<Point2D> readBdryPointsFromFile(std::string &fileName);
 	std::vector<Point2D> createBdryPointsOnCircle(double r, int n);
-	UnstructMesh2D generateMesh2D(std::vector<Point2D> &boundaryPoints);
+	UnstructMesh2D generateMesh2D(std::vector<Point2D> &boundaryPoints,
+			std::list<Point> list_of_seeds = default_list_of_seeds,
+			Criteria criteria = default_criteria);
 	virtual ~MeshGen();
 };
 

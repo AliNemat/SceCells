@@ -115,63 +115,6 @@ void generateCellInitInfo(std::string meshInput, uint numberOfInitCells,
 	}
 }
 
-void generateBoundaryCellsInfo(std::vector<CellType> &cellTypes1,
-		std::vector<uint> &numOfInitNodesOfCells1,
-		std::vector<double> &initBdryCellNodePosX1,
-		std::vector<double> &initBdryCellNodePosY1) {
-
-}
-
-void generateFNMCellsInfo(std::vector<CellType> &cellTypes2,
-		std::vector<uint> &numOfInitNodesOfCells2,
-		std::vector<double> &initFNMCellNodePosX,
-		std::vector<double> &initFNMCellNodePosY) {
-
-}
-
-void generateMXCellsInfo(std::vector<CellType> &cellTypes3,
-		std::vector<uint> &numOfInitNodesOfCells3,
-		std::vector<double> &initMXCellNodePosX,
-		std::vector<double> &initMXCellNodePosY) {
-
-}
-
-/*
- void generateBeakProfileInitInfo(std::vector<CellType> &cellTypes,
- std::vector<uint> &numOfInitNodesOfCells,
- std::vector<double> &initBdryCellNodePosX,
- std::vector<double> &initBdryCellNodePosY,
- std::vector<double> &initFNMCellNodePosX,
- std::vector<double> &initFNMCellNodePosY,
- std::vector<double> &initMXCellNodePosX,
- std::vector<double> &initMXCellNodePosY) {
-
- std::vector<CellType> cellTypes1;
- std::vector<CellType> cellTypes2;
- std::vector<CellType> cellTypes3;
- std::vector<uint> initNodeCount1;
- std::vector<uint> initNodeCount2;
- std::vector<uint> initNodeCount3;
- generateBoundaryCellsInfo(cellTypes1, initNodeCount1, initBdryCellNodePosX,
- initBdryCellNodePosY);
- generateFNMCellsInfo(cellTypes2, initNodeCount2, initFNMCellNodePosX,
- initFNMCellNodePosY);
- generateMXCellsInfo(cellTypes3, initNodeCount3, initMXCellNodePosX,
- initMXCellNodePosY);
- cellTypes.clear();
- numOfInitNodesOfCells.clear();
- cellTypes.insert(cellTypes.end(), cellTypes1.begin(), cellTypes1.end());
- cellTypes.insert(cellTypes.end(), cellTypes2.begin(), cellTypes2.end());
- cellTypes.insert(cellTypes.end(), cellTypes3.begin(), cellTypes3.end());
- numOfInitNodesOfCells.insert(numOfInitNodesOfCells.end(),
- initNodeCount1.begin(), initNodeCount1.end());
- numOfInitNodesOfCells.insert(numOfInitNodesOfCells.end(),
- initNodeCount2.begin(), initNodeCount2.end());
- numOfInitNodesOfCells.insert(numOfInitNodesOfCells.end(),
- initNodeCount3.begin(), initNodeCount3.end());
- }
- */
-
 int main() {
 	srand(time(NULL));
 	ConfigParser parser;

@@ -9,24 +9,84 @@
 #include <iostream>
 
 #include "MeshGen.h"
+#include "commonData.h"
+#include "CellInitHelper.h"
+#include <vector>
+#include "SimulationDomainGPU.h"
 
 using namespace std;
 
+GlobalConfigVars globalConfigVars;
+
+void generateStringInputs(std::string &loadMeshInput,
+		std::string &animationInput, std::string &animationFolder,
+		std::vector<std::string> &boundaryMeshFileNames) {
+	std::string meshLocation =
+			globalConfigVars.getConfigValue("MeshLocation").toString();
+	std::string meshName =
+			globalConfigVars.getConfigValue("MeshName").toString();
+	std::string meshExtention =
+			globalConfigVars.getConfigValue("MeshExtention").toString();
+	loadMeshInput = meshLocation + meshName + meshExtention;
+
+	animationFolder =
+			globalConfigVars.getConfigValue("AnimationFolder").toString();
+	animationInput = animationFolder
+			+ globalConfigVars.getConfigValue("AnimationName").toString();
+
+	std::string boundaryMeshLocation = globalConfigVars.getConfigValue(
+			"BoundaryMeshLocation").toString();
+	std::string boundaryMeshName = globalConfigVars.getConfigValue(
+			"BoundaryMeshName").toString();
+	std::string boundaryMeshExtention = globalConfigVars.getConfigValue(
+			"BoundaryMeshExtention").toString();
+	std::string boundaryMeshInput = boundaryMeshLocation + boundaryMeshName
+			+ boundaryMeshExtention;
+	boundaryMeshFileNames.push_back(boundaryMeshInput);
+}
+
 int main() {
-	GEOMETRY::MeshGen meshGen;
-	//std::string meshBdryPointsFile("boundaryPoints.dat");
-	//std::vector<GEOMETRY::Point2D> points = meshGen.readBdryPointsFromFile(
-	//		meshBdryPointsFile);
+	srand(time(NULL));
+	ConfigParser parser;
+	std::string configFileName = "sceDiskCell.config";
+	globalConfigVars = parser.parseConfigFile(configFileName);
 
-	std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(3,
-			10);
+	double SimulationTotalTime = globalConfigVars.getConfigValue(
+			"SimulationTotalTime").toDouble();
+	double SimulationTimeStep = globalConfigVars.getConfigValue(
+			"SimulationTimeStep").toDouble();
+	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+			"TotalNumOfOutputFrames").toInt();
 
-	//points.push_back(GEOMETRY::Point2D(3, 3));
-	//points.push_back(GEOMETRY::Point2D(-3, 3));
-	//points.push_back(GEOMETRY::Point2D(-3, -3));
-	//points.push_back(GEOMETRY::Point2D(3, -3));
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points);
-	std::string vtkFileName = "testVtk";
-	mesh.outputVtkFile(vtkFileName);
+	std::string loadMeshInput;
+	std::string animationInput;
+	std::vector<std::string> boundaryMeshFileNames;
+	std::string animationFolder;
+	generateStringInputs(loadMeshInput, animationInput, animationFolder,
+			boundaryMeshFileNames);
+
+	const double simulationTime = SimulationTotalTime;
+	const double dt = SimulationTimeStep;
+	const int numOfTimeSteps = simulationTime / dt;
+	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
+	const int outputAnimationAuxVarible = numOfTimeSteps
+			/ totalNumOfOutputFrame;
+
+	CellInitHelper initHelper;
+
+	SimulationDomainGPU simuDomain;
+	SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
+	simuDomain.initialize_V2(initData);
+
+	simuDomain.checkIfAllDataFieldsValid();
+
+	for (int i = 0; i <= numOfTimeSteps; i++) {
+		cout << "step number = " << i << endl;
+		if (i % outputAnimationAuxVarible == 0) {
+			simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
+			cout << "finished output Animation" << endl;
+		}
+		simuDomain.runAllLogic(dt);
+	}
 	return 0;
 }

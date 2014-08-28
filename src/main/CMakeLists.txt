@@ -10,9 +10,9 @@ add_dependencies(${BEAK_PROJECT_NAME} SceGPU)
 
 if(NOT WIN32)
         target_link_libraries(${BEAK_PROJECT_NAME} pthread)
-        target_link_libraries(${BEAK_PROJECT_NAME} ${GPU_SOURCE_DIR}/libSceGPU.a)
-        target_link_libraries(${BEAK_PROJECT_NAME} ${CPU_SOURCE_DIR}/libSceInit.a)
-        target_link_libraries(${BEAK_PROJECT_NAME} ${COMMON_INCLUDES}/libSceUtils.a)
+        target_link_libraries(${BEAK_PROJECT_NAME} SceGPU)
+        target_link_libraries(${BEAK_PROJECT_NAME} SceInit)
+        target_link_libraries(${BEAK_PROJECT_NAME} SceUtils)
         target_link_libraries(${BEAK_PROJECT_NAME}
                 ${GTEST_LIBS_DIR}/libgtest.a
                 ${GTEST_LIBS_DIR}/libgtest_main.a
@@ -36,9 +36,9 @@ endif (CGAL_FOUND)
 
 if(NOT WIN32)
         target_link_libraries(${DISK_PROJECT_NAME} pthread)
-        target_link_libraries(${DISK_PROJECT_NAME} ${GPU_SOURCE_DIR}/libSceGPU.a)
-        target_link_libraries(${DISK_PROJECT_NAME} ${CPU_SOURCE_DIR}/libSceInit.a)
-        target_link_libraries(${DISK_PROJECT_NAME} ${COMMON_INCLUDES}/libSceUtils.a)
+        target_link_libraries(${DISK_PROJECT_NAME} SceGPU)
+        target_link_libraries(${DISK_PROJECT_NAME} SceInit)
+        target_link_libraries(${DISK_PROJECT_NAME} SceUtils)
 
         target_link_libraries(${DISK_PROJECT_NAME}
                 ${GTEST_LIBS_DIR}/libgtest.a
