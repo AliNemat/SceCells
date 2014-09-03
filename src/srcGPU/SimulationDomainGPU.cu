@@ -802,6 +802,218 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
 	fs.close();
 }
 
+/**
+ * This is the second version of visualization.
+ * Inter-links are not colored for a clearer representation
+ * Fixed Boundary: Black
+ * FNM cells: Red
+ * MX cells: Blue
+ * ECM: Yellow
+ * Moving Epithilum layer: Green
+ */
+void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
+		std::string scriptNameBase, int rank) {
+	cerr << "start to output animation " << rank << endl;
+	//cells_m.distributeIsCellRank();
+	cells_m.distributeIsActiveInfo();
+	thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
+	cout << "finished distribute cell is active" << endl;
+
+	int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
+	int num2 = cells_m.beginPosOfCellsNode
+			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+	cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
+			<< nodes.startPosCells << ", part 2 = "
+			<< cells_m.totalNodeCountForActiveCells << endl;
+	cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
+			<< cells_m.beginPosOfCellsNode << ", part 2 = "
+			<< nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
+
+	int count = 0;
+	for (int i = 0;
+			i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
+			i++) {
+		if (isActiveHost[i] == true) {
+			count++;
+		}
+	}
+	cout << "before printing, number of active nodes in domain: " << count
+			<< endl;
+	//int jj;
+	//cin >> jj;
+
+	uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
+			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+
+	cout << "number of nodes = " << activeTotalNodeCount << endl;
+	cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
+			<< endl;
+
+	uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+			nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
+
+	//uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+	//		nodes.nodeIsActive.begin() + 1);
+	cerr << "number of active nodes = " << totalActiveCount << endl;
+	cerr << "number of total active nodes possible= " << activeTotalNodeCount
+			<< endl;
+
+	cout.flush();
+
+	thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
+	thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
+	thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
+	thrust::device_vector<double> deviceTmpVectorMaxForce(totalActiveCount);
+	thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
+	thrust::device_vector<CellType> deviceTmpVectorNodeType(totalActiveCount);
+	thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
+
+	thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
+	thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
+	thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
+	thrust::host_vector<double> hostTmpVectorMaxForce(totalActiveCount);
+	thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
+	thrust::host_vector<CellType> hostTmpVectorNodeType(totalActiveCount);
+	thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
+
+	cout << "finished initialization space for GPU and CPU" << endl;
+
+	cout << "During output animation, active total node count is "
+			<< activeTotalNodeCount << endl;
+
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes.nodeLocX.begin(),
+							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+							nodes.nodeMaxForce.begin(),
+							nodes.nodeCellType.begin(),
+							nodes.nodeCellRank.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes.nodeLocX.begin(),
+							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+							nodes.nodeMaxForce.begin(),
+							nodes.nodeCellType.begin(),
+							nodes.nodeCellRank.begin())) + activeTotalNodeCount,
+			nodes.nodeIsActive.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(deviceTmpVectorLocX.begin(),
+							deviceTmpVectorLocY.begin(),
+							deviceTmpVectorLocZ.begin(),
+							deviceTmpVectorMaxForce.begin(),
+							deviceTmpVectorNodeType.begin(),
+							deviceTmpVectorNodeRank.begin())), isTrue());
+
+	cout << "finished cpu data from GPU to CPU" << endl;
+
+	hostTmpVectorLocX = deviceTmpVectorLocX;
+	hostTmpVectorLocY = deviceTmpVectorLocY;
+	hostTmpVectorLocZ = deviceTmpVectorLocZ;
+	hostTmpVectorMaxForce = deviceTmpVectorMaxForce;
+	hostTmpVectorIsActive = deviceTmpVectorIsActive;
+	hostTmpVectorNodeType = deviceTmpVectorNodeType;
+	hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
+
+	int i, j;
+	std::vector<std::pair<uint, uint> > links;
+
+	//assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
+	// using string stream is probably not the best solution,
+	// but I can't use c++ 11 features for backward compatibility
+	std::stringstream ss;
+	ss << std::setw(5) << std::setfill('0') << rank;
+	std::string scriptNameRank = ss.str();
+	std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
+	std::cout << "start to create vtk file" << vtkFileName << std::endl;
+	std::ofstream fs;
+	fs.open(vtkFileName.c_str());
+
+	//int totalNNum = getTotalNodeCount();
+	//int LNum = 0;
+	//int NNum;
+	assert(hostTmpVectorLocX.size() == totalActiveCount);
+
+	fs << "# vtk DataFile Version 3.0" << std::endl;
+	fs << "Lines and points representing subcelluar element cells "
+			<< std::endl;
+	fs << "ASCII" << std::endl;
+	fs << std::endl;
+	fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
+	fs << "POINTS " << totalActiveCount << " float" << std::endl;
+
+	uint counterForLink = 0;
+	for (i = 0; i < totalActiveCount; i++) {
+		fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
+				<< hostTmpVectorLocZ[i] << std::endl;
+		for (j = 0; j < totalActiveCount; j++) {
+			if (i == j) {
+				continue;
+			}
+			if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
+					hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
+					hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
+					<= intraLinkDisplayRange) {
+				// have this extra if because we don't want to include visualization
+				// for inter-cell interactions.
+				// to achieve that, we don't include links between different types
+				// and also avoid display links between different cells of same type
+				if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
+						&& hostTmpVectorNodeRank[i]
+								== hostTmpVectorNodeRank[j]) {
+					if (hostTmpVectorNodeType[i] == Boundary) {
+						if (j - i == 1) {
+							links.push_back(std::make_pair<uint, uint>(i, j));
+							counterForLink++;
+						}
+					} else if (hostTmpVectorNodeType[i] == Profile) {
+						if (j - i == 1) {
+							links.push_back(std::make_pair<uint, uint>(i, j));
+							counterForLink++;
+						}
+					} else if (hostTmpVectorNodeType[i] == ECM) {
+						if (j - i == 1) {
+							links.push_back(std::make_pair<uint, uint>(i, j));
+							counterForLink++;
+						}
+					} else if (hostTmpVectorNodeType[i] == MX
+							|| hostTmpVectorNodeType[i] == FNM) {
+						links.push_back(std::make_pair<uint, uint>(i, j));
+						counterForLink++;
+					}
+				}
+			} else {
+				//if (hostTmpVectorNodeType[i] == Profile) {
+				//	if (j - i == 1) {
+				//		links.push_back(std::make_pair<uint, uint>(i, j));
+				//		counterForLink++;
+				//	}
+				//}
+			}
+		}
+		//std::cout << "link count = " << counterForLink << std::endl;
+	}
+	fs << std::endl;
+	fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
+	uint linkSize = links.size();
+	for (uint i = 0; i < linkSize; i++) {
+		fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
+	}
+	uint LNum = links.size();
+	fs << "CELL_TYPES " << LNum << endl;
+	for (i = 0; i < LNum; i++) {
+		fs << "3" << endl;
+	}
+	fs << "POINT_DATA " << totalActiveCount << endl;
+	fs << "SCALARS point_scalars float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+
+	for (i = 0; i < totalActiveCount; i++) {
+		fs << hostTmpVectorMaxForce[i] << endl;
+	}
+
+	//fs.flush();
+	fs.close();
+}
+
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank) {
 	cout << "before calling obtaining neighbors" << endl;

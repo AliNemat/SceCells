@@ -460,6 +460,10 @@ public:
 	RawDataInput generateRawInput(std::string meshInput);
 	SimulationInitData generateInput(std::string meshInput);
 
+	vector<CVector> generateCircleCentersInDisk(double diskRadius,
+			double circleRadius);
+	vector<CVector> generateCircleCentersInDisk2(double diskRadius,
+			double circleRadius);
 	RawDataInput generateDiskRawInput(std::string meshInput);
 	SimulationInitData generateDiskInput(std::string meshInput);
 

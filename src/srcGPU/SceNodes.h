@@ -46,7 +46,6 @@
  *  3) The approximate time scale of our simulation is several days. (day 8 - day 11)?
  */
 
-
 typedef thrust::tuple<double, double> CVec2;
 typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, uint, double> BoolUID;
@@ -73,7 +72,6 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 //enum CellType {
 //	Boundary, Profile, ECM, FNM, MX
 //};
-
 /**
  * This structure is for visualization purpose only.
  */
@@ -87,9 +85,8 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
 	uint maxCellCount;__host__ __device__
 	InitFunctor(uint maxCell) :
-			maxCellCount(maxCell) {
-	}
-	__host__ __device__
+	maxCellCount(maxCell) {
+	}__host__ __device__
 	Tuint3 operator()(const Tuint3 &v) {
 		uint iter = thrust::get<2>(v);
 		uint cellRank = iter / maxCellCount;
@@ -104,7 +101,7 @@ struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
 struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
 	double _dt;__host__ __device__
 	AddFunctor(double dt) :
-			_dt(dt) {
+	_dt(dt) {
 	}
 
 	__host__ __device__
@@ -127,9 +124,8 @@ struct Prg {
 
 	__host__ __device__
 	Prg(double _a = 0.f, double _b = 1.f) :
-			a(_a), b(_b) {
-	}
-	__host__ __device__
+	a(_a), b(_b) {
+	}__host__ __device__
 	double operator()(const unsigned int n) const {
 		thrust::default_random_engine rng;
 		thrust::uniform_real_distribution<double> dist(a, b);
@@ -154,8 +150,8 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 	__host__ __device__
 	pointToBucketIndex2D(double minX, double maxX, double minY, double maxY,
 			double bucketSize) :
-			_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _bucketSize(
-					bucketSize), width((maxX - minX) / bucketSize + 1) {
+	_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _bucketSize(
+			bucketSize), width((maxX - minX) / bucketSize + 1) {
 	}
 
 	__host__ __device__
@@ -163,9 +159,9 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 		// find the raster indices of p's bucket
 		if (thrust::get<3>(v) == true) {
 			unsigned int x = static_cast<unsigned int>((thrust::get<0>(v)
-					- _minX) / _bucketSize);
+							- _minX) / _bucketSize);
 			unsigned int y = static_cast<unsigned int>((thrust::get<1>(v)
-					- _minY) / _bucketSize);
+							- _minY) / _bucketSize);
 
 			// return the bucket's linear index and node's global index
 			return thrust::make_tuple(y * width + x, thrust::get<4>(v));
@@ -188,46 +184,45 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 	uint _numOfBucketsInXDim;
 	uint _numOfBucketsInYDim;__host__ __device__
 	NeighborFunctor2D(uint numOfBucketsInXDim, uint numOfBucketsInYDim) :
-			_numOfBucketsInXDim(numOfBucketsInXDim), _numOfBucketsInYDim(
-					numOfBucketsInYDim) {
-	}
-	__host__ __device__
+	_numOfBucketsInXDim(numOfBucketsInXDim), _numOfBucketsInYDim(
+			numOfBucketsInYDim) {
+	}__host__ __device__
 	Tuint2 operator()(const Tuint2 &v) {
 		uint relativeRank = thrust::get<1>(v) % 9;
 		uint xPos = thrust::get<0>(v) % _numOfBucketsInXDim;
 		uint yPos = thrust::get<0>(v) / _numOfBucketsInXDim;
 		switch (relativeRank) {
-		case 0:
+			case 0:
 			return thrust::make_tuple(thrust::get<0>(v), thrust::get<1>(v));
-		case 1:
+			case 1:
 			if (xPos > 0 && yPos > 0) {
 				uint topLeft = (xPos - 1) + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(topLeft, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 2:
+			case 2:
 			if (yPos > 0) {
 				uint top = xPos + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(top, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 3:
+			case 3:
 			if (yPos > 0 && xPos < _numOfBucketsInXDim - 1) {
 				uint topRight = xPos + 1 + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(topRight, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 4:
+			case 4:
 			if (xPos < _numOfBucketsInXDim - 1) {
 				uint right = xPos + 1 + yPos * _numOfBucketsInXDim;
 				return thrust::make_tuple(right, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 5:
+			case 5:
 			if (xPos < _numOfBucketsInXDim - 1
 					&& yPos < _numOfBucketsInYDim - 1) {
 				uint bottomRight = xPos + 1 + (yPos + 1) * _numOfBucketsInXDim;
@@ -235,28 +230,28 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 6:
+			case 6:
 			if (yPos < _numOfBucketsInYDim - 1) {
 				uint bottom = xPos + (yPos + 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(bottom, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 7:
+			case 7:
 			if (xPos > 0 && yPos < _numOfBucketsInYDim - 1) {
 				uint bottomLeft = (xPos - 1) + (yPos + 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(bottomLeft, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		case 8:
+			case 8:
 			if (xPos > 0) {
 				uint left = xPos - 1 + yPos * _numOfBucketsInXDim;
 				return thrust::make_tuple(left, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-		default:
+			default:
 			return thrust::make_tuple(UINT_MAX, UINT_MAX);
 		}
 	}
@@ -303,31 +298,25 @@ struct isOne {
 		}
 	}
 };
-
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
-
 __device__
 void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
-
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
-
 __device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
-
 __device__
 void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
-
 __device__ bool bothNodesCellNode(uint nodeGlobalRank1, uint nodeGlobalRank2,
 		uint cellNodesThreshold);
 
@@ -340,9 +329,9 @@ __device__
 void handleForceBetweenNodes(uint &nodeRank1, CellType &type1, uint &nodeRank2,
 		CellType &type2, double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double* _nodeLocZAddress, uint startPosOfCells);
-
+		double &zRes, double &maxForce, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress,
+		uint startPosOfCells);
 __device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
@@ -353,7 +342,7 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
  * a complicated data structure for adding subcellular element force to cell nodes.
  * This data structure is designed in an unconventional way because of performance considerations.
  */
-struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec3> {
+struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	uint* _extendedValuesAddress;
 	double* _nodeLocXAddress;
 	double* _nodeLocYAddress;
@@ -369,25 +358,26 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec3> {
 			uint* nodeRankAddress, CellType* cellTypesAddress,
 			uint cellNodesThreshold, uint nodeCountPerCell,
 			uint cellNodesStartPos, uint celLNodesPerECM) :
-			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
-					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
-					nodeLocZAddress), _nodeRankAddress(nodeRankAddress), _cellTypesAddress(
-					cellTypesAddress), _cellNodesThreshold(cellNodesThreshold), _cellNodesStartPos(
-					cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
-					celLNodesPerECM) {
-	}
-	__device__
-	CVec3 operator()(const Tuuuddd &u3d3) const {
+	_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+			nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
+			nodeLocZAddress), _nodeRankAddress(nodeRankAddress), _cellTypesAddress(
+			cellTypesAddress), _cellNodesThreshold(cellNodesThreshold), _cellNodesStartPos(
+			cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
+			celLNodesPerECM) {
+	}__device__
+	CVec4 operator()(const Tuuuddd &u3d3) const {
 		double xRes = 0.0;
 		double yRes = 0.0;
 		double zRes = 0.0;
 
-		uint begin = thrust::get<0>(u3d3);
-		uint end = thrust::get<1>(u3d3);
-		uint myValue = thrust::get<2>(u3d3);
-		double xPos = thrust::get<3>(u3d3);
-		double yPos = thrust::get<4>(u3d3);
-		double zPos = thrust::get<5>(u3d3);
+		double maxForce = 0.0;
+
+		uint begin = thrust::get < 0 > (u3d3);
+		uint end = thrust::get < 1 > (u3d3);
+		uint myValue = thrust::get < 2 > (u3d3);
+		double xPos = thrust::get < 3 > (u3d3);
+		double yPos = thrust::get < 4 > (u3d3);
+		double zPos = thrust::get < 5 > (u3d3);
 
 		CellType myType = _cellTypesAddress[myValue];
 
@@ -405,12 +395,12 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec3> {
 					_nodeLocXAddress[nodeRankOfOtherNode],
 					_nodeLocYAddress[nodeRankOfOtherNode],
 					_nodeLocZAddress[nodeRankOfOtherNode], xRes, yRes, zRes,
-					_nodeLocXAddress, _nodeLocYAddress, _nodeLocZAddress,
-					_cellNodesStartPos);
+					maxForce, _nodeLocXAddress, _nodeLocYAddress,
+					_nodeLocZAddress, _cellNodesStartPos);
 
 		}
 
-		return thrust::make_tuple(xRes, yRes, zRes);
+		return thrust::make_tuple(xRes, yRes, zRes, maxForce);
 	}
 };
 
@@ -426,15 +416,14 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress,
 			double* nodeVelXLinkBeginAddress, double* nodeVelYLinkBeginAddress,
 			double* nodeVelZLinkBeginAddress, uint maxNumberOfNodes) :
-			_nodeLocXLinkBeginAddress(nodeLocXLinkBeginAddress), _nodeLocYLinkBeginAddress(
-					nodeLocYLinkBeginAddress), _nodeLocZLinkBeginAddress(
-					nodeLocZLinkBeginAddress), _nodeVelXLinkBeginAddress(
-					nodeVelXLinkBeginAddress), _nodeVelYLinkBeginAddress(
-					nodeVelYLinkBeginAddress), _nodeVelZLinkBeginAddress(
-					nodeVelZLinkBeginAddress), _maxNumberOfNodes(
-					maxNumberOfNodes) {
-	}
-	__device__
+	_nodeLocXLinkBeginAddress(nodeLocXLinkBeginAddress), _nodeLocYLinkBeginAddress(
+			nodeLocYLinkBeginAddress), _nodeLocZLinkBeginAddress(
+			nodeLocZLinkBeginAddress), _nodeVelXLinkBeginAddress(
+			nodeVelXLinkBeginAddress), _nodeVelYLinkBeginAddress(
+			nodeVelYLinkBeginAddress), _nodeVelZLinkBeginAddress(
+			nodeVelZLinkBeginAddress), _maxNumberOfNodes(
+			maxNumberOfNodes) {
+	}__device__
 	CVec3 operator()(const uint &pos) const {
 		// nodes on two ends should be fixed.
 		// therefore, velocity is set to 0.
@@ -484,7 +473,7 @@ struct GetZeroTupleThree: public thrust::unary_function<uint, CVec3> {
 struct isLessThan: public thrust::unary_function<uint, bool> {
 	uint initValue;__host__ __device__
 	isLessThan(uint initV) :
-			initValue(initV) {
+	initValue(initV) {
 	}
 
 	__host__ __device__
@@ -596,6 +585,8 @@ public:
 	thrust::device_vector<double> nodeVelY;
 	// Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
+	// represents nodes's stress level.
+	thrust::device_vector<double> nodeMaxForce;
 
 	// in order to represent differential adhesion, we also need an vector
 	// for each cell node to identify the cell type.

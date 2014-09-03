@@ -3,3 +3,4 @@
 !.gitignore
 !*.cpp
 !*.h
+!CMakeLists.txt

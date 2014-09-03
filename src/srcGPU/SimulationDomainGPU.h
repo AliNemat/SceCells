@@ -90,6 +90,8 @@ public:
 	void outputVtkFilesWithColor(std::string scriptNameBase, int rank);
 	void outputVtkFilesWithColor_v2(std::string scriptNameBase, int rank);
 	void outputVtkFilesWithColor_v3(std::string scriptNameBase, int rank);
+	void outputVtkFilesWithColor_v2_stress(std::string scriptNameBase,
+			int rank);
 	void checkIfAllDataFieldsValid();
 };
 

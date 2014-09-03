@@ -865,6 +865,94 @@ SimulationInitData CellInitHelper::generateInput(std::string meshInput) {
 	return initInputsV2(rawData);
 }
 
+vector<CVector> CellInitHelper::generateCircleCentersInDisk(double diskRadius,
+		double circleRadius) {
+	const double PI = acos(-1.0);
+	vector<CVector> result;
+	CVector center(0, 0, 0);
+	CVector topIncrease = CVector(circleRadius * sin(PI / 6.0),
+			circleRadius * cos(PI / 6.0), 0.0);
+	CVector bottomIncrease = CVector(0, 0, 0) - topIncrease;
+	CVector leftIncrease = CVector(-circleRadius, 0, 0);
+	CVector rightIncrease = CVector(circleRadius, 0, 0);
+	CVector topIter = center;
+	while (topIter.y - center.y < diskRadius) {
+		CVector leftIter = topIter;
+		while (Modul(leftIter - center) < diskRadius) {
+			result.push_back(leftIter);
+			leftIter.Print();
+			leftIter = leftIter + leftIncrease;
+			cout << "aaaa" << endl;
+		}
+		CVector rightIter = topIter + rightIncrease;
+		while (Modul(rightIter - center) < diskRadius) {
+			result.push_back(rightIter);
+			rightIter.Print();
+			rightIter = rightIter + rightIncrease;
+
+			cout << "bbbb" << endl;
+		}
+		topIter = topIter + topIncrease;
+	}
+	CVector bottomIter = center + bottomIncrease;
+	while (center.y - bottomIter.y < diskRadius) {
+		CVector leftIter = bottomIter;
+		while (Modul(leftIter - center) < diskRadius) {
+			result.push_back(leftIter);
+			leftIter.Print();
+			leftIter = leftIter + leftIncrease;
+			cout << "cccc" << endl;
+		}
+		CVector rightIter = bottomIter + rightIncrease;
+		while (Modul(rightIter - center) < diskRadius) {
+			result.push_back(rightIter);
+			rightIter.Print();
+			rightIter = rightIter + rightIncrease;
+			cout << "dddd" << endl;
+		}
+		bottomIter = bottomIter + bottomIncrease;
+	}
+	cout << "eeee" << endl;
+	return result;
+}
+
+vector<CVector> CellInitHelper::generateCircleCentersInDisk2(double diskRadius,
+		double circleRadius) {
+	const double PI = acos(-1.0);
+	int sideCount = (int) (diskRadius / circleRadius);
+	vector<CVector> result;
+	CVector startPoint(circleRadius * sideCount, 0, 0);
+	int maxNum = 2 * sideCount + 1;
+	CVector topIncrease = CVector(circleRadius * sin(PI / 6.0),
+			circleRadius * cos(PI / 6.0), 0.0);
+	CVector bottomIncrease = CVector(circleRadius * sin(PI / 6.0),
+			-circleRadius * cos(PI / 6.0), 0.0);
+	CVector rightIncrease = CVector(circleRadius, 0, 0);
+	CVector topIter = startPoint;
+	int topCount = 0;
+	while (topCount <= sideCount) {
+		int num = maxNum - topCount;
+		for (int i = 0; i < num; i++) {
+			CVector rightIter = topIter + i * rightIncrease;
+			result.push_back(rightIter);
+		}
+		topCount++;
+		topIter = topIter + topIncrease;
+	}
+	int botCount = 1;
+	CVector botIter = startPoint + bottomIncrease;
+	while (botCount <= sideCount) {
+		int num = maxNum - botCount;
+		for (int i = 0; i < num; i++) {
+			CVector rightIter = botIter + i * rightIncrease;
+			result.push_back(rightIter);
+		}
+		botCount++;
+		botIter = botIter + bottomIncrease;
+	}
+	return result;
+}
+
 SimulationInitData CellInitHelper::generateDiskInput(std::string meshInput) {
 	RawDataInput rawData = generateDiskRawInput(meshInput);
 	return initInputsV2(rawData);
@@ -873,9 +961,11 @@ SimulationInitData CellInitHelper::generateDiskInput(std::string meshInput) {
 RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 
 	RawDataInput rawData;
+	vector<CVector> insideCellCenters;
+
 	GEOMETRY::MeshGen meshGen;
 	std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
-			10);
+			4);
 	Criteria criteria(0.125, 3.0);
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
 			GEOMETRY::MeshGen::default_list_of_seeds, criteria);
@@ -884,12 +974,18 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 
 	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 
-	vector<CVector> insideCellCenters;
 	for (unsigned int i = 0; i < centerPoints.size(); i++) {
 		insideCellCenters.push_back(
 				CVector(centerPoints[i].getX() + 25,
 						centerPoints[i].getY() + 25, 0));
 	}
+
+	insideCellCenters = generateCircleCentersInDisk2(7, 0.999);
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		insideCellCenters[i] = CVector(insideCellCenters[i].GetX() + 25,
+				insideCellCenters[i].GetY() + 25, 0);
+	}
+
 	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
 
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
@@ -902,8 +998,8 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 			<< " and number of FNM cells:" << rawData.FNMCellCenters.size()
 			<< endl;
 
-	//int jj;
-	//cin >> jj;
+//int jj;
+//cin >> jj;
 
 	return rawData;
 }
@@ -911,13 +1007,13 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 void CellInitHelper::generateProfileNodesArray(
 		vector<CVector> &initProfileNodes, double profileNodeInterval) {
 
-	// initPoints[5], initPoints[6];
-	// initPoints[6], initPoints[7];
-	// initPoints[7], initPoints[8];
-	// initPoints[8], initPoints[9];
-	// initPoints[9], initPoints[10]
-	// initPoints[10], initPoints[11];
-	// initPoints[11], initPoints[0];
+// initPoints[5], initPoints[6];
+// initPoints[6], initPoints[7];
+// initPoints[7], initPoints[8];
+// initPoints[8], initPoints[9];
+// initPoints[9], initPoints[10]
+// initPoints[10], initPoints[11];
+// initPoints[11], initPoints[0];
 
 	if (isInitNodesInitializedFlag == false) {
 		cerr
@@ -995,8 +1091,8 @@ void CellInitHelper::generateProfileNodesArray(
 		remainFromPrevious = actualTotalDist
 				- numberOfPieces * profileNodeInterval;
 	}
-	//int jj;
-	//cin >> jj;
+//int jj;
+//cin >> jj;
 }
 //TODO
 void CellInitHelper::generateRandomAngles(vector<double> &randomAngles,
@@ -1035,8 +1131,8 @@ void CellInitHelper::generateCellInitNodeInfo(vector<CVector> &initPos,
 		initPos[i].y = initPos[i].y / 10.0;
 		initPos[i].Print();
 	}
-	//int jj;
-	//cin >> jj;
+//int jj;
+//cin >> jj;
 	fs.close();
 }
 

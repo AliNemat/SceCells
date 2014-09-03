@@ -4,3 +4,4 @@
 !*.cu
 !*.h
 !*.cpp
+!CMakeLists.txt

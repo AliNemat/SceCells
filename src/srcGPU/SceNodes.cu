@@ -94,6 +94,7 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	nodeVelX.resize(maxTotalNodeCount);
 	nodeVelY.resize(maxTotalNodeCount);
 	nodeVelZ.resize(maxTotalNodeCount);
+	nodeMaxForce.resize(maxTotalNodeCount);
 	nodeCellType.resize(maxTotalNodeCount);
 	nodeCellRank.resize(maxTotalNodeCount);
 	nodeIsActive.resize(maxTotalNodeCount);
@@ -507,7 +508,6 @@ void SceNodes::buildBuckets2D() {
 	bucketValues.erase(bucketValues.end() - numberOfOutOfRange,
 			bucketValues.end());
 }
-
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2) {
@@ -515,7 +515,6 @@ double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
 					+ (zPos - zPos2) * (zPos - zPos2));
 }
-
 __device__
 void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -542,7 +541,6 @@ void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 	}
 
 }
-
 __device__
 void calculateAndAddProfileForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -574,7 +572,6 @@ void calculateAndAddProfileForce(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
-
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -623,7 +620,6 @@ void calculateAndAddDiffInterCellForce(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
-
 __device__
 void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -648,7 +644,6 @@ void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
-
 __device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -664,7 +659,6 @@ void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
-
 __device__ bool bothNodesCellNode(uint nodeGlobalRank1, uint nodeGlobalRank2,
 		uint cellNodesThreshold) {
 	if (nodeGlobalRank1 < cellNodesThreshold
@@ -704,7 +698,7 @@ __device__ bool isNeighborECMNodes(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 		// this means that two nodes are actually close to each other
 		// seems to be strange because of unsigned int.
 		if ((nodeGlobalRank1 > nodeGlobalRank2
-				&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
+						&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
 				|| (nodeGlobalRank2 > nodeGlobalRank1
 						&& nodeGlobalRank2 - nodeGlobalRank1 == 1)) {
 			return true;
@@ -716,7 +710,7 @@ __device__ bool isNeighborECMNodes(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 __device__ bool isNeighborProfileNodes(uint nodeGlobalRank1,
 		uint nodeGlobalRank2) {
 	if ((nodeGlobalRank1 > nodeGlobalRank2
-			&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
+					&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
 			|| (nodeGlobalRank2 > nodeGlobalRank1
 					&& nodeGlobalRank2 - nodeGlobalRank1 == 1)) {
 		return true;
@@ -779,13 +773,13 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 	 }
 	 */
 }
-
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, CellType &type1, uint &nodeRank2,
 		CellType &type2, double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double* _nodeLocZAddress, uint beginPosOfCells) {
+		double &zRes, double &maxForce, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress,
+		uint beginPosOfCells) {
 	// this means that both nodes come from cells
 	if (bothCellNodes(type1, type2)) {
 		// this means that nodes come from different type of cell, apply differential adhesion
@@ -805,10 +799,21 @@ void handleForceBetweenNodes(uint &nodeRank1, CellType &type1, uint &nodeRank2,
 						_nodeLocYAddress[nodeRank2],
 						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
 			} else {
+				double xPre = xRes;
+				double yPre = yRes;
+				double zPre = zRes;
 				calculateAndAddInterForce(xPos, yPos, zPos,
 						_nodeLocXAddress[nodeRank2],
 						_nodeLocYAddress[nodeRank2],
 						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
+				double xDiff = xRes - xPre;
+				double yDiff = yRes - yPre;
+				double zDiff = zRes - zPre;
+				double force = sqrt(
+						xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
+				if (force > maxForce) {
+					maxForce = force;
+				}
 			}
 		}
 	}
@@ -970,6 +975,8 @@ void SceNodes::applySceForces() {
 							make_permutation_iterator(nodeVelY.begin(),
 									bucketValues.begin()),
 							make_permutation_iterator(nodeVelZ.begin(),
+									bucketValues.begin()),
+							make_permutation_iterator(nodeMaxForce.begin(),
 									bucketValues.begin()))),
 			AddSceForce(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeLocZAddress, nodeRankAddress, nodeTypeAddress,
