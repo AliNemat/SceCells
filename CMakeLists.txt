@@ -1,6 +1,13 @@
 cmake_minimum_required (VERSION 2.8.7)
 set(PROJECT_NAME_STR SceCellsGPU)
-project(${PROJECT_NAME_STR} C CXX)
+#project(${PROJECT_NAME_STR} C CXX)
+project(${PROJECT_NAME_STR})
+
+# This manual CXX FLAGS setting is required, because the some version of CMAKE would use an unsupported CMAKE_CXX_FLAGS and result in compliation failure.
+# more specifically, -fstack-protector-strong option is not supported by g++ until g++-4.9, but it is enabled by default in CMake 2.8.12
+# however g++-4.9 is not supported by nvcc 5.5
+set(CMAKE_CXX_FLAGS "-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security  -frounding-math -g")
+MESSAGE("manually resetting g++ flags to : " ${CMAKE_CXX_FLAGS})
 
 find_package(CUDA REQUIRED)
 
@@ -8,7 +15,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         add_definitions(-Wall -ansi -Wno-deprecated -pthread -fpermissive -frounding-math)
 endif()
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_20,code=compute_20)
+
+MESSAGE("NVCC flags are : " ${CUDA_NVCC_FLAGS})
 
 SET(CMAKE_BUILD_TYPE Debug)
 SET(EXECUTABLE_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -71,7 +81,7 @@ CUDA_INCLUDE_DIRECTORIES(
 	)
 # for some reason, cusparse library is not included by default.
 # therefore adding it here. 
-SET(CUDA_LIBRARIES "${CUDA_LIBRARIES};${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcusparse.so")
+#SET(CUDA_LIBRARIES "${CUDA_LIBRARIES};${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcusparse.so")
 
 #-- Add an Option to toggle the generation of the API documentation
 if(BUILD_DOCUMENTATION)

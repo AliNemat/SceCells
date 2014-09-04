@@ -41,6 +41,13 @@ const double errTol = 1.0e-12;
 
 GlobalConfigVars globalConfigVars;
 
+TEST(DummyTest, SanityTest){
+    cudaSetDevice(0);
+    EXPECT_EQ(32,32);
+    int size = 256;
+    thrust::device_vector<unsigned int> dv(size);
+}
+
 double computeDistInTest(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2) {
 	return sqrt(
@@ -179,7 +186,7 @@ protected:
 	double sceIntraParaCPU[4];
 	virtual void SetUp() {
 		ConfigParser parser;
-		std::string configFileName = "../../sceCell.config";
+		std::string configFileName = "./sceCell.config";
 		globalConfigVars = parser.parseConfigFile(configFileName);
 		cudaSetDevice(
 				globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
@@ -335,6 +342,10 @@ double Test_bucketSize = 0.97;
 
 TEST_F(SceNodeTest, ParameterInitTest) {
         cout<<" point 1 , before everything starts"<<endl;
+	int deviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
+	int totalDeviceCount;
+	cudaGetDeviceCount(&totalDeviceCount);
+	EXPECT_TRUE(deviceID>=0 && deviceID<totalDeviceCount);
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
         cout<<" point 1.1 "<<endl;
         

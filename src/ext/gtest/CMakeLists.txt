@@ -13,6 +13,8 @@ ExternalProject_Add(googletest
     INSTALL_COMMAND ""
 )
 
+#MESSAGE("GTEST FLAGS = " ${MSVC_COMPILER_DEFS})
+
 # Specify include dir
 ExternalProject_Get_Property(googletest source_dir)
 set(GTEST_INCLUDE_DIRS ${source_dir}/include PARENT_SCOPE)
