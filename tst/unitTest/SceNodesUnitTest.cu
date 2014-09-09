@@ -41,11 +41,11 @@ const double errTol = 1.0e-12;
 
 GlobalConfigVars globalConfigVars;
 
-TEST(DummyTest, SanityTest){
-    cudaSetDevice(0);
-    EXPECT_EQ(32,32);
-    int size = 256;
-    thrust::device_vector<unsigned int> dv(size);
+TEST(DummyTest, SanityTest) {
+	cudaSetDevice(0);
+	EXPECT_EQ(32, 32);
+	int size = 256;
+	thrust::device_vector<unsigned int> dv(size);
 }
 
 double computeDistInTest(double &xPos, double &yPos, double &zPos,
@@ -341,18 +341,18 @@ double Test_maxY = 25.9;
 double Test_bucketSize = 0.97;
 
 TEST_F(SceNodeTest, ParameterInitTest) {
-        cout<<" point 1 , before everything starts"<<endl;
+	cout << " point 1 , before everything starts" << endl;
 	int deviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 	int totalDeviceCount;
 	cudaGetDeviceCount(&totalDeviceCount);
-	EXPECT_TRUE(deviceID>=0 && deviceID<totalDeviceCount);
+	EXPECT_TRUE(deviceID >= 0 && deviceID < totalDeviceCount);
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
-        cout<<" point 1.1 "<<endl;
-        
+	cout << " point 1.1 " << endl;
+
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
 			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
 			Test_maxNodeInCell);
-        cout<<" point 1.2 "<<endl;
+	cout << " point 1.2 " << endl;
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
 			Test_bucketSize);
 
@@ -363,7 +363,7 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	EXPECT_EQ(Expected_BucketXDim, nodes.numOfBucketsInXDim);
 	EXPECT_EQ(Expected_BucketYDim, nodes.numOfBucketsInYDim);
 	EXPECT_EQ(Expected_TotalBucket, nodes.totalBucketCount);
-        cout<<" point 2, middle of no where"<<endl;
+	cout << " point 2, middle of no where" << endl;
 
 	// following part tests initial parameters for node location info
 	int startPosOfProfile = Test_totalBdryNodeCount;
@@ -380,7 +380,7 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	EXPECT_EQ(Test_maxNodeInCell, nodes.maxNodeOfOneCell);
 	EXPECT_EQ(Test_maxNodeInECM, nodes.maxNodePerECM);
 
-        cout<<" point 3, everything has finished"<<endl;
+	cout << " point 3, everything has finished" << endl;
 }
 
 TEST_F(SceNodeTest, GPUConstMemTest) {
@@ -772,7 +772,8 @@ TEST_F(SceNodeTest, ExtendBucketfixedTest) {
 /*
  * Expected size of the extended buckets equals to computed
  * all results fits the requirement
- * no duplicate */
+ * no duplicate
+ */
 
 TEST(SceExtendBucket2D, extendBucketRandomTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
@@ -881,114 +882,123 @@ TEST(SceExtendBucket2D, extendBucketRandomTest) {
 	}
 
 }
+
+/**
+ * This test function was setup to verify if
+ */ //
+TEST_F(SceNodeTest, FindingPossiblePairsTest) {
+
+}
+
 /*
- TEST_F(SceNodeTest, addForceFixedNeighborTest) {
- cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
- SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
- Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
- Test_maxNodeInCell);
- const uint testCellCount = 1;
- const uint testNodePerCell = 4;
- const uint testTotalNodeCount = testCellCount * testNodePerCell;
+TEST_F(SceNodeTest, addForceFixedNeighborTest) {
+	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
+	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
+			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell);
+	const uint testCellCount = 1;
+	const uint testNodePerCell = 4;
+	const uint testTotalNodeCount = testCellCount * testNodePerCell;
 
- thrust::host_vector<double> nodeLocXHost(testTotalNodeCount);
- thrust::host_vector<double> nodeLocYHost(testTotalNodeCount);
- thrust::host_vector<double> nodeLocZHost(testTotalNodeCount);
- thrust::host_vector<bool> nodeIsActiveHost(testTotalNodeCount);
- const double minX = 0.0;
- const double maxX = 3.0 - 1.0e-10;
- const double minY = 0.0;
- const double maxY = 2.0 - 1.0e-10;
- //const double minZ = 0.0;
- //const double maxZ = 0.0;
- const double bucketSize = 1.0;
- nodes.initDimension(minX, maxX, minY, maxY, bucketSize);
+	thrust::host_vector<double> nodeLocXHost(testTotalNodeCount);
+	thrust::host_vector<double> nodeLocYHost(testTotalNodeCount);
+	thrust::host_vector<double> nodeLocZHost(testTotalNodeCount);
+	thrust::host_vector<bool> nodeIsActiveHost(testTotalNodeCount);
+	const double minX = 0.0;
+	const double maxX = 3.0 - 1.0e-10;
+	const double minY = 0.0;
+	const double maxY = 2.0 - 1.0e-10;
+	//const double minZ = 0.0;
+	//const double maxZ = 0.0;
+	const double bucketSize = 1.0;
+	nodes.initDimension(minX, maxX, minY, maxY, bucketSize);
 
- nodeLocXHost[0] = 0.2;
- nodeLocYHost[0] = 0.5;
- nodeLocZHost[0] = 0.0;
- nodeIsActiveHost[0] = 1;
- // 0
- nodeLocXHost[1] = 1.2;
- nodeLocYHost[1] = 0.2;
- nodeLocZHost[1] = 0.0;
- nodeIsActiveHost[1] = 1;
- // 1
- nodeLocXHost[2] = 1.3;
- nodeLocYHost[2] = 0.5;
- nodeLocZHost[2] = 0.0;
- nodeIsActiveHost[2] = 1;
- // 1
- nodeLocXHost[3] = 2.7;
- nodeLocYHost[3] = 1.1;
- nodeLocZHost[3] = 0.0;
- nodeIsActiveHost[3] = 1;
- // 5
- nodes.nodeLocX = nodeLocXHost;
- nodes.nodeLocY = nodeLocYHost;
- nodes.nodeLocZ = nodeLocZHost;
- nodes.nodeIsActive = nodeIsActiveHost;
- nodes.startPosCells = 0;
- nodes.currentActiveCellCount = testCellCount;
- nodes.maxNodeOfOneCell = testNodePerCell;
- //nodes.buildBuckets2D(minX, maxX, minY, maxY, bucketSize);
- nodes.calculateAndApplySceForces();
- //const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
- //const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
- //nodes.extendBuckets2D(numberOfBucketsInXDim, numberOfBucketsInYDim);
- //std::cout << "before applying forces:" << std::endl;
- //thrust::host_vector<double> nodeVelXFromGPU_init = nodes.nodeVelX;
- //thrust::host_vector<double> nodeVelYFromGPU_init = nodes.nodeVelY;
- //thrust::host_vector<double> nodeVelZFromGPU_init = nodes.nodeVelZ;
- //for (uint i = 0; i < nodeVelXFromGPU_init.size(); i++) {
- //	std::cout << nodeVelXFromGPU_init[i] << ", " << nodeVelYFromGPU_init[i]
- //			<< ", " << nodeVelZFromGPU_init[i] << std::endl;
- //}
- //std::cout << std::endl;
- //nodes.applySceForces(numberOfBucketsInXDim, numberOfBucketsInYDim);
- //thrust::host_vector<uint> bucketsKeysFromGPU = nodes.bucketKeys;
- //thrust::host_vector<uint> bucketsValuesFromGPU = nodes.bucketValues;
- //std::cout << "printing key-value pairs:" << std::endl;
- //for (uint i = 0; i < bucketsKeysFromGPU.size(); i++) {
- //	std::cout << "Key :" << bucketsKeysFromGPU[i] << ", value: "
- //			<< bucketsValuesFromGPU[i] << std::endl;
- //}
- thrust::host_vector<double> nodeVelXFromGPU = nodes.nodeVelX;
- thrust::host_vector<double> nodeVelYFromGPU = nodes.nodeVelY;
- thrust::host_vector<double> nodeVelZFromGPU = nodes.nodeVelZ;
- for (uint i = 0; i < nodeVelXFromGPU.size(); i++) {
- //std::cout << nodeVelXFromGPU[i] << ", " << nodeVelYFromGPU[i] << ", "
- //		<< nodeVelZFromGPU[i] << std::endl;
- }
+	nodeLocXHost[0] = 0.2;
+	nodeLocYHost[0] = 0.5;
+	nodeLocZHost[0] = 0.0;
+	nodeIsActiveHost[0] = 1;
+	// 0
+	nodeLocXHost[1] = 1.2;
+	nodeLocYHost[1] = 0.2;
+	nodeLocZHost[1] = 0.0;
+	nodeIsActiveHost[1] = 1;
+	// 1
+	nodeLocXHost[2] = 1.3;
+	nodeLocYHost[2] = 0.5;
+	nodeLocZHost[2] = 0.0;
+	nodeIsActiveHost[2] = 1;
+	// 1
+	nodeLocXHost[3] = 2.7;
+	nodeLocYHost[3] = 1.1;
+	nodeLocZHost[3] = 0.0;
+	nodeIsActiveHost[3] = 1;
+	// 5
+	nodes.nodeLocX = nodeLocXHost;
+	nodes.nodeLocY = nodeLocYHost;
+	nodes.nodeLocZ = nodeLocZHost;
+	nodes.nodeIsActive = nodeIsActiveHost;
+	nodes.startPosCells = 0;
+	nodes.currentActiveCellCount = testCellCount;
+	nodes.maxNodeOfOneCell = testNodePerCell;
+	//nodes.buildBuckets2D(minX, maxX, minY, maxY, bucketSize);
+	nodes.calculateAndApplySceForces();
+	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
+	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
+	//nodes.extendBuckets2D(numberOfBucketsInXDim, numberOfBucketsInYDim);
+	//std::cout << "before applying forces:" << std::endl;
+	//thrust::host_vector<double> nodeVelXFromGPU_init = nodes.nodeVelX;
+	//thrust::host_vector<double> nodeVelYFromGPU_init = nodes.nodeVelY;
+	//thrust::host_vector<double> nodeVelZFromGPU_init = nodes.nodeVelZ;
+	//for (uint i = 0; i < nodeVelXFromGPU_init.size(); i++) {
+	//	std::cout << nodeVelXFromGPU_init[i] << ", " << nodeVelYFromGPU_init[i]
+	//			<< ", " << nodeVelZFromGPU_init[i] << std::endl;
+	//}
+	//std::cout << std::endl;
+	//nodes.applySceForces(numberOfBucketsInXDim, numberOfBucketsInYDim);
+	//thrust::host_vector<uint> bucketsKeysFromGPU = nodes.bucketKeys;
+	//thrust::host_vector<uint> bucketsValuesFromGPU = nodes.bucketValues;
+	//std::cout << "printing key-value pairs:" << std::endl;
+	//for (uint i = 0; i < bucketsKeysFromGPU.size(); i++) {
+	//	std::cout << "Key :" << bucketsKeysFromGPU[i] << ", value: "
+	//			<< bucketsValuesFromGPU[i] << std::endl;
+	//}
+	thrust::host_vector<double> nodeVelXFromGPU = nodes.nodeVelX;
+	thrust::host_vector<double> nodeVelYFromGPU = nodes.nodeVelY;
+	thrust::host_vector<double> nodeVelZFromGPU = nodes.nodeVelZ;
+	for (uint i = 0; i < nodeVelXFromGPU.size(); i++) {
+		//std::cout << nodeVelXFromGPU[i] << ", " << nodeVelYFromGPU[i] << ", "
+		//		<< nodeVelZFromGPU[i] << std::endl;
+	}
 
- vector<double> xPoss(testTotalNodeCount, 0.0);
- vector<double> yPoss(testTotalNodeCount, 0.0);
- vector<double> zPoss(testTotalNodeCount, 0.0);
- vector<double> xVels(testTotalNodeCount, 0.0);
- vector<double> yVels(testTotalNodeCount, 0.0);
- vector<double> zVels(testTotalNodeCount, 0.0);
- vector<bool> isActive(testTotalNodeCount, 0);
- for (uint i = 0; i < testTotalNodeCount; i++) {
- xPoss[i] = nodeLocXHost[i];
- yPoss[i] = nodeLocYHost[i];
- zPoss[i] = nodeLocZHost[i];
- isActive[i] = nodeIsActiveHost[i];
- }
- vector<double> paraSetIntra(4, 0.0);
- for (uint i = 0; i < 4; i++) {
- paraSetIntra[i] = sceIntraParaCPU[i];
- }
- computeResultFromCPUAllIntra2D(xPoss, yPoss, zPoss, xVels, yVels, zVels,
- isActive, paraSetIntra, bucketSize, minX, maxX, minY, maxY);
- for (uint i = 0; i < nodeVelXFromGPU.size(); i++) {
- EXPECT_NEAR(xVels[i], nodeVelXFromGPU[i], errTol);
- EXPECT_NEAR(yVels[i], nodeVelYFromGPU[i], errTol);
- EXPECT_NEAR(zVels[i], nodeVelZFromGPU[i], errTol);
- }
+	vector<double> xPoss(testTotalNodeCount, 0.0);
+	vector<double> yPoss(testTotalNodeCount, 0.0);
+	vector<double> zPoss(testTotalNodeCount, 0.0);
+	vector<double> xVels(testTotalNodeCount, 0.0);
+	vector<double> yVels(testTotalNodeCount, 0.0);
+	vector<double> zVels(testTotalNodeCount, 0.0);
+	vector<bool> isActive(testTotalNodeCount, 0);
+	for (uint i = 0; i < testTotalNodeCount; i++) {
+		xPoss[i] = nodeLocXHost[i];
+		yPoss[i] = nodeLocYHost[i];
+		zPoss[i] = nodeLocZHost[i];
+		isActive[i] = nodeIsActiveHost[i];
+	}
+	vector<double> paraSetIntra(4, 0.0);
+	for (uint i = 0; i < 4; i++) {
+		paraSetIntra[i] = sceIntraParaCPU[i];
+	}
+	computeResultFromCPUAllIntra2D(xPoss, yPoss, zPoss, xVels, yVels, zVels,
+			isActive, paraSetIntra, bucketSize, minX, maxX, minY, maxY);
+	for (uint i = 0; i < nodeVelXFromGPU.size(); i++) {
+		EXPECT_NEAR(xVels[i], nodeVelXFromGPU[i], errTol);
+		EXPECT_NEAR(yVels[i], nodeVelYFromGPU[i], errTol);
+		EXPECT_NEAR(zVels[i], nodeVelZFromGPU[i], errTol);
+	}
 
- //std::cout << std::endl;
- }
- */
+	//std::cout << std::endl;
+}
+*/
+
 /*
  TEST_F(SceNodeTest, addForceRandomTest) {
  cudaSetDevice(myDeviceId);

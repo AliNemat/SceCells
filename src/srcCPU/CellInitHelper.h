@@ -30,7 +30,7 @@ using namespace std;
 class CellPlacementInfo {
 public:
 	CVector centerLocation;
-	CellType cellType;
+	SceNodeType cellNodeType;
 };
 
 class CellInitHelper2 {
@@ -446,7 +446,7 @@ public:
 	void generateThreeInputCellInfoArrays(vector<CVector> &bdryNodes,
 			vector<CVector> &FNMCellCenters, vector<CVector> &MXCellCenters,
 			double cellCenterInterval, double bdryNodeInterval);
-	void initInputsFromCellInfoArray(vector<CellType> &cellTypes,
+	void initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 			vector<uint> &numOfInitNodesOfCells,
 			vector<double> &initBdryCellNodePosX,
 			vector<double> &initBdryCellNodePosY,

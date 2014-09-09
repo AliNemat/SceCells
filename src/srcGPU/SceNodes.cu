@@ -109,7 +109,7 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	//int jj;
 	//std::cin >> jj;
 
-	thrust::host_vector<CellType> hostTmpVector(maxTotalNodeCount);
+	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
 	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
 	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
 	for (int i = 0; i < maxTotalNodeCount; i++) {
@@ -302,7 +302,7 @@ void SceNodes::initDimension(double domainMinX, double domainMaxX,
 	//std::cin >> jj;
 }
 
-std::vector<std::pair<uint, uint> > SceNodes::obtainNeighborPairs() {
+std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 	std::vector<std::pair<uint, uint> > result;
 	thrust::host_vector<uint> keyBeginCPU = keyBegin;
 	thrust::host_vector<uint> keyEndCPU = keyEnd;
@@ -440,7 +440,7 @@ void SceNodes::addNewlyDividedCells(
 		thrust::device_vector<double> &nodeLocYNewCell,
 		thrust::device_vector<double> &nodeLocZNewCell,
 		thrust::device_vector<bool> &nodeIsActiveNewCell,
-		thrust::device_vector<CellType> &nodeCellTypeNewCell) {
+		thrust::device_vector<SceNodeType> &nodeCellTypeNewCell) {
 
 	// data validation
 	uint nodesSize = nodeLocXNewCell.size();
@@ -726,7 +726,7 @@ __device__ bool ofSameType(uint cellType1, uint cellType2) {
 	}
 }
 
-__device__ bool bothCellNodes(CellType &type1, CellType &type2) {
+__device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 	if ((type1 == MX || type1 == FNM) && (type2 == MX || type2 == FNM)) {
 		return true;
 	} else {
@@ -774,8 +774,8 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 	 */
 }
 __device__
-void handleForceBetweenNodes(uint &nodeRank1, CellType &type1, uint &nodeRank2,
-		CellType &type2, double &xPos, double &yPos, double &zPos,
+void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1, uint &nodeRank2,
+		SceNodeType &type2, double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
@@ -939,7 +939,7 @@ void SceNodes::applySceForces() {
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&nodeLocY[0]);
 	double* nodeLocZAddress = thrust::raw_pointer_cast(&nodeLocZ[0]);
 	uint* nodeRankAddress = thrust::raw_pointer_cast(&nodeCellRank[0]);
-	CellType* nodeTypeAddress = thrust::raw_pointer_cast(&nodeCellType[0]);
+	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(&nodeCellType[0]);
 
 	std::cout << "begin transformation" << std::endl;
 

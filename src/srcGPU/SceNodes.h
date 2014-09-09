@@ -99,11 +99,13 @@ struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
  * functor to add two three dimensional vectors.
  */
 struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
-	double _dt;__host__ __device__
+	double _dt;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	AddFunctor(double dt) :
 	_dt(dt) {
 	}
-
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	CVec3 operator()(const CVec3 &vel, const CVec3 &loc) {
 		double xMoveDist = thrust::get<0>(vel) * _dt;
@@ -326,10 +328,10 @@ __device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2,
 __device__ bool ofSameType(uint cellType1, uint cellType2);
 
 __device__
-void handleForceBetweenNodes(uint &nodeRank1, CellType &type1, uint &nodeRank2,
-		CellType &type2, double &xPos, double &yPos, double &zPos,
-		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes, double &maxForce, double* _nodeLocXAddress,
+void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
+		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
+		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
+		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
 		uint startPosOfCells);
 __device__
@@ -348,14 +350,14 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	double* _nodeLocYAddress;
 	double* _nodeLocZAddress;
 	uint* _nodeRankAddress;
-	CellType* _cellTypesAddress;
+	SceNodeType* _cellTypesAddress;
 	uint _cellNodesThreshold;
 	uint _cellNodesStartPos;
 	uint _nodeCountPerCell;
 	uint _cellNodesPerECM;__host__ __device__
 	AddSceForce(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, double* nodeLocZAddress,
-			uint* nodeRankAddress, CellType* cellTypesAddress,
+			uint* nodeRankAddress, SceNodeType* cellTypesAddress,
 			uint cellNodesThreshold, uint nodeCountPerCell,
 			uint cellNodesStartPos, uint celLNodesPerECM) :
 	_extendedValuesAddress(valueAddress), _nodeLocXAddress(
@@ -379,12 +381,12 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 		double yPos = thrust::get < 4 > (u3d3);
 		double zPos = thrust::get < 5 > (u3d3);
 
-		CellType myType = _cellTypesAddress[myValue];
+		SceNodeType myType = _cellTypesAddress[myValue];
 
 		for (uint i = begin; i < end; i++) {
 			//for (uint i = begin; i < begin+1; i++) {
 			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
-			CellType cellTypeOfOtherNode =
+			SceNodeType cellTypeOfOtherNode =
 					_cellTypesAddress[nodeRankOfOtherNode];
 			if (nodeRankOfOtherNode == myValue) {
 				continue;
@@ -411,7 +413,9 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	double* _nodeVelXLinkBeginAddress;
 	double* _nodeVelYLinkBeginAddress;
 	double* _nodeVelZLinkBeginAddress;
-	uint _maxNumberOfNodes;__host__ __device__
+	uint _maxNumberOfNodes;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	AddLinkForces(double* nodeLocXLinkBeginAddress,
 			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress,
 			double* nodeVelXLinkBeginAddress, double* nodeVelYLinkBeginAddress,
@@ -423,7 +427,9 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 			nodeVelYLinkBeginAddress), _nodeVelZLinkBeginAddress(
 			nodeVelZLinkBeginAddress), _maxNumberOfNodes(
 			maxNumberOfNodes) {
-	}__device__
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__
 	CVec3 operator()(const uint &pos) const {
 		// nodes on two ends should be fixed.
 		// therefore, velocity is set to 0.
@@ -471,11 +477,13 @@ struct GetZeroTupleThree: public thrust::unary_function<uint, CVec3> {
  * return true if this number is less than initial parameter.
  */
 struct isLessThan: public thrust::unary_function<uint, bool> {
-	uint initValue;__host__ __device__
+	uint initValue;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	isLessThan(uint initV) :
 	initValue(initV) {
 	}
-
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	bool operator()(uint val) {
 		if (val < initValue) {
@@ -590,7 +598,7 @@ public:
 
 	// in order to represent differential adhesion, we also need an vector
 	// for each cell node to identify the cell type.
-	thrust::device_vector<CellType> nodeCellType;
+	thrust::device_vector<SceNodeType> nodeCellType;
 
 	// for each node, we need to identify which cell it belongs to.
 	thrust::device_vector<uint> nodeCellRank;
@@ -604,7 +612,14 @@ public:
 	// bucket value expanded means each point ( represented by its global rank) will have multiple copies
 	thrust::device_vector<uint> bucketValuesIncludingNeighbor;
 
-	std::vector<std::pair<uint, uint> > obtainNeighborPairs();
+	/**
+	 * @Brief This method outputs a vector of possible neighbor pairs.
+	 * Reason why this method exist is that outputting animation frame
+	 * is really slow using previous version of animation function.
+	 * Hopefully this new method could improve speed of producing
+	 * animation frame.
+	 */
+	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
 	/**
 	 * This function copies parameters to GPU constant memory.
@@ -667,7 +682,7 @@ public:
 			thrust::device_vector<double> &nodeLocYNewCell,
 			thrust::device_vector<double> &nodeLocZNewCell,
 			thrust::device_vector<bool> &nodeIsActiveNewCell,
-			thrust::device_vector<CellType> &nodeCellTypeNewCell);
+			thrust::device_vector<SceNodeType> &nodeCellTypeNewCell);
 
 	uint getCurrentActiveCellCount() const {
 		return currentActiveCellCount;

@@ -487,12 +487,12 @@ vector<CellPlacementInfo> CellInitHelper::obtainPreciseCellInfoArray(
 		if (isMXType(centerPos)) {
 			CellPlacementInfo cellInfo;
 			cellInfo.centerLocation = centerPos;
-			cellInfo.cellType = MX;
+			cellInfo.cellNodeType = MX;
 			cellPlacementInfoArray.push_back(cellInfo);
 		} else {
 			CellPlacementInfo cellInfo;
 			cellInfo.centerLocation = centerPos;
-			cellInfo.cellType = FNM;
+			cellInfo.cellNodeType = FNM;
 			cellPlacementInfoArray.push_back(cellInfo);
 		}
 	}
@@ -509,7 +509,7 @@ vector<CellPlacementInfo> CellInitHelper::obtainPreciseCellInfoArray(
  * last input of initCellNodePoss is the initial position of cell nodes, which could read
  * from mesh file. must be preprocessed to have the cell center of (0,0)
  */
-void CellInitHelper::initInputsFromCellInfoArray(vector<CellType> &cellTypes,
+void CellInitHelper::initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 		vector<uint> &numOfInitNodesOfCells,
 		vector<double> &initBdryCellNodePosX,
 		vector<double> &initBdryCellNodePosY,
@@ -1289,7 +1289,7 @@ std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
 	for (uint i = 0; i < centerPoints.size(); i++) {
 		info.centerLocation = CVector(centerPoints[i].getX(),
 				centerPoints[i].getY(), 0);
-		info.cellType = Base;
+		info.cellNodeType = Base;
 		result.push_back(info);
 	}
 	return result;

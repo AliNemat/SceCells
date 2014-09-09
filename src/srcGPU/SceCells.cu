@@ -738,7 +738,7 @@ void SceCells_M::copyCellsPreDivision() {
 	tmpYValueHold1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
 	tmpZValueHold1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
 
-	tmpCellTypes = thrust::device_vector<CellType>(nodeStorageCount);
+	tmpCellTypes = thrust::device_vector<SceNodeType>(nodeStorageCount);
 
 	tmpIsActiveHold2 = thrust::device_vector<bool>(nodeStorageCount, false);
 	tmpDistToCenter2 = thrust::device_vector<double>(nodeStorageCount, 0.0);

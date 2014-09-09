@@ -13,7 +13,6 @@
 
 /**
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
- *
  */
 class SimulationDomainGPU {
 	uint maxCellInDomain;
@@ -22,7 +21,7 @@ class SimulationDomainGPU {
 	uint maxNodePerECM;
 	//uint initECMCount;
 	double FinalToInitProfileNodeCountRatio;
-	void initialCellsOfFiveTypes(std::vector<CellType> &cellTypes,
+	void initialCellsOfFiveTypes(std::vector<SceNodeType> &cellTypes,
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<double> &initBdryCellNodePosX,
 			std::vector<double> &initBdryCellNodePosY,

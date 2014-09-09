@@ -38,7 +38,7 @@ public:
 	}
 };
 
-enum CellType {
+enum SceNodeType {
 	Boundary, Profile, ECM, FNM, MX, Base
 };
 
@@ -54,7 +54,7 @@ struct RawDataInput {
 };
 
 struct SimulationInitData {
-	std::vector<CellType> cellTypes;
+	std::vector<SceNodeType> cellTypes;
 	std::vector<uint> numOfInitActiveNodesOfCells;
 	std::vector<double> initBdryCellNodePosX;
 	std::vector<double> initBdryCellNodePosY;
@@ -71,7 +71,7 @@ struct SimulationInitData {
 struct SceInputPoint {
 	static std::string delimiter;
 	uint cellRank;
-	CellType cellType;
+	SceNodeType cellType;
 	double xCoord;
 	double yCoord;
 	double zCoord;
@@ -95,6 +95,10 @@ struct inputInitialData {
 	void initFromFile(std::string fileName);
 	void addNewPoints(std::vector<SceInputPoint> &newPoints);
 	void outputToFile(std::string fileName);
+};
+
+struct animationCriteria {
+
 };
 
 #endif /* COMMONDATA_H_ */
