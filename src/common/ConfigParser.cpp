@@ -131,9 +131,9 @@ GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 		}
 		tmpReading = splitLineByEqualSign(line);
 		if (tmpReading.size() != 2) {
-			throw ConfigParserException(
+			throw SceException(
 					"Error in Config file: More than one equal sign found in one line :"
-							+ line);
+							+ line, ConfigValueException);
 		}
 		std::string varName = removeLeadingAndTrailingSpace(tmpReading[0]);
 		std::string varValue = removeLeadingAndTrailingSpace(tmpReading[1]);
@@ -144,8 +144,9 @@ GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 	std::vector<ConfigVar>::iterator it = configVaribles.begin();
 	while (it != configVaribles.end()) {
 		if (it->getValue().toString().length() == 0) {
-			throw ConfigParserWarning(
-					"one or more config value is not defined in config file");
+			throw SceException(
+					"one or more config value is not defined in config file",
+					ConfigValueException);
 		}
 		++it;
 	}

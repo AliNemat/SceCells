@@ -13,7 +13,6 @@ double sceInterDiffParaCPU[5];
 double sceProfileParaCPU[7];
 double sceECMParaCPU[5];
 double sceDiffParaCPU[5];
-
 __constant__ uint ProfilebeginPos;
 __constant__ uint ECMbeginPos;
 __constant__ uint cellNodeBeginPos;
@@ -311,15 +310,23 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 	thrust::host_vector<uint> bucketValuesExtendedCPU =
 			bucketValuesIncludingNeighbor;
 
+	//cout << "sizes = " << keyBeginCPU.size() << " " << keyEndCPU.size() << " "
+	//		<< bucketKeysCPU.size() << " " << bucketValuesCPU.size() << " "
+	//		<< bucketValuesExtendedCPU.size() << endl;
+
 	int size = bucketKeysCPU.size();
 	for (int i = 0; i < size; i++) {
 		for (int j = keyBeginCPU[bucketKeysCPU[i]];
 				j < keyEndCPU[bucketKeysCPU[i]]; j++) {
 			//std::cout << "pair node 1: " << bucketValues[i] << ",pair node2: "
 			//		<< bucketValuesIncludingNeighbor[j] << std::endl;
-			result.push_back(
-					std::make_pair<uint, uint>(bucketValues[i],
-							bucketValuesIncludingNeighbor[j]));
+			int node1 = bucketValues[i];
+			int node2 = bucketValuesIncludingNeighbor[j];
+			if (node1 >= node2) {
+				continue;
+			} else {
+				result.push_back(std::make_pair<uint, uint>(node1, node2));
+			}
 		}
 	}
 
@@ -698,7 +705,7 @@ __device__ bool isNeighborECMNodes(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 		// this means that two nodes are actually close to each other
 		// seems to be strange because of unsigned int.
 		if ((nodeGlobalRank1 > nodeGlobalRank2
-						&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
+				&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
 				|| (nodeGlobalRank2 > nodeGlobalRank1
 						&& nodeGlobalRank2 - nodeGlobalRank1 == 1)) {
 			return true;
@@ -710,7 +717,7 @@ __device__ bool isNeighborECMNodes(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 __device__ bool isNeighborProfileNodes(uint nodeGlobalRank1,
 		uint nodeGlobalRank2) {
 	if ((nodeGlobalRank1 > nodeGlobalRank2
-					&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
+			&& nodeGlobalRank1 - nodeGlobalRank2 == 1)
 			|| (nodeGlobalRank2 > nodeGlobalRank1
 					&& nodeGlobalRank2 - nodeGlobalRank1 == 1)) {
 		return true;
@@ -774,10 +781,10 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 	 */
 }
 __device__
-void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1, uint &nodeRank2,
-		SceNodeType &type2, double &xPos, double &yPos, double &zPos,
-		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes, double &maxForce, double* _nodeLocXAddress,
+void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
+		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
+		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
+		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
 		uint beginPosOfCells) {
 	// this means that both nodes come from cells
@@ -908,17 +915,17 @@ void SceNodes::extendBuckets2D() {
 			bucketValuesIncludingNeighbor.end());
 }
 void SceNodes::applySceForces() {
-	std::cout << "begin apply sce forces" << std::endl;
-	std::cout << "size of lower = " << keyBegin.size() << std::endl;
+	//std::cout << "begin apply sce forces" << std::endl;
+	//std::cout << "size of lower = " << keyBegin.size() << std::endl;
 	thrust::counting_iterator<unsigned int> search_begin(0);
 	thrust::lower_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
 			search_begin, search_begin + totalBucketCount, keyBegin.begin());
 	thrust::upper_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
 			search_begin, search_begin + totalBucketCount, keyEnd.begin());
 
-	thrust::host_vector<uint> lowerCPU = keyBegin;
+	//thrust::host_vector<uint> lowerCPU = keyBegin;
 
-	std::cout << "finished finding bounds" << std::endl;
+	//std::cout << "finished finding bounds" << std::endl;
 
 	//int test1 = lowerCPU[0];
 	//int test2 = lowerCPU[0];
@@ -933,7 +940,7 @@ void SceNodes::applySceForces() {
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&bucketValuesIncludingNeighbor[0]);
 
-	std::cout << "begin pointer casting" << std::endl;
+	//std::cout << "begin pointer casting" << std::endl;
 
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&nodeLocY[0]);
@@ -941,7 +948,7 @@ void SceNodes::applySceForces() {
 	uint* nodeRankAddress = thrust::raw_pointer_cast(&nodeCellRank[0]);
 	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(&nodeCellType[0]);
 
-	std::cout << "begin transformation" << std::endl;
+	//std::cout << "begin transformation" << std::endl;
 
 	thrust::transform(
 			make_zip_iterator(
@@ -983,7 +990,7 @@ void SceNodes::applySceForces() {
 					maxTotalCellNodeCount, startPosCells, maxNodeOfOneCell,
 					maxNodePerECM));
 
-	std::cout << "after transformation" << std::endl;
+	//std::cout << "after transformation" << std::endl;
 }
 
 void SceNodes::calculateAndApplySceForces() {

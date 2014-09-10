@@ -85,8 +85,9 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
 	uint maxCellCount;__host__ __device__
 	InitFunctor(uint maxCell) :
-	maxCellCount(maxCell) {
-	}__host__ __device__
+			maxCellCount(maxCell) {
+	}
+	__host__ __device__
 	Tuint3 operator()(const Tuint3 &v) {
 		uint iter = thrust::get<2>(v);
 		uint cellRank = iter / maxCellCount;
@@ -103,7 +104,7 @@ struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddFunctor(double dt) :
-	_dt(dt) {
+			_dt(dt) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
@@ -126,8 +127,9 @@ struct Prg {
 
 	__host__ __device__
 	Prg(double _a = 0.f, double _b = 1.f) :
-	a(_a), b(_b) {
-	}__host__ __device__
+			a(_a), b(_b) {
+	}
+	__host__ __device__
 	double operator()(const unsigned int n) const {
 		thrust::default_random_engine rng;
 		thrust::uniform_real_distribution<double> dist(a, b);
@@ -152,8 +154,8 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 	__host__ __device__
 	pointToBucketIndex2D(double minX, double maxX, double minY, double maxY,
 			double bucketSize) :
-	_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _bucketSize(
-			bucketSize), width((maxX - minX) / bucketSize + 1) {
+			_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _bucketSize(
+					bucketSize), width((maxX - minX) / bucketSize + 1) {
 	}
 
 	__host__ __device__
@@ -161,9 +163,9 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 		// find the raster indices of p's bucket
 		if (thrust::get<3>(v) == true) {
 			unsigned int x = static_cast<unsigned int>((thrust::get<0>(v)
-							- _minX) / _bucketSize);
+					- _minX) / _bucketSize);
 			unsigned int y = static_cast<unsigned int>((thrust::get<1>(v)
-							- _minY) / _bucketSize);
+					- _minY) / _bucketSize);
 
 			// return the bucket's linear index and node's global index
 			return thrust::make_tuple(y * width + x, thrust::get<4>(v));
@@ -184,47 +186,50 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
  */
 struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 	uint _numOfBucketsInXDim;
-	uint _numOfBucketsInYDim;__host__ __device__
+	uint _numOfBucketsInYDim;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	NeighborFunctor2D(uint numOfBucketsInXDim, uint numOfBucketsInYDim) :
-	_numOfBucketsInXDim(numOfBucketsInXDim), _numOfBucketsInYDim(
-			numOfBucketsInYDim) {
-	}__host__ __device__
+			_numOfBucketsInXDim(numOfBucketsInXDim), _numOfBucketsInYDim(
+					numOfBucketsInYDim) {
+	}
+	__host__ __device__
 	Tuint2 operator()(const Tuint2 &v) {
 		uint relativeRank = thrust::get<1>(v) % 9;
 		uint xPos = thrust::get<0>(v) % _numOfBucketsInXDim;
 		uint yPos = thrust::get<0>(v) / _numOfBucketsInXDim;
 		switch (relativeRank) {
-			case 0:
+		case 0:
 			return thrust::make_tuple(thrust::get<0>(v), thrust::get<1>(v));
-			case 1:
+		case 1:
 			if (xPos > 0 && yPos > 0) {
 				uint topLeft = (xPos - 1) + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(topLeft, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 2:
+		case 2:
 			if (yPos > 0) {
 				uint top = xPos + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(top, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 3:
+		case 3:
 			if (yPos > 0 && xPos < _numOfBucketsInXDim - 1) {
 				uint topRight = xPos + 1 + (yPos - 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(topRight, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 4:
+		case 4:
 			if (xPos < _numOfBucketsInXDim - 1) {
 				uint right = xPos + 1 + yPos * _numOfBucketsInXDim;
 				return thrust::make_tuple(right, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 5:
+		case 5:
 			if (xPos < _numOfBucketsInXDim - 1
 					&& yPos < _numOfBucketsInYDim - 1) {
 				uint bottomRight = xPos + 1 + (yPos + 1) * _numOfBucketsInXDim;
@@ -232,28 +237,28 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 6:
+		case 6:
 			if (yPos < _numOfBucketsInYDim - 1) {
 				uint bottom = xPos + (yPos + 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(bottom, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 7:
+		case 7:
 			if (xPos > 0 && yPos < _numOfBucketsInYDim - 1) {
 				uint bottomLeft = (xPos - 1) + (yPos + 1) * _numOfBucketsInXDim;
 				return thrust::make_tuple(bottomLeft, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			case 8:
+		case 8:
 			if (xPos > 0) {
 				uint left = xPos - 1 + yPos * _numOfBucketsInXDim;
 				return thrust::make_tuple(left, thrust::get<1>(v));
 			} else {
 				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
 			}
-			default:
+		default:
 			return thrust::make_tuple(UINT_MAX, UINT_MAX);
 		}
 	}
@@ -354,19 +359,22 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	uint _cellNodesThreshold;
 	uint _cellNodesStartPos;
 	uint _nodeCountPerCell;
-	uint _cellNodesPerECM;__host__ __device__
+	uint _cellNodesPerECM;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	AddSceForce(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, double* nodeLocZAddress,
 			uint* nodeRankAddress, SceNodeType* cellTypesAddress,
 			uint cellNodesThreshold, uint nodeCountPerCell,
 			uint cellNodesStartPos, uint celLNodesPerECM) :
-	_extendedValuesAddress(valueAddress), _nodeLocXAddress(
-			nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
-			nodeLocZAddress), _nodeRankAddress(nodeRankAddress), _cellTypesAddress(
-			cellTypesAddress), _cellNodesThreshold(cellNodesThreshold), _cellNodesStartPos(
-			cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
-			celLNodesPerECM) {
-	}__device__
+			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
+					nodeLocZAddress), _nodeRankAddress(nodeRankAddress), _cellTypesAddress(
+					cellTypesAddress), _cellNodesThreshold(cellNodesThreshold), _cellNodesStartPos(
+					cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
+					celLNodesPerECM) {
+	}
+	__device__
 	CVec4 operator()(const Tuuuddd &u3d3) const {
 		double xRes = 0.0;
 		double yRes = 0.0;
@@ -374,12 +382,12 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 
 		double maxForce = 0.0;
 
-		uint begin = thrust::get < 0 > (u3d3);
-		uint end = thrust::get < 1 > (u3d3);
-		uint myValue = thrust::get < 2 > (u3d3);
-		double xPos = thrust::get < 3 > (u3d3);
-		double yPos = thrust::get < 4 > (u3d3);
-		double zPos = thrust::get < 5 > (u3d3);
+		uint begin = thrust::get<0>(u3d3);
+		uint end = thrust::get<1>(u3d3);
+		uint myValue = thrust::get<2>(u3d3);
+		double xPos = thrust::get<3>(u3d3);
+		double yPos = thrust::get<4>(u3d3);
+		double zPos = thrust::get<5>(u3d3);
 
 		SceNodeType myType = _cellTypesAddress[myValue];
 
@@ -420,13 +428,13 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress,
 			double* nodeVelXLinkBeginAddress, double* nodeVelYLinkBeginAddress,
 			double* nodeVelZLinkBeginAddress, uint maxNumberOfNodes) :
-	_nodeLocXLinkBeginAddress(nodeLocXLinkBeginAddress), _nodeLocYLinkBeginAddress(
-			nodeLocYLinkBeginAddress), _nodeLocZLinkBeginAddress(
-			nodeLocZLinkBeginAddress), _nodeVelXLinkBeginAddress(
-			nodeVelXLinkBeginAddress), _nodeVelYLinkBeginAddress(
-			nodeVelYLinkBeginAddress), _nodeVelZLinkBeginAddress(
-			nodeVelZLinkBeginAddress), _maxNumberOfNodes(
-			maxNumberOfNodes) {
+			_nodeLocXLinkBeginAddress(nodeLocXLinkBeginAddress), _nodeLocYLinkBeginAddress(
+					nodeLocYLinkBeginAddress), _nodeLocZLinkBeginAddress(
+					nodeLocZLinkBeginAddress), _nodeVelXLinkBeginAddress(
+					nodeVelXLinkBeginAddress), _nodeVelYLinkBeginAddress(
+					nodeVelYLinkBeginAddress), _nodeVelZLinkBeginAddress(
+					nodeVelZLinkBeginAddress), _maxNumberOfNodes(
+					maxNumberOfNodes) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
@@ -481,7 +489,7 @@ struct isLessThan: public thrust::unary_function<uint, bool> {
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	isLessThan(uint initV) :
-	initValue(initV) {
+			initValue(initV) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__

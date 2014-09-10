@@ -5,6 +5,8 @@
 #include <vector>
 #include <cuda_runtime.h>
 #include <algorithm>
+#include <tr1/unordered_set>
+#include "commonData.h"
 using namespace std;
 
 /**
@@ -31,11 +33,11 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
-const int myDeviceId = 0;
-const uint maxCellCount = 10;
-const uint maxNodePerCell = 100;
-const uint maxNodeCount = maxCellCount * maxNodePerCell;
-const double dt = 0.1;
+//const int myDeviceId = 0;
+//const uint maxCellCount = 10;
+//const uint maxNodePerCell = 100;
+//const uint maxNodeCount = maxCellCount * maxNodePerCell;
+//const double dt = 0.1;
 const double errTol = 1.0e-12;
 
 GlobalConfigVars globalConfigVars;
@@ -883,16 +885,16 @@ TEST(SceExtendBucket2D, extendBucketRandomTest) {
 }
 
 /**
- * This test function was setup to verify if
+ * This test function was setup to verify if all pair of nodes that are relatively close
+ * can be found out using the find pair method.
  */ //
 TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
-	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
-	const uint testCellCount = 2;
-	const uint testNodePerCell = 2;
-	const uint testTotalNodeCount = testCellCount * testNodePerCell;
+	// means that we have four nodes.
+	SceNodes nodes = SceNodes(1, 1, 1, 1, 1, 1);
+	const uint testCellCount = 1;
+	const uint testNodePerCell = 1;
+	const uint testTotalNodeCount = 4;
 	nodes.setCurrentActiveCellCount(testCellCount);
 	nodes.maxNodeOfOneCell = testCellCount;
 	thrust::host_vector<double> nodeLocXHost(testTotalNodeCount);
@@ -900,49 +902,77 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	thrust::host_vector<double> nodeLocZHost(testTotalNodeCount);
 	thrust::host_vector<bool> nodeIsActiveHost(testTotalNodeCount);
 	thrust::host_vector<uint> nodeExpectedBucket(testTotalNodeCount);
-	const double minX = 0.0;
-	const double maxX = 0.99999;
-	const double minY = 0.0;
-	const double maxY = 0.99999;
+	const double minX = -1.34;
+	const double maxX = 2;
+	const double minY = -0.5;
+	const double maxY = 2.6;
 	//const double minZ = 0.0;
 	//const double maxZ = 0.0;
-	const double bucketSize = 0.1;
+	const double bucketSize = 0.3;
 	nodes.initDimension(minX, maxX, minY, maxY, bucketSize);
-	nodeLocXHost[0] = 0.0;
-	nodeLocYHost[0] = 0.0;
+	nodeLocXHost[0] = 0.09;      // (0.09 - (-1.34)) / 0.3 = 4
+	nodeLocYHost[0] = -0.09;     // (-0.09 - (-0.5)) / 0.3 = 1
 	nodeIsActiveHost[0] = true;
-	// 0
-	nodeLocXHost[1] = 0.51;
-	nodeLocYHost[1] = 0.212;
+	// 1 * 12 + 4 = 16
+	nodeLocXHost[1] = 0.21;       // (0.21 - (-1.34)) / 0.3 = 5
+	nodeLocYHost[1] = 0.2;        // (0.2 - (-0.5)) / 0.3 = 2
 	nodeIsActiveHost[1] = true;
-	// 25
-	nodeLocXHost[2] = 0.52;
-	nodeLocYHost[2] = 0.211;
+	// 2 * 12 + 5 = 29
+	nodeLocXHost[2] = -0.1;      // (-0.1 - (-1.34)) / 0.3 = 4
+	nodeLocYHost[2] = 0.5;      // (0.5 - (-0.5)) / 0.3 = 3
 	nodeIsActiveHost[2] = true;
-	// 25
-	nodeLocXHost[3] = 0.63;
-	nodeLocYHost[3] = 0.207;
-	nodeIsActiveHost[3] = false;
-	// 26
+	// 3 * 12 + 4 = 40
+	nodeLocXHost[3] = 0.63;      // (0.63 - (-1.34)) / 0.3 = 6
+	nodeLocYHost[3] = 0.207;     // (0.207 - (-0.5)) / 0.3 = 2
+	nodeIsActiveHost[3] = true;
+	// 2 * 12 + 6 = 30
+
+	// 2D bucket:
+	// 3   4   5
+	// 15  16  17  18  19
+	// 27  28  29  30  31
+	// 39  40  41  42  43
+	// 51  52  53
+
 	nodes.nodeLocX = nodeLocXHost;
 	nodes.nodeLocY = nodeLocYHost;
 	nodes.nodeLocZ = nodeLocZHost;
 	nodes.nodeIsActive = nodeIsActiveHost;
 	nodes.buildBuckets2D();
-	const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
-	const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
+	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1; // (2 - (-1.34)) / 0.3 + 1 = 12
+	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1; // (2.6 - (-0.5)) / 0.3 + 1 = 11
 	nodes.extendBuckets2D();
 
 	thrust::host_vector<uint> extendedKeysFromGPU = nodes.bucketKeysExpanded;
 	thrust::host_vector<uint> extendValuesFromGPU =
 			nodes.bucketValuesIncludingNeighbor;
-	EXPECT_EQ(extendedKeysFromGPU.size(), (uint )22);
-	EXPECT_EQ(extendValuesFromGPU.size(), (uint )22);
-	int expectedKeys[] = { 0, 1, 10, 11, 14, 14, 15, 15, 16, 16, 24, 24, 25, 25,
-			26, 26, 34, 34, 35, 35, 36, 36 };
-	std::vector<uint> expectedResultsKeys(expectedKeys, expectedKeys + 22);
-	for (int i = 0; i < 22; i++) {
+	EXPECT_EQ(extendedKeysFromGPU.size(), (uint )36);
+	EXPECT_EQ(extendValuesFromGPU.size(), (uint )36);
+	int expectedKeys[] = { 3, 4, 5, 15, 16, 16, 17, 17, 17, 18, 18, 19, 27, 27,
+			28, 28, 28, 29, 29, 29, 29, 30, 30, 31, 39, 40, 40, 41, 41, 41, 42,
+			42, 43, 51, 52, 53 };
+	std::vector<uint> expectedResultsKeys(expectedKeys, expectedKeys + 36);
+	for (int i = 0; i < 36; i++) {
 		EXPECT_EQ(expectedResultsKeys[i], extendedKeysFromGPU[i]);
+	}
+
+	// keyBegin and keyEnd will be built in this step
+	nodes.applySceForces();
+
+	// make sure that size matches our expectation
+	std::vector<std::pair<uint, uint> > possiblePairs =
+			nodes.obtainPossibleNeighborPairs();
+	EXPECT_EQ((uint )3, possiblePairs.size());
+
+	sort(possiblePairs.begin(), possiblePairs.end());
+	std::vector<std::pair<uint, uint> > expectedPairs;
+	expectedPairs.push_back(std::make_pair<uint, uint>(0, 1));
+	expectedPairs.push_back(std::make_pair<uint, uint>(1, 2));
+	expectedPairs.push_back(std::make_pair<uint, uint>(1, 3));
+
+	// make sure that the possible pairs data matches our expectation.
+	for (uint i = 0; i < possiblePairs.size(); i++) {
+		EXPECT_EQ(possiblePairs[i], expectedPairs[i]);
 	}
 }
 

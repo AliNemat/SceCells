@@ -14,14 +14,14 @@ using namespace std;
  * Focus on initializing domain-level parameter values.
  */
 SimulationDomainGPU::SimulationDomainGPU() {
-	cout << "before allocation memory" << endl;
+	//cout << "before allocation memory" << endl;
 	//thrust::host_vector<int> aa;
 	//aa.resize(50000);
 	//thrust::device_vector<int> bb = aa;
 	//thrust::device_vector<double> cc(5000);
-	cout << "after allocate memory" << endl;
+	//cout << "after allocate memory" << endl;
 
-	cout << "start to create simulatonDomainGPU object" << endl;
+	//cout << "start to create simulatonDomainGPU object" << endl;
 
 	maxCellInDomain =
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
@@ -648,7 +648,8 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
 	thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
 	thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
 	thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
-	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(totalActiveCount);
+	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
+			totalActiveCount);
 	thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
 
 	thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
@@ -865,7 +866,8 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
 	thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
 	thrust::device_vector<double> deviceTmpVectorMaxForce(totalActiveCount);
 	thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
-	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(totalActiveCount);
+	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
+			totalActiveCount);
 	thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
 
 	thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
@@ -1016,6 +1018,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank) {
+	nodes.obtainPossibleNeighborPairs();
 }
 
 void SimulationDomainGPU::checkIfAllDataFieldsValid() {
