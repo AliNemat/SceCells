@@ -2,7 +2,6 @@
 !*/
 /CMakeFiles
 /bin
-
 !*.cpp
 !*.cu
 !*.h
