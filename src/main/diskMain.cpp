@@ -48,7 +48,7 @@ void generateStringInputs(std::string &loadMeshInput,
 int main() {
 	srand(time(NULL));
 	ConfigParser parser;
-	std::string configFileName = "sceDiskCell.config";
+	std::string configFileName = "./resources/disk.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
 	double SimulationTotalTime = globalConfigVars.getConfigValue(

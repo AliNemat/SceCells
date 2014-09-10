@@ -119,7 +119,7 @@ int main() {
 	srand(time(NULL));
 	ConfigParser parser;
 	cudaSetDevice(myDeviceID);
-	std::string configFileName = "sceCell.config";
+	std::string configFileName = "./resources/beak.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
 	double SimulationTotalTime = globalConfigVars.getConfigValue(
