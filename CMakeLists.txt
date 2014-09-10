@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8.7)
 set(PROJECT_NAME_STR SceCellsGPU)
-#project(${PROJECT_NAME_STR} C CXX)
+#project(${PROJECT_NAME_STR} C CXX CUDA)
 project(${PROJECT_NAME_STR})
 
 # This manual CXX FLAGS setting is required, because the some version of CMAKE would use an unsupported CMAKE_CXX_FLAGS and result in compliation failure.
