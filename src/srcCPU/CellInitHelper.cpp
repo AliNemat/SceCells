@@ -1145,7 +1145,7 @@ void CellInitHelper::generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 	double ECMInitNodeInterval = globalConfigVars.getConfigValue(
 			"ECM_Init_Node_Interval").toDouble();
 	int numOfSegments = initNodeCountPerECM - 1;
-	double totalLength = ECMInitNodeInterval * numOfSegments;
+	//double totalLength = ECMInitNodeInterval * numOfSegments;
 	if (numOfSegments % 2 == 0) {
 		CVector initPt = CVector(0, 0, 0);
 		initECMNodePoss.push_back(initPt);

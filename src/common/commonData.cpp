@@ -1,5 +1,7 @@
 #include "commonData.h"
 
+const std::string SceInputPoint::delimiter = " ";
+
 std::string toString(SceExceptionType type) {
 	std::string result("Undefined type");
 	switch (type) {
@@ -8,6 +10,12 @@ std::string toString(SceExceptionType type) {
 		break;
 	case InputInitException:
 		result = "Initialization Exception";
+		break;
+	case ConfigFileNotFound:
+		result = "Configuration file not found Exception";
+		break;
+	case ConfigValueException:
+		result = "Configuration value Exception";
 		break;
 	}
 	return result;
@@ -45,14 +53,7 @@ void SceInputPoint::initFromString(std::string inputLine) {
 }
 
 SceInputPoint::SceInputPoint(std::string inputLine) {
-	delimiter = " ";
 	initFromString(inputLine);
-}
-
-void inputInitialData::addNewPoints(std::vector<SceInputPoint>& newPoints) {
-	for (unsigned int i = 0; i < newPoints.size(); i++) {
-		inputPoints.push_back(newPoints[i]);
-	}
 }
 
 void SceInputPoint::outputToString(std::string &outputLine) {
@@ -64,6 +65,12 @@ void SceInputPoint::outputToString(std::string &outputLine) {
 	s << zCoord << delimiter;
 	s << std::endl;
 	outputLine = s.str();
+}
+
+void inputInitialData::addNewPoints(std::vector<SceInputPoint>& newPoints) {
+	for (unsigned int i = 0; i < newPoints.size(); i++) {
+		inputPoints.push_back(newPoints[i]);
+	}
 }
 
 void inputInitialData::outputToFile(std::string fileName) {

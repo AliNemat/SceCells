@@ -45,8 +45,9 @@ void GlobalConfigVars::insertData(std::string varName, std::string varValue) {
 	while (it != configVars.end()) {
 		if (it->getVarName() == varName) {
 			if (it->getValue().toString().length() != 0) {
-				throw ConfigParserException(
-						"Multiple definition of config value is not permitted");
+				throw SceException(
+						"Multiple definition of config value is not permitted",
+						ConfigValueException);
 			} else {
 				it->setValue(varValue);
 			}
@@ -63,27 +64,14 @@ ConfigVarValue GlobalConfigVars::getConfigValue(std::string varName) {
 	std::tr1::unordered_map<std::string, ConfigVar>::iterator it =
 			configMap.find(varName);
 	if (it == configMap.end()) {
-		throw ConfigParserException(
+		throw SceException(
 				"Error in lookup config varible, following key cannot be found:"
-						+ varName);
+						+ varName, ConfigValueException);
 	} else {
 		//std::cout << "return value:" << (it->second).getValue().toString()
 		//		<< std::endl;
 		return (it->second.getValue());
 	}
-	// following code is depreciated because of bad performance
-	/*
-	 std::vector<ConfigVar>::iterator it = configVars.begin();
-	 while (it != configVars.end()) {
-	 if (it->getVarName() == varName) {
-	 return it->getValue();
-	 }
-	 ++it;
-	 }
-	 throw ConfigParserException(
-	 "Error in lookup config varible, following key cannot be found:"
-	 + varName);
-	 */
 }
 void GlobalConfigVars::printAll() {
 	std::vector<ConfigVar>::iterator it = configVars.begin();
@@ -126,7 +114,9 @@ std::vector<std::string> ConfigParser::splitLineByEqualSign(
 GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 	std::ifstream infile(configFileName.c_str());
 	if (!infile.is_open()) {
-		throw ConfigParserException("Fatal error: Config file not found!");
+		throw SceException(
+				"Fatal error: Config file not found!" + configFileName,
+				ConfigFileNotFound);
 	}
 
 	std::string line;

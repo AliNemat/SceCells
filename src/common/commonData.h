@@ -14,7 +14,7 @@
 typedef unsigned int uint;
 
 enum SceExceptionType {
-	BaseException, InputInitException
+	BaseException, InputInitException, ConfigFileNotFound, ConfigValueException
 };
 
 std::string toString(SceExceptionType type);
@@ -53,6 +53,9 @@ struct RawDataInput {
 	std::vector<CVector> initECMNodePoss;
 };
 
+/**
+ * an data structure that was specifically designed for Beak project.
+ */
 struct SimulationInitData {
 	std::vector<SceNodeType> cellTypes;
 	std::vector<uint> numOfInitActiveNodesOfCells;
@@ -69,7 +72,7 @@ struct SimulationInitData {
 };
 
 struct SceInputPoint {
-	static std::string delimiter;
+	static const std::string delimiter;
 	uint cellRank;
 	SceNodeType cellType;
 	double xCoord;
@@ -97,7 +100,15 @@ struct inputInitialData {
 	void outputToFile(std::string fileName);
 };
 
+/**
+ * Data structure that controls the animation criteria.
+ */
 struct animationCriteria {
+	// If this varible is set to be true, output stress map;
+	// otherwise, output normal animation.
+	bool isStressMap;
+	// We will only animate links that are close enough.
+	double defaultEffectiveDistance;
 
 };
 

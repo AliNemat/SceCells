@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <tr1/unordered_map>
+#include "commonData.h"
 
 #ifndef CONFIGPARSER_H_
 #define CONFIGPARSER_H_
