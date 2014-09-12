@@ -7,17 +7,27 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sstream>
+#include <map>
 
 #ifndef COMMONDATA_H_
 #define COMMONDATA_H_
 
 typedef unsigned int uint;
+typedef std::map<uint, uint> IndexMap;
 
 enum SceExceptionType {
 	BaseException, InputInitException, ConfigFileNotFound, ConfigValueException
 };
 
 std::string toString(SceExceptionType type);
+double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
+		double &yPos2, double &zPos2);
+
+enum SceNodeType {
+	Boundary, Profile, ECM, FNM, MX, Base
+};
+
+double nodeTypeToScale(SceNodeType type);
 
 class SceException: public std::exception {
 private:
@@ -36,10 +46,6 @@ public:
 		return std::string(
 				_message + ", Exception type: " + toString(_exceptionType)).c_str();
 	}
-};
-
-enum SceNodeType {
-	Boundary, Profile, ECM, FNM, MX, Base
 };
 
 struct RawDataInput {
@@ -103,13 +109,43 @@ struct inputInitialData {
 /**
  * Data structure that controls the animation criteria.
  */
-struct animationCriteria {
+struct AnimationCriteria {
 	// If this varible is set to be true, output stress map;
 	// otherwise, output normal animation.
 	bool isStressMap;
 	// We will only animate links that are close enough.
 	double defaultEffectiveDistance;
+	// determines if a potential pair is qualified for animation.
+	bool isPairQualify(uint seq1, uint seq2, double x1, double y1, double z1,
+			SceNodeType t1, uint r1, double x2, double y2, double z2,
+			SceNodeType t2, uint r2);
 
+};
+
+/**
+ * Necessary information to animate a point in VTK.
+ */
+struct PointAniData {
+	// position of the node.
+	CVector pos;
+	// In VTK animation software, color scale represents the relative distance to red and blue;
+	// bigger value means close to red. smaller value means close to blue.
+	double colorScale;
+};
+
+/**
+ * Necessary information to animate a link in VTK.
+ */
+struct LinkAniData {
+	uint node1Index, node2Index;
+};
+
+/**
+ * contains all information need to be
+ */
+struct VtkAnimationData {
+	std::vector<PointAniData> pointsAniData;
+	std::vector<LinkAniData> linksAniData;
 };
 
 #endif /* COMMONDATA_H_ */

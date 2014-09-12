@@ -1204,7 +1204,7 @@ void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 				continue;
 			}
 			ECMCenters.push_back(pos);
-			if (isnan(pos.GetX())) {
+			if (std::isnan(pos.GetX())) {
 				cout
 						<< "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 						<< endl;

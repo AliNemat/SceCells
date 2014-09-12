@@ -597,7 +597,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
  */
 void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
 		int rank) {
-	cerr << "start to output animation " << rank << endl;
+	//cerr << "start to output animation " << rank << endl;
 	//cells_m.distributeIsCellRank();
 	cells_m.distributeIsActiveInfo();
 	thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;

@@ -21,6 +21,31 @@ std::string toString(SceExceptionType type) {
 	return result;
 }
 
+double nodeTypeToScale(SceNodeType type) {
+	double result = 0.0;
+	switch (type) {
+	case Boundary:
+		result = 1;
+		break;
+	case Profile:
+		result = 2;
+		break;
+	case ECM:
+		result = 3;
+		break;
+	case FNM:
+		result = 4;
+		break;
+	case MX:
+		result = 5;
+		break;
+	case Base:
+		result = 6;
+		break;
+	}
+	return result;
+}
+
 void inputInitialData::initFromFile(std::string fileName) {
 	std::ifstream infile(fileName.c_str());
 	if (!infile.is_open()) {
@@ -81,4 +106,33 @@ void inputInitialData::outputToFile(std::string fileName) {
 		outFile << outLine;
 	}
 	outFile.close();
+}
+
+bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
+		double y1, double z1, SceNodeType t1, uint r1, double x2, double y2,
+		double z2, SceNodeType t2, uint r2) {
+	bool condi1 = false, condi2 = false;
+	if (t1 == t2 && r1 == r2) {
+		if (t1 == Boundary || t1 == Profile || t1 == ECM) {
+			if (abs(seq1 - seq2) == 1) {
+				condi1 = true;
+			}
+		} else if (t1 == MX || t1 == FNM) {
+			condi1 = true;
+		}
+		if (condi1) {
+			double dist = compuDistHost(x1, y1, z1, x2, y2, z2);
+			if (dist < defaultEffectiveDistance) {
+				condi2 = true;
+			}
+		}
+	}
+	return condi1 && condi2;
+}
+
+double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
+		double &yPos2, double &zPos2) {
+	return sqrt(
+			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
+					+ (zPos - zPos2) * (zPos - zPos2));
 }

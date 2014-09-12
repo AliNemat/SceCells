@@ -442,6 +442,76 @@ void SceNodes::applyProfileForces() {
 					currentActiveProfileNodeCount));
 }
 
+VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
+	VtkAnimationData vtkData;
+	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs();
+	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
+
+	// unordered_map is more efficient than map, but it is a c++ 11 feature
+	// and c++ 11 seems to be incompatible with Thrust.
+	IndexMap locIndexToAniIndexMap;
+
+	// Doesn't have to copy the entire nodeLocX array.
+	// Only copy the first half will be sufficient
+	thrust::host_vector<double> hostTmpVectorLocX = nodeLocX;
+	thrust::host_vector<double> hostTmpVectorLocY = nodeLocY;
+	thrust::host_vector<double> hostTmpVectorLocZ = nodeLocZ;
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType = nodeCellType;
+	thrust::host_vector<uint> hostTmpVectorNodeRank = nodeCellRank;
+
+	uint curIndex = 0;
+	for (uint i = 0; i < pairs.size(); i++) {
+		uint node1Index = pairs[i].first;
+		uint node2Index = pairs[i].second;
+		double node1X = hostTmpVectorLocX[node1Index];
+		double node1Y = hostTmpVectorLocY[node1Index];
+		double node1Z = hostTmpVectorLocZ[node1Index];
+		SceNodeType node1T = hostTmpVectorNodeType[node1Index];
+		uint node1R = hostTmpVectorNodeRank[node1Index];
+		double node2X = hostTmpVectorLocX[node2Index];
+		double node2Y = hostTmpVectorLocY[node2Index];
+		double node2Z = hostTmpVectorLocZ[node2Index];
+		SceNodeType node2T = hostTmpVectorNodeType[node2Index];
+		uint node2R = hostTmpVectorNodeRank[node2Index];
+
+		if (aniCri.isPairQualify(node1Index, node2Index, node1X, node1Y, node1Z,
+				node1T, node1R, node2X, node2Y, node2Z, node2T, node2R)) {
+			pairsTobeAnimated.push_back(pairs[i]);
+			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].first, curIndex));
+				curIndex++;
+				PointAniData ptAniData;
+				ptAniData.colorScale = nodeTypeToScale(node1T);
+				ptAniData.pos = CVector(node1X, node1Y, node1Z);
+				vtkData.pointsAniData.push_back(ptAniData);
+			}
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].second, curIndex));
+				curIndex++;
+				PointAniData ptAniData;
+				ptAniData.colorScale = nodeTypeToScale(node2T);
+				ptAniData.pos = CVector(node2X, node2Y, node2Z);
+				vtkData.pointsAniData.push_back(ptAniData);
+			}
+
+			it = locIndexToAniIndexMap.find(pairs[i].first);
+			uint aniIndex1 = it->second;
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			uint aniIndex2 = it->second;
+
+			LinkAniData linkData;
+			linkData.node1Index = aniIndex1;
+			linkData.node2Index = aniIndex2;
+			vtkData.linksAniData.push_back(linkData);
+		}
+	}
+	return vtkData;
+}
+
 void SceNodes::addNewlyDividedCells(
 		thrust::device_vector<double> &nodeLocXNewCell,
 		thrust::device_vector<double> &nodeLocYNewCell,
@@ -522,6 +592,7 @@ double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
 					+ (zPos - zPos2) * (zPos - zPos2));
 }
+
 __device__
 void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,

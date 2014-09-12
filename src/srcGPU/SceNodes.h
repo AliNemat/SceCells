@@ -25,6 +25,10 @@
 #include <assert.h>
 #include "commonData.h"
 
+// I wish I could include some c++ 11 data structure here but it seems
+// Thrust is not compatible with c++ 11.
+// #include <unordered_map>
+
 /**
  * @mainpage chicken beak development project main documentation page
  *
@@ -628,6 +632,11 @@ public:
 	 * animation frame.
 	 */
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
+
+	/**
+	 * @Brief This method outputs a data structure for animation.
+	 */
+	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
 
 	/**
 	 * This function copies parameters to GPU constant memory.

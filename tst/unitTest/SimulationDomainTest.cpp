@@ -85,80 +85,79 @@ void generateCellInitInfo(std::string meshInput, uint numberOfInitCells,
 }
 
 /*
-TEST(SingleCellGrowTest,noGrowthTest) {
-	cudaSetDevice(myDeviceID);
-	ConfigParser parser;
-	std::string configFileName = "sceCell.config";
-	globalConfigVars = parser.parseConfigFile(configFileName);
+ TEST(SingleCellGrowTest,noGrowthTest) {
+ cudaSetDevice(myDeviceID);
+ ConfigParser parser;
+ std::string configFileName = "sceCell.config";
+ globalConfigVars = parser.parseConfigFile(configFileName);
 
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
+ double SimulationTotalTime = globalConfigVars.getConfigValue(
+ "SimulationTotalTime").toDouble();
+ double SimulationTimeStep = globalConfigVars.getConfigValue(
+ "SimulationTimeStep").toDouble();
+ int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+ "TotalNumOfOutputFrames").toInt();
 
-	std::string loadMeshInput;
-	std::string animationInput;
-	std::vector < std::string > boundaryMeshFileNames;
-	std::string animationFolder;
-	generateStringInputs(loadMeshInput, animationInput, animationFolder,
-			boundaryMeshFileNames);
+ std::string loadMeshInput;
+ std::string animationInput;
+ std::vector < std::string > boundaryMeshFileNames;
+ std::string animationFolder;
+ generateStringInputs(loadMeshInput, animationInput, animationFolder,
+ boundaryMeshFileNames);
 
-	const double simulationTime = SimulationTotalTime;
-	const double dt = SimulationTimeStep;
-	const int numOfTimeSteps = simulationTime / dt;
-	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	const int outputAnimationAuxVarible = numOfTimeSteps
-			/ totalNumOfOutputFrame;
+ const double simulationTime = SimulationTotalTime;
+ const double dt = SimulationTimeStep;
+ const int numOfTimeSteps = simulationTime / dt;
+ const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
+ const int outputAnimationAuxVarible = numOfTimeSteps
+ / totalNumOfOutputFrame;
 
-	std::vector<double> initCellNodePosX;
-	std::vector<double> initCellNodePosY;
-	std::vector<double> centerPosX;
-	std::vector<double> centerPosY;
+ std::vector<double> initCellNodePosX;
+ std::vector<double> initCellNodePosY;
+ std::vector<double> centerPosX;
+ std::vector<double> centerPosY;
 
-	SimulationDomainGPU simuDomain;
-	// here we only want one cell in region that has no chemical concentration
-	uint numberOfInitCells = 1;
-	generateCellInitInfo(loadMeshInput, numberOfInitCells, initCellNodePosX,
-			initCellNodePosY, centerPosX, centerPosY);
-	std::cout << "finished generate cell info" << std::endl;
-	simuDomain.initializeCells(initCellNodePosX, initCellNodePosY, centerPosX,
-			centerPosY,0);
+ SimulationDomainGPU simuDomain;
+ // here we only want one cell in region that has no chemical concentration
+ uint numberOfInitCells = 1;
+ generateCellInitInfo(loadMeshInput, numberOfInitCells, initCellNodePosX,
+ initCellNodePosY, centerPosX, centerPosY);
+ std::cout << "finished generate cell info" << std::endl;
+ simuDomain.initializeCells(initCellNodePosX, initCellNodePosY, centerPosX,
+ centerPosY,0);
 
-	simuDomain.runAllLogic(dt);
-	EXPECT_NEAR(simuDomain.cells_m.centerCoordX[0], centerPosX[0], errTol);
-	EXPECT_NEAR(simuDomain.cells_m.centerCoordY[0], centerPosY[0], errTol);
-	double chemicalSourceXPos = globalConfigVars.getConfigValue(
-			"GrowthMorCenterXCoord").toDouble();
-	double chemicalSourceYPos = globalConfigVars.getConfigValue(
-			"GrowthMorCenterYCoord").toDouble();
-	int mappedXPosInGrowthMap = centerPosX[0]
-			/ simuDomain.growthMap.gridSpacing;
-	double mappedXCoord = (mappedXPosInGrowthMap + 0.5)
-			* simuDomain.growthMap.gridSpacing;
-	int mappedYPosInGrowthMap = centerPosY[0]
-			/ simuDomain.growthMap.gridSpacing;
-	double mappedYCoord = (mappedYPosInGrowthMap + 0.5)
-			* simuDomain.growthMap.gridSpacing;
-	double distanceToSource = sqrt(
-			(chemicalSourceXPos - mappedXCoord)
-					* (chemicalSourceXPos - mappedXCoord)
-					+ (chemicalSourceYPos - mappedYCoord)
-							* (chemicalSourceYPos - mappedYCoord));
-	double expectedGrowthDirX = (chemicalSourceXPos - mappedXCoord)
-			/ distanceToSource;
-	double expectedGrowthDirY = (chemicalSourceYPos - mappedYCoord)
-			/ distanceToSource;
+ simuDomain.runAllLogic(dt);
+ EXPECT_NEAR(simuDomain.cells_m.centerCoordX[0], centerPosX[0], errTol);
+ EXPECT_NEAR(simuDomain.cells_m.centerCoordY[0], centerPosY[0], errTol);
+ double chemicalSourceXPos = globalConfigVars.getConfigValue(
+ "GrowthMorCenterXCoord").toDouble();
+ double chemicalSourceYPos = globalConfigVars.getConfigValue(
+ "GrowthMorCenterYCoord").toDouble();
+ int mappedXPosInGrowthMap = centerPosX[0]
+ / simuDomain.growthMap.gridSpacing;
+ double mappedXCoord = (mappedXPosInGrowthMap + 0.5)
+ * simuDomain.growthMap.gridSpacing;
+ int mappedYPosInGrowthMap = centerPosY[0]
+ / simuDomain.growthMap.gridSpacing;
+ double mappedYCoord = (mappedYPosInGrowthMap + 0.5)
+ * simuDomain.growthMap.gridSpacing;
+ double distanceToSource = sqrt(
+ (chemicalSourceXPos - mappedXCoord)
+ * (chemicalSourceXPos - mappedXCoord)
+ + (chemicalSourceYPos - mappedYCoord)
+ * (chemicalSourceYPos - mappedYCoord));
+ double expectedGrowthDirX = (chemicalSourceXPos - mappedXCoord)
+ / distanceToSource;
+ double expectedGrowthDirY = (chemicalSourceYPos - mappedYCoord)
+ / distanceToSource;
 
-	EXPECT_NEAR(simuDomain.cells_m.growthXDir[0], expectedGrowthDirX, errTol);
-	EXPECT_NEAR(simuDomain.cells_m.growthYDir[0], expectedGrowthDirY, errTol);
-	EXPECT_NEAR(simuDomain.cells_m.growthSpeed[0], 0.0, errTol);
-	EXPECT_NEAR(simuDomain.cells_m.growthProgress[0], 0.0, errTol);
-	EXPECT_NEAR(simuDomain.cells_m.lastCheckPoint[0], 0.0, errTol);
-	EXPECT_EQ(simuDomain.cells_m.isDivided[0], false);
-	EXPECT_EQ(simuDomain.cells_m.isScheduledToGrow[0], false);
-}
-*/
-
+ EXPECT_NEAR(simuDomain.cells_m.growthXDir[0], expectedGrowthDirX, errTol);
+ EXPECT_NEAR(simuDomain.cells_m.growthYDir[0], expectedGrowthDirY, errTol);
+ EXPECT_NEAR(simuDomain.cells_m.growthSpeed[0], 0.0, errTol);
+ EXPECT_NEAR(simuDomain.cells_m.growthProgress[0], 0.0, errTol);
+ EXPECT_NEAR(simuDomain.cells_m.lastCheckPoint[0], 0.0, errTol);
+ EXPECT_EQ(simuDomain.cells_m.isDivided[0], false);
+ EXPECT_EQ(simuDomain.cells_m.isScheduledToGrow[0], false);
+ }
+ */
 

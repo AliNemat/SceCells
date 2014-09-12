@@ -976,6 +976,170 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	}
 }
 
+/**
+ * This test function was setup to verify if output animation method was properly setup.
+ */ //
+TEST_F(SceNodeTest, outputAnimationLinks) {
+	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
+	// means that we have four nodes.
+	SceNodes nodes = SceNodes(2, 0, 0, 0, 2, 2);
+	const uint testCellCount = 2;
+	const uint testNodePerCell = 2;
+	const uint testTotalNodeCount = 6;
+	nodes.setCurrentActiveCellCount(testCellCount);
+	nodes.maxNodeOfOneCell = testCellCount;
+	thrust::host_vector<double> nodeLocXHost(testTotalNodeCount);
+	thrust::host_vector<double> nodeLocYHost(testTotalNodeCount);
+	thrust::host_vector<double> nodeLocZHost(testTotalNodeCount);
+	thrust::host_vector<bool> nodeIsActiveHost(testTotalNodeCount);
+	thrust::host_vector<uint> nodeExpectedBucket(testTotalNodeCount);
+	const double minX = -1.34;
+	const double maxX = 2;
+	const double minY = -0.5;
+	const double maxY = 2.6;
+	//const double minZ = 0.0;
+	//const double maxZ = 0.0;
+	const double bucketSize = 0.3;
+	nodes.initDimension(minX, maxX, minY, maxY, bucketSize);
+	nodeLocXHost[0] = -0.3;      // (-0.3 - (-1.34)) / 0.3 = 3
+	nodeLocYHost[0] = -0.39;     // (-0.39 - (-0.5)) / 0.3 = 0
+	nodeIsActiveHost[0] = true;
+	// 0 * 12 + 3 = 3
+	nodeExpectedBucket[0] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[0], nodeLocYHost[0]);
+
+	nodeLocXHost[1] = 0.0;       // (0.0 - (-1.34)) / 0.3 = 4
+	nodeLocYHost[1] = -0.3;      // (-0.3 - (-0.5)) / 0.3 = 0
+	nodeIsActiveHost[1] = true;
+	// 0 * 12 + 4 = 4
+	nodeExpectedBucket[1] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[1], nodeLocYHost[1]);
+
+	nodeLocXHost[2] = 0.3;       // (0.3 - (-1.34)) / 0.3 = 5
+	nodeLocYHost[2] = -0.09;     // (-0.09 - (-0.5)) / 0.3 = 1
+	nodeIsActiveHost[2] = true;
+	// 1 * 12 + 5 = 17
+	nodeExpectedBucket[2] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[2], nodeLocYHost[2]);
+
+	nodeLocXHost[3] = 0.21;      // (0.21 - (-1.34)) / 0.3 = 5
+	nodeLocYHost[3] = -0.1;      // (-0.1 - (-0.5)) / 0.3 = 1
+	nodeIsActiveHost[3] = true;
+	// 1 * 12 + 5 = 17
+	nodeExpectedBucket[3] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[3], nodeLocYHost[3]);
+
+	nodeLocXHost[4] = 0.82;       // (0.82 - (-1.34)) / 0.3 = 7
+	nodeLocYHost[4] = 0.51;      // (0.51 - (-0.5)) / 0.3 = 3
+	nodeIsActiveHost[4] = false; // intentionally mark it inactive
+	// 3 * 12 + 7 = 43
+	nodeExpectedBucket[4] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[4], nodeLocYHost[4]);
+
+	nodeLocXHost[5] = 0.5;       // (0.5 - (-1.34)) / 0.3 = 6
+	nodeLocYHost[5] = 0.25;      // (0.25 - (-0.5)) / 0.3 = 2
+	nodeIsActiveHost[5] = true;
+	// 2 * 12 + 6 = 30
+	nodeExpectedBucket[5] = calculateBucketKey(minX, maxX, minY, maxY,
+			bucketSize, nodeLocXHost[5], nodeLocYHost[5]);
+
+	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1; // (2 - (-1.34)) / 0.3 + 1 = 12
+	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1; // (2.6 - (-0.5)) / 0.3 + 1 = 11
+
+	nodes.nodeLocX = nodeLocXHost;
+	nodes.nodeLocY = nodeLocYHost;
+	nodes.nodeLocZ = nodeLocZHost;
+	nodes.nodeIsActive = nodeIsActiveHost;
+	nodes.buildBuckets2D();
+	nodes.extendBuckets2D();
+	// This step is necessary for
+	nodes.applySceForces();
+	thrust::host_vector<uint> keysFromGPU = nodes.bucketKeys;
+	thrust::host_vector<uint> valuesFromGPU = nodes.bucketValues;
+	uint activeNodeCount = 0;
+	for (uint i = 0; i < nodeIsActiveHost.size(); i++) {
+		if (nodeIsActiveHost[i] == true) {
+			activeNodeCount++;
+		}
+	}
+	EXPECT_EQ(keysFromGPU.size(), activeNodeCount);
+	EXPECT_EQ(keysFromGPU.size(), valuesFromGPU.size());
+	for (uint i = 0; i < keysFromGPU.size(); i++) {
+		uint nodeRank = valuesFromGPU[i];
+		uint expectedResultFromCPU = nodeExpectedBucket[nodeRank];
+		EXPECT_EQ(expectedResultFromCPU, keysFromGPU[i]);
+	}
+
+	// make sure that size matches our expectation
+	std::vector<std::pair<uint, uint> > possiblePairs =
+			nodes.obtainPossibleNeighborPairs();
+	EXPECT_EQ((uint )6, possiblePairs.size());
+
+	sort(possiblePairs.begin(), possiblePairs.end());
+	std::vector<std::pair<uint, uint> > expectedPairs;
+	expectedPairs.push_back(std::make_pair<uint, uint>(0, 1));
+	expectedPairs.push_back(std::make_pair<uint, uint>(1, 2));
+	expectedPairs.push_back(std::make_pair<uint, uint>(1, 3));
+	expectedPairs.push_back(std::make_pair<uint, uint>(2, 3));
+	expectedPairs.push_back(std::make_pair<uint, uint>(2, 5));
+	expectedPairs.push_back(std::make_pair<uint, uint>(3, 5));
+
+	// make sure that the possible pairs data matches our expectation.
+	for (uint i = 0; i < possiblePairs.size(); i++) {
+		EXPECT_EQ(possiblePairs[i], expectedPairs[i]);
+	}
+
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+			"IntraLinkDisplayRange").toDouble();
+	VtkAnimationData vtkData = nodes.obtainAnimationData(aniCri);
+
+	EXPECT_EQ((uint )4, vtkData.pointsAniData.size());
+	EXPECT_EQ((uint )2, vtkData.linksAniData.size());
+
+	std::vector<PointAniData> expectedAniPoints;
+	PointAniData ptData;
+	ptData.pos = CVector(nodeLocXHost[0], nodeLocYHost[0], 0.0);
+	ptData.colorScale = nodeTypeToScale(Boundary);
+	expectedAniPoints.push_back(ptData);
+	ptData.pos = CVector(nodeLocXHost[1], nodeLocYHost[1], 0.0);
+	ptData.colorScale = nodeTypeToScale(Boundary);
+	expectedAniPoints.push_back(ptData);
+	ptData.pos = CVector(nodeLocXHost[2], nodeLocYHost[2], 0.0);
+	ptData.colorScale = nodeTypeToScale(FNM);
+	expectedAniPoints.push_back(ptData);
+	ptData.pos = CVector(nodeLocXHost[3], nodeLocYHost[3], 0.0);
+	ptData.colorScale = nodeTypeToScale(FNM);
+	expectedAniPoints.push_back(ptData);
+
+	std::vector<LinkAniData> expectedAniPairs;
+	LinkAniData linkData;
+	linkData.node1Index = 0;
+	linkData.node2Index = 1;
+	expectedAniPairs.push_back(linkData);
+	linkData.node1Index = 2;
+	linkData.node2Index = 3;
+	expectedAniPairs.push_back(linkData);
+
+	for (uint i = 0; i < expectedAniPairs.size(); i++) {
+		EXPECT_EQ(expectedAniPairs[i].node1Index,
+				vtkData.linksAniData[i].node1Index);
+		EXPECT_EQ(expectedAniPairs[i].node2Index,
+				vtkData.linksAniData[i].node2Index);
+	}
+
+	for (uint i = 0; i < expectedAniPoints.size(); i++) {
+		EXPECT_NEAR(expectedAniPoints[i].pos.x, vtkData.pointsAniData[i].pos.x,
+				errTol);
+		EXPECT_NEAR(expectedAniPoints[i].pos.y, vtkData.pointsAniData[i].pos.y,
+				errTol);
+		EXPECT_NEAR(expectedAniPoints[i].pos.z, vtkData.pointsAniData[i].pos.z,
+				errTol);
+		EXPECT_NEAR(expectedAniPoints[i].colorScale,
+				vtkData.pointsAniData[i].colorScale, errTol);
+	}
+}
+
 /*
  TEST_F(SceNodeTest, addForceFixedNeighborTest) {
  cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
