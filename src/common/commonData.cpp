@@ -136,3 +136,46 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
 					+ (zPos - zPos2) * (zPos - zPos2));
 }
+
+void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank,
+		AnimationCriteria aniCri) {
+	std::stringstream ss;
+	ss << std::setw(5) << std::setfill('0') << rank;
+	std::string scriptNameRank = ss.str();
+	std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
+	std::cout << "start to create vtk file" << vtkFileName << std::endl;
+	std::ofstream fs;
+	fs.open(vtkFileName.c_str());
+	fs << "# vtk DataFile Version 3.0" << std::endl;
+	fs << "Lines and points representing subcelluar element cells "
+			<< std::endl;
+	fs << "ASCII" << std::endl;
+	fs << std::endl;
+	fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
+	fs << "POINTS " << pointsAniData.size() << " float" << std::endl;
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].pos.x << " " << pointsAniData[i].pos.y << " "
+				<< pointsAniData[i].pos.z << std::endl;
+	}
+
+	fs << std::endl;
+	fs << "CELLS " << linksAniData.size() << " " << 3 * linksAniData.size()
+			<< std::endl;
+	for (uint i = 0; i < linksAniData.size(); i++) {
+		fs << 2 << " " << linksAniData[i].node1Index << " "
+				<< linksAniData[i].node2Index << std::endl;
+	}
+	fs << "CELL_TYPES " << linksAniData.size() << endl;
+	for (uint i = 0; i < linksAniData.size(); i++) {
+		fs << "3" << endl;
+	}
+	fs << "POINT_DATA " << pointsAniData.size() << endl;
+	fs << "SCALARS point_scalars float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].colorScale << endl;
+	}
+
+	fs.close();
+}

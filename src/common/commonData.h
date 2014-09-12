@@ -8,6 +8,9 @@
 #include <math.h>
 #include <sstream>
 #include <map>
+#include <sstream>
+#include <iomanip>
+#include <fstream>
 
 #ifndef COMMONDATA_H_
 #define COMMONDATA_H_
@@ -146,6 +149,8 @@ struct LinkAniData {
 struct VtkAnimationData {
 	std::vector<PointAniData> pointsAniData;
 	std::vector<LinkAniData> linksAniData;
+	void outputVtkAni(std::string scriptNameBase, int rank,
+			AnimationCriteria aniCri);
 };
 
 #endif /* COMMONDATA_H_ */

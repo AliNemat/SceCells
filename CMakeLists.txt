@@ -44,7 +44,8 @@ set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/src/ext)
 SET(CMAKE_BUILD_DIR ${CMAKE_SOURCE_DIR}/bin)
 #location of unit test files
 SET(CMAKE_UNITTEST_DIR ${CMAKE_SOURCE_DIR}/tst/unitTest)
-#location of model test files
+#location of perfermance test files
+SET(CMAKE_PERFTEST_DIR ${CMAKE_SOURCE_DIR}/tst/perfTest)
 #SET(CMAKE_MODELTEST_DIR ${CMAKE_SOURCE_DIR}/modelTest)
 
 
