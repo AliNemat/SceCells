@@ -12,13 +12,16 @@ TimedObject::TimedObject() {
 }
 
 double TimedObject::countExecutionTime(RunConfig cfg) {
-	double result;
+	double result = -1.0;
 	switch (cfg.type) {
 	case SortGPU:
 		return countGPUSorting(cfg.size, cfg.randomRange);
 	case SortCPU:
 		return countCPUSorting(cfg.size, cfg.randomRange);
+	case SceNodeGPU:
+		return countSceMove(cfg.size);
 	}
+	return result;
 }
 
 double TimedObject::countCPUSorting(uint size, double randomRange) {
@@ -62,6 +65,63 @@ double TimedObject::countGPUSorting(uint size, double randomRange) {
 	double gpuSortingTime = elapsedTime / 1000.0;
 
 	return gpuSortingTime;
+
+}
+
+void TimedObject::loadInitSceData(std::vector<CVector> nodeInitPosData,
+		std::vector<CVector> centerInitPosData) {
+	nodeInitPos = nodeInitPosData;
+	centerInitPos = centerInitPosData;
+}
+
+double TimedObject::countSceMove(uint size) {
+
+	double minX = globalConfigVars.getConfigValue("DOMAIN_XMIN").toDouble();
+	double maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
+	double minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
+	double maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
+
+	double gridSpacing =
+			globalConfigVars.getConfigValue("Cell_Center_Interval").toDouble();
+
+	std::vector<double> emptyVector;
+	std::vector<double> nodeXVector(size * 20);
+	std::vector<double> nodeYVector(size * 20);
+
+	utils.transformVals(nodeXVector, nodeYVector, nodeInitPos, centerInitPos);
+
+	SceNodes nodes = SceNodes(0, 0, 0, 0, size, 20);
+	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
+	nodes.setCurrentActiveCellCount(size);
+
+	nodes.initValues(emptyVector, emptyVector, emptyVector, emptyVector,
+			emptyVector, emptyVector, emptyVector, emptyVector, nodeXVector,
+			nodeYVector);
+	thrust::fill(nodes.nodeIsActive.begin(), nodes.nodeIsActive.end(), true);
+
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = 0.4;
+
+	cudaEvent_t start, stop;
+	float elapsedTime;
+
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+
+	for (uint i = 0; i < 3000; i++) {
+		//VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
+		//aniData.outputVtkAni("./animation/testVtk.vtk", i);
+		nodes.calculateAndApplySceForces();
+	}
+
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	// elapsedTime is in unit of ms
+	double gpuSceMoveTime = elapsedTime / 1000.0;
+
+	return gpuSceMoveTime;
 
 }
 

@@ -137,8 +137,7 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 					+ (zPos - zPos2) * (zPos - zPos2));
 }
 
-void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank,
-		AnimationCriteria aniCri) {
+void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	std::stringstream ss;
 	ss << std::setw(5) << std::setfill('0') << rank;
 	std::string scriptNameRank = ss.str();

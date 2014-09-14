@@ -149,8 +149,7 @@ struct LinkAniData {
 struct VtkAnimationData {
 	std::vector<PointAniData> pointsAniData;
 	std::vector<LinkAniData> linksAniData;
-	void outputVtkAni(std::string scriptNameBase, int rank,
-			AnimationCriteria aniCri);
+	void outputVtkAni(std::string scriptNameBase, int rank);
 };
 
 #endif /* COMMONDATA_H_ */

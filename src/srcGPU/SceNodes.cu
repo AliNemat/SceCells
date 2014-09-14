@@ -70,12 +70,13 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	maxNodePerECM = maxNodeInECM;
 	maxECMCount = maxTotalECMCount;
 	this->maxProfileNodeCount = maxProfileNodeCount;
+	//std::cout << "break point 1" << std::endl;
 	currentActiveProfileNodeCount = 0;
 	BdryNodeCount = totalBdryNodeCount;
 	currentActiveCellCount = 0;
 	maxTotalECMNodeCount = maxECMCount * maxNodePerECM;
 	currentActiveECM = 0;
-
+	//std::cout << "break point 2" << std::endl;
 	// will need to change this value after we have more detail about ECM
 	maxTotalCellNodeCount = maxTotalCellCount * maxNodeOfOneCell;
 
@@ -87,12 +88,16 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	//std::cout << "maxTotalNodeCount = " << maxTotalNodeCount << std::endl;
 	//thrust::host_vector<bool> nodeIsActiveHost
 
+	//std::cout << "max Total Node count = " << maxTotalNodeCount << std::endl;
+
 	nodeLocX.resize(maxTotalNodeCount);
+	//std::cout << "break point 3" << std::endl;
 	nodeLocY.resize(maxTotalNodeCount);
 	nodeLocZ.resize(maxTotalNodeCount);
 	nodeVelX.resize(maxTotalNodeCount);
 	nodeVelY.resize(maxTotalNodeCount);
 	nodeVelZ.resize(maxTotalNodeCount);
+	//std::cout << "break point 4" << std::endl;
 	nodeMaxForce.resize(maxTotalNodeCount);
 	nodeCellType.resize(maxTotalNodeCount);
 	nodeCellRank.resize(maxTotalNodeCount);
@@ -102,9 +107,9 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	startPosECM = startPosProfile + maxProfileNodeCount;
 	startPosCells = startPosECM + maxTotalECMNodeCount;
 
-	std::cout << "start pos Profile = " << startPosProfile << ", startPosECM = "
-			<< startPosECM << ", startPosCells = " << startPosCells
-			<< std::endl;
+	//std::cout << "start pos Profile = " << startPosProfile << ", startPosECM = "
+	//		<< startPosECM << ", startPosCells = " << startPosCells
+	//		<< std::endl;
 	//int jj;
 	//std::cin >> jj;
 
@@ -895,6 +900,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 			}
 		}
 	}
+
 	// this means that both nodes come from ECM and from same ECM
 	else if (type1 == ECM && type2 == ECM && isSameECM(nodeRank1, nodeRank2)) {
 		if (isNeighborECMNodes(nodeRank1, nodeRank2)) {
@@ -923,6 +929,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
 				yRes, zRes);
 	}
+
 }
 
 void SceNodes::extendBuckets2D() {
@@ -1067,14 +1074,14 @@ void SceNodes::applySceForces() {
 void SceNodes::calculateAndApplySceForces() {
 	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
 	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
-	std::cout << "in SceNodes, before build buckets 2D:" << std::endl;
+	//std::cout << "in SceNodes, before build buckets 2D:" << std::endl;
 	buildBuckets2D();
-	std::cout << "in SceNodes, before extend buckets 2D:" << std::endl;
+	//std::cout << "in SceNodes, before extend buckets 2D:" << std::endl;
 	extendBuckets2D();
-	std::cout << "in SceNodes, before apply sce forces:" << std::endl;
+	//std::cout << "in SceNodes, before apply sce forces:" << std::endl;
 	applySceForces();
-	std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
+	//std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
 	applyProfileForces();
-	std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
+	//std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
 }
 

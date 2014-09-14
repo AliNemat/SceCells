@@ -46,6 +46,7 @@ public:
 	UnstructMesh2D();
 	void outputVtkFile(std::string outputFileName);
 	std::vector<GEOMETRY::Point2D> outputTriangleCenters();
+	std::vector<GEOMETRY::Point2D> outputTriangleVerticies();
 	virtual ~UnstructMesh2D();
 };
 

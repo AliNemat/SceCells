@@ -11,6 +11,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/reduce.h>
 #include <thrust/sort.h>
+#include <thrust/fill.h>
 #include <thrust/generate.h>
 #include <cuda_runtime.h>
 #include <algorithm>
@@ -20,7 +21,7 @@
 #define TIMEDOBJECT_H_
 
 enum PerfTestType {
-	SortGPU, SortCPU
+	SortGPU, SortCPU, SceNodeGPU
 };
 
 /**
@@ -36,12 +37,17 @@ class TimedObject {
 
 	double countCPUSorting(uint size, double randomRange);
 	double countGPUSorting(uint size, double randomRange);
+	double countSceMove(uint size);
 	bool isSortingDataInitialized;
 	std::vector<double> initialVectorForSorting;
-
+	std::vector<CVector> nodeInitPos;
+	std::vector<CVector> centerInitPos;
 	PerfTestUtils utils;
+
 public:
 	TimedObject();
+	void loadInitSceData(std::vector<CVector> nodeInitPosData,
+			std::vector<CVector> centerInitPosData);
 	double countExecutionTime(RunConfig cfg);
 	virtual ~TimedObject();
 };

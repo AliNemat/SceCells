@@ -28,6 +28,22 @@ std::vector<GEOMETRY::Point2D> UnstructMesh2D::outputTriangleCenters() {
 	return result;
 }
 
+std::vector<GEOMETRY::Point2D> UnstructMesh2D::outputTriangleVerticies() {
+	std::vector<GEOMETRY::Point2D> result;
+	int triCount = triangles.size();
+	for (int i = 0; i < triCount; i++) {
+		Point2D center;
+		center.setX(
+				(points[triangles[i][0]].getX() + points[triangles[i][1]].getX()
+						+ points[triangles[i][2]].getX()) / 3.0);
+		center.setY(
+				(points[triangles[i][0]].getY() + points[triangles[i][1]].getY()
+						+ points[triangles[i][2]].getY()) / 3.0);
+		result.push_back(center);
+	}
+	return result;
+}
+
 UnstructMesh2D::~UnstructMesh2D() {
 
 }
