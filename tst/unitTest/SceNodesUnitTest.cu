@@ -938,10 +938,11 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	nodes.nodeLocY = nodeLocYHost;
 	nodes.nodeLocZ = nodeLocZHost;
 	nodes.nodeIsActive = nodeIsActiveHost;
-	nodes.buildBuckets2D();
+	nodes.prepareSceForceComputation();
+	//nodes.buildBuckets2D();
 	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1; // (2 - (-1.34)) / 0.3 + 1 = 12
 	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1; // (2.6 - (-0.5)) / 0.3 + 1 = 11
-	nodes.extendBuckets2D();
+	//nodes.extendBuckets2D();
 
 	thrust::host_vector<uint> extendedKeysFromGPU = nodes.bucketKeysExpanded;
 	thrust::host_vector<uint> extendValuesFromGPU =
@@ -957,7 +958,7 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	}
 
 	// keyBegin and keyEnd will be built in this step
-	nodes.applySceForces();
+	//nodes.applySceForces();
 
 	// make sure that size matches our expectation
 	std::vector<std::pair<uint, uint> > possiblePairs =
@@ -1050,10 +1051,11 @@ TEST_F(SceNodeTest, outputAnimationLinks) {
 	nodes.nodeLocY = nodeLocYHost;
 	nodes.nodeLocZ = nodeLocZHost;
 	nodes.nodeIsActive = nodeIsActiveHost;
-	nodes.buildBuckets2D();
-	nodes.extendBuckets2D();
+	//nodes.buildBuckets2D();
+	//nodes.extendBuckets2D();
 	// This step is necessary for
-	nodes.applySceForces();
+	//nodes.applySceForces();
+	nodes.prepareSceForceComputation();
 	thrust::host_vector<uint> keysFromGPU = nodes.bucketKeys;
 	thrust::host_vector<uint> valuesFromGPU = nodes.bucketValues;
 	uint activeNodeCount = 0;

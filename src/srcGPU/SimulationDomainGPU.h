@@ -11,6 +11,7 @@
 #include <fstream>
 #include <string>
 
+
 /**
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */

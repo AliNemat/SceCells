@@ -24,6 +24,8 @@
 #include "ConfigParser.h"
 #include <assert.h>
 #include "commonData.h"
+#include "commonGPUData.h"
+#include <ctime>
 
 // I wish I could include some c++ 11 data structure here but it seems
 // Thrust is not compatible with c++ 11.
@@ -128,7 +130,7 @@ struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
  */
 struct Prg {
 	double a, b;
-
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	Prg(double _a = 0.f, double _b = 1.f) :
 			a(_a), b(_b) {
@@ -170,7 +172,6 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 					- _minX) / _bucketSize);
 			unsigned int y = static_cast<unsigned int>((thrust::get<1>(v)
 					- _minY) / _bucketSize);
-
 			// return the bucket's linear index and node's global index
 			return thrust::make_tuple(y * width + x, thrust::get<4>(v));
 		} else {
@@ -522,8 +523,8 @@ struct isLessThan: public thrust::unary_function<uint, bool> {
  */
 class SceNodes {
 public:
-	SceNodes() {
-	}
+	SceNodes();
+
 	// in the new version, we need to initialize the nodes together with initial
 	// boundary nodes and initial profile nodes.
 	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
@@ -656,6 +657,15 @@ public:
 	 */
 	void extendBuckets2D();
 
+	/**
+	 * this method prepares data for apply Sce forces.
+	 */
+	void findBucketBounds();
+
+	/**
+	 * this method contains all preparsion work for SCE force calculation.
+	 */
+	void prepareSceForceComputation();
 	/**
 	 * @brief This is the most important part of the parallel algorithm.
 	 * For each particle in SCE model (represented by bucketValues here),

@@ -278,20 +278,20 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	// find the begining position of Profile.
 
 	assert(nodes.startPosProfile == bdryNodeCountX);
-	uint beginAddressOfProfile = nodes.startPosProfile;
+	//uint beginAddressOfProfile = nodes.startPosProfile;
 	// find the begining position of ECM.
-	uint beginAddressOfECM = nodes.startPosECM;
+	//uint beginAddressOfECM = nodes.startPosECM;
 	// find the begining position of FNM cells.
 	uint beginAddressOfFNM = nodes.startPosCells;
 	// find the begining position of MX cells.
-	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
+	//uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
 
 	// initialize the cell ranks and types
 
-	int numOfCellEachLevel[] = { bdryQuotient, profileQuotient, ecmQuotient,
-			fnmQuotient, mxQuotient };
-	int nodesPerCellEachLevel[] = { bdryNodeCount, maxProfileNodeCount,
-			maxNodePerECM, maxNodePerCell, maxNodePerCell };
+	//int numOfCellEachLevel[] = { bdryQuotient, profileQuotient, ecmQuotient,
+	//		fnmQuotient, mxQuotient };
+	//int nodesPerCellEachLevel[] = { bdryNodeCount, maxProfileNodeCount,
+	//		maxNodePerECM, maxNodePerCell, maxNodePerCell };
 	uint totalSize = nodes.nodeLocX.size();
 	//thrust::host_vector<CellType> allNodeTypes;
 	//thrust::host_vector<int> cellRanks;
@@ -393,9 +393,9 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	 */
 	// set cell types
 	cells_m.setCellTypes(cellTypesToPass);
-
-	cout << "finished initialize cells of five types" << endl;
-	cout << "press any key to continue" << endl;
+	cells_m.distributeIsActiveInfo();
+	//cout << "finished initialize cells of five types" << endl;
+	//cout << "press any key to continue" << endl;
 	//int jj;
 	//cin >> jj;
 }
@@ -417,16 +417,8 @@ void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
  *
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
-
 	nodes.calculateAndApplySceForces();
-	//nodes.move(dt);
-	//cells.growAndDivide(dt, growthMap.growthFactorMag,
-	//		growthMap.growthFactorDirXComp, growthMap.growthFactorDirYComp,
-	//		growthMap.gridDimensionX, growthMap.gridDimensionY,
-	//		growthMap.gridSpacing);
-	// cells.growAndDivide(dt, growthMap, growthMap2);
 	cells_m.runAllCellLevelLogics(dt, growthMap, growthMap2);
-	// cells.runAllCellLevelLogics(dt,growthMap,growthMap2);
 }
 
 /**
@@ -1018,7 +1010,17 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank) {
-	nodes.obtainPossibleNeighborPairs();
+	nodes.prepareSceForceComputation();
+	//nodes.obtainPossibleNeighborPairs()
+	cout << "after prepare SCE" << endl;
+	//int jj;
+	//cin >> jj;
+	//nodes.obtainPossibleNeighborPairs();
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
+	aniCri.isStressMap = 1;
+	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
+	aniData.outputVtkAni(scriptNameBase, rank);
 }
 
 void SimulationDomainGPU::checkIfAllDataFieldsValid() {

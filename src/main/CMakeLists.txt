@@ -7,12 +7,14 @@ file(GLOB SRC_FILES ./beakMain.cpp)
 cuda_add_executable(${BEAK_PROJECT_NAME} ${SRC_FILES})
 add_dependencies(${BEAK_PROJECT_NAME} googletest)
 add_dependencies(${BEAK_PROJECT_NAME} SceGPU)
+#add_dependencies(${BEAK_PROJECT_NAME} SceUtilsGPU)
 
 if(NOT WIN32)
         target_link_libraries(${BEAK_PROJECT_NAME} pthread)
         target_link_libraries(${BEAK_PROJECT_NAME} SceGPU)
         target_link_libraries(${BEAK_PROJECT_NAME} SceInit)
         target_link_libraries(${BEAK_PROJECT_NAME} SceUtils)
+        #target_link_libraries(${BEAK_PROJECT_NAME} SceUtilsGPU)
         target_link_libraries(${BEAK_PROJECT_NAME}
                 ${GTEST_LIBS_DIR}/libgtest.a
                 ${GTEST_LIBS_DIR}/libgtest_main.a
@@ -39,6 +41,7 @@ if(NOT WIN32)
         target_link_libraries(${DISK_PROJECT_NAME} SceGPU)
         target_link_libraries(${DISK_PROJECT_NAME} SceInit)
         target_link_libraries(${DISK_PROJECT_NAME} SceUtils)
+        #target_link_libraries(${DISK_PROJECT_NAME} SceUtilsGPU)
 
         target_link_libraries(${DISK_PROJECT_NAME}
                 ${GTEST_LIBS_DIR}/libgtest.a

@@ -12,9 +12,13 @@ CUDA_ADD_LIBRARY(SceGPU
 	SceCells.cu
 	SimulationDomainGPU.h
 	SimulationDomainGPU.cu
-        ${COMMON_INCLUDES}/commonData.h
+    ${COMMON_INCLUDES}/commonData.h
+    #${COMMON_INCLUDES}/commonGPUData.h
+    #${COMMON_INCLUDES}/commonGPUData.cu
 	#CellInitHelper.cpp
-        #CellInitHelper.h
+    #CellInitHelper.h
 )
+#target_link_libraries(SceGPU SceUtilsGPU)
+#target_link_libraries(SceGPU ${COMMON_INCLUDES}/libSceUtilsGPU.a)
 #target_link_libraries(SceGPU ${CPU_SOURCE_DIR}/libSceCPU.a)
 #target_link_libraries(SceGPU ${CPU_SOURCE_DIR}/Utils/libSceUtils.a)

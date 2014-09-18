@@ -29,6 +29,7 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 enum SceNodeType {
 	Boundary, Profile, ECM, FNM, MX, Base
 };
+std::string toString(SceNodeType type);
 
 double nodeTypeToScale(SceNodeType type);
 

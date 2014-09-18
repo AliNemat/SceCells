@@ -21,6 +21,31 @@ std::string toString(SceExceptionType type) {
 	return result;
 }
 
+std::string toString(SceNodeType type) {
+	std::string result("Undefined type");
+	switch (type) {
+	case Boundary:
+		result = "Boundary";
+		break;
+	case Profile:
+		result = "Profile";
+		break;
+	case ECM:
+		result = "ECM";
+		break;
+	case FNM:
+		result = "FNM";
+		break;
+	case MX:
+		result = "MX";
+		break;
+	case Base:
+		result = "Base";
+		break;
+	}
+	return result;
+}
+
 double nodeTypeToScale(SceNodeType type) {
 	double result = 0.0;
 	switch (type) {
@@ -112,6 +137,12 @@ bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 		double y1, double z1, SceNodeType t1, uint r1, double x2, double y2,
 		double z2, SceNodeType t2, uint r2) {
 	bool condi1 = false, condi2 = false;
+	//std::cout << "seq 1 = " << seq1 << "point1 = (" << x1 << "," << y1 << ","
+	//		<< z1 << ") type = " << toString(t1) << "ranking = " << r1
+	//		<< std::endl;
+	//std::cout << "seq 2 = " << seq2 << "point2 = (" << x2 << "," << y2 << ","
+	//		<< z2 << ") type = " << toString(t2) << "ranking = " << r2
+	//		<< std::endl;
 	if (t1 == t2 && r1 == r2) {
 		if (t1 == Boundary || t1 == Profile || t1 == ECM) {
 			if (abs(seq1 - seq2) == 1) {
@@ -126,7 +157,9 @@ bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 				condi2 = true;
 			}
 		}
+		//cout << "at least in the same cell" << endl;
 	}
+	//cout << " condition 1: " << condi1 << ", condition 2: " << condi2 << endl;
 	return condi1 && condi2;
 }
 

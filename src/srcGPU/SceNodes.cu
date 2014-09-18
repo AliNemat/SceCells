@@ -61,6 +61,12 @@ OutputIterator expand(InputIterator1 first1, InputIterator1 last1,
 	return output;
 }
 
+SceNodes::SceNodes() {
+	currentActiveECM = 0;
+	maxNodePerECM = 0;
+	currentActiveProfileNodeCount = 0;
+}
+
 SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
 		uint maxNodeInCell) {
@@ -307,6 +313,8 @@ void SceNodes::initDimension(double domainMinX, double domainMaxX,
 }
 
 std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
+	//std::clock_t t1, t2, t3, t4, t5, t6;
+	//t1 = std::clock();
 	std::vector<std::pair<uint, uint> > result;
 	thrust::host_vector<uint> keyBeginCPU = keyBegin;
 	thrust::host_vector<uint> keyEndCPU = keyEnd;
@@ -315,9 +323,26 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 	thrust::host_vector<uint> bucketValuesExtendedCPU =
 			bucketValuesIncludingNeighbor;
 
-	//cout << "sizes = " << keyBeginCPU.size() << " " << keyEndCPU.size() << " "
-	//		<< bucketKeysCPU.size() << " " << bucketValuesCPU.size() << " "
-	//		<< bucketValuesExtendedCPU.size() << endl;
+	//t2 = std::clock();
+
+	//std::vector<uint> keyBeginStd(keyBeginCPU.size());
+	//std::vector<uint> keyEndStd(keyBeginCPU.size());
+	//std::vector<uint> bucketKeysStd(bucketKeysCPU.size());
+	//std::vector<uint> bucketValuesStd(bucketValuesCPU.size());
+	//std::vector<uint> bucketValuesExtendedStd(bucketValuesExtendedCPU.size());
+
+	//thrustVecToStd<uint>(keyBeginCPU, keyBeginStd);
+	//thrustVecToStd<uint>(keyEndCPU, keyEndStd);
+	//thrustVecToStd<uint>(bucketKeysCPU, bucketKeysStd);
+	//thrustVecToStd<uint>(bucketValuesCPU, bucketValuesStd);
+	//thrustVecToStd<uint>(bucketValuesExtendedCPU, bucketValuesExtendedStd);
+
+	cout << "sizes = " << keyBeginCPU.size() << " " << keyEndCPU.size() << " "
+			<< bucketKeysCPU.size() << " " << bucketValuesCPU.size() << " "
+			<< bucketValuesExtendedCPU.size() << endl;
+
+	//t3 = std::clock();
+	uint iterationCounter = 0;
 
 	int size = bucketKeysCPU.size();
 	for (int i = 0; i < size; i++) {
@@ -325,16 +350,60 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 				j < keyEndCPU[bucketKeysCPU[i]]; j++) {
 			//std::cout << "pair node 1: " << bucketValues[i] << ",pair node2: "
 			//		<< bucketValuesIncludingNeighbor[j] << std::endl;
-			int node1 = bucketValues[i];
-			int node2 = bucketValuesIncludingNeighbor[j];
+			int node1 = bucketValuesCPU[i];
+			int node2 = bucketValuesExtendedCPU[j];
+			//cout << "node1 = " << node1 << "node2 = " << node2 << endl;
 			if (node1 >= node2) {
+				//cout << "not inserted, continue" << endl;
 				continue;
 			} else {
+				//cout << "inserted!" << endl;
 				result.push_back(std::make_pair<uint, uint>(node1, node2));
 			}
+			iterationCounter++;
 		}
 	}
+	cout << "iter counter = " << iterationCounter << endl;
 
+	/*
+	 t4 = std::clock();
+	 double thrustHostTime = t4 - t3;
+	 cout << "calculating thrust host time:" << thrustHostTime / CLOCKS_PER_SEC
+	 << endl;
+	 result.clear();
+	 for (int i = 0; i < size; i++) {
+
+	 for (int j = keyBeginStd[bucketKeysStd[i]];
+	 j < keyEndStd[bucketKeysStd[i]]; j++) {
+	 //std::cout << "pair node 1: " << bucketValues[i] << ",pair node2: "
+	 //		<< bucketValuesIncludingNeighbor[j] << std::endl;
+	 int node1 = bucketKeysStd[i];
+	 int node2 = bucketValuesExtendedStd[j];
+	 //cout << "node1 = " << node1 << "node2 = " << node2 << endl;
+	 if (node1 >= node2) {
+	 //cout << "not inserted, continue" << endl;
+	 continue;
+	 } else {
+	 //cout << "inserted!" << endl;
+	 result.push_back(std::make_pair<uint, uint>(node1, node2));
+	 }
+	 //iterationCounter++;
+	 }
+	 }
+	 t5 = std::clock();
+	 double stdTime = t5 - t4;
+	 cout << "calculating std time:" << stdTime / CLOCKS_PER_SEC << endl;
+	 result.clear();
+	 for (int i = 0; i < iterationCounter; i++) {
+	 result.push_back(std::make_pair<uint, uint>(i, i + 1));
+	 }
+
+	 t6 = std::clock();
+	 double dummyTime = t6 - t5;
+	 cout << "calculating dummy time:" << dummyTime / CLOCKS_PER_SEC << endl;
+	 int jj;
+	 cin >> jj;
+	 */
 	return result;
 }
 
@@ -353,37 +422,37 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 	uint MXNodeCountX = initMXCellNodePosX.size();
 
 	uint beginAddressOfProfile = startPosProfile;
-	// find the begining position of ECM.
+// find the begining position of ECM.
 	uint beginAddressOfECM = startPosECM;
-	// find the begining position of FNM cells.
+// find the begining position of FNM cells.
 	uint beginAddressOfFNM = startPosCells;
-	// find the begining position of MX cells.
+// find the begining position of MX cells.
 	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
 
-	//std::cerr << "before copying arrays" << endl;
+//std::cerr << "before copying arrays" << endl;
 
 	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
 			nodeLocX.begin());
 	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
 			nodeLocY.begin());
 
-	//std::cerr << "copy 1" << endl;
+//std::cerr << "copy 1" << endl;
 
-	// copy x and y position of nodes of Profile to actual node position.
+// copy x and y position of nodes of Profile to actual node position.
 	thrust::copy(initProfileNodePosX.begin(), initProfileNodePosX.end(),
 			nodeLocX.begin() + beginAddressOfProfile);
 	thrust::copy(initProfileNodePosY.begin(), initProfileNodePosY.end(),
 			nodeLocY.begin() + beginAddressOfProfile);
 
-	//std::cerr << "copy 2" << endl;
+//std::cerr << "copy 2" << endl;
 
-	// copy x and y position of nodes of ECM to actual node position.
+// copy x and y position of nodes of ECM to actual node position.
 	thrust::copy(initECMNodePosX.begin(), initECMNodePosX.end(),
 			nodeLocX.begin() + beginAddressOfECM);
 	thrust::copy(initECMNodePosY.begin(), initECMNodePosY.end(),
 			nodeLocY.begin() + beginAddressOfECM);
 
-	// debug
+// debug
 	for (int i = 0; i < initECMNodePosX.size(); i++) {
 		std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
 				<< "nodeLocX =" << nodeLocX[i + beginAddressOfECM] << std::endl;
@@ -391,31 +460,31 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 		assert(!isnan(initECMNodePosX[i]));
 	}
 
-	// std::cerr << "copy 3" << endl;
+// std::cerr << "copy 3" << endl;
 
-	// copy x and y position of nodes of FNM cells to actual node position.
+// copy x and y position of nodes of FNM cells to actual node position.
 	thrust::copy(initFNMCellNodePosX.begin(), initFNMCellNodePosX.end(),
 			nodeLocX.begin() + beginAddressOfFNM);
 	thrust::copy(initFNMCellNodePosY.begin(), initFNMCellNodePosY.end(),
 			nodeLocY.begin() + beginAddressOfFNM);
 
-	// std::cerr << "copy 4" << endl;
+// std::cerr << "copy 4" << endl;
 
 	thrust::fill(nodeCellType.begin() + beginAddressOfFNM,
 			nodeCellType.begin() + beginAddressOfMX, FNM);
 
-	// copy x and y position of nodes of MX cells to actual node position.
+// copy x and y position of nodes of MX cells to actual node position.
 	thrust::copy(initMXCellNodePosX.begin(), initMXCellNodePosX.end(),
 			nodeLocX.begin() + beginAddressOfMX);
 	thrust::copy(initMXCellNodePosY.begin(), initMXCellNodePosY.end(),
 			nodeLocY.begin() + beginAddressOfMX);
 
-	//std::cerr << "after copying arrays" << endl;
+//std::cerr << "after copying arrays" << endl;
 
 	thrust::fill(nodeCellType.begin() + beginAddressOfMX,
 			nodeCellType.begin() + beginAddressOfMX + MXNodeCountX, MX);
 
-	//std::cout << "initial MX cell numbers: " << mxQuotient << std::endl;
+//std::cout << "initial MX cell numbers: " << mxQuotient << std::endl;
 }
 
 void SceNodes::applyProfileForces() {
@@ -450,6 +519,9 @@ void SceNodes::applyProfileForces() {
 VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	VtkAnimationData vtkData;
 	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs();
+	cout << "size of potential pairs = " << pairs.size() << endl;
+	//int jj;
+	//cin >> jj;
 	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
 
 	// unordered_map is more efficient than map, but it is a c++ 11 feature
@@ -463,6 +535,10 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	thrust::host_vector<double> hostTmpVectorLocZ = nodeLocZ;
 	thrust::host_vector<SceNodeType> hostTmpVectorNodeType = nodeCellType;
 	thrust::host_vector<uint> hostTmpVectorNodeRank = nodeCellRank;
+	thrust::host_vector<double> hostTmpVectorNodeStress;
+	if (aniCri.isStressMap) {
+		hostTmpVectorNodeStress = nodeMaxForce;
+	}
 
 	uint curIndex = 0;
 	for (uint i = 0; i < pairs.size(); i++) {
@@ -488,7 +564,11 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].first, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				ptAniData.colorScale = nodeTypeToScale(node1T);
+				if (aniCri.isStressMap) {
+					ptAniData.colorScale = hostTmpVectorNodeStress[node1Index];
+				} else {
+					ptAniData.colorScale = nodeTypeToScale(node1T);
+				}
 				ptAniData.pos = CVector(node1X, node1Y, node1Z);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -498,7 +578,11 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].second, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				ptAniData.colorScale = nodeTypeToScale(node2T);
+				if (aniCri.isStressMap) {
+					ptAniData.colorScale = hostTmpVectorNodeStress[node2Index];
+				} else {
+					ptAniData.colorScale = nodeTypeToScale(node2T);
+				}
 				ptAniData.pos = CVector(node2X, node2Y, node2Z);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -512,9 +596,29 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 			linkData.node1Index = aniIndex1;
 			linkData.node2Index = aniIndex2;
 			vtkData.linksAniData.push_back(linkData);
+			//cout << "aaa" << endl;
 		}
+		//cout << "bbb" << endl;
 	}
 	return vtkData;
+}
+
+void SceNodes::findBucketBounds() {
+	thrust::counting_iterator<unsigned int> search_begin(0);
+	thrust::lower_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
+			search_begin, search_begin + totalBucketCount, keyBegin.begin());
+	thrust::upper_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
+			search_begin, search_begin + totalBucketCount, keyEnd.begin());
+}
+
+void SceNodes::prepareSceForceComputation() {
+	buildBuckets2D();
+	cout << "after building, bucket size = " << bucketKeys.size() << endl;
+	extendBuckets2D();
+	cout << "after extending, extended size = " << bucketKeysExpanded.size()
+			<< endl;
+	findBucketBounds();
+	cout << "after finding bounds, bound size = " << keyBegin.size() << endl;
 }
 
 void SceNodes::addNewlyDividedCells(
@@ -524,12 +628,12 @@ void SceNodes::addNewlyDividedCells(
 		thrust::device_vector<bool> &nodeIsActiveNewCell,
 		thrust::device_vector<SceNodeType> &nodeCellTypeNewCell) {
 
-	// data validation
+// data validation
 	uint nodesSize = nodeLocXNewCell.size();
 	assert(nodesSize % maxNodeOfOneCell == 0);
 	uint addCellCount = nodesSize / maxNodeOfOneCell;
 
-	// position that we will add newly divided cells.
+// position that we will add newly divided cells.
 	uint shiftStartPosNewCell = startPosCells
 			+ currentActiveCellCount * maxNodeOfOneCell;
 
@@ -549,7 +653,7 @@ void SceNodes::addNewlyDividedCells(
 							nodeLocZ.begin(), nodeIsActive.begin(),
 							nodeCellType.begin())) + shiftStartPosNewCell);
 
-	// total number of cells has increased.
+// total number of cells has increased.
 	currentActiveCellCount = currentActiveCellCount + addCellCount;
 }
 
@@ -557,6 +661,7 @@ void SceNodes::buildBuckets2D() {
 	int totalActiveNodes = startPosCells
 			+ currentActiveCellCount * maxNodeOfOneCell;
 
+	std::cout << "num of active nodes = " << totalActiveNodes << std::endl;
 	bucketKeys.resize(totalActiveNodes);
 	bucketValues.resize(totalActiveNodes);
 	thrust::counting_iterator<uint> countingIterBegin(0);
@@ -564,7 +669,6 @@ void SceNodes::buildBuckets2D() {
 
 	// takes counting iterator and coordinates
 	// return tuple of keys and values
-
 	// transform the points to their bucket indices
 	thrust::transform(
 			make_zip_iterator(
@@ -586,9 +690,12 @@ void SceNodes::buildBuckets2D() {
 	// we need to removed those keys along with their values.
 	int numberOfOutOfRange = thrust::count(bucketKeys.begin(), bucketKeys.end(),
 			UINT_MAX);
+
+	std::cout << "before erasing, size = " << bucketKeys.size() << std::endl;
 	bucketKeys.erase(bucketKeys.end() - numberOfOutOfRange, bucketKeys.end());
 	bucketValues.erase(bucketValues.end() - numberOfOutOfRange,
 			bucketValues.end());
+	std::cout << "after erasing, size = " << bucketKeys.size() << std::endl;
 }
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
@@ -775,7 +882,7 @@ __device__ bool isSameECM(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 }
 
 __device__ bool isNeighborECMNodes(uint nodeGlobalRank1, uint nodeGlobalRank2) {
-	// this means that two nodes are from the same ECM
+// this means that two nodes are from the same ECM
 	if ((nodeGlobalRank1 - ECMbeginPos) / nodeCountPerECM
 			== (nodeGlobalRank2 - ECMbeginPos) / nodeCountPerECM) {
 		// this means that two nodes are actually close to each other
@@ -863,7 +970,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
 		uint beginPosOfCells) {
-	// this means that both nodes come from cells
+// this means that both nodes come from cells
 	if (bothCellNodes(type1, type2)) {
 		// this means that nodes come from different type of cell, apply differential adhesion
 		if (type1 != type2) {
@@ -901,7 +1008,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		}
 	}
 
-	// this means that both nodes come from ECM and from same ECM
+// this means that both nodes come from ECM and from same ECM
 	else if (type1 == ECM && type2 == ECM && isSameECM(nodeRank1, nodeRank2)) {
 		if (isNeighborECMNodes(nodeRank1, nodeRank2)) {
 			// TODO: need to create another two vectors that holds the neighbor information for ECM.
@@ -913,7 +1020,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		}
 		// if both nodes belong to same ECM but are not neighbors they shouldn't interact.
 	}
-	// this means that both nodes come from profile ( Epithilum layer).
+// this means that both nodes come from profile ( Epithilum layer).
 	else if (type1 == Profile && type2 == Profile) {
 		if (isNeighborProfileNodes(nodeRank1, nodeRank2)) {
 			// TODO: need a set of parameters for calculating linking force between profile nodes
@@ -993,40 +1100,40 @@ void SceNodes::extendBuckets2D() {
 			bucketValuesIncludingNeighbor.end());
 }
 void SceNodes::applySceForces() {
-	//std::cout << "begin apply sce forces" << std::endl;
-	//std::cout << "size of lower = " << keyBegin.size() << std::endl;
-	thrust::counting_iterator<unsigned int> search_begin(0);
-	thrust::lower_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
-			search_begin, search_begin + totalBucketCount, keyBegin.begin());
-	thrust::upper_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
-			search_begin, search_begin + totalBucketCount, keyEnd.begin());
+//std::cout << "begin apply sce forces" << std::endl;
+//std::cout << "size of lower = " << keyBegin.size() << std::endl;
 
-	//thrust::host_vector<uint> lowerCPU = keyBegin;
+//findBucketBounds();
 
-	//std::cout << "finished finding bounds" << std::endl;
+//thrust::host_vector<uint> lowerCPU = keyBegin;
 
-	//int test1 = lowerCPU[0];
-	//int test2 = lowerCPU[0];
+//std::cout << "finished finding bounds" << std::endl;
 
-	//std::cout << "test 1 =" << test1 << ", test 2 = " << test2 << std::endl;
-	//std::cout.flush();
+//int test1 = lowerCPU[0];
+//int test2 = lowerCPU[0];
 
-	//int test3 = keyBegin[totalBucketCount - 1];
-	//int test4 = keyEnd[totalBucketCount - 1];
+//std::cout << "test 1 =" << test1 << ", test 2 = " << test2 << std::endl;
+//std::cout.flush();
 
-	//std::cout << "test 3 =" << test3 << ", test 4 = " << test4 << std::endl;
+//int test3 = keyBegin[totalBucketCount - 1];
+//int test4 = keyEnd[totalBucketCount - 1];
+
+//std::cout << "test 3 =" << test3 << ", test 4 = " << test4 << std::endl;
+
+//std::cout << "begin pointer casting" << std::endl;
+
+// reason for casting these pointers every time is for flexibility.
+// Because these are thrust vectors, the begin address could possibly change.
+// Therefore, we re-define the begin address of these pointers everytime.
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&bucketValuesIncludingNeighbor[0]);
-
-	//std::cout << "begin pointer casting" << std::endl;
-
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&nodeLocY[0]);
 	double* nodeLocZAddress = thrust::raw_pointer_cast(&nodeLocZ[0]);
 	uint* nodeRankAddress = thrust::raw_pointer_cast(&nodeCellRank[0]);
 	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(&nodeCellType[0]);
 
-	//std::cout << "begin transformation" << std::endl;
+//std::cout << "begin transformation" << std::endl;
 
 	thrust::transform(
 			make_zip_iterator(
@@ -1068,20 +1175,12 @@ void SceNodes::applySceForces() {
 					maxTotalCellNodeCount, startPosCells, maxNodeOfOneCell,
 					maxNodePerECM));
 
-	//std::cout << "after transformation" << std::endl;
+//std::cout << "after transformation" << std::endl;
 }
 
 void SceNodes::calculateAndApplySceForces() {
-	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
-	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
-	//std::cout << "in SceNodes, before build buckets 2D:" << std::endl;
-	buildBuckets2D();
-	//std::cout << "in SceNodes, before extend buckets 2D:" << std::endl;
-	extendBuckets2D();
-	//std::cout << "in SceNodes, before apply sce forces:" << std::endl;
+	prepareSceForceComputation();
 	applySceForces();
-	//std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
 	applyProfileForces();
-	//std::cout << "in SceNodes, finished apply sce forces:" << std::endl;
 }
 
