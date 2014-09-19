@@ -426,159 +426,159 @@ void SimulationDomainGPU::runAllLogic(double dt) {
  *
  */
 /*
-void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
-		int rank) {
+ void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
+ int rank) {
 
-	uint activeTotalNodeCount = nodes.currentActiveCellCount
-			* nodes.maxNodeOfOneCell;
+ uint activeTotalNodeCount = nodes.currentActiveCellCount
+ * nodes.maxNodeOfOneCell;
 
-	thrust::host_vector<uint> hostActiveCountOfCells(
-			nodes.currentActiveCellCount);
+ thrust::host_vector<uint> hostActiveCountOfCells(
+ nodes.currentActiveCellCount);
 
-	thrust::host_vector<double> hostTmpVectorLocX(activeTotalNodeCount);
-	thrust::host_vector<double> hostTmpVectorLocY(activeTotalNodeCount);
-	thrust::host_vector<double> hostTmpVectorLocZ(activeTotalNodeCount);
-	thrust::host_vector<bool> hostTmpVectorIsActive(activeTotalNodeCount);
+ thrust::host_vector<double> hostTmpVectorLocX(activeTotalNodeCount);
+ thrust::host_vector<double> hostTmpVectorLocY(activeTotalNodeCount);
+ thrust::host_vector<double> hostTmpVectorLocZ(activeTotalNodeCount);
+ thrust::host_vector<bool> hostTmpVectorIsActive(activeTotalNodeCount);
 
-	std::vector<uint> prefixSum(nodes.currentActiveCellCount);
-	std::vector<uint> prefixSumLinks(nodes.currentActiveCellCount);
+ std::vector<uint> prefixSum(nodes.currentActiveCellCount);
+ std::vector<uint> prefixSumLinks(nodes.currentActiveCellCount);
 
-	thrust::copy(
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeIsActive.begin())),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeIsActive.begin())) + activeTotalNodeCount,
-			thrust::make_zip_iterator(
-					thrust::make_tuple(hostTmpVectorLocX.begin(),
-							hostTmpVectorLocY.begin(),
-							hostTmpVectorLocZ.begin(),
-							hostTmpVectorIsActive.begin())));
+ thrust::copy(
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeIsActive.begin())),
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeIsActive.begin())) + activeTotalNodeCount,
+ thrust::make_zip_iterator(
+ thrust::make_tuple(hostTmpVectorLocX.begin(),
+ hostTmpVectorLocY.begin(),
+ hostTmpVectorLocZ.begin(),
+ hostTmpVectorIsActive.begin())));
 
-	thrust::copy(cells_m.activeNodeCountOfThisCell.begin(),
-			cells_m.activeNodeCountOfThisCell.begin()
-					+ cells_m.currentActiveCellCount,
-			hostActiveCountOfCells.begin());
+ thrust::copy(cells_m.activeNodeCountOfThisCell.begin(),
+ cells_m.activeNodeCountOfThisCell.begin()
+ + cells_m.currentActiveCellCount,
+ hostActiveCountOfCells.begin());
 
-	int i, j, k;
-	int totalNNum = thrust::reduce(hostActiveCountOfCells.begin(),
-			hostActiveCountOfCells.end());
-	std::vector<std::pair<uint, uint> > links;
-	uint tmpRes = 0;
-	for (i = 0; i < nodes.currentActiveCellCount; i++) {
-		prefixSum[i] = tmpRes;
-		tmpRes = tmpRes + hostActiveCountOfCells[i];
-	}
+ int i, j, k;
+ int totalNNum = thrust::reduce(hostActiveCountOfCells.begin(),
+ hostActiveCountOfCells.end());
+ std::vector<std::pair<uint, uint> > links;
+ uint tmpRes = 0;
+ for (i = 0; i < nodes.currentActiveCellCount; i++) {
+ prefixSum[i] = tmpRes;
+ tmpRes = tmpRes + hostActiveCountOfCells[i];
+ }
 
-	thrust::host_vector<SceNodeType> cellTypesFromGPU = cells_m.getCellTypes();
-	cout << "size of cellTypes from GPU is " << cellTypesFromGPU.size()
-			<< ", size of currentActiveCellCount is"
-			<< nodes.currentActiveCellCount << endl;
-//assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
-// using string stream is probably not the best solution,
-// but I can't use c++ 11 features for backward compatibility
-	std::stringstream ss;
-	ss << std::setw(5) << std::setfill('0') << rank;
-	std::string scriptNameRank = ss.str();
-	std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
-	std::cout << "start to create vtk file" << vtkFileName << std::endl;
-	std::ofstream fs;
-	fs.open(vtkFileName.c_str());
+ thrust::host_vector<SceNodeType> cellTypesFromGPU = cells_m.getCellTypes();
+ cout << "size of cellTypes from GPU is " << cellTypesFromGPU.size()
+ << ", size of currentActiveCellCount is"
+ << nodes.currentActiveCellCount << endl;
+ //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
+ // using string stream is probably not the best solution,
+ // but I can't use c++ 11 features for backward compatibility
+ std::stringstream ss;
+ ss << std::setw(5) << std::setfill('0') << rank;
+ std::string scriptNameRank = ss.str();
+ std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
+ std::cout << "start to create vtk file" << vtkFileName << std::endl;
+ std::ofstream fs;
+ fs.open(vtkFileName.c_str());
 
-//int totalNNum = getTotalNodeCount();
-//int LNum = 0;
-//int NNum;
-	fs << "# vtk DataFile Version 3.0" << std::endl;
-	fs << "Lines and points representing subcelluar element cells "
-			<< std::endl;
-	fs << "ASCII" << std::endl;
-	fs << std::endl;
-	fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
-	fs << "POINTS " << totalNNum << " float" << std::endl;
+ //int totalNNum = getTotalNodeCount();
+ //int LNum = 0;
+ //int NNum;
+ fs << "# vtk DataFile Version 3.0" << std::endl;
+ fs << "Lines and points representing subcelluar element cells "
+ << std::endl;
+ fs << "ASCII" << std::endl;
+ fs << std::endl;
+ fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
+ fs << "POINTS " << totalNNum << " float" << std::endl;
 
-	uint counterForLink = 0;
-	for (i = 0; i < nodes.currentActiveCellCount; i++) {
-		uint activeNodeCount = hostActiveCountOfCells[i];
-		for (j = 0; j < activeNodeCount; j++) {
-			uint pos = i * nodes.maxNodeOfOneCell + j;
-			fs << hostTmpVectorLocX[pos] << " " << hostTmpVectorLocY[pos] << " "
-					<< hostTmpVectorLocZ[pos] << std::endl;
-		}
-		uint tmpCount = 0;
-		for (j = 0; j < activeNodeCount; j++) {
-			for (k = j; k < activeNodeCount; k++) {
-				if (j == k) {
-					continue;
-				} else {
-					uint pos1 = prefixSum[i] + j;
-					uint pos2 = prefixSum[i] + k;
-					uint pos1InVec = i * nodes.maxNodeOfOneCell + j;
-					uint pos2InVec = i * nodes.maxNodeOfOneCell + k;
-					if (compuDist(hostTmpVectorLocX[pos1InVec],
-							hostTmpVectorLocY[pos1InVec],
-							hostTmpVectorLocZ[pos1InVec],
-							hostTmpVectorLocX[pos2InVec],
-							hostTmpVectorLocY[pos2InVec],
-							hostTmpVectorLocZ[pos2InVec])
-							<= intraLinkDisplayRange) {
-						links.push_back(std::make_pair<uint, uint>(pos1, pos2));
-						tmpCount++;
-					} else {
-						continue;
-					}
-				}
-			}
-		}
-		prefixSumLinks[i] = counterForLink;
-		counterForLink = counterForLink + tmpCount;
-	}
-	fs << std::endl;
-	fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
-	uint linkSize = links.size();
-	for (uint i = 0; i < linkSize; i++) {
-		fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
-	}
-	uint LNum = links.size();
-	fs << "CELL_TYPES " << LNum << endl;
-	for (i = 0; i < LNum; i++) {
-		fs << "3" << endl;
-	}
-	fs << "POINT_DATA " << totalNNum << endl;
-	fs << "SCALARS point_scalars float" << endl;
-	fs << "LOOKUP_TABLE default" << endl;
+ uint counterForLink = 0;
+ for (i = 0; i < nodes.currentActiveCellCount; i++) {
+ uint activeNodeCount = hostActiveCountOfCells[i];
+ for (j = 0; j < activeNodeCount; j++) {
+ uint pos = i * nodes.maxNodeOfOneCell + j;
+ fs << hostTmpVectorLocX[pos] << " " << hostTmpVectorLocY[pos] << " "
+ << hostTmpVectorLocZ[pos] << std::endl;
+ }
+ uint tmpCount = 0;
+ for (j = 0; j < activeNodeCount; j++) {
+ for (k = j; k < activeNodeCount; k++) {
+ if (j == k) {
+ continue;
+ } else {
+ uint pos1 = prefixSum[i] + j;
+ uint pos2 = prefixSum[i] + k;
+ uint pos1InVec = i * nodes.maxNodeOfOneCell + j;
+ uint pos2InVec = i * nodes.maxNodeOfOneCell + k;
+ if (compuDist(hostTmpVectorLocX[pos1InVec],
+ hostTmpVectorLocY[pos1InVec],
+ hostTmpVectorLocZ[pos1InVec],
+ hostTmpVectorLocX[pos2InVec],
+ hostTmpVectorLocY[pos2InVec],
+ hostTmpVectorLocZ[pos2InVec])
+ <= intraLinkDisplayRange) {
+ links.push_back(std::make_pair<uint, uint>(pos1, pos2));
+ tmpCount++;
+ } else {
+ continue;
+ }
+ }
+ }
+ }
+ prefixSumLinks[i] = counterForLink;
+ counterForLink = counterForLink + tmpCount;
+ }
+ fs << std::endl;
+ fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
+ uint linkSize = links.size();
+ for (uint i = 0; i < linkSize; i++) {
+ fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
+ }
+ uint LNum = links.size();
+ fs << "CELL_TYPES " << LNum << endl;
+ for (i = 0; i < LNum; i++) {
+ fs << "3" << endl;
+ }
+ fs << "POINT_DATA " << totalNNum << endl;
+ fs << "SCALARS point_scalars float" << endl;
+ fs << "LOOKUP_TABLE default" << endl;
 
-//for (i = 0; i < nodes.currentActiveCellCount; i++) {
-//	uint activeNodeCount = hostActiveCountOfCells[i];
-//	for (j = 0; j < activeNodeCount; j++) {
-//		fs << i << endl;
-//	}
-//}
+ //for (i = 0; i < nodes.currentActiveCellCount; i++) {
+ //	uint activeNodeCount = hostActiveCountOfCells[i];
+ //	for (j = 0; j < activeNodeCount; j++) {
+ //		fs << i << endl;
+ //	}
+ //}
 
-	for (i = 0; i < nodes.currentActiveCellCount; i++) {
-		uint activeNodeCount = hostActiveCountOfCells[i];
-		if (cellTypesFromGPU[i] == Boundary) {
-			for (j = 0; j < activeNodeCount; j++) {
-				fs << 1 << endl;
-			}
-		} else if (cellTypesFromGPU[i] == FNM) {
-			for (j = 0; j < activeNodeCount; j++) {
-				fs << 2 << endl;
-			}
-		} else if (cellTypesFromGPU[i] == MX) {
-			for (j = 0; j < activeNodeCount; j++) {
-				fs << 3 << endl;
-			}
-		}
+ for (i = 0; i < nodes.currentActiveCellCount; i++) {
+ uint activeNodeCount = hostActiveCountOfCells[i];
+ if (cellTypesFromGPU[i] == Boundary) {
+ for (j = 0; j < activeNodeCount; j++) {
+ fs << 1 << endl;
+ }
+ } else if (cellTypesFromGPU[i] == FNM) {
+ for (j = 0; j < activeNodeCount; j++) {
+ fs << 2 << endl;
+ }
+ } else if (cellTypesFromGPU[i] == MX) {
+ for (j = 0; j < activeNodeCount; j++) {
+ fs << 3 << endl;
+ }
+ }
 
-	}
+ }
 
-	fs.flush();
-	fs.close();
-}
-*/
+ fs.flush();
+ fs.close();
+ }
+ */
 
 /**
  * This is the second version of visualization.
@@ -590,214 +590,214 @@ void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
  * Moving Epithilum layer: Green
  */
 /*
-void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
-		int rank) {
-	//cerr << "start to output animation " << rank << endl;
-	//cells_m.distributeIsCellRank();
-	cells_m.distributeIsActiveInfo();
-	thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
-	cout << "finished distribute cell is active" << endl;
+ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
+ int rank) {
+ //cerr << "start to output animation " << rank << endl;
+ //cells_m.distributeIsCellRank();
+ cells_m.distributeIsActiveInfo();
+ thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
+ cout << "finished distribute cell is active" << endl;
 
-	int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
-	int num2 = cells_m.beginPosOfCellsNode
-			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
-	cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
-			<< nodes.startPosCells << ", part 2 = "
-			<< cells_m.totalNodeCountForActiveCells << endl;
-	cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
-			<< cells_m.beginPosOfCellsNode << ", part 2 = "
-			<< nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
+ int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
+ int num2 = cells_m.beginPosOfCellsNode
+ + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+ cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
+ << nodes.startPosCells << ", part 2 = "
+ << cells_m.totalNodeCountForActiveCells << endl;
+ cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
+ << cells_m.beginPosOfCellsNode << ", part 2 = "
+ << nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
 
-	int count = 0;
-	for (int i = 0;
-			i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
-			i++) {
-		if (isActiveHost[i] == true) {
-			count++;
-		}
-	}
-	cout << "before printing, number of active nodes in domain: " << count
-			<< endl;
-	//int jj;
-	//cin >> jj;
+ int count = 0;
+ for (int i = 0;
+ i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
+ i++) {
+ if (isActiveHost[i] == true) {
+ count++;
+ }
+ }
+ cout << "before printing, number of active nodes in domain: " << count
+ << endl;
+ //int jj;
+ //cin >> jj;
 
-	uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
-			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+ uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
+ + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
 
-	cout << "number of nodes = " << activeTotalNodeCount << endl;
-	cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
-			<< endl;
+ cout << "number of nodes = " << activeTotalNodeCount << endl;
+ cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
+ << endl;
 
-	uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
-			nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
+ uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+ nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
 
-	//uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
-	//		nodes.nodeIsActive.begin() + 1);
-	cerr << "number of active nodes = " << totalActiveCount << endl;
-	cerr << "number of total active nodes possible= " << activeTotalNodeCount
-			<< endl;
+ //uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+ //		nodes.nodeIsActive.begin() + 1);
+ cerr << "number of active nodes = " << totalActiveCount << endl;
+ cerr << "number of total active nodes possible= " << activeTotalNodeCount
+ << endl;
 
-	cout.flush();
+ cout.flush();
 
-	thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
-	thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
-	thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
-	thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
-	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
-			totalActiveCount);
-	thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
+ thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
+ thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
+ totalActiveCount);
+ thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
 
-	thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
-	thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
-	thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
-	thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
-	thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
-	thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
+ thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
+ thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
+ thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
 
-	cout << "finished initialization space for GPU and CPU" << endl;
+ cout << "finished initialization space for GPU and CPU" << endl;
 
-	cout << "During output animation, active total node count is "
-			<< activeTotalNodeCount << endl;
+ cout << "During output animation, active total node count is "
+ << activeTotalNodeCount << endl;
 
-	thrust::copy_if(
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeCellType.begin(),
-							nodes.nodeCellRank.begin())),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeCellType.begin(),
-							nodes.nodeCellRank.begin())) + activeTotalNodeCount,
-			nodes.nodeIsActive.begin(),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(deviceTmpVectorLocX.begin(),
-							deviceTmpVectorLocY.begin(),
-							deviceTmpVectorLocZ.begin(),
-							deviceTmpVectorNodeType.begin(),
-							deviceTmpVectorNodeRank.begin())), isTrue());
+ thrust::copy_if(
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeCellType.begin(),
+ nodes.nodeCellRank.begin())),
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeCellType.begin(),
+ nodes.nodeCellRank.begin())) + activeTotalNodeCount,
+ nodes.nodeIsActive.begin(),
+ thrust::make_zip_iterator(
+ thrust::make_tuple(deviceTmpVectorLocX.begin(),
+ deviceTmpVectorLocY.begin(),
+ deviceTmpVectorLocZ.begin(),
+ deviceTmpVectorNodeType.begin(),
+ deviceTmpVectorNodeRank.begin())), isTrue());
 
-	cout << "finished cpu data from GPU to CPU" << endl;
+ cout << "finished cpu data from GPU to CPU" << endl;
 
-	hostTmpVectorLocX = deviceTmpVectorLocX;
-	hostTmpVectorLocY = deviceTmpVectorLocY;
-	hostTmpVectorLocZ = deviceTmpVectorLocZ;
-	hostTmpVectorIsActive = deviceTmpVectorIsActive;
-	hostTmpVectorNodeType = deviceTmpVectorNodeType;
-	hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
+ hostTmpVectorLocX = deviceTmpVectorLocX;
+ hostTmpVectorLocY = deviceTmpVectorLocY;
+ hostTmpVectorLocZ = deviceTmpVectorLocZ;
+ hostTmpVectorIsActive = deviceTmpVectorIsActive;
+ hostTmpVectorNodeType = deviceTmpVectorNodeType;
+ hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
 
-	int i, j;
-	std::vector<std::pair<uint, uint> > links;
+ int i, j;
+ std::vector<std::pair<uint, uint> > links;
 
-	//assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
-	// using string stream is probably not the best solution,
-	// but I can't use c++ 11 features for backward compatibility
-	std::stringstream ss;
-	ss << std::setw(5) << std::setfill('0') << rank;
-	std::string scriptNameRank = ss.str();
-	std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
-	std::cout << "start to create vtk file" << vtkFileName << std::endl;
-	std::ofstream fs;
-	fs.open(vtkFileName.c_str());
+ //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
+ // using string stream is probably not the best solution,
+ // but I can't use c++ 11 features for backward compatibility
+ std::stringstream ss;
+ ss << std::setw(5) << std::setfill('0') << rank;
+ std::string scriptNameRank = ss.str();
+ std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
+ std::cout << "start to create vtk file" << vtkFileName << std::endl;
+ std::ofstream fs;
+ fs.open(vtkFileName.c_str());
 
-	//int totalNNum = getTotalNodeCount();
-	//int LNum = 0;
-	//int NNum;
-	assert(hostTmpVectorLocX.size() == totalActiveCount);
+ //int totalNNum = getTotalNodeCount();
+ //int LNum = 0;
+ //int NNum;
+ assert(hostTmpVectorLocX.size() == totalActiveCount);
 
-	fs << "# vtk DataFile Version 3.0" << std::endl;
-	fs << "Lines and points representing subcelluar element cells "
-			<< std::endl;
-	fs << "ASCII" << std::endl;
-	fs << std::endl;
-	fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
-	fs << "POINTS " << totalActiveCount << " float" << std::endl;
+ fs << "# vtk DataFile Version 3.0" << std::endl;
+ fs << "Lines and points representing subcelluar element cells "
+ << std::endl;
+ fs << "ASCII" << std::endl;
+ fs << std::endl;
+ fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
+ fs << "POINTS " << totalActiveCount << " float" << std::endl;
 
-	uint counterForLink = 0;
-	for (i = 0; i < totalActiveCount; i++) {
-		fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
-				<< hostTmpVectorLocZ[i] << std::endl;
-		for (j = 0; j < totalActiveCount; j++) {
-			if (i == j) {
-				continue;
-			}
-			if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
-					hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
-					hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
-					<= intraLinkDisplayRange) {
-				// have this extra if because we don't want to include visualization
-				// for inter-cell interactions.
-				// to achieve that, we don't include links between different types
-				// and also avoid display links between different cells of same type
-				if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
-						&& hostTmpVectorNodeRank[i]
-								== hostTmpVectorNodeRank[j]) {
-					if (hostTmpVectorNodeType[i] == Boundary) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == Profile) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == ECM) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == MX
-							|| hostTmpVectorNodeType[i] == FNM) {
-						links.push_back(std::make_pair<uint, uint>(i, j));
-						counterForLink++;
-					}
-				}
-			} else {
-				//if (hostTmpVectorNodeType[i] == Profile) {
-				//	if (j - i == 1) {
-				//		links.push_back(std::make_pair<uint, uint>(i, j));
-				//		counterForLink++;
-				//	}
-				//}
-			}
-		}
-		//std::cout << "link count = " << counterForLink << std::endl;
-	}
-	fs << std::endl;
-	fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
-	uint linkSize = links.size();
-	for (uint i = 0; i < linkSize; i++) {
-		fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
-	}
-	uint LNum = links.size();
-	fs << "CELL_TYPES " << LNum << endl;
-	for (i = 0; i < LNum; i++) {
-		fs << "3" << endl;
-	}
-	fs << "POINT_DATA " << totalActiveCount << endl;
-	fs << "SCALARS point_scalars float" << endl;
-	fs << "LOOKUP_TABLE default" << endl;
+ uint counterForLink = 0;
+ for (i = 0; i < totalActiveCount; i++) {
+ fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
+ << hostTmpVectorLocZ[i] << std::endl;
+ for (j = 0; j < totalActiveCount; j++) {
+ if (i == j) {
+ continue;
+ }
+ if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
+ hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
+ hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
+ <= intraLinkDisplayRange) {
+ // have this extra if because we don't want to include visualization
+ // for inter-cell interactions.
+ // to achieve that, we don't include links between different types
+ // and also avoid display links between different cells of same type
+ if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
+ && hostTmpVectorNodeRank[i]
+ == hostTmpVectorNodeRank[j]) {
+ if (hostTmpVectorNodeType[i] == Boundary) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == Profile) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == ECM) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == MX
+ || hostTmpVectorNodeType[i] == FNM) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ }
+ } else {
+ //if (hostTmpVectorNodeType[i] == Profile) {
+ //	if (j - i == 1) {
+ //		links.push_back(std::make_pair<uint, uint>(i, j));
+ //		counterForLink++;
+ //	}
+ //}
+ }
+ }
+ //std::cout << "link count = " << counterForLink << std::endl;
+ }
+ fs << std::endl;
+ fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
+ uint linkSize = links.size();
+ for (uint i = 0; i < linkSize; i++) {
+ fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
+ }
+ uint LNum = links.size();
+ fs << "CELL_TYPES " << LNum << endl;
+ for (i = 0; i < LNum; i++) {
+ fs << "3" << endl;
+ }
+ fs << "POINT_DATA " << totalActiveCount << endl;
+ fs << "SCALARS point_scalars float" << endl;
+ fs << "LOOKUP_TABLE default" << endl;
 
-	for (i = 0; i < totalActiveCount; i++) {
-		if (hostTmpVectorNodeType[i] == Boundary) {
-			fs << 1 << endl;
-		} else if (hostTmpVectorNodeType[i] == Profile) {
-			fs << 2 << endl;
-		} else if (hostTmpVectorNodeType[i] == ECM) {
-			fs << 3 << endl;
-		} else if (hostTmpVectorNodeType[i] == FNM) {
-			fs << 4 << endl;
-		} else if (hostTmpVectorNodeType[i] == MX) {
-			fs << 5 << endl;
-		}
-	}
+ for (i = 0; i < totalActiveCount; i++) {
+ if (hostTmpVectorNodeType[i] == Boundary) {
+ fs << 1 << endl;
+ } else if (hostTmpVectorNodeType[i] == Profile) {
+ fs << 2 << endl;
+ } else if (hostTmpVectorNodeType[i] == ECM) {
+ fs << 3 << endl;
+ } else if (hostTmpVectorNodeType[i] == FNM) {
+ fs << 4 << endl;
+ } else if (hostTmpVectorNodeType[i] == MX) {
+ fs << 5 << endl;
+ }
+ }
 
-	//fs.flush();
-	fs.close();
-}
-*/
+ //fs.flush();
+ fs.close();
+ }
+ */
 
 /**
  * This is the second version of visualization.
@@ -809,222 +809,226 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
  * Moving Epithilum layer: Green
  */
 /*
-void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
-		std::string scriptNameBase, int rank) {
-	cerr << "start to output animation " << rank << endl;
-	//cells_m.distributeIsCellRank();
-	cells_m.distributeIsActiveInfo();
-	thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
-	cout << "finished distribute cell is active" << endl;
+ void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
+ std::string scriptNameBase, int rank) {
+ cerr << "start to output animation " << rank << endl;
+ //cells_m.distributeIsCellRank();
+ cells_m.distributeIsActiveInfo();
+ thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
+ cout << "finished distribute cell is active" << endl;
 
-	int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
-	int num2 = cells_m.beginPosOfCellsNode
-			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
-	cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
-			<< nodes.startPosCells << ", part 2 = "
-			<< cells_m.totalNodeCountForActiveCells << endl;
-	cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
-			<< cells_m.beginPosOfCellsNode << ", part 2 = "
-			<< nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
+ int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
+ int num2 = cells_m.beginPosOfCellsNode
+ + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+ cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
+ << nodes.startPosCells << ", part 2 = "
+ << cells_m.totalNodeCountForActiveCells << endl;
+ cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
+ << cells_m.beginPosOfCellsNode << ", part 2 = "
+ << nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
 
-	int count = 0;
-	for (int i = 0;
-			i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
-			i++) {
-		if (isActiveHost[i] == true) {
-			count++;
-		}
-	}
-	cout << "before printing, number of active nodes in domain: " << count
-			<< endl;
-	//int jj;
-	//cin >> jj;
+ int count = 0;
+ for (int i = 0;
+ i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
+ i++) {
+ if (isActiveHost[i] == true) {
+ count++;
+ }
+ }
+ cout << "before printing, number of active nodes in domain: " << count
+ << endl;
+ //int jj;
+ //cin >> jj;
 
-	uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
-			+ nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
+ uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
+ + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
 
-	cout << "number of nodes = " << activeTotalNodeCount << endl;
-	cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
-			<< endl;
+ cout << "number of nodes = " << activeTotalNodeCount << endl;
+ cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
+ << endl;
 
-	uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
-			nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
+ uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+ nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
 
-	//uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
-	//		nodes.nodeIsActive.begin() + 1);
-	cerr << "number of active nodes = " << totalActiveCount << endl;
-	cerr << "number of total active nodes possible= " << activeTotalNodeCount
-			<< endl;
+ //uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
+ //		nodes.nodeIsActive.begin() + 1);
+ cerr << "number of active nodes = " << totalActiveCount << endl;
+ cerr << "number of total active nodes possible= " << activeTotalNodeCount
+ << endl;
 
-	cout.flush();
+ cout.flush();
 
-	thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
-	thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
-	thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
-	thrust::device_vector<double> deviceTmpVectorMaxForce(totalActiveCount);
-	thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
-	thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
-			totalActiveCount);
-	thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
+ thrust::device_vector<double> deviceTmpVectorMaxForce(totalActiveCount);
+ thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
+ thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
+ totalActiveCount);
+ thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
 
-	thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
-	thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
-	thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
-	thrust::host_vector<double> hostTmpVectorMaxForce(totalActiveCount);
-	thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
-	thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
-	thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
+ thrust::host_vector<double> hostTmpVectorMaxForce(totalActiveCount);
+ thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
+ thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
+ thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
 
-	cout << "finished initialization space for GPU and CPU" << endl;
+ cout << "finished initialization space for GPU and CPU" << endl;
 
-	cout << "During output animation, active total node count is "
-			<< activeTotalNodeCount << endl;
+ cout << "During output animation, active total node count is "
+ << activeTotalNodeCount << endl;
 
-	thrust::copy_if(
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeMaxForce.begin(),
-							nodes.nodeCellType.begin(),
-							nodes.nodeCellRank.begin())),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes.nodeLocX.begin(),
-							nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
-							nodes.nodeMaxForce.begin(),
-							nodes.nodeCellType.begin(),
-							nodes.nodeCellRank.begin())) + activeTotalNodeCount,
-			nodes.nodeIsActive.begin(),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(deviceTmpVectorLocX.begin(),
-							deviceTmpVectorLocY.begin(),
-							deviceTmpVectorLocZ.begin(),
-							deviceTmpVectorMaxForce.begin(),
-							deviceTmpVectorNodeType.begin(),
-							deviceTmpVectorNodeRank.begin())), isTrue());
+ thrust::copy_if(
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeMaxForce.begin(),
+ nodes.nodeCellType.begin(),
+ nodes.nodeCellRank.begin())),
+ thrust::make_zip_iterator(
+ thrust::make_tuple(nodes.nodeLocX.begin(),
+ nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
+ nodes.nodeMaxForce.begin(),
+ nodes.nodeCellType.begin(),
+ nodes.nodeCellRank.begin())) + activeTotalNodeCount,
+ nodes.nodeIsActive.begin(),
+ thrust::make_zip_iterator(
+ thrust::make_tuple(deviceTmpVectorLocX.begin(),
+ deviceTmpVectorLocY.begin(),
+ deviceTmpVectorLocZ.begin(),
+ deviceTmpVectorMaxForce.begin(),
+ deviceTmpVectorNodeType.begin(),
+ deviceTmpVectorNodeRank.begin())), isTrue());
 
-	cout << "finished cpu data from GPU to CPU" << endl;
+ cout << "finished cpu data from GPU to CPU" << endl;
 
-	hostTmpVectorLocX = deviceTmpVectorLocX;
-	hostTmpVectorLocY = deviceTmpVectorLocY;
-	hostTmpVectorLocZ = deviceTmpVectorLocZ;
-	hostTmpVectorMaxForce = deviceTmpVectorMaxForce;
-	hostTmpVectorIsActive = deviceTmpVectorIsActive;
-	hostTmpVectorNodeType = deviceTmpVectorNodeType;
-	hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
+ hostTmpVectorLocX = deviceTmpVectorLocX;
+ hostTmpVectorLocY = deviceTmpVectorLocY;
+ hostTmpVectorLocZ = deviceTmpVectorLocZ;
+ hostTmpVectorMaxForce = deviceTmpVectorMaxForce;
+ hostTmpVectorIsActive = deviceTmpVectorIsActive;
+ hostTmpVectorNodeType = deviceTmpVectorNodeType;
+ hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
 
-	int i, j;
-	std::vector<std::pair<uint, uint> > links;
+ int i, j;
+ std::vector<std::pair<uint, uint> > links;
 
-	//assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
-	// using string stream is probably not the best solution,
-	// but I can't use c++ 11 features for backward compatibility
-	std::stringstream ss;
-	ss << std::setw(5) << std::setfill('0') << rank;
-	std::string scriptNameRank = ss.str();
-	std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
-	std::cout << "start to create vtk file" << vtkFileName << std::endl;
-	std::ofstream fs;
-	fs.open(vtkFileName.c_str());
+ //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
+ // using string stream is probably not the best solution,
+ // but I can't use c++ 11 features for backward compatibility
+ std::stringstream ss;
+ ss << std::setw(5) << std::setfill('0') << rank;
+ std::string scriptNameRank = ss.str();
+ std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
+ std::cout << "start to create vtk file" << vtkFileName << std::endl;
+ std::ofstream fs;
+ fs.open(vtkFileName.c_str());
 
-	//int totalNNum = getTotalNodeCount();
-	//int LNum = 0;
-	//int NNum;
-	assert(hostTmpVectorLocX.size() == totalActiveCount);
+ //int totalNNum = getTotalNodeCount();
+ //int LNum = 0;
+ //int NNum;
+ assert(hostTmpVectorLocX.size() == totalActiveCount);
 
-	fs << "# vtk DataFile Version 3.0" << std::endl;
-	fs << "Lines and points representing subcelluar element cells "
-			<< std::endl;
-	fs << "ASCII" << std::endl;
-	fs << std::endl;
-	fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
-	fs << "POINTS " << totalActiveCount << " float" << std::endl;
+ fs << "# vtk DataFile Version 3.0" << std::endl;
+ fs << "Lines and points representing subcelluar element cells "
+ << std::endl;
+ fs << "ASCII" << std::endl;
+ fs << std::endl;
+ fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
+ fs << "POINTS " << totalActiveCount << " float" << std::endl;
 
-	uint counterForLink = 0;
-	for (i = 0; i < totalActiveCount; i++) {
-		fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
-				<< hostTmpVectorLocZ[i] << std::endl;
-		for (j = 0; j < totalActiveCount; j++) {
-			if (i == j) {
-				continue;
-			}
-			if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
-					hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
-					hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
-					<= intraLinkDisplayRange) {
-				// have this extra if because we don't want to include visualization
-				// for inter-cell interactions.
-				// to achieve that, we don't include links between different types
-				// and also avoid display links between different cells of same type
-				if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
-						&& hostTmpVectorNodeRank[i]
-								== hostTmpVectorNodeRank[j]) {
-					if (hostTmpVectorNodeType[i] == Boundary) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == Profile) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == ECM) {
-						if (j - i == 1) {
-							links.push_back(std::make_pair<uint, uint>(i, j));
-							counterForLink++;
-						}
-					} else if (hostTmpVectorNodeType[i] == MX
-							|| hostTmpVectorNodeType[i] == FNM) {
-						links.push_back(std::make_pair<uint, uint>(i, j));
-						counterForLink++;
-					}
-				}
-			} else {
-				//if (hostTmpVectorNodeType[i] == Profile) {
-				//	if (j - i == 1) {
-				//		links.push_back(std::make_pair<uint, uint>(i, j));
-				//		counterForLink++;
-				//	}
-				//}
-			}
-		}
-		//std::cout << "link count = " << counterForLink << std::endl;
-	}
-	fs << std::endl;
-	fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
-	uint linkSize = links.size();
-	for (uint i = 0; i < linkSize; i++) {
-		fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
-	}
-	uint LNum = links.size();
-	fs << "CELL_TYPES " << LNum << endl;
-	for (i = 0; i < LNum; i++) {
-		fs << "3" << endl;
-	}
-	fs << "POINT_DATA " << totalActiveCount << endl;
-	fs << "SCALARS point_scalars float" << endl;
-	fs << "LOOKUP_TABLE default" << endl;
+ uint counterForLink = 0;
+ for (i = 0; i < totalActiveCount; i++) {
+ fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
+ << hostTmpVectorLocZ[i] << std::endl;
+ for (j = 0; j < totalActiveCount; j++) {
+ if (i == j) {
+ continue;
+ }
+ if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
+ hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
+ hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
+ <= intraLinkDisplayRange) {
+ // have this extra if because we don't want to include visualization
+ // for inter-cell interactions.
+ // to achieve that, we don't include links between different types
+ // and also avoid display links between different cells of same type
+ if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
+ && hostTmpVectorNodeRank[i]
+ == hostTmpVectorNodeRank[j]) {
+ if (hostTmpVectorNodeType[i] == Boundary) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == Profile) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == ECM) {
+ if (j - i == 1) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ } else if (hostTmpVectorNodeType[i] == MX
+ || hostTmpVectorNodeType[i] == FNM) {
+ links.push_back(std::make_pair<uint, uint>(i, j));
+ counterForLink++;
+ }
+ }
+ } else {
+ //if (hostTmpVectorNodeType[i] == Profile) {
+ //	if (j - i == 1) {
+ //		links.push_back(std::make_pair<uint, uint>(i, j));
+ //		counterForLink++;
+ //	}
+ //}
+ }
+ }
+ //std::cout << "link count = " << counterForLink << std::endl;
+ }
+ fs << std::endl;
+ fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
+ uint linkSize = links.size();
+ for (uint i = 0; i < linkSize; i++) {
+ fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
+ }
+ uint LNum = links.size();
+ fs << "CELL_TYPES " << LNum << endl;
+ for (i = 0; i < LNum; i++) {
+ fs << "3" << endl;
+ }
+ fs << "POINT_DATA " << totalActiveCount << endl;
+ fs << "SCALARS point_scalars float" << endl;
+ fs << "LOOKUP_TABLE default" << endl;
 
-	for (i = 0; i < totalActiveCount; i++) {
-		fs << hostTmpVectorMaxForce[i] << endl;
-	}
+ for (i = 0; i < totalActiveCount; i++) {
+ fs << hostTmpVectorMaxForce[i] << endl;
+ }
 
-	//fs.flush();
-	fs.close();
+ //fs.flush();
+ fs.close();
+ }
+ */
+
+/*
+void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
+		int rank) {
+	nodes.prepareSceForceComputation();
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
+	aniCri.isStressMap = 1;
+	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
+	aniData.outputVtkAni(scriptNameBase, rank);
 }
 */
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
-		int rank) {
+		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
-	//nodes.obtainPossibleNeighborPairs()
-	cout << "after prepare SCE" << endl;
-	//int jj;
-	//cin >> jj;
-	//nodes.obtainPossibleNeighborPairs();
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
-	aniCri.isStressMap = 1;
 	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
