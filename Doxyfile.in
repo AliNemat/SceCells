@@ -1,6 +1,7 @@
 PROJECT_NAME           = "Chicken Beak Development"
 RECURSIVE              = YES
-INPUT                  = srcGPU unitTest modelTest
+INPUT                  = src tst
 FILE_PATTERNS          = *.cu *.cpp *.h
 JAVADOC_AUTOBRIEF      = YES
 EXTRACT_ALL            = YES
+QUIET                  = YES

@@ -52,6 +52,79 @@ public:
 	}
 };
 
+/**
+ * This data structure contains mechanical parameters of the model.
+ */
+struct SceMechPara {
+
+};
+
+/**
+ * This data structure contains chemical parameters of the model.
+ */
+struct SceChemPara {
+	uint growthGridXDim;
+	uint growthGridYDim;
+	double growthGridSpacing;
+	double growthGridLowerLeftPtX;
+	double growthGridLowerLeftPtY;
+
+	// first morphogen distribution
+	double growthMorCenterXCoord;
+	double growthMorCenterYCoord;
+	double growthMorHighConcen;
+	double growthMorLowConcen;
+	double growthMorDiffSlope;
+
+	// second morphogen distribution
+	double growthMorCenterXCoordMX;
+	double growthMorCenterYCoordMX;
+	double growthMorHighConcenMX;
+	double growthMorLowConcenMX;
+	double growthMorDiffSlopeMX;
+};
+
+/**
+ * This data structure contains biology parameters of the model.
+ */
+struct SceBioPara {
+
+};
+
+/**
+ * This data structure contains miscellaneous parameters of the model.
+ */
+struct SceMiscPara {
+
+};
+
+/**
+ * This data structure contains parameters about the memory layout of the simulation domain.
+ */
+struct SceMemPara {
+	uint maxCellInDomain;
+	uint maxNodePerCell;
+	uint maxECMInDomain;
+	uint maxNodePerECM;
+	double FinalToInitProfileNodeCountRatio;
+};
+
+/**
+ * This data structure contains parameters about the setup of the simulation domain.
+ */
+struct SceDomainPara {
+	double minX;
+	double maxX;
+	double minY;
+	double maxY;
+	double minZ;
+	double maxZ;
+	double gridSpacing;
+};
+
+/**
+ * Generated Raw data that needs reformatting in order to be used for domain initialization.
+ */
 struct RawDataInput {
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> profileNodes;
@@ -81,6 +154,9 @@ struct SimulationInitData {
 	std::vector<double> initMXCellNodePosY;
 };
 
+/**
+ * This class is not used for now but might be useful in the future
+ */
 struct SceInputPoint {
 	static const std::string delimiter;
 	uint cellRank;
@@ -88,26 +164,21 @@ struct SceInputPoint {
 	double xCoord;
 	double yCoord;
 	double zCoord;
-	SceInputPoint(std::string inputLine);
-	void initFromString(std::string inputLine);
-	void outputToString(std::string& outputLine);
+	//SceInputPoint(std::string inputLine);
+	//void initFromString(std::string inputLine);
+	//void outputToString(std::string& outputLine);
 };
 
-struct SceMechanicalParameters {
-
-};
-
-struct SceMemoryParameters {
-
-};
-
+/**
+ * This class is not used for nwo but might be useful in the future
+ */
 struct inputInitialData {
-	SceMemoryParameters memParas;
-	SceMechanicalParameters mechParas;
+	SceMemPara memParas;
+	SceMechPara mechParas;
 	std::vector<SceInputPoint> inputPoints;
-	void initFromFile(std::string fileName);
+	//void initFromFile(std::string fileName);
 	void addNewPoints(std::vector<SceInputPoint> &newPoints);
-	void outputToFile(std::string fileName);
+	//void outputToFile(std::string fileName);
 };
 
 /**

@@ -1,5 +1,4 @@
 #include "SceCells.h"
-
 __constant__ uint GridDimension[2];
 __constant__ double gridSpacing;
 
@@ -39,8 +38,7 @@ void SceCells_M::distributeCellIsActiveInfo() {
 	//std::cout << "count of non zero init counts:" << count << std::endl;
 	//int jj;
 	//std::cin >> jj;
-	totalNodeCountForActiveCells = currentActiveCellCount
-				* maxNodeOfOneCell;
+	totalNodeCountForActiveCells = currentActiveCellCount * maxNodeOfOneCell;
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 	std::cout << "started distri cell active" << std::endl;
@@ -160,7 +158,6 @@ SceCells_M::SceCells_M(SceNodes* nodesInput) :
 			&(nodes->nodeLocX[beginPosOfCellsNode]));
 	nodeYPosAddress = thrust::raw_pointer_cast(
 			&(nodes->nodeLocY[beginPosOfCellsNode]));
-
 
 	distributeIsCellRank();
 }
@@ -570,10 +567,8 @@ void SceCells_M::allComponentsMove() {
 /**
  * Mark cell node as either activdistributeIsActiveInfo()e or inactive.
  * left part of the node array will be active and right part will be inactive.
- * the threshold is defined by array @activeNodeCountOfThisCell.
- * e.g. activeNodeCountOfThisCell = {2,3} and  maxNodeOfOneCell = 5,
- *
- * @Checked.
+ * the threshold is defined by array activeNodeCountOfThisCell.
+ * e.g. activeNodeCountOfThisCell = {2,3} and  maxNodeOfOneCell = 5
  */
 void SceCells_M::distributeIsActiveInfo() {
 	std::cout << "before distribute bdry isActive" << std::endl;
@@ -607,8 +602,6 @@ void SceCells_M::distributeIsCellRank() {
 /**
  * This method computes center of all cells.
  * more efficient then simply iterating the cell because of parallel reducing.
- *
- * @Checked.
  */
 void SceCells_M::computeCenterPos() {
 	uint totalNodeCountForActiveCells = currentActiveCellCount

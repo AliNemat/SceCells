@@ -106,7 +106,7 @@ void PerfTestUtils::transformVals(std::vector<double> &nodeXVector,
 	uint maxIndex = nodeXVector.size();
 	uint cellCount = centerInitPos.size();
 	uint nodeInCellCount = nodeInitPos.size();
-	uint index;
+	uint index = 0;
 	for (uint i = 0; i < cellCount; i++) {
 		for (uint j = 0; j < nodeInCellCount; j++) {
 			index = i * nodeInCellCount + j;

@@ -147,7 +147,7 @@ class CellInitHelper {
 				//cout << "not inside arc range" << endl;
 				return false;
 			} else {
-				double difference = dist - this->r;
+				//double difference = dist - this->r;
 				//cout << " inside arc range" << "distance = " << difference
 				//		<< endl;
 				return true;

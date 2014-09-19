@@ -11,7 +11,6 @@
 #include <fstream>
 #include <string>
 
-
 /**
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */
@@ -87,11 +86,11 @@ public:
 	void initialize_V2(SimulationInitData &initData);
 
 	void runAllLogic(double dt);
-	void outputVtkFilesWithColor(std::string scriptNameBase, int rank);
-	void outputVtkFilesWithColor_v2(std::string scriptNameBase, int rank);
+	//void outputVtkFilesWithColor(std::string scriptNameBase, int rank);
+	//void outputVtkFilesWithColor_v2(std::string scriptNameBase, int rank);
 	void outputVtkFilesWithColor_v3(std::string scriptNameBase, int rank);
-	void outputVtkFilesWithColor_v2_stress(std::string scriptNameBase,
-			int rank);
+	//void outputVtkFilesWithColor_v2_stress(std::string scriptNameBase,
+	//int rank);
 	void checkIfAllDataFieldsValid();
 };
 

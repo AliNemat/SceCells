@@ -626,7 +626,7 @@ public:
 	thrust::device_vector<uint> bucketValuesIncludingNeighbor;
 
 	/**
-	 * @Brief This method outputs a vector of possible neighbor pairs.
+	 * This method outputs a vector of possible neighbor pairs.
 	 * Reason why this method exist is that outputting animation frame
 	 * is really slow using previous version of animation function.
 	 * Hopefully this new method could improve speed of producing
@@ -635,7 +635,7 @@ public:
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
 	/**
-	 * @Brief This method outputs a data structure for animation.
+	 * This method outputs a data structure for animation.
 	 */
 	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
 

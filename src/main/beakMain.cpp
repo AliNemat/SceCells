@@ -154,7 +154,8 @@ int main() {
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
-			simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
+			//simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
+			simuDomain.outputVtkFilesWithColor_v3(animationInput, i);
 			cout << "finished output Animation" << endl;
 		}
 		simuDomain.runAllLogic(dt);

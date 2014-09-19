@@ -71,6 +71,7 @@ double nodeTypeToScale(SceNodeType type) {
 	return result;
 }
 
+/*
 void inputInitialData::initFromFile(std::string fileName) {
 	std::ifstream infile(fileName.c_str());
 	if (!infile.is_open()) {
@@ -117,12 +118,6 @@ void SceInputPoint::outputToString(std::string &outputLine) {
 	outputLine = s.str();
 }
 
-void inputInitialData::addNewPoints(std::vector<SceInputPoint>& newPoints) {
-	for (unsigned int i = 0; i < newPoints.size(); i++) {
-		inputPoints.push_back(newPoints[i]);
-	}
-}
-
 void inputInitialData::outputToFile(std::string fileName) {
 	std::ofstream outFile(fileName.c_str());
 	std::string outLine;
@@ -132,6 +127,15 @@ void inputInitialData::outputToFile(std::string fileName) {
 	}
 	outFile.close();
 }
+*/
+
+void inputInitialData::addNewPoints(std::vector<SceInputPoint>& newPoints) {
+	for (unsigned int i = 0; i < newPoints.size(); i++) {
+		inputPoints.push_back(newPoints[i]);
+	}
+}
+
+
 
 bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 		double y1, double z1, SceNodeType t1, uint r1, double x2, double y2,

@@ -1,5 +1,5 @@
 /**
- * @file SimulationDomainGPU.cpp
+ * @file SimulationDomainGPU.cu
  * @brief this file contains domain level logic.
  * @author Wenzhao Sun wsun2@nd.edu
  * @bug no know bugs
@@ -221,11 +221,11 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	uint mxQuotient = MXNodeCountX / maxNodePerCell;
 
 	// for now we try to make boundary cells one complete part so ....
-	uint bdryRemainder = 0;
+	//uint bdryRemainder = 0;
 	uint bdryQuotient = 1;
 
 	// for now we try to make profile nodes one complete part soremdiner = 0 and quotient = 1
-	uint profileRemainder = 0;
+	//uint profileRemainder = 0;
 	uint profileQuotient = 1;
 
 	// remainder must be zero.
@@ -238,7 +238,7 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	// make sure the cell types follow format requirement.
 	// must follow sequence : B - P - E - F - M
 	int counter = 0;
-	SceNodeType cellTypesForEachLevel[5] = { Boundary, Profile, ECM, FNM, MX };
+	//SceNodeType cellTypesForEachLevel[5] = { Boundary, Profile, ECM, FNM, MX };
 	int bounds[5];
 	bounds[0] = bdryQuotient;
 	bounds[1] = bounds[0] + profileQuotient;
@@ -282,7 +282,7 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	// find the begining position of ECM.
 	//uint beginAddressOfECM = nodes.startPosECM;
 	// find the begining position of FNM cells.
-	uint beginAddressOfFNM = nodes.startPosCells;
+	//uint beginAddressOfFNM = nodes.startPosCells;
 	// find the begining position of MX cells.
 	//uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
 
@@ -425,6 +425,7 @@ void SimulationDomainGPU::runAllLogic(double dt) {
  * Depreciated.
  *
  */
+/*
 void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
 		int rank) {
 
@@ -577,6 +578,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
 	fs.flush();
 	fs.close();
 }
+*/
 
 /**
  * This is the second version of visualization.
@@ -587,6 +589,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
  * ECM: Yellow
  * Moving Epithilum layer: Green
  */
+/*
 void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
 		int rank) {
 	//cerr << "start to output animation " << rank << endl;
@@ -794,6 +797,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
 	//fs.flush();
 	fs.close();
 }
+*/
 
 /**
  * This is the second version of visualization.
@@ -804,6 +808,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
  * ECM: Yellow
  * Moving Epithilum layer: Green
  */
+/*
 void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
 		std::string scriptNameBase, int rank) {
 	cerr << "start to output animation " << rank << endl;
@@ -1007,6 +1012,7 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
 	//fs.flush();
 	fs.close();
 }
+*/
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank) {

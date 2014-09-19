@@ -33,7 +33,7 @@ add_dependencies(${DISK_PROJECT_NAME} SceGPU)
 
 find_package(CGAL REQUIRED)
 if(CGAL_FOUND)
-        include_directories(${CGAL_USE_FILE})
+        include(${CGAL_USE_FILE})
 endif (CGAL_FOUND)
 
 if(NOT WIN32)

@@ -565,10 +565,6 @@ TEST_F(SceNodeTest, MemSizeTest) {
 	EXPECT_EQ(totalNodeSize, nodes.nodeVelZ.size());
 }
 
-void generateInitVectors() {
-
-}
-
 TEST_F(SceNodeTest, InitialValueTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
@@ -753,8 +749,8 @@ TEST_F(SceNodeTest, ExtendBucketfixedTest) {
 	nodes.nodeLocZ = nodeLocZHost;
 	nodes.nodeIsActive = nodeIsActiveHost;
 	nodes.buildBuckets2D();
-	const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
-	const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
+	//const int numberOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
+	//const int numberOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
 	nodes.extendBuckets2D();
 
 	thrust::host_vector<uint> extendedKeysFromGPU = nodes.bucketKeysExpanded;
@@ -774,8 +770,7 @@ TEST_F(SceNodeTest, ExtendBucketfixedTest) {
  * Expected size of the extended buckets equals to computed
  * all results fits the requirement
  * no duplicate
- */
-
+ */ //
 TEST(SceExtendBucket2D, extendBucketRandomTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
@@ -893,7 +888,7 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	// means that we have four nodes.
 	SceNodes nodes = SceNodes(1, 1, 1, 1, 1, 1);
 	const uint testCellCount = 1;
-	const uint testNodePerCell = 1;
+	//const uint testNodePerCell = 1;
 	const uint testTotalNodeCount = 4;
 	nodes.setCurrentActiveCellCount(testCellCount);
 	nodes.maxNodeOfOneCell = testCellCount;
@@ -985,7 +980,7 @@ TEST_F(SceNodeTest, outputAnimationLinks) {
 	// means that we have four nodes.
 	SceNodes nodes = SceNodes(2, 0, 0, 0, 2, 2);
 	const uint testCellCount = 2;
-	const uint testNodePerCell = 2;
+	//const uint testNodePerCell = 2;
 	const uint testTotalNodeCount = 6;
 	nodes.setCurrentActiveCellCount(testCellCount);
 	nodes.maxNodeOfOneCell = testCellCount;
@@ -1094,6 +1089,7 @@ TEST_F(SceNodeTest, outputAnimationLinks) {
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
+	aniCri.isStressMap = false;
 	VtkAnimationData vtkData = nodes.obtainAnimationData(aniCri);
 
 	EXPECT_EQ((uint )4, vtkData.pointsAniData.size());

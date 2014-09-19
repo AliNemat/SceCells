@@ -31,12 +31,12 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
-const int myDeviceId = 0;
-const uint maxCellCount = 10;
-const uint maxNodePerCell = 100;
-const uint maxNodeCount = maxCellCount * maxNodePerCell;
-const double dt = 0.1;
-const double errTol = 1.0e-12;
+//const int myDeviceId = 0;
+//const uint maxCellCount = 10;
+//const uint maxNodePerCell = 100;
+//const uint maxNodeCount = maxCellCount * maxNodePerCell;
+//const double dt = 0.1;
+//const double errTol = 1.0e-12;
 
 extern GlobalConfigVars globalConfigVars;
 

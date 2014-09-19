@@ -93,19 +93,19 @@ void CellInitHelper::generateBoundaryCellNodesArray(vector<CVector> &bdryNodes,
 	CVector Point4 = CVector((232 - 142) / 10.0, (350 - 26) / 10.0, 0.0);
 	CVector Point5 = CVector((342 - 142) / 10.0, (350 - 26) / 10.0, 0.0);
 	CVector Point6 = CVector((249 - 142) / 10.0, (350 - 97) / 10.0, 0);
-	double tmpDiff1 = fabs(Point3.x - Point6.x);
-	double tmpDiff2 = fabs(Point3.y - Point6.y);
+	//double tmpDiff1 = fabs(Point3.x - Point6.x);
+	//double tmpDiff2 = fabs(Point3.y - Point6.y);
 	CVector arcCenter = CVector(-4.97647, 25.3, 0);
 	double radius = Point6.x - arcCenter.x;
 	//fstream fs;
 
 	bdryNodes.clear();
-	double delta = 1.0e-6;
+	//double delta = 1.0e-6;
 	CVector dirVector1 = Point2 - Point1;
 	CVector dirVector2 = Point3 - Point2;
 	CVector dirVector4 = Point5 - Point4;
-	double totalDistance1 = Modul(dirVector1);
-	double totalDistance2 = Modul(dirVector2);
+	//double totalDistance1 = Modul(dirVector1);
+	//double totalDistance2 = Modul(dirVector2);
 	assert(Point3.x == Point4.x);
 	double arcSpan = fabs(Point3.y - Point4.y);
 	double arcSpanAngle = asin(arcSpan / 2.0 / radius) * 2;
@@ -119,16 +119,16 @@ void CellInitHelper::generateBoundaryCellNodesArray(vector<CVector> &bdryNodes,
 	CVector unitIncrease2 = unitVector2 * distance;
 	CVector unitIncrease4 = unitVector4 * distance;
 	CVector tempPoint;
-	bool isOnLine2 = false;
-	double distanceFromStart = 0.0;
-	int nodeNumCounter = 0;
-	int numOfPointsOnLine1 = floor(totalDistance1 / distance) + 1;
-	double startDistFromStartOnLine2 = distance
-			- (totalDistance1 / distance - (int) (totalDistance1 / distance));
-	CVector startPointOnLine2 = Point2
-			+ startDistFromStartOnLine2 * unitVector2;
-	double actualDistance2 = Modul(Point3 - startPointOnLine2);
-	int numOfPointsOnLine2 = floor(actualDistance2 / distance) + 1;
+	//bool isOnLine2 = false;
+	//double distanceFromStart = 0.0;
+	//int nodeNumCounter = 0;
+	//int numOfPointsOnLine1 = floor(totalDistance1 / distance) + 1;
+	//double startDistFromStartOnLine2 = distance
+	//		- (totalDistance1 / distance - (int) (totalDistance1 / distance));
+	//CVector startPointOnLine2 = Point2
+	//		+ startDistFromStartOnLine2 * unitVector2;
+	//double actualDistance2 = Modul(Point3 - startPointOnLine2);
+	//int numOfPointsOnLine2 = floor(actualDistance2 / distance) + 1;
 	//int totalNumOfNodes = numOfPointsOnLine1 + numOfPointsOnLine2;
 	int totalNumOfNodes = 0;
 
@@ -173,8 +173,8 @@ void CellInitHelper::generateBoundaryCellNodesArray(vector<CVector> &bdryNodes,
 		tempPoint.Print();
 	}
 	double leftOverAngle = arcSpanAngle / 2.0 - (theta - angleIncrement);
-	cout << "angle increment = " << angleIncrement << " and left over angle ="
-			<< leftOverAngle << endl;
+	//cout << "angle increment = " << angleIncrement << " and left over angle ="
+	//		<< leftOverAngle << endl;
 	double leftOverDistance = leftOverAngle * radius;
 	double increaseDist = distance - leftOverDistance;
 	CVector startPointOnLine4 = Point4 + increaseDist * unitVector4;
@@ -479,7 +479,7 @@ vector<CellPlacementInfo> CellInitHelper::obtainPreciseCellInfoArray(
 	initPrecisionBoundaryPoints();
 	transformBoundaryPoints();
 	initBoundaryLines(interval / 1.8);
-	CVector cellDeform = CVector(deformRatio, deformRatio, deformRatio);
+	//CVector cellDeform = CVector(deformRatio, deformRatio, deformRatio);
 	vector<CVector> insideCellCenters = getCellCentersInside(interval);
 	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
@@ -641,7 +641,7 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
-	uint initTotalECMCount = rawData.ECMCenters.size();
+	//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryCellNodePosX.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initBdryCellNodePosY.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initProfileNodePosX.resize(rawData.profileNodes.size());
@@ -970,7 +970,7 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
 			GEOMETRY::MeshGen::default_list_of_seeds, criteria);
 	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
-	mesh.outputVtkFile("testVTK");
+	//mesh.outputVtkFile("testVTK");
 
 	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 
@@ -1046,27 +1046,27 @@ void CellInitHelper::generateProfileNodesArray(
 	cout << "finished init start and end points" << endl;
 
 	initProfileNodes.clear();
-	double delta = 1.0e-6;
+	//double delta = 1.0e-6;
 	vector<CVector> dirVectors;
-	for (int i = 0; i < endNodes.size(); i++) {
+	for (uint i = 0; i < endNodes.size(); i++) {
 		dirVectors.push_back(endNodes[i] - beginNodes[i]);
 	}
 	cout << "finished init dirvectors" << endl;
 
 	vector<double> totalDistances;
-	for (int i = 0; i < dirVectors.size(); i++) {
+	for (uint i = 0; i < dirVectors.size(); i++) {
 		totalDistances.push_back(Modul(dirVectors[i]));
 	}
 	cout << "finished init totalDistantces" << endl;
 
 	vector<CVector> unitVectors;
-	for (int i = 0; i < dirVectors.size(); i++) {
+	for (uint i = 0; i < dirVectors.size(); i++) {
 		unitVectors.push_back(dirVectors[i].getUnitVector());
 	}
 	cout << "finished unitVectors" << endl;
 
 	vector<CVector> unitIncreases;
-	for (int i = 0; i < dirVectors.size(); i++) {
+	for (uint i = 0; i < dirVectors.size(); i++) {
 		unitIncreases.push_back(unitVectors[i] * profileNodeInterval);
 	}
 	cout << "finished init unitIncrease" << endl;
@@ -1075,13 +1075,13 @@ void CellInitHelper::generateProfileNodesArray(
 	initProfileNodes.push_back(beginNodes[0]);
 	double remainFromPrevious = 0.0;
 	CVector startPt;
-	for (int i = 0; i < beginNodes.size(); i++) {
+	for (uint i = 0; i < beginNodes.size(); i++) {
 		startPt = beginNodes[i]
 				+ (profileNodeInterval - remainFromPrevious) * unitIncreases[i];
 
 		double actualTotalDist = remainFromPrevious + totalDistances[i];
-		int numberOfPieces = actualTotalDist / profileNodeInterval;
-		for (int j = 0; j < numberOfPieces; j++) {
+		uint numberOfPieces = actualTotalDist / profileNodeInterval;
+		for (uint j = 0; j < numberOfPieces; j++) {
 			tempPoint = startPt + j * unitIncreases[i];
 
 			initProfileNodes.push_back(tempPoint);
@@ -1191,7 +1191,7 @@ void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 		//cout << "vec = (" << vec.GetX() << "," << vec.GetY() << ","
 		//		<< vec.GetZ() << ")" << endl;
 	}
-	for (int i = 0; i < CellCenters.size(); i++) {
+	for (uint i = 0; i < CellCenters.size(); i++) {
 		for (int j = 0; j < numberOfECMAroundCellCenter; j++) {
 			CVector pos = CellCenters[i] + vecs[j];
 			if (anyCellCenterTooClose(CellCenters, pos)) {

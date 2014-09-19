@@ -99,9 +99,6 @@ double TimedObject::countSceMove(uint size) {
 			nodeYVector);
 	thrust::fill(nodes.nodeIsActive.begin(), nodes.nodeIsActive.end(), true);
 
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = 0.4;
-
 	cudaEvent_t start, stop;
 	float elapsedTime;
 
@@ -110,8 +107,6 @@ double TimedObject::countSceMove(uint size) {
 	cudaEventRecord(start, 0);
 
 	for (uint i = 0; i < 3000; i++) {
-		//VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
-		//aniData.outputVtkAni("./animation/testVtk.vtk", i);
 		nodes.calculateAndApplySceForces();
 	}
 
@@ -119,8 +114,8 @@ double TimedObject::countSceMove(uint size) {
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 	// elapsedTime is in unit of ms
-	double gpuSceMoveTime = elapsedTime / 1000.0;
 
+	double gpuSceMoveTime = elapsedTime / 1000.0;
 	return gpuSceMoveTime;
 
 }
