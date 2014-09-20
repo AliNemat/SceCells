@@ -421,6 +421,29 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 	cells_m.runAllCellLevelLogics(dt, growthMap, growthMap2);
 }
 
+void SimulationDomainGPU::readMemPara() {
+	memPara.maxCellInDomain =
+			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
+	memPara.maxNodePerCell =
+			globalConfigVars.getConfigValue("MaxNodePerCell").toDouble();
+	memPara.maxECMInDomain =
+			globalConfigVars.getConfigValue("MaxECMInDomain").toDouble();
+	memPara.maxNodePerECM =
+			globalConfigVars.getConfigValue("MaxNodePerECM").toDouble();
+	//initECMCount = globalConfigVars.getConfigValue("InitECMCount").toInt();
+	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
+			"FinalToInitProfileNodeCountRatio").toDouble();
+}
+
+void SimulationDomainGPU::readDomainPara() {
+}
+
+void SimulationDomainGPU::readChemPara() {
+}
+
+void SimulationDomainGPU::readAllParameters() {
+}
+
 /**
  * Depreciated.
  *
@@ -1015,16 +1038,16 @@ void SimulationDomainGPU::runAllLogic(double dt) {
  */
 
 /*
-void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
-		int rank) {
-	nodes.prepareSceForceComputation();
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
-	aniCri.isStressMap = 1;
-	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
-	aniData.outputVtkAni(scriptNameBase, rank);
-}
-*/
+ void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
+ int rank) {
+ nodes.prepareSceForceComputation();
+ AnimationCriteria aniCri;
+ aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
+ aniCri.isStressMap = 1;
+ VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
+ aniData.outputVtkAni(scriptNameBase, rank);
+ }
+ */
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {

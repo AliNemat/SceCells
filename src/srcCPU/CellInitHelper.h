@@ -173,30 +173,6 @@ class CellInitHelper {
 		}
 	};
 
-	/* General purpose class for parabola is difficult and not worthwhile.
-	 * Use two straight lines instead
-	 */
-	/*
-	 // y = a*(x-b)^2+c  , a must be negative
-	 class DownwardsParabola: public BoundaryLine {
-	 double a, b, c;
-	 bool isInsideOf(CVector position) {
-	 if (position.y < c) {
-	 return false;
-	 } else {
-	 double temp = sqrt((position.y - c) / a);
-	 double xLeft = b - temp;
-	 double xRight = b + temp;
-	 if (position.x >= xLeft && position.x <= xRight) {
-	 return true;
-	 } else {
-	 return false;
-	 }
-	 }
-	 }
-	 };
-	 */
-
 	class StraightLineEquationVertical: public BoundaryLine {
 	public:
 		void printWhoAmI() {

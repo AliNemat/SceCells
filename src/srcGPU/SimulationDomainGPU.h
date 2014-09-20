@@ -15,12 +15,14 @@
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */
 class SimulationDomainGPU {
+	SceMemPara memPara;
+
 	uint maxCellInDomain;
 	uint maxNodePerCell;
 	uint maxECMInDomain;
 	uint maxNodePerECM;
-	//uint initECMCount;
 	double FinalToInitProfileNodeCountRatio;
+
 	void initialCellsOfFiveTypes(std::vector<SceNodeType> &cellTypes,
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<double> &initBdryCellNodePosX,
@@ -33,18 +35,21 @@ class SimulationDomainGPU {
 			std::vector<double> &initFNMCellNodePosY,
 			std::vector<double> &initMXCellNodePosX,
 			std::vector<double> &initMXCellNodePosY);
-public:
+
+	void readMemPara();
+	void readDomainPara();
+	void readChemPara();
+	void readAllParameters();
+
 	SceNodes nodes;
-	//SceCells cells;
 	SceCells_M cells_m;
 
 	GrowthDistriMap growthMap; // first map
-
 	GrowthDistriMap growthMap2; // second map
 
-	// boundary nodes share same attribute with cell nodes
-	// but nodes can't move.
-	// uint cellSpaceForBdry;
+	SceDomainPara domainPara;
+	SceChemPara chemPara;
+public:
 
 	double intraLinkDisplayRange;
 
@@ -74,26 +79,40 @@ public:
 	double growthMorLowConcenMX;
 	double growthMorDiffSlopeMX;
 
-	double compuDist(double x1, double y1, double z1, double x2, double y2,
-			double z2) {
-		return sqrt(
-				(x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
-						+ (z1 - z2) * (z1 - z2));
-	}
-
+	/**
+	 * Default constructor.
+	 * Reads all the configuration values from file.
+	 */
 	SimulationDomainGPU();
 
+	/**
+	 * Domain initialization.
+	 * Assigns values to the data fields in simulation domain.
+	 * @param initData initial data set for simulation domain
+	 */
 	void initialize_V2(SimulationInitData &initData);
 
+	/**
+	 * Checks if all data fields are valid.
+	 * This methods only loosely checks the data validity.
+	 */
+	void checkIfAllDataFieldsValid();
+
+	/**
+	 * Run one step of simulation in the domain.
+	 * Contains cell level logics and node level logics.
+	 * @param dt timestep
+	 */
 	void runAllLogic(double dt);
-	//void outputVtkFilesWithColor(std::string scriptNameBase, int rank);
-	//void outputVtkFilesWithColor_v2(std::string scriptNameBase, int rank);
-	//void outputVtkFilesWithColor_v3(std::string scriptNameBase, int rank);
+
+	/**
+	 * Method that animates the domain to VTK format.
+	 * @param scriptNameBase name of the vtk animation series.
+	 * @param rank frame sequence in the vtk animation series.
+	 * @param aniCri criteria for outputing animation.
+	 */
 	void outputVtkFilesWithColor_v3(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
-	//void outputVtkFilesWithColor_v2_stress(std::string scriptNameBase,
-	//int rank);
-	void checkIfAllDataFieldsValid();
 };
 
 #endif
