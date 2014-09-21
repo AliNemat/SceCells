@@ -73,28 +73,13 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 //extern double sceIntraParaCPU[4];
 
 /**
- * enum type cell type.
- */
-//enum CellType {
-//	Boundary, Profile, ECM, FNM, MX
-//};
-/**
- * This structure is for visualization purpose only.
- */
-//struct Point {
-//	CellType type;
-//	int rank;
-//};
-/**
  * Depreciated.
  */
 struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
-	uint maxCellCount;__host__ __device__
-	InitFunctor(uint maxCell) :
+	uint maxCellCount;__host__ __device__ InitFunctor(uint maxCell) :
 			maxCellCount(maxCell) {
 	}
-	__host__ __device__
-	Tuint3 operator()(const Tuint3 &v) {
+	__host__ __device__ Tuint3 operator()(const Tuint3 &v) {
 		uint iter = thrust::get<2>(v);
 		uint cellRank = iter / maxCellCount;
 		uint nodeRank = iter % maxCellCount;
@@ -108,13 +93,11 @@ struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
 struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
 	double _dt;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddFunctor(double dt) :
+	__host__ __device__ AddFunctor(double dt) :
 			_dt(dt) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CVec3 operator()(const CVec3 &vel, const CVec3 &loc) {
+	__host__ __device__ CVec3 operator()(const CVec3 &vel, const CVec3 &loc) {
 		double xMoveDist = thrust::get<0>(vel) * _dt;
 		double yMoveDist = thrust::get<1>(vel) * _dt;
 		double zMoveDist = thrust::get<2>(vel) * _dt;
@@ -131,8 +114,7 @@ struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
 struct Prg {
 	double a, b;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	Prg(double _a = 0.f, double _b = 1.f) :
+	__host__ __device__ Prg(double _a = 0.f, double _b = 1.f) :
 			a(_a), b(_b) {
 	}
 	__host__ __device__
@@ -157,15 +139,13 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 	double _bucketSize;
 	unsigned int width;
 
-	__host__ __device__
-	pointToBucketIndex2D(double minX, double maxX, double minY, double maxY,
-			double bucketSize) :
+	__host__ __device__ pointToBucketIndex2D(double minX, double maxX,
+			double minY, double maxY, double bucketSize) :
 			_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _bucketSize(
 					bucketSize), width((maxX - minX) / bucketSize + 1) {
 	}
 
-	__host__ __device__
-	Tuint2 operator()(const CVec3BoolInt& v) const {
+	__host__ __device__ Tuint2 operator()(const CVec3BoolInt& v) const {
 		// find the raster indices of p's bucket
 		if (thrust::get<3>(v) == true) {
 			unsigned int x = static_cast<unsigned int>((thrust::get<0>(v)
@@ -193,13 +173,12 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 	uint _numOfBucketsInXDim;
 	uint _numOfBucketsInYDim;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	NeighborFunctor2D(uint numOfBucketsInXDim, uint numOfBucketsInYDim) :
+	__host__ __device__ NeighborFunctor2D(uint numOfBucketsInXDim,
+			uint numOfBucketsInYDim) :
 			_numOfBucketsInXDim(numOfBucketsInXDim), _numOfBucketsInYDim(
 					numOfBucketsInYDim) {
 	}
-	__host__ __device__
-	Tuint2 operator()(const Tuint2 &v) {
+	__host__ __device__ Tuint2 operator()(const Tuint2 &v) {
 		uint relativeRank = thrust::get<1>(v) % 9;
 		uint xPos = thrust::get<0>(v) % _numOfBucketsInXDim;
 		uint yPos = thrust::get<0>(v) / _numOfBucketsInXDim;
@@ -366,8 +345,7 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	uint _nodeCountPerCell;
 	uint _cellNodesPerECM;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddSceForce(uint* valueAddress, double* nodeLocXAddress,
+	__host__ __device__ AddSceForce(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, double* nodeLocZAddress,
 			uint* nodeRankAddress, SceNodeType* cellTypesAddress,
 			uint cellNodesThreshold, uint nodeCountPerCell,
@@ -379,8 +357,7 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 					cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
 					celLNodesPerECM) {
 	}
-	__device__
-	CVec4 operator()(const Tuuuddd &u3d3) const {
+	__device__ CVec4 operator()(const Tuuuddd &u3d3) const {
 		double xRes = 0.0;
 		double yRes = 0.0;
 		double zRes = 0.0;
@@ -428,8 +405,7 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	double* _nodeVelZLinkBeginAddress;
 	uint _maxNumberOfNodes;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddLinkForces(double* nodeLocXLinkBeginAddress,
+	__host__ __device__ AddLinkForces(double* nodeLocXLinkBeginAddress,
 			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress,
 			double* nodeVelXLinkBeginAddress, double* nodeVelYLinkBeginAddress,
 			double* nodeVelZLinkBeginAddress, uint maxNumberOfNodes) :
@@ -442,8 +418,7 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 					maxNumberOfNodes) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__
-	CVec3 operator()(const uint &pos) const {
+	__device__ CVec3 operator()(const uint &pos) const {
 		// nodes on two ends should be fixed.
 		// therefore, velocity is set to 0.
 		if (pos == 0 || pos == _maxNumberOfNodes - 1) {
@@ -480,8 +455,7 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
  * return a tuple of three zero double numbers.
  */
 struct GetZeroTupleThree: public thrust::unary_function<uint, CVec3> {
-	__host__ __device__
-	CVec3 operator()(const uint &value) {
+	__host__ __device__ CVec3 operator()(const uint &value) {
 		return thrust::make_tuple(0.0, 0.0, 0.0);
 	}
 };
@@ -492,8 +466,7 @@ struct GetZeroTupleThree: public thrust::unary_function<uint, CVec3> {
 struct isLessThan: public thrust::unary_function<uint, bool> {
 	uint initValue;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	isLessThan(uint initV) :
+	__host__ __device__ isLessThan(uint initV) :
 			initValue(initV) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -583,9 +556,6 @@ public:
 	uint startPosProfile;
 	uint startPosECM;
 	uint startPosCells;
-
-	//thrust::device_vector<uint> cellRanks;
-	//thrust::device_vector<uint> nodeRanks;
 
 	// for all of these values that are allocated for all nodes, the actual value is meaningless
 	// if the cell it belongs to is inactive

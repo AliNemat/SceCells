@@ -15,13 +15,16 @@
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */
 class SimulationDomainGPU {
-	SceMemPara memPara;
 
-	uint maxCellInDomain;
-	uint maxNodePerCell;
-	uint maxECMInDomain;
-	uint maxNodePerECM;
-	double FinalToInitProfileNodeCountRatio;
+	SceNodes nodes;
+	SceCells_M cells_m;
+
+	GrowthDistriMap growthMap; // first map
+	GrowthDistriMap growthMap2; // second map
+
+	SceMemPara memPara;
+	SceDomainPara domainPara;
+	SceChemPara chemPara;
 
 	void initialCellsOfFiveTypes(std::vector<SceNodeType> &cellTypes,
 			std::vector<uint> &numOfInitActiveNodesOfCells,
@@ -41,44 +44,8 @@ class SimulationDomainGPU {
 	void readChemPara();
 	void readAllParameters();
 
-	SceNodes nodes;
-	SceCells_M cells_m;
-
-	GrowthDistriMap growthMap; // first map
-	GrowthDistriMap growthMap2; // second map
-
-	SceDomainPara domainPara;
-	SceChemPara chemPara;
+	void initializeGrowthMap();
 public:
-
-	double intraLinkDisplayRange;
-
-	double minX;
-	double maxX;
-	double minY;
-	double maxY;
-	double gridSpacing;
-
-	uint growthGridXDim;
-	uint growthGridYDim;
-	double growthGridSpacing;
-	double growthGridLowerLeftPtX;
-	double growthGridLowerLeftPtY;
-
-	// first morphogen distribution
-	double growthMorCenterXCoord;
-	double growthMorCenterYCoord;
-	double growthMorHighConcen;
-	double growthMorLowConcen;
-	double growthMorDiffSlope;
-
-	// second morphogen distribution
-	double growthMorCenterXCoordMX;
-	double growthMorCenterYCoordMX;
-	double growthMorHighConcenMX;
-	double growthMorLowConcenMX;
-	double growthMorDiffSlopeMX;
-
 	/**
 	 * Default constructor.
 	 * Reads all the configuration values from file.

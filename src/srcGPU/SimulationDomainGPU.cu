@@ -11,92 +11,11 @@ using namespace std;
 
 /**
  * Constructor.
- * Focus on initializing domain-level parameter values.
+ * reads values from config file.
  */
 SimulationDomainGPU::SimulationDomainGPU() {
-	//cout << "before allocation memory" << endl;
-	//thrust::host_vector<int> aa;
-	//aa.resize(50000);
-	//thrust::device_vector<int> bb = aa;
-	//thrust::device_vector<double> cc(5000);
-	//cout << "after allocate memory" << endl;
-
-	//cout << "start to create simulatonDomainGPU object" << endl;
-
-	maxCellInDomain =
-			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
-	maxNodePerCell =
-			globalConfigVars.getConfigValue("MaxNodePerCell").toDouble();
-	maxECMInDomain =
-			globalConfigVars.getConfigValue("MaxECMInDomain").toDouble();
-	maxNodePerECM = globalConfigVars.getConfigValue("MaxNodePerECM").toDouble();
-	//initECMCount = globalConfigVars.getConfigValue("InitECMCount").toInt();
-	FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
-			"FinalToInitProfileNodeCountRatio").toDouble();
-
-	minX = globalConfigVars.getConfigValue("DOMAIN_XMIN").toDouble();
-	maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
-	minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
-	maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
-
-	gridSpacing =
-			globalConfigVars.getConfigValue("Cell_Center_Interval").toDouble();
-
-	growthGridXDim = globalConfigVars.getConfigValue("GrowthGridXDim").toInt();
-	growthGridYDim = globalConfigVars.getConfigValue("GrowthGridYDim").toInt();
-	growthGridSpacing =
-			globalConfigVars.getConfigValue("GrowthGridSpacing").toDouble();
-	growthGridLowerLeftPtX = globalConfigVars.getConfigValue(
-			"GrowthGridLowerLeftPtX").toDouble();
-	growthGridLowerLeftPtY = globalConfigVars.getConfigValue(
-			"GrowthGridLowerLeftPtY").toDouble();
-
-	growthMorCenterXCoord = globalConfigVars.getConfigValue(
-			"GrowthMorCenterXCoord").toDouble();
-	growthMorCenterYCoord = globalConfigVars.getConfigValue(
-			"GrowthMorCenterYCoord").toDouble();
-	growthMorHighConcen =
-			globalConfigVars.getConfigValue("GrowthMorHighConcen").toDouble();
-	growthMorLowConcen =
-			globalConfigVars.getConfigValue("GrowthMorLowConcen").toDouble();
-	growthMorDiffSlope =
-			globalConfigVars.getConfigValue("GrowthMorDiffSlope").toDouble();
-
-	growthMorCenterXCoordMX = globalConfigVars.getConfigValue(
-			"GrowthMorCenterXCoordMX").toDouble();
-	growthMorCenterYCoordMX = globalConfigVars.getConfigValue(
-			"GrowthMorCenterYCoordMX").toDouble();
-	growthMorHighConcenMX = globalConfigVars.getConfigValue(
-			"GrowthMorHighConcenMX").toDouble();
-	growthMorLowConcenMX = globalConfigVars.getConfigValue(
-			"GrowthMorLowConcenMX").toDouble();
-	growthMorDiffSlopeMX = globalConfigVars.getConfigValue(
-			"GrowthMorDiffSlopeMX").toDouble();
-
-	intraLinkDisplayRange = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-
-	cout << "after reading values from config file" << endl;
-	cout << "key parameters are : maxCellInDomain = " << maxCellInDomain
-			<< "maxNodePerCell = " << maxNodePerCell << "maxECMInDomain = "
-			<< maxECMInDomain << "maxNodePerECM = " << maxNodePerECM << endl;
-	cout << "after created nodes object" << endl;
-	//cells = SceCells(&nodes);
-
-	cout << "after created nodes and cells object" << endl;
-	growthMap = GrowthDistriMap(growthGridXDim, growthGridYDim,
-			growthGridSpacing);
-	growthMap.initialize(growthGridLowerLeftPtX, growthGridLowerLeftPtY,
-			growthMorCenterXCoord, growthMorCenterYCoord, growthMorHighConcen,
-			growthMorLowConcen, growthMorDiffSlope);
-
-	cout << "after created growthMap1" << endl;
-	growthMap2 = GrowthDistriMap(growthGridXDim, growthGridYDim,
-			growthGridSpacing);
-	growthMap2.initialize(growthGridLowerLeftPtX, growthGridLowerLeftPtY,
-			growthMorCenterXCoordMX, growthMorCenterYCoordMX,
-			growthMorHighConcenMX, growthMorLowConcenMX, growthMorDiffSlopeMX);
-	cout << "after created growthMap2" << endl;
+	readAllParameters();
+	initializeGrowthMap();
 }
 
 /**
@@ -150,14 +69,15 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	// because the total length of profile might increase.
 	// FinalToInitProfileNodeCountRatio is defined in Config file.
 	uint maxProfileNodeCount = initProfileNodePosX.size()
-			* FinalToInitProfileNodeCountRatio;
+			* memPara.FinalToInitProfileNodeCountRatio;
 
 	/*
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
 	 * while the last four parameters come from Config file.
 	 */
-	nodes = SceNodes(bdryNodeCount, maxProfileNodeCount, maxECMInDomain,
-			maxNodePerECM, maxCellInDomain, maxNodePerCell);
+	nodes = SceNodes(bdryNodeCount, maxProfileNodeCount, memPara.maxECMInDomain,
+			memPara.maxNodePerECM, memPara.maxCellInDomain,
+			memPara.maxNodePerCell);
 	/*
 	 * Initialize SceCells_M ( M means modified) by nodes information.
 	 */
@@ -269,135 +189,26 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 
 	nodes.currentActiveProfileNodeCount = ProfileNodeCountX;
 
-	cerr << "after set parameters" << endl;
-	// copy input of initial active node of cells to our actual data location
-	//thrust::copy(numOfInitActiveNodesOfCells.begin(),
-	//		numOfInitActiveNodesOfCells.end(),
-	//		cells_m.activeNodeCountOfThisCell.begin());
-
-	// find the begining position of Profile.
-
 	assert(nodes.startPosProfile == bdryNodeCountX);
-	//uint beginAddressOfProfile = nodes.startPosProfile;
-	// find the begining position of ECM.
-	//uint beginAddressOfECM = nodes.startPosECM;
-	// find the begining position of FNM cells.
-	//uint beginAddressOfFNM = nodes.startPosCells;
-	// find the begining position of MX cells.
-	//uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
 
-	// initialize the cell ranks and types
-
-	//int numOfCellEachLevel[] = { bdryQuotient, profileQuotient, ecmQuotient,
-	//		fnmQuotient, mxQuotient };
-	//int nodesPerCellEachLevel[] = { bdryNodeCount, maxProfileNodeCount,
-	//		maxNodePerECM, maxNodePerCell, maxNodePerCell };
 	uint totalSize = nodes.nodeLocX.size();
-	//thrust::host_vector<CellType> allNodeTypes;
-	//thrust::host_vector<int> cellRanks;
-	//allNodeTypes.resize(totalSize);
-	//cellRanks.resize(totalSize);
-	//int currentRank = 0;
-	//level = 0;
-	//counter = 0;
-	//while (counter < cellTypeSize) {
-	// if count is already beyond the bound, we need to increase the current level.
-	//	if (counter == bounds[level]) {
-	//		level++;
-	//	}
-	//	allNodeTypes[counter] = cellTypesForEachLevel[level];
-	//	if (level == 0) {
-	//		cellRanks[counter] = counter / nodesPerCellEachLevel[0];
-	//		//currentRank = cellRanks[counter];
-	//	} else {
-	//		cellRanks[counter] = (counter - bounds[level - 1])
-	//				/ nodesPerCellEachLevel[level];
-	//	}
-	//	counter++;
-	//}
-	// copy node rank and node type information to GPU
-	//thrust::copy(allNodeTypes.begin(), allNodeTypes.end(),
-	//		nodes.nodeCellType.begin());
-	//thrust::copy(cellRanks.begin(), cellRanks.end(),
-	//		nodes.nodeCellRank.begin());
-
-	// copy x and y position of nodes of boundary cells to actual node position.
 
 	// set cell types
 	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
-
-	cout << "Break point 1111" << endl;
-
-	cout << "size1 = " << numOfInitActiveNodesOfCells.size() << endl;
-	cout << "size2 = " << cells_m.activeNodeCountOfThisCell.size() << endl;
 
 	// copy initial active node count info to GPU
 	thrust::copy(numOfInitActiveNodesOfCells.begin(),
 			numOfInitActiveNodesOfCells.end(),
 			cells_m.activeNodeCountOfThisCell.begin());
 
-	cout << "Break point 2222" << endl;
-
-	cout << "number of initial cells: " << numOfInitActiveNodesOfCells.size();
-
 	nodes.initValues(initBdryCellNodePosX, initBdryCellNodePosY,
 			initProfileNodePosX, initProfileNodePosY, initECMNodePosX,
 			initECMNodePosY, initFNMCellNodePosX, initFNMCellNodePosY,
 			initMXCellNodePosX, initMXCellNodePosY);
 
-	//for (int i = 0; i < numOfInitActiveNodesOfCells.size(); i++) {
-	//	cout << cells_m.activeNodeCountOfThisCell[i] << " " << endl;
-	//}
-	// set isActiveInfo
-	// allocate space for isActive info
-	// uint sizeOfTmpVector = maxNodePerCell * initNodeCountSize;
-	// thrust::host_vector<bool> isActive(sizeOfTmpVector, false);
-
-	//thrust::host_vector<bool> isActive(totalSize, false);
-
-	//for (int i = 0; i < initNodeCountSize; i++) {
-	//	int j = 0;
-	//	int index;
-	//	while (j < numOfInitActiveNodesOfCells[i]) {
-	//		index = i * maxNodePerCell + j;
-	//		isActive[index] = true;
-	//		j++;
-	//	}
-	//}
-	/*
-	 for (int i = 0; i < totalSize; i++) {
-	 if (i < beginAddressOfProfile) {
-	 isActive[i] = true;
-	 } else if (i < beginAddressOfECM) {
-	 if (i - beginAddressOfProfile < ProfileNodeCountX) {
-	 isActive[i] = true;
-	 } else {
-	 isActive[i] = false;
-	 }
-	 } else if (i < beginAddressOfFNM) {
-	 if (i - beginAddressOfECM < initECMCount * maxNodePerECM) {
-	 isActive[i] = true;
-	 } else {
-	 isActive[i] = false;
-	 }
-
-	 } else {
-	 // else : initially we don't need to set active for FNM and MX because
-	 // this information will be updated while cell logic.
-	 isActive[i] = false;
-	 }
-	 }
-	 // copy is active info to GPU
-	 thrust::copy(isActive.begin(), isActive.end(), nodes.nodeIsActive.begin());
-
-	 */
 	// set cell types
 	cells_m.setCellTypes(cellTypesToPass);
 	cells_m.distributeIsActiveInfo();
-	//cout << "finished initialize cells of five types" << endl;
-	//cout << "press any key to continue" << endl;
-	//int jj;
-	//cin >> jj;
 }
 
 void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
@@ -408,8 +219,9 @@ void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
 			initData.initECMNodePosY, initData.initFNMCellNodePosX,
 			initData.initFNMCellNodePosY, initData.initMXCellNodePosX,
 			initData.initMXCellNodePosY);
-	cout << "finished init cells of five types" << endl;
-	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
+	//cout << "finished init cells of five types" << endl;
+	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
+			domainPara.maxY, domainPara.gridSpacing);
 }
 
 /**
@@ -430,624 +242,83 @@ void SimulationDomainGPU::readMemPara() {
 			globalConfigVars.getConfigValue("MaxECMInDomain").toDouble();
 	memPara.maxNodePerECM =
 			globalConfigVars.getConfigValue("MaxNodePerECM").toDouble();
-	//initECMCount = globalConfigVars.getConfigValue("InitECMCount").toInt();
 	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
 			"FinalToInitProfileNodeCountRatio").toDouble();
 }
 
 void SimulationDomainGPU::readDomainPara() {
+	domainPara.minX = globalConfigVars.getConfigValue("DOMAIN_XMIN").toDouble();
+	domainPara.maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
+	domainPara.minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
+	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
+	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
+	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
+	domainPara.gridSpacing = globalConfigVars.getConfigValue(
+			"Cell_Center_Interval").toDouble();
+	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+			/ domainPara.gridSpacing + 1;
+	domainPara.numOfBucketsInXDim = (domainPara.maxY - domainPara.minY)
+			/ domainPara.gridSpacing + 1;
 }
 
 void SimulationDomainGPU::readChemPara() {
+	chemPara.growthGridXDim =
+			globalConfigVars.getConfigValue("GrowthGridXDim").toInt();
+	chemPara.growthGridYDim =
+			globalConfigVars.getConfigValue("GrowthGridYDim").toInt();
+	chemPara.growthGridSpacing = globalConfigVars.getConfigValue(
+			"GrowthGridSpacing").toDouble();
+	chemPara.growthGridLowerLeftPtX = globalConfigVars.getConfigValue(
+			"GrowthGridLowerLeftPtX").toDouble();
+	chemPara.growthGridLowerLeftPtY = globalConfigVars.getConfigValue(
+			"GrowthGridLowerLeftPtY").toDouble();
+
+	chemPara.growthMorCenterXCoord = globalConfigVars.getConfigValue(
+			"GrowthMorCenterXCoord").toDouble();
+	chemPara.growthMorCenterYCoord = globalConfigVars.getConfigValue(
+			"GrowthMorCenterYCoord").toDouble();
+	chemPara.growthMorHighConcen = globalConfigVars.getConfigValue(
+			"GrowthMorHighConcen").toDouble();
+	chemPara.growthMorLowConcen = globalConfigVars.getConfigValue(
+			"GrowthMorLowConcen").toDouble();
+	chemPara.growthMorDiffSlope = globalConfigVars.getConfigValue(
+			"GrowthMorDiffSlope").toDouble();
+
+	chemPara.growthMorCenterXCoordMX = globalConfigVars.getConfigValue(
+			"GrowthMorCenterXCoordMX").toDouble();
+	chemPara.growthMorCenterYCoordMX = globalConfigVars.getConfigValue(
+			"GrowthMorCenterYCoordMX").toDouble();
+	chemPara.growthMorHighConcenMX = globalConfigVars.getConfigValue(
+			"GrowthMorHighConcenMX").toDouble();
+	chemPara.growthMorLowConcenMX = globalConfigVars.getConfigValue(
+			"GrowthMorLowConcenMX").toDouble();
+	chemPara.growthMorDiffSlopeMX = globalConfigVars.getConfigValue(
+			"GrowthMorDiffSlopeMX").toDouble();
 }
 
 void SimulationDomainGPU::readAllParameters() {
+	readMemPara();
+	readDomainPara();
+	readChemPara();
 }
 
-/**
- * Depreciated.
- *
- */
-/*
- void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
- int rank) {
+void SimulationDomainGPU::initializeGrowthMap() {
+	growthMap = GrowthDistriMap(chemPara.growthGridXDim,
+			chemPara.growthGridYDim, chemPara.growthGridSpacing);
+	growthMap.initialize(chemPara.growthGridLowerLeftPtX,
+			chemPara.growthGridLowerLeftPtY, chemPara.growthMorCenterXCoord,
+			chemPara.growthMorCenterYCoord, chemPara.growthMorHighConcen,
+			chemPara.growthMorLowConcen, chemPara.growthMorDiffSlope);
 
- uint activeTotalNodeCount = nodes.currentActiveCellCount
- * nodes.maxNodeOfOneCell;
-
- thrust::host_vector<uint> hostActiveCountOfCells(
- nodes.currentActiveCellCount);
-
- thrust::host_vector<double> hostTmpVectorLocX(activeTotalNodeCount);
- thrust::host_vector<double> hostTmpVectorLocY(activeTotalNodeCount);
- thrust::host_vector<double> hostTmpVectorLocZ(activeTotalNodeCount);
- thrust::host_vector<bool> hostTmpVectorIsActive(activeTotalNodeCount);
-
- std::vector<uint> prefixSum(nodes.currentActiveCellCount);
- std::vector<uint> prefixSumLinks(nodes.currentActiveCellCount);
-
- thrust::copy(
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeIsActive.begin())),
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeIsActive.begin())) + activeTotalNodeCount,
- thrust::make_zip_iterator(
- thrust::make_tuple(hostTmpVectorLocX.begin(),
- hostTmpVectorLocY.begin(),
- hostTmpVectorLocZ.begin(),
- hostTmpVectorIsActive.begin())));
-
- thrust::copy(cells_m.activeNodeCountOfThisCell.begin(),
- cells_m.activeNodeCountOfThisCell.begin()
- + cells_m.currentActiveCellCount,
- hostActiveCountOfCells.begin());
-
- int i, j, k;
- int totalNNum = thrust::reduce(hostActiveCountOfCells.begin(),
- hostActiveCountOfCells.end());
- std::vector<std::pair<uint, uint> > links;
- uint tmpRes = 0;
- for (i = 0; i < nodes.currentActiveCellCount; i++) {
- prefixSum[i] = tmpRes;
- tmpRes = tmpRes + hostActiveCountOfCells[i];
- }
-
- thrust::host_vector<SceNodeType> cellTypesFromGPU = cells_m.getCellTypes();
- cout << "size of cellTypes from GPU is " << cellTypesFromGPU.size()
- << ", size of currentActiveCellCount is"
- << nodes.currentActiveCellCount << endl;
- //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
- // using string stream is probably not the best solution,
- // but I can't use c++ 11 features for backward compatibility
- std::stringstream ss;
- ss << std::setw(5) << std::setfill('0') << rank;
- std::string scriptNameRank = ss.str();
- std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
- std::cout << "start to create vtk file" << vtkFileName << std::endl;
- std::ofstream fs;
- fs.open(vtkFileName.c_str());
-
- //int totalNNum = getTotalNodeCount();
- //int LNum = 0;
- //int NNum;
- fs << "# vtk DataFile Version 3.0" << std::endl;
- fs << "Lines and points representing subcelluar element cells "
- << std::endl;
- fs << "ASCII" << std::endl;
- fs << std::endl;
- fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
- fs << "POINTS " << totalNNum << " float" << std::endl;
-
- uint counterForLink = 0;
- for (i = 0; i < nodes.currentActiveCellCount; i++) {
- uint activeNodeCount = hostActiveCountOfCells[i];
- for (j = 0; j < activeNodeCount; j++) {
- uint pos = i * nodes.maxNodeOfOneCell + j;
- fs << hostTmpVectorLocX[pos] << " " << hostTmpVectorLocY[pos] << " "
- << hostTmpVectorLocZ[pos] << std::endl;
- }
- uint tmpCount = 0;
- for (j = 0; j < activeNodeCount; j++) {
- for (k = j; k < activeNodeCount; k++) {
- if (j == k) {
- continue;
- } else {
- uint pos1 = prefixSum[i] + j;
- uint pos2 = prefixSum[i] + k;
- uint pos1InVec = i * nodes.maxNodeOfOneCell + j;
- uint pos2InVec = i * nodes.maxNodeOfOneCell + k;
- if (compuDist(hostTmpVectorLocX[pos1InVec],
- hostTmpVectorLocY[pos1InVec],
- hostTmpVectorLocZ[pos1InVec],
- hostTmpVectorLocX[pos2InVec],
- hostTmpVectorLocY[pos2InVec],
- hostTmpVectorLocZ[pos2InVec])
- <= intraLinkDisplayRange) {
- links.push_back(std::make_pair<uint, uint>(pos1, pos2));
- tmpCount++;
- } else {
- continue;
- }
- }
- }
- }
- prefixSumLinks[i] = counterForLink;
- counterForLink = counterForLink + tmpCount;
- }
- fs << std::endl;
- fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
- uint linkSize = links.size();
- for (uint i = 0; i < linkSize; i++) {
- fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
- }
- uint LNum = links.size();
- fs << "CELL_TYPES " << LNum << endl;
- for (i = 0; i < LNum; i++) {
- fs << "3" << endl;
- }
- fs << "POINT_DATA " << totalNNum << endl;
- fs << "SCALARS point_scalars float" << endl;
- fs << "LOOKUP_TABLE default" << endl;
-
- //for (i = 0; i < nodes.currentActiveCellCount; i++) {
- //	uint activeNodeCount = hostActiveCountOfCells[i];
- //	for (j = 0; j < activeNodeCount; j++) {
- //		fs << i << endl;
- //	}
- //}
-
- for (i = 0; i < nodes.currentActiveCellCount; i++) {
- uint activeNodeCount = hostActiveCountOfCells[i];
- if (cellTypesFromGPU[i] == Boundary) {
- for (j = 0; j < activeNodeCount; j++) {
- fs << 1 << endl;
- }
- } else if (cellTypesFromGPU[i] == FNM) {
- for (j = 0; j < activeNodeCount; j++) {
- fs << 2 << endl;
- }
- } else if (cellTypesFromGPU[i] == MX) {
- for (j = 0; j < activeNodeCount; j++) {
- fs << 3 << endl;
- }
- }
-
- }
-
- fs.flush();
- fs.close();
- }
- */
-
-/**
- * This is the second version of visualization.
- * Inter-links are not colored for a clearer representation
- * Fixed Boundary: Black
- * FNM cells: Red
- * MX cells: Blue
- * ECM: Yellow
- * Moving Epithilum layer: Green
- */
-/*
- void SimulationDomainGPU::outputVtkFilesWithColor_v2(std::string scriptNameBase,
- int rank) {
- //cerr << "start to output animation " << rank << endl;
- //cells_m.distributeIsCellRank();
- cells_m.distributeIsActiveInfo();
- thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
- cout << "finished distribute cell is active" << endl;
-
- int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
- int num2 = cells_m.beginPosOfCellsNode
- + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
- cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
- << nodes.startPosCells << ", part 2 = "
- << cells_m.totalNodeCountForActiveCells << endl;
- cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
- << cells_m.beginPosOfCellsNode << ", part 2 = "
- << nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
-
- int count = 0;
- for (int i = 0;
- i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
- i++) {
- if (isActiveHost[i] == true) {
- count++;
- }
- }
- cout << "before printing, number of active nodes in domain: " << count
- << endl;
- //int jj;
- //cin >> jj;
-
- uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
- + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
-
- cout << "number of nodes = " << activeTotalNodeCount << endl;
- cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
- << endl;
-
- uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
- nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
-
- //uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
- //		nodes.nodeIsActive.begin() + 1);
- cerr << "number of active nodes = " << totalActiveCount << endl;
- cerr << "number of total active nodes possible= " << activeTotalNodeCount
- << endl;
-
- cout.flush();
-
- thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
- thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
- thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
- thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
- thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
- totalActiveCount);
- thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
-
- thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
- thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
- thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
- thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
- thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
- thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
-
- cout << "finished initialization space for GPU and CPU" << endl;
-
- cout << "During output animation, active total node count is "
- << activeTotalNodeCount << endl;
-
- thrust::copy_if(
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeCellType.begin(),
- nodes.nodeCellRank.begin())),
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeCellType.begin(),
- nodes.nodeCellRank.begin())) + activeTotalNodeCount,
- nodes.nodeIsActive.begin(),
- thrust::make_zip_iterator(
- thrust::make_tuple(deviceTmpVectorLocX.begin(),
- deviceTmpVectorLocY.begin(),
- deviceTmpVectorLocZ.begin(),
- deviceTmpVectorNodeType.begin(),
- deviceTmpVectorNodeRank.begin())), isTrue());
-
- cout << "finished cpu data from GPU to CPU" << endl;
-
- hostTmpVectorLocX = deviceTmpVectorLocX;
- hostTmpVectorLocY = deviceTmpVectorLocY;
- hostTmpVectorLocZ = deviceTmpVectorLocZ;
- hostTmpVectorIsActive = deviceTmpVectorIsActive;
- hostTmpVectorNodeType = deviceTmpVectorNodeType;
- hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
-
- int i, j;
- std::vector<std::pair<uint, uint> > links;
-
- //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
- // using string stream is probably not the best solution,
- // but I can't use c++ 11 features for backward compatibility
- std::stringstream ss;
- ss << std::setw(5) << std::setfill('0') << rank;
- std::string scriptNameRank = ss.str();
- std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
- std::cout << "start to create vtk file" << vtkFileName << std::endl;
- std::ofstream fs;
- fs.open(vtkFileName.c_str());
-
- //int totalNNum = getTotalNodeCount();
- //int LNum = 0;
- //int NNum;
- assert(hostTmpVectorLocX.size() == totalActiveCount);
-
- fs << "# vtk DataFile Version 3.0" << std::endl;
- fs << "Lines and points representing subcelluar element cells "
- << std::endl;
- fs << "ASCII" << std::endl;
- fs << std::endl;
- fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
- fs << "POINTS " << totalActiveCount << " float" << std::endl;
-
- uint counterForLink = 0;
- for (i = 0; i < totalActiveCount; i++) {
- fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
- << hostTmpVectorLocZ[i] << std::endl;
- for (j = 0; j < totalActiveCount; j++) {
- if (i == j) {
- continue;
- }
- if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
- hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
- hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
- <= intraLinkDisplayRange) {
- // have this extra if because we don't want to include visualization
- // for inter-cell interactions.
- // to achieve that, we don't include links between different types
- // and also avoid display links between different cells of same type
- if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
- && hostTmpVectorNodeRank[i]
- == hostTmpVectorNodeRank[j]) {
- if (hostTmpVectorNodeType[i] == Boundary) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == Profile) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == ECM) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == MX
- || hostTmpVectorNodeType[i] == FNM) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- }
- } else {
- //if (hostTmpVectorNodeType[i] == Profile) {
- //	if (j - i == 1) {
- //		links.push_back(std::make_pair<uint, uint>(i, j));
- //		counterForLink++;
- //	}
- //}
- }
- }
- //std::cout << "link count = " << counterForLink << std::endl;
- }
- fs << std::endl;
- fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
- uint linkSize = links.size();
- for (uint i = 0; i < linkSize; i++) {
- fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
- }
- uint LNum = links.size();
- fs << "CELL_TYPES " << LNum << endl;
- for (i = 0; i < LNum; i++) {
- fs << "3" << endl;
- }
- fs << "POINT_DATA " << totalActiveCount << endl;
- fs << "SCALARS point_scalars float" << endl;
- fs << "LOOKUP_TABLE default" << endl;
-
- for (i = 0; i < totalActiveCount; i++) {
- if (hostTmpVectorNodeType[i] == Boundary) {
- fs << 1 << endl;
- } else if (hostTmpVectorNodeType[i] == Profile) {
- fs << 2 << endl;
- } else if (hostTmpVectorNodeType[i] == ECM) {
- fs << 3 << endl;
- } else if (hostTmpVectorNodeType[i] == FNM) {
- fs << 4 << endl;
- } else if (hostTmpVectorNodeType[i] == MX) {
- fs << 5 << endl;
- }
- }
-
- //fs.flush();
- fs.close();
- }
- */
-
-/**
- * This is the second version of visualization.
- * Inter-links are not colored for a clearer representation
- * Fixed Boundary: Black
- * FNM cells: Red
- * MX cells: Blue
- * ECM: Yellow
- * Moving Epithilum layer: Green
- */
-/*
- void SimulationDomainGPU::outputVtkFilesWithColor_v2_stress(
- std::string scriptNameBase, int rank) {
- cerr << "start to output animation " << rank << endl;
- //cells_m.distributeIsCellRank();
- cells_m.distributeIsActiveInfo();
- thrust::host_vector<bool> isActiveHost = nodes.nodeIsActive;
- cout << "finished distribute cell is active" << endl;
-
- int num1 = nodes.startPosCells + cells_m.totalNodeCountForActiveCells;
- int num2 = cells_m.beginPosOfCellsNode
- + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
- cout << "Total active nodes estimation1 = " << num1 << ", part 1 = "
- << nodes.startPosCells << ", part 2 = "
- << cells_m.totalNodeCountForActiveCells << endl;
- cout << "Total active nodes estimation2 = " << num2 << ", part 1 = "
- << cells_m.beginPosOfCellsNode << ", part 2 = "
- << nodes.currentActiveCellCount * nodes.maxNodeOfOneCell << endl;
-
- int count = 0;
- for (int i = 0;
- i < (nodes.startPosCells + cells_m.totalNodeCountForActiveCells);
- i++) {
- if (isActiveHost[i] == true) {
- count++;
- }
- }
- cout << "before printing, number of active nodes in domain: " << count
- << endl;
- //int jj;
- //cin >> jj;
-
- uint activeTotalNodeCount = cells_m.beginPosOfCellsNode
- + nodes.currentActiveCellCount * nodes.maxNodeOfOneCell;
-
- cout << "number of nodes = " << activeTotalNodeCount << endl;
- cout << "total nodes in the bool array = " << nodes.nodeIsActive.size()
- << endl;
-
- uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
- nodes.nodeIsActive.begin() + activeTotalNodeCount, (int) (0));
-
- //uint totalActiveCount = thrust::reduce(nodes.nodeIsActive.begin(),
- //		nodes.nodeIsActive.begin() + 1);
- cerr << "number of active nodes = " << totalActiveCount << endl;
- cerr << "number of total active nodes possible= " << activeTotalNodeCount
- << endl;
-
- cout.flush();
-
- thrust::device_vector<double> deviceTmpVectorLocX(totalActiveCount);
- thrust::device_vector<double> deviceTmpVectorLocY(totalActiveCount);
- thrust::device_vector<double> deviceTmpVectorLocZ(totalActiveCount);
- thrust::device_vector<double> deviceTmpVectorMaxForce(totalActiveCount);
- thrust::device_vector<bool> deviceTmpVectorIsActive(totalActiveCount);
- thrust::device_vector<SceNodeType> deviceTmpVectorNodeType(
- totalActiveCount);
- thrust::device_vector<uint> deviceTmpVectorNodeRank(totalActiveCount);
-
- thrust::host_vector<double> hostTmpVectorLocX(totalActiveCount);
- thrust::host_vector<double> hostTmpVectorLocY(totalActiveCount);
- thrust::host_vector<double> hostTmpVectorLocZ(totalActiveCount);
- thrust::host_vector<double> hostTmpVectorMaxForce(totalActiveCount);
- thrust::host_vector<bool> hostTmpVectorIsActive(totalActiveCount);
- thrust::host_vector<SceNodeType> hostTmpVectorNodeType(totalActiveCount);
- thrust::host_vector<uint> hostTmpVectorNodeRank(totalActiveCount);
-
- cout << "finished initialization space for GPU and CPU" << endl;
-
- cout << "During output animation, active total node count is "
- << activeTotalNodeCount << endl;
-
- thrust::copy_if(
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeMaxForce.begin(),
- nodes.nodeCellType.begin(),
- nodes.nodeCellRank.begin())),
- thrust::make_zip_iterator(
- thrust::make_tuple(nodes.nodeLocX.begin(),
- nodes.nodeLocY.begin(), nodes.nodeLocZ.begin(),
- nodes.nodeMaxForce.begin(),
- nodes.nodeCellType.begin(),
- nodes.nodeCellRank.begin())) + activeTotalNodeCount,
- nodes.nodeIsActive.begin(),
- thrust::make_zip_iterator(
- thrust::make_tuple(deviceTmpVectorLocX.begin(),
- deviceTmpVectorLocY.begin(),
- deviceTmpVectorLocZ.begin(),
- deviceTmpVectorMaxForce.begin(),
- deviceTmpVectorNodeType.begin(),
- deviceTmpVectorNodeRank.begin())), isTrue());
-
- cout << "finished cpu data from GPU to CPU" << endl;
-
- hostTmpVectorLocX = deviceTmpVectorLocX;
- hostTmpVectorLocY = deviceTmpVectorLocY;
- hostTmpVectorLocZ = deviceTmpVectorLocZ;
- hostTmpVectorMaxForce = deviceTmpVectorMaxForce;
- hostTmpVectorIsActive = deviceTmpVectorIsActive;
- hostTmpVectorNodeType = deviceTmpVectorNodeType;
- hostTmpVectorNodeRank = deviceTmpVectorNodeRank;
-
- int i, j;
- std::vector<std::pair<uint, uint> > links;
-
- //assert(cellTypesFromGPU.size() == nodes.currentActiveCellCount);
- // using string stream is probably not the best solution,
- // but I can't use c++ 11 features for backward compatibility
- std::stringstream ss;
- ss << std::setw(5) << std::setfill('0') << rank;
- std::string scriptNameRank = ss.str();
- std::string vtkFileName = scriptNameBase + scriptNameRank + ".vtk";
- std::cout << "start to create vtk file" << vtkFileName << std::endl;
- std::ofstream fs;
- fs.open(vtkFileName.c_str());
-
- //int totalNNum = getTotalNodeCount();
- //int LNum = 0;
- //int NNum;
- assert(hostTmpVectorLocX.size() == totalActiveCount);
-
- fs << "# vtk DataFile Version 3.0" << std::endl;
- fs << "Lines and points representing subcelluar element cells "
- << std::endl;
- fs << "ASCII" << std::endl;
- fs << std::endl;
- fs << "DATASET UNSTRUCTURED_GRID" << std::endl;
- fs << "POINTS " << totalActiveCount << " float" << std::endl;
-
- uint counterForLink = 0;
- for (i = 0; i < totalActiveCount; i++) {
- fs << hostTmpVectorLocX[i] << " " << hostTmpVectorLocY[i] << " "
- << hostTmpVectorLocZ[i] << std::endl;
- for (j = 0; j < totalActiveCount; j++) {
- if (i == j) {
- continue;
- }
- if (compuDist(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
- hostTmpVectorLocZ[i], hostTmpVectorLocX[j],
- hostTmpVectorLocY[j], hostTmpVectorLocZ[j])
- <= intraLinkDisplayRange) {
- // have this extra if because we don't want to include visualization
- // for inter-cell interactions.
- // to achieve that, we don't include links between different types
- // and also avoid display links between different cells of same type
- if (hostTmpVectorNodeType[i] == hostTmpVectorNodeType[j]
- && hostTmpVectorNodeRank[i]
- == hostTmpVectorNodeRank[j]) {
- if (hostTmpVectorNodeType[i] == Boundary) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == Profile) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == ECM) {
- if (j - i == 1) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- } else if (hostTmpVectorNodeType[i] == MX
- || hostTmpVectorNodeType[i] == FNM) {
- links.push_back(std::make_pair<uint, uint>(i, j));
- counterForLink++;
- }
- }
- } else {
- //if (hostTmpVectorNodeType[i] == Profile) {
- //	if (j - i == 1) {
- //		links.push_back(std::make_pair<uint, uint>(i, j));
- //		counterForLink++;
- //	}
- //}
- }
- }
- //std::cout << "link count = " << counterForLink << std::endl;
- }
- fs << std::endl;
- fs << "CELLS " << counterForLink << " " << 3 * counterForLink << std::endl;
- uint linkSize = links.size();
- for (uint i = 0; i < linkSize; i++) {
- fs << 2 << " " << links[i].first << " " << links[i].second << std::endl;
- }
- uint LNum = links.size();
- fs << "CELL_TYPES " << LNum << endl;
- for (i = 0; i < LNum; i++) {
- fs << "3" << endl;
- }
- fs << "POINT_DATA " << totalActiveCount << endl;
- fs << "SCALARS point_scalars float" << endl;
- fs << "LOOKUP_TABLE default" << endl;
-
- for (i = 0; i < totalActiveCount; i++) {
- fs << hostTmpVectorMaxForce[i] << endl;
- }
-
- //fs.flush();
- fs.close();
- }
- */
-
-/*
- void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
- int rank) {
- nodes.prepareSceForceComputation();
- AnimationCriteria aniCri;
- aniCri.defaultEffectiveDistance = intraLinkDisplayRange;
- aniCri.isStressMap = 1;
- VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
- aniData.outputVtkAni(scriptNameBase, rank);
- }
- */
+	//cout << "after created growthMap1" << endl;
+	growthMap2 = GrowthDistriMap(chemPara.growthGridXDim,
+			chemPara.growthGridYDim, chemPara.growthGridSpacing);
+	growthMap2.initialize(chemPara.growthGridLowerLeftPtX,
+			chemPara.growthGridLowerLeftPtY, chemPara.growthMorCenterXCoordMX,
+			chemPara.growthMorCenterYCoordMX, chemPara.growthMorHighConcenMX,
+			chemPara.growthMorLowConcenMX, chemPara.growthMorDiffSlopeMX);
+	//cout << "after created growthMap2" << endl;
+}
 
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {

@@ -74,7 +74,7 @@ int main() {
 
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"Cell_Center_Interval").toDouble();
+			"IntraLinkDisplayRange").toDouble();
 	aniCri.isStressMap = true;
 
 	CellInitHelper initHelper;
