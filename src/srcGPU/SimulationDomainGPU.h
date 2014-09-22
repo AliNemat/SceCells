@@ -15,17 +15,72 @@
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */
 class SimulationDomainGPU {
-
+	/**
+	 * Variable that contains information for nodes.
+	 * Handles node level interaction logic.
+	 */
 	SceNodes nodes;
-	SceCells_M cells_m;
 
-	GrowthDistriMap growthMap; // first map
-	GrowthDistriMap growthMap2; // second map
+	/**
+	 * Variable that contains information for cells.
+	 * Handles cell level logics like growth and division.
+	 */
+	SceCells cells_m;
 
+	/**
+	 * Growth map that controls the growth for cells.
+	 */
+	GrowthDistriMap growthMap;
+
+	/**
+	 * Growth map that controls the growth for cells.
+	 */
+	GrowthDistriMap growthMap2;
+
+	/**
+	 * memory related parameters.
+	 */
 	SceMemPara memPara;
+
+	/**
+	 * domain related parameters.
+	 */
 	SceDomainPara domainPara;
+
+	/**
+	 * chemical related parameters.
+	 */
 	SceChemPara chemPara;
 
+	/**
+	 * reads memory related parameters.
+	 */
+	void readMemPara();
+
+	/**
+	 * reads domain related parameters.
+	 */
+	void readDomainPara();
+
+	/**
+	 * reads chemical related parameters.
+	 */
+	void readChemPara();
+
+	/**
+	 * reads all parameters by calling all other reading methods.
+	 */
+	void readAllParameters();
+
+	/**
+	 * initializes growth maps.
+	 */
+	void initializeGrowthMap();
+
+	/**
+	 * Initializes data vectors by given vectors.
+	 * This function was written in the past and may not be very robust.
+	 */
 	void initialCellsOfFiveTypes(std::vector<SceNodeType> &cellTypes,
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<double> &initBdryCellNodePosX,
@@ -39,12 +94,6 @@ class SimulationDomainGPU {
 			std::vector<double> &initMXCellNodePosX,
 			std::vector<double> &initMXCellNodePosY);
 
-	void readMemPara();
-	void readDomainPara();
-	void readChemPara();
-	void readAllParameters();
-
-	void initializeGrowthMap();
 public:
 	/**
 	 * Default constructor.

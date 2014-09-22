@@ -24,8 +24,11 @@
 #include "ConfigParser.h"
 #include <assert.h>
 #include "commonData.h"
-#include "commonGPUData.h"
+//#include "commonGPUData.h"
 #include <ctime>
+
+// include google test files in order to test private functions.
+#include "gtest/gtest_prod.h"
 
 // I wish I could include some c++ 11 data structure here but it seems
 // Thrust is not compatible with c++ 11.
@@ -66,26 +69,6 @@ typedef thrust::tuple<double, double, double, double, double, double, bool> CVec
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
-
-//extern __constant__ double sceInterPara[4];
-//extern __constant__ double sceIntraPara[4];
-//extern double sceInterParaCPU[4];
-//extern double sceIntraParaCPU[4];
-
-/**
- * Depreciated.
- */
-struct InitFunctor: public thrust::unary_function<Tuint3, Tuint3> {
-	uint maxCellCount;__host__ __device__ InitFunctor(uint maxCell) :
-			maxCellCount(maxCell) {
-	}
-	__host__ __device__ Tuint3 operator()(const Tuint3 &v) {
-		uint iter = thrust::get<2>(v);
-		uint cellRank = iter / maxCellCount;
-		uint nodeRank = iter % maxCellCount;
-		return thrust::make_tuple(cellRank, nodeRank, iter);
-	}
-};
 
 /**
  * functor to add two three dimensional vectors.
@@ -248,47 +231,6 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 	}
 };
 
-/**
- * functor to check if both inputs are non-zero.
- */
-struct bothNoneZero {
-	__host__ __device__
-	bool operator()(Tuint2 v) {
-		if (thrust::get<0>(v) != 0 && thrust::get<1>(v) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
-
-/**
- * functor to check if first two of the three inputs are non-zero.
- */
-struct bothNoneZero2 {
-	__host__ __device__
-	bool operator()(Tuint3 v) {
-		if (thrust::get<0>(v) != 0 && thrust::get<1>(v) != 0) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
-
-/**
- * functor to check if an integer is one.
- */
-struct isOne {
-	__host__ __device__
-	bool operator()(int i) {
-		if (i == 1) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
@@ -311,8 +253,7 @@ void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 __device__ bool bothNodesCellNode(uint nodeGlobalRank1, uint nodeGlobalRank2,
 		uint cellNodesThreshold);
 
-__device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2,
-		uint nodeCountPerCell);
+__device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
 __device__ bool ofSameType(uint cellType1, uint cellType2);
 
@@ -451,115 +392,8 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	}
 };
 
-/**
- * return a tuple of three zero double numbers.
- */
-struct GetZeroTupleThree: public thrust::unary_function<uint, CVec3> {
-	__host__ __device__ CVec3 operator()(const uint &value) {
-		return thrust::make_tuple(0.0, 0.0, 0.0);
-	}
-};
-
-/**
- * return true if this number is less than initial parameter.
- */
-struct isLessThan: public thrust::unary_function<uint, bool> {
-	uint initValue;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ isLessThan(uint initV) :
-			initValue(initV) {
-	}
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	bool operator()(uint val) {
-		if (val < initValue) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
-
-/**
- * Data structure for calculating nearby node interaction.
- * To maximize GPU performance, I choose to implement Structure of Arrays(SOA)
- * instead of Array Of Structure, which is commonly used in serial algorithms.
- * This data structure is a little bit counter-intuitive, but would expect to
- * give 2X - 3X performance gain.
- * To gain a better performance on GPU, we pre-allocate memory for everything that
- * will potentially
- * This data structure need to be initialized with following parameters:
- * 1) maximum number of cells to be simulated in the simulation domain
- * 2) maximum number of nodes inside a cell
- * 3) maximum number of uintra-cellular links per node
- * 4) maximum number of uinter-cellular links per node
- */
-class SceNodes {
+struct NodeInfoVecs {
 public:
-	SceNodes();
-
-	// in the new version, we need to initialize the nodes together with initial
-	// boundary nodes and initial profile nodes.
-	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
-			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
-			uint maxNodeInCell);
-
-	// parameters for discretizing domain into grids
-	uint numOfBucketsInXDim;
-	uint numOfBucketsInYDim;
-	uint totalBucketCount;
-
-	double minX;
-	double maxX;
-	double minY;
-	double maxY;
-	double bucketSize;
-
-	thrust::device_vector<unsigned int> keyBegin;
-	thrust::device_vector<unsigned int> keyEnd;
-
-	// @maxNodeOfOneCell represents maximum number of nodes per cell
-	uint maxNodeOfOneCell;
-	// @maxCellCount represents maximum number of cells in the system
-	uint maxCellCount;
-	// @maxCellCount represents maximum number of cells (including pesudo-cells) in the system
-	uint maxCellCountAll;
-	// @maxTotalNodeCount represents maximum total number of nodes of all cells
-	// maxTotalCellNodeCount = maxNodeOfOneCell * maxCellCount;
-	uint maxTotalCellNodeCount;
-	// @currentActiveCellCount represents number of cells that are currently active.
-	uint currentActiveCellCount;
-
-	// @maxNodePerECM represents maximum number of nodes per ECM
-	uint maxNodePerECM;
-	// @maxECMCount represents maximum number of ECM
-	uint maxECMCount;
-	// @maxTotalECMNodeCount represents maximum total number of node of ECM
-	uint maxTotalECMNodeCount;
-	// @currentActiveECM represents number of ECM that are currently active.
-	uint currentActiveECM;
-
-	// epithilum might grow or might not. Set maxProfileNodeCount as the maximum possible node count
-	uint maxProfileNodeCount;
-	// no matter whether epithilum grow or not we need to track the cucrent count.
-	uint currentActiveProfileNodeCount;
-
-	uint BdryNodeCount;
-
-	// @cellSpaceForBdry First several spaces are reserved for boundary.
-	// depreciated.
-	// uint cellSpaceForBdry;
-	// because several spaces are reserved for boundary, some nodes can't move
-	// depreciated.
-	// uint fixedNodeCount;
-
-	uint startPosProfile;
-	uint startPosECM;
-	uint startPosCells;
-
-	// for all of these values that are allocated for all nodes, the actual value is meaningless
-	// if the cell it belongs to is inactive
-
 	// this vector is used to indicate whether a node is active or not.
 	// E.g, max number of nodes of a cell is 100 maybe the first 75 nodes are active.
 	// The value of this vector will be changed by external process.
@@ -578,14 +412,15 @@ public:
 	thrust::device_vector<double> nodeVelZ;
 	// represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
-
 	// in order to represent differential adhesion, we also need an vector
 	// for each cell node to identify the cell type.
 	thrust::device_vector<SceNodeType> nodeCellType;
-
 	// for each node, we need to identify which cell it belongs to.
 	thrust::device_vector<uint> nodeCellRank;
 
+};
+
+struct NodeAuxVecs {
 	// bucket key means which bucket ID does a certain point fit into
 	thrust::device_vector<uint> bucketKeys;
 	// bucket value means global rank of a certain point
@@ -594,26 +429,52 @@ public:
 	thrust::device_vector<uint> bucketKeysExpanded;
 	// bucket value expanded means each point ( represented by its global rank) will have multiple copies
 	thrust::device_vector<uint> bucketValuesIncludingNeighbor;
+	// begin position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
+	thrust::device_vector<uint> keyBegin;
+	// end position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
+	thrust::device_vector<uint> keyEnd;
+};
+
+/**
+ * Data structure for calculating nearby node interaction.
+ * To maximize GPU performance, I choose to implement Structure of Arrays(SOA)
+ * instead of Array Of Structure, which is commonly used in serial algorithms.
+ * This data structure is a little bit counter-intuitive, but would expect to
+ * give 2X - 3X performance gain.
+ * To gain a better performance on GPU, we pre-allocate memory for everything that
+ * will potentially
+ * This data structure need to be initialized with following parameters:
+ * 1) maximum number of cells to be simulated in the simulation domain
+ * 2) maximum number of nodes inside a cell
+ * 3) maximum number of uintra-cellular links per node
+ * 4) maximum number of uinter-cellular links per node
+ */
+class SceNodes {
+	SceDomainPara domainPara;
+	SceMechPara mechPara;
+	NodeAllocPara allocPara;
+	NodeInfoVecs infoVecs;
+	NodeAuxVecs auxVecs;
 
 	/**
-	 * This method outputs a vector of possible neighbor pairs.
-	 * Reason why this method exist is that outputting animation frame
-	 * is really slow using previous version of animation function.
-	 * Hopefully this new method could improve speed of producing
-	 * animation frame.
+	 * reads domain related parameters.
 	 */
-	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
+	void readDomainPara();
 
 	/**
-	 * This method outputs a data structure for animation.
+	 * reads mechanics related parameters.
 	 */
-	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
+	void readMechPara();
 
+	void initNodeAllocPara(uint totalBdryNodeCount, uint maxProfileNodeCount,
+			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
+			uint maxNodeInCell);
 	/**
 	 * This function copies parameters to GPU constant memory.
 	 */
 	void copyParaToGPUConstMem();
 
+	void allocSpaceForNodes(uint maxTotalNodeCount);
 	/**
 	 * this method maps the points to their bucket ID.
 	 * writes data to thrust::device_vector<uint> bucketValues and
@@ -633,10 +494,6 @@ public:
 	void findBucketBounds();
 
 	/**
-	 * this method contains all preparsion work for SCE force calculation.
-	 */
-	void prepareSceForceComputation();
-	/**
 	 * @brief This is the most important part of the parallel algorithm.
 	 * For each particle in SCE model (represented by bucketValues here),
 	 * the algorithm finds all particles that fits in the nearby grids and then
@@ -650,8 +507,41 @@ public:
 	 */
 	void applyProfileForces();
 
+	/**
+	 * This method outputs a vector of possible neighbor pairs.
+	 * Reason why this method exist is that outputting animation frame
+	 * is really slow using previous version of animation function.
+	 * Hopefully this new method could improve speed of producing
+	 * animation frame.
+	 */
+	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
+
+	// friend unit test so these it can test private functions
+	FRIEND_TEST(SceNodeTest, FindingPossiblePairsTest);
+	// friend unit test so these it can test private functions
+	FRIEND_TEST(SceNodeTest, outputAnimationLinks);
+public:
+	/**
+	 * Default constructor -- explicit usage is discouraged.
+	 */
+	SceNodes();
+
+	/**
+	 * recommended constructor for beak project.
+	 */
+	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
+			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
+			uint maxNodeInCell);
+
+	/**
+	 * Override dimension data introduced by config files.
+	 */
 	void initDimension(double minX, double maxX, double minY, double maxY,
 			double bucketSize);
+
+	/**
+	 * initialize data fields.
+	 */
 	void initValues(std::vector<double> &initBdryCellNodePosX,
 			std::vector<double> &initBdryCellNodePosY,
 			std::vector<double> &initProfileNodePosX,
@@ -664,7 +554,12 @@ public:
 			std::vector<double> &initMXCellNodePosY);
 
 	/**
-	 * wrap three methods together.
+	 * this method contains all preparation work for SCE force calculation.
+	 */
+	void prepareSceForceComputation();
+
+	/**
+	 * wrap apply forces methods together.
 	 */
 	void calculateAndApplySceForces();
 
@@ -674,92 +569,29 @@ public:
 	void addNewlyDividedCells(thrust::device_vector<double> &nodeLocXNewCell,
 			thrust::device_vector<double> &nodeLocYNewCell,
 			thrust::device_vector<double> &nodeLocZNewCell,
-			thrust::device_vector<bool> &nodeIsActive);
-	void addNewlyDividedCells(thrust::device_vector<double> &nodeLocXNewCell,
-			thrust::device_vector<double> &nodeLocYNewCell,
-			thrust::device_vector<double> &nodeLocZNewCell,
 			thrust::device_vector<bool> &nodeIsActiveNewCell,
 			thrust::device_vector<SceNodeType> &nodeCellTypeNewCell);
 
-	uint getCurrentActiveCellCount() const {
-		return currentActiveCellCount;
-	}
+	/**
+	 * This method outputs a data structure for animation.
+	 */
+	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
 
-	void setCurrentActiveCellCount(uint currentActiveCellCount) {
-		this->currentActiveCellCount = currentActiveCellCount;
-	}
+	const SceDomainPara&getDomainPara() const;
+	void setDomainPara(const SceDomainPara& domainPara);
 
-	uint getCurrentActiveEcm() const {
-		return currentActiveECM;
-	}
+	const NodeAllocPara& getAllocPara() const;
+	void setAllocPara(const NodeAllocPara& allocPara);
 
-	void setCurrentActiveEcm(uint currentActiveEcm) {
-		currentActiveECM = currentActiveEcm;
-	}
+	const NodeAuxVecs& getAuxVecs() const;
+	void setAuxVecs(const NodeAuxVecs& auxVecs);
 
-	uint getMaxCellCount() const {
-		return maxCellCount;
-	}
-
-	void setMaxCellCount(uint maxCellCount) {
-		this->maxCellCount = maxCellCount;
-	}
-
-	uint getMaxNodeOfOneCell() const {
-		return maxNodeOfOneCell;
-	}
-
-	void setMaxNodeOfOneCell(uint maxNodeOfOneCell) {
-		this->maxNodeOfOneCell = maxNodeOfOneCell;
-	}
-
-	uint getMaxTotalCellNodeCount() const {
-		return maxTotalCellNodeCount;
-	}
-
-	void setMaxTotalCellNodeCount(uint maxTotalCellNodeCount) {
-		this->maxTotalCellNodeCount = maxTotalCellNodeCount;
-	}
-
-	uint getCurrentActiveProfileNodeCount() const {
-		return currentActiveProfileNodeCount;
-	}
-
-	void setCurrentActiveProfileNodeCount(uint currentActiveProfileNodeCount) {
-		this->currentActiveProfileNodeCount = currentActiveProfileNodeCount;
-	}
-
-	uint getMaxEcmCount() const {
-		return maxECMCount;
-	}
-
-	void setMaxEcmCount(uint maxEcmCount) {
-		maxECMCount = maxEcmCount;
-	}
-
-	uint getMaxNodePerEcm() const {
-		return maxNodePerECM;
-	}
-
-	void setMaxNodePerEcm(uint maxNodePerEcm) {
-		maxNodePerECM = maxNodePerEcm;
-	}
-
-	uint getMaxProfileNodeCount() const {
-		return maxProfileNodeCount;
-	}
-
-	void setMaxProfileNodeCount(uint maxProfileNodeCount) {
-		this->maxProfileNodeCount = maxProfileNodeCount;
-	}
-
-	uint getMaxCellCountAll() const {
-		return maxCellCountAll;
-	}
-
-	void setMaxCellCountAll(uint maxCellCountAll) {
-		this->maxCellCountAll = maxCellCountAll;
-	}
+	/**
+	 * This getter does not contain "const", meaning the value can be changed inside this getter function.
+	 * This setting might not fit code design principles but might be necessary for performance considerations.
+	 */
+	NodeInfoVecs& getInfoVecs();
+	void setInfoVecs(const NodeInfoVecs& infoVecs);
 };
 
 #endif /* SCENODES_H_ */

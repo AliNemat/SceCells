@@ -78,10 +78,6 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	nodes = SceNodes(bdryNodeCount, maxProfileNodeCount, memPara.maxECMInDomain,
 			memPara.maxNodePerECM, memPara.maxCellInDomain,
 			memPara.maxNodePerCell);
-	/*
-	 * Initialize SceCells_M ( M means modified) by nodes information.
-	 */
-	cells_m = SceCells_M(&nodes);
 
 	/*
 	 * first step: error checking.
@@ -89,9 +85,9 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	 */
 	cout << "begin init cells of five types" << endl;
 	// get max node per cell. should be defined previously.
-	uint maxNodePerCell = nodes.maxNodeOfOneCell;
+	uint maxNodePerCell = nodes.getAllocPara().maxNodeOfOneCell;
 	// get max node per ECM. Should be defined previously.
-	uint maxNodePerECM = nodes.getMaxNodePerEcm();
+	uint maxNodePerECM = nodes.getAllocPara().maxNodePerECM;
 	// check if we successfully loaded maxNodePerCell
 	assert(maxNodePerCell != 0);
 
@@ -113,6 +109,9 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 			<< ", initial ECM node count = " << ECMNodeCountX
 			<< ", init FNM node count = " << FNMNodeCountX
 			<< ", init MX node count = " << MXNodeCountX << endl;
+
+	//int jj;
+	//cin >> jj;
 
 	// array size of cell type array
 	uint cellTypeSize = cellTypes.size();
@@ -182,29 +181,35 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	 * copy data from main system memory to GPU memory
 	 */
 
-	nodes.setCurrentActiveCellCount(fnmQuotient + mxQuotient);
-	cells_m.currentActiveCellCount = fnmQuotient + mxQuotient;
-	nodes.setCurrentActiveEcm(ecmQuotient);
-	cells_m.currentActiveECMCount = ecmQuotient;
+	NodeAllocPara para = nodes.getAllocPara();
+	para.currentActiveCellCount = fnmQuotient + mxQuotient;
+	para.currentActiveECM = ecmQuotient;
+	para.currentActiveProfileNodeCount = ProfileNodeCountX;
+	nodes.setAllocPara(para);
 
-	nodes.currentActiveProfileNodeCount = ProfileNodeCountX;
+	//NodeAllocPara nodePara = nodes.getAllocPara();
 
-	assert(nodes.startPosProfile == bdryNodeCountX);
+	assert(nodes.getAllocPara().startPosProfile == bdryNodeCountX);
 
-	uint totalSize = nodes.nodeLocX.size();
+	uint totalSize = nodes.getInfoVecs().nodeLocX.size();
 
 	// set cell types
 	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
-
-	// copy initial active node count info to GPU
-	thrust::copy(numOfInitActiveNodesOfCells.begin(),
-			numOfInitActiveNodesOfCells.end(),
-			cells_m.activeNodeCountOfThisCell.begin());
 
 	nodes.initValues(initBdryCellNodePosX, initBdryCellNodePosY,
 			initProfileNodePosX, initProfileNodePosY, initECMNodePosX,
 			initECMNodePosY, initFNMCellNodePosX, initFNMCellNodePosY,
 			initMXCellNodePosX, initMXCellNodePosY);
+
+	/*
+	 * Initialize SceCells_M ( M means modified) by nodes information.
+	 */
+	cells_m = SceCells(&nodes);
+
+	// copy initial active node count info to GPU
+	thrust::copy(numOfInitActiveNodesOfCells.begin(),
+			numOfInitActiveNodesOfCells.end(),
+			cells_m.activeNodeCountOfThisCell.begin());
 
 	// set cell types
 	cells_m.setCellTypes(cellTypesToPass);
@@ -237,11 +242,11 @@ void SimulationDomainGPU::readMemPara() {
 	memPara.maxCellInDomain =
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
 	memPara.maxNodePerCell =
-			globalConfigVars.getConfigValue("MaxNodePerCell").toDouble();
+			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
 	memPara.maxECMInDomain =
-			globalConfigVars.getConfigValue("MaxECMInDomain").toDouble();
+			globalConfigVars.getConfigValue("MaxECMInDomain").toInt();
 	memPara.maxNodePerECM =
-			globalConfigVars.getConfigValue("MaxNodePerECM").toDouble();
+			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
 			"FinalToInitProfileNodeCountRatio").toDouble();
 }
@@ -254,10 +259,10 @@ void SimulationDomainGPU::readDomainPara() {
 	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
 	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
 	domainPara.gridSpacing = globalConfigVars.getConfigValue(
-			"Cell_Center_Interval").toDouble();
+			"DOMAIN_GRID_SPACING").toDouble();
 	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
-	domainPara.numOfBucketsInXDim = (domainPara.maxY - domainPara.minY)
+	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
 			/ domainPara.gridSpacing + 1;
 }
 
@@ -329,36 +334,47 @@ void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 
 void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 	cout << "Begin output information about nodes:" << endl;
-	cout << "size of isActive:" << nodes.nodeIsActive.size() << endl;
-	cout << "size of nodeLocX:" << nodes.nodeLocX.size() << endl;
-	cout << "size of nodeLocY:" << nodes.nodeLocY.size() << endl;
-	cout << "size of nodeLocZ:" << nodes.nodeLocZ.size() << endl;
-	cout << "size of nodeVelX:" << nodes.nodeVelX.size() << endl;
-	cout << "size of nodeVelY:" << nodes.nodeVelY.size() << endl;
-	cout << "size of nodeVelZ:" << nodes.nodeVelZ.size() << endl;
-	cout << "size of CellType:" << nodes.nodeCellType.size() << endl;
-	cout << "size of nodeCellRank:" << nodes.nodeCellRank.size() << endl;
-
-	cout << "start position of Profile is " << nodes.startPosProfile << endl;
-	cout << "start position of ECM is " << nodes.startPosECM << endl;
-	cout << "start position of Cells is " << nodes.startPosCells << endl;
-
-	cout << "max node of one cell is " << nodes.maxNodeOfOneCell << endl;
-	cout << "max number of cells is " << nodes.maxCellCount << endl;
-	cout << "max total cell node count is " << nodes.maxTotalCellNodeCount
+	cout << "size of isActive:" << nodes.getInfoVecs().nodeIsActive.size()
 			<< endl;
-	cout << "current active cell count is " << nodes.currentActiveCellCount
+	cout << "size of nodeLocX:" << nodes.getInfoVecs().nodeLocX.size() << endl;
+	cout << "size of nodeLocY:" << nodes.getInfoVecs().nodeLocY.size() << endl;
+	cout << "size of nodeLocZ:" << nodes.getInfoVecs().nodeLocZ.size() << endl;
+	cout << "size of nodeVelX:" << nodes.getInfoVecs().nodeVelX.size() << endl;
+	cout << "size of nodeVelY:" << nodes.getInfoVecs().nodeVelY.size() << endl;
+	cout << "size of nodeVelZ:" << nodes.getInfoVecs().nodeVelZ.size() << endl;
+	cout << "size of CellType:" << nodes.getInfoVecs().nodeCellType.size()
+			<< endl;
+	cout << "size of nodeCellRank:" << nodes.getInfoVecs().nodeCellRank.size()
 			<< endl;
 
-	cout << "max node of one ECM is " << nodes.maxNodePerECM << endl;
-	cout << "max number of ECm is " << nodes.maxECMCount << endl;
-	cout << "max total ECM node count is " << nodes.maxTotalECMNodeCount
+	cout << "start position of Profile is "
+			<< nodes.getAllocPara().startPosProfile << endl;
+	cout << "start position of ECM is " << nodes.getAllocPara().startPosECM
 			<< endl;
-	cout << "current active ECM count is " << nodes.currentActiveECM << endl;
+	cout << "start position of Cells is " << nodes.getAllocPara().startPosCells
+			<< endl;
 
-	cout << "max profile node count is " << nodes.maxProfileNodeCount << endl;
+	cout << "max node of one cell is " << nodes.getAllocPara().maxNodeOfOneCell
+			<< endl;
+	cout << "max number of cells is " << nodes.getAllocPara().maxCellCount
+			<< endl;
+	cout << "max total cell node count is "
+			<< nodes.getAllocPara().maxTotalCellNodeCount << endl;
+	cout << "current active cell count is "
+			<< nodes.getAllocPara().currentActiveCellCount << endl;
+
+	cout << "max node of one ECM is " << nodes.getAllocPara().maxNodePerECM
+			<< endl;
+	cout << "max number of ECm is " << nodes.getAllocPara().maxECMCount << endl;
+	cout << "max total ECM node count is "
+			<< nodes.getAllocPara().maxTotalECMNodeCount << endl;
+	cout << "current active ECM count is "
+			<< nodes.getAllocPara().currentActiveECM << endl;
+
+	cout << "max profile node count is "
+			<< nodes.getAllocPara().maxProfileNodeCount << endl;
 	cout << "current active profile node count is "
-			<< nodes.currentActiveProfileNodeCount << endl;
+			<< nodes.getAllocPara().currentActiveProfileNodeCount << endl;
 	//int jj;
 	//cin >> jj;
 }

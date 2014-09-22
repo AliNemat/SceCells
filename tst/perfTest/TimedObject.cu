@@ -92,12 +92,16 @@ double TimedObject::countSceMove(uint size) {
 
 	SceNodes nodes = SceNodes(0, 0, 0, 0, size, 20);
 	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
-	nodes.setCurrentActiveCellCount(size);
+
+	NodeAllocPara para = nodes.getAllocPara();
+	para.currentActiveCellCount = size;
+	nodes.setAllocPara(para);
 
 	nodes.initValues(emptyVector, emptyVector, emptyVector, emptyVector,
 			emptyVector, emptyVector, emptyVector, emptyVector, nodeXVector,
 			nodeYVector);
-	thrust::fill(nodes.nodeIsActive.begin(), nodes.nodeIsActive.end(), true);
+	thrust::fill(nodes.getInfoVecs().nodeIsActive.begin(),
+			nodes.getInfoVecs().nodeIsActive.end(), true);
 
 	cudaEvent_t start, stop;
 	float elapsedTime;

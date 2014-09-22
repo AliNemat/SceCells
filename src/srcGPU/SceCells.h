@@ -63,8 +63,8 @@ struct isTrue {
 struct isActiveNoneBdry {
 	__host__ __device__
 	bool operator()(boolType b) {
-		bool isActive = thrust::get < 0 > (b);
-		SceNodeType type = thrust::get < 1 > (b);
+		bool isActive = thrust::get<0>(b);
+		SceNodeType type = thrust::get<1>(b);
 		if (isActive && type != Boundary) {
 			return true;
 		} else {
@@ -82,10 +82,9 @@ struct isActiveNoneBdry {
 struct CVec3Add: public thrust::binary_function<CVec3, CVec3, CVec3> {
 	__host__ __device__
 	CVec3 operator()(const CVec3 &vec1, const CVec3 &vec2) {
-		return thrust::make_tuple(
-				thrust::get < 0 > (vec1) + thrust::get < 0 > (vec2),
-				thrust::get < 1 > (vec1) + thrust::get < 1 > (vec2),
-				thrust::get < 2 > (vec1) + thrust::get < 2 > (vec2));
+		return thrust::make_tuple(thrust::get<0>(vec1) + thrust::get<0>(vec2),
+				thrust::get<1>(vec1) + thrust::get<1>(vec2),
+				thrust::get<2>(vec1) + thrust::get<2>(vec2));
 	}
 };
 
@@ -101,9 +100,8 @@ struct CVec3Add: public thrust::binary_function<CVec3, CVec3, CVec3> {
 struct CVec3Divide: public thrust::binary_function<CVec3, double, CVec3> {
 	__host__ __device__
 	CVec3 operator()(const CVec3 &vec1, const double &divisor) {
-		return thrust::make_tuple(thrust::get < 0 > (vec1) / divisor,
-				thrust::get < 1 > (vec1) / divisor,
-				thrust::get < 2 > (vec1) / divisor);
+		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
+				thrust::get<1>(vec1) / divisor, thrust::get<2>(vec1) / divisor);
 	}
 };
 
@@ -140,8 +138,8 @@ struct LoadGridDataToNode: public thrust::unary_function<CVec2, CVec3> {
 	}
 	__host__ __device__
 	CVec3 operator()(const CVec2 &d2) const {
-		double xCoord = thrust::get < 0 > (d2);
-		double yCoord = thrust::get < 1 > (d2);
+		double xCoord = thrust::get<0>(d2);
+		double yCoord = thrust::get<1>(d2);
 		uint gridLoc = (uint) (xCoord / _gridSpacing)
 				+ (uint) (yCoord / _gridSpacing) * _gridDimensionX;
 		double magRes = _gridMagValue[gridLoc];
@@ -198,9 +196,9 @@ struct LoadChemDataToNode: public thrust::unary_function<CVec2Type, CVec3> {
 	}
 	__host__ __device__
 	CVec3 operator()(const CVec2Type &d2) const {
-		double xCoord = thrust::get < 0 > (d2);
-		double yCoord = thrust::get < 1 > (d2);
-		SceNodeType type = thrust::get < 2 > (d2);
+		double xCoord = thrust::get<0>(d2);
+		double yCoord = thrust::get<1>(d2);
+		SceNodeType type = thrust::get<2>(d2);
 		uint gridLoc = (uint) (xCoord / _gridSpacing)
 				+ (uint) (yCoord / _gridSpacing) * _gridDimensionX;
 		if (type == FNM) {
@@ -276,8 +274,8 @@ struct SaxpyFunctorDim2: public thrust::binary_function<CVec2, CVec2, CVec2> {
 	}
 	__host__ __device__
 	CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
-		double xRes = thrust::get < 0 > (vec1) * _dt + thrust::get < 0 > (vec2);
-		double yRes = thrust::get < 1 > (vec1) * _dt + thrust::get < 1 > (vec2);
+		double xRes = thrust::get<0>(vec1) * _dt + thrust::get<0>(vec2);
+		double yRes = thrust::get<1>(vec1) * _dt + thrust::get<1>(vec2);
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
@@ -298,8 +296,8 @@ struct PtCondiOp: public thrust::unary_function<CVec2, bool> {
 	}
 	__host__ __device__
 	bool operator()(const CVec2 &d2) const {
-		double progress = thrust::get < 0 > (d2);
-		double lastCheckPoint = thrust::get < 1 > (d2);
+		double progress = thrust::get<0>(d2);
+		double lastCheckPoint = thrust::get<1>(d2);
 		bool resBool = false;
 		if (progress == 1.0 && lastCheckPoint < 1.0) {
 			resBool = true;
@@ -396,16 +394,16 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 	__host__ __device__
 	BoolUID operator()(const BoolUIDDUID &biddi) {
 		const double pI = acos(-1.0);
-		bool isScheduledToGrow = thrust::get < 0 > (biddi);
-		uint activeNodeCountOfThisCell = thrust::get < 1 > (biddi);
-		double lastCheckPoint = thrust::get < 5 > (biddi);
+		bool isScheduledToGrow = thrust::get<0>(biddi);
+		uint activeNodeCountOfThisCell = thrust::get<1>(biddi);
+		double lastCheckPoint = thrust::get<5>(biddi);
 		if (isScheduledToGrow == false) {
 			return thrust::make_tuple(isScheduledToGrow,
 					activeNodeCountOfThisCell, lastCheckPoint);
 		}
-		double cellCenterXCoord = thrust::get < 2 > (biddi);
-		double cellCenterYCoord = thrust::get < 3 > (biddi);
-		uint cellRank = thrust::get < 4 > (biddi);
+		double cellCenterXCoord = thrust::get<2>(biddi);
+		double cellCenterYCoord = thrust::get<3>(biddi);
+		uint cellRank = thrust::get<4>(biddi);
 
 		bool isSuccess = true;
 
@@ -484,13 +482,13 @@ struct CompuTarLen: thrust::unary_function<double, double> {
 struct CompuDist: thrust::unary_function<CVec6Bool, double> {
 	__host__ __device__
 	double operator()(const CVec6Bool &vec6b) {
-		double centerXPos = thrust::get < 0 > (vec6b);
-		double centerYPos = thrust::get < 1 > (vec6b);
-		double growthXDir = thrust::get < 2 > (vec6b);
-		double growthYDir = thrust::get < 3 > (vec6b);
-		double nodeXPos = thrust::get < 4 > (vec6b);
-		double nodeYPos = thrust::get < 5 > (vec6b);
-		bool nodeIsActive = thrust::get < 6 > (vec6b);
+		double centerXPos = thrust::get<0>(vec6b);
+		double centerYPos = thrust::get<1>(vec6b);
+		double growthXDir = thrust::get<2>(vec6b);
+		double growthYDir = thrust::get<3>(vec6b);
+		double nodeXPos = thrust::get<4>(vec6b);
+		double nodeYPos = thrust::get<5>(vec6b);
+		bool nodeIsActive = thrust::get<6>(vec6b);
 		if (nodeIsActive == false) {
 			// this is not true. but those nodes that are inactive will be omitted.
 			// I choose 0 because 0 will not be either maximum or minimum
@@ -514,10 +512,10 @@ struct CompuDist: thrust::unary_function<CVec6Bool, double> {
 struct CompuDiff: thrust::unary_function<CVec3, double> {
 	__host__ __device__
 	double operator()(const CVec3 &vec3) {
-		double expectedLen = thrust::get < 0 > (vec3);
+		double expectedLen = thrust::get<0>(vec3);
 		// minimum distance of node to its corresponding center along growth direction
-		double minDistance = thrust::get < 1 > (vec3);
-		double maxDistance = thrust::get < 2 > (vec3);
+		double minDistance = thrust::get<1>(vec3);
+		double maxDistance = thrust::get<2>(vec3);
 		return (expectedLen - (maxDistance - minDistance));
 	}
 };
@@ -540,13 +538,13 @@ struct ApplyStretchForce: thrust::unary_function<CVec6, CVec2> {
 	}
 	__host__ __device__
 	CVec2 operator()(const CVec6 &vec6) {
-		double distToCenterAlongGrowDir = thrust::get < 0 > (vec6);
+		double distToCenterAlongGrowDir = thrust::get<0>(vec6);
 		// minimum distance of node to its corresponding center along growth direction
-		double lengthDifference = thrust::get < 1 > (vec6);
-		double growthXDir = thrust::get < 2 > (vec6);
-		double growthYDir = thrust::get < 3 > (vec6);
-		double originalVelX = thrust::get < 4 > (vec6);
-		double originalVelY = thrust::get < 5 > (vec6);
+		double lengthDifference = thrust::get<1>(vec6);
+		double growthXDir = thrust::get<2>(vec6);
+		double growthYDir = thrust::get<3>(vec6);
+		double originalVelX = thrust::get<4>(vec6);
+		double originalVelY = thrust::get<5>(vec6);
 		double xRes = lengthDifference * _elongationCoefficient
 				* distToCenterAlongGrowDir * growthXDir;
 		xRes = xRes + originalVelX;
@@ -564,11 +562,11 @@ struct ApplyChemoVel: thrust::unary_function<CVec5, CVec2> {
 	}
 	__host__ __device__
 	CVec2 operator()(const CVec5 &vec5) {
-		double growthSpeed = thrust::get < 0 > (vec5);
-		double growthXDir = thrust::get < 1 > (vec5);
-		double growthYDir = thrust::get < 2 > (vec5);
-		double originalVelX = thrust::get < 3 > (vec5);
-		double originalVelY = thrust::get < 4 > (vec5);
+		double growthSpeed = thrust::get<0>(vec5);
+		double growthXDir = thrust::get<1>(vec5);
+		double growthYDir = thrust::get<2>(vec5);
+		double originalVelX = thrust::get<3>(vec5);
+		double originalVelY = thrust::get<4>(vec5);
 		double xRes = growthSpeed * _chemoCoefficient * growthXDir;
 		xRes = xRes + originalVelX;
 		double yRes = growthSpeed * _chemoCoefficient * growthYDir;
@@ -663,8 +661,8 @@ struct CompuPos: thrust::unary_function<Tuint2, uint> {
 	}
 	__host__ __device__
 	uint operator()(const Tuint2 &vec) {
-		uint rankInCell = thrust::get < 0 > (vec) % _maxNodeCountPerCell;
-		uint cellRank = thrust::get < 1 > (vec);
+		uint rankInCell = thrust::get<0>(vec) % _maxNodeCountPerCell;
+		uint cellRank = thrust::get<1>(vec);
 		return (cellRank * _maxNodeCountPerCell + rankInCell);
 	}
 };
@@ -688,11 +686,11 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, bool> {
 	}
 	__host__ __device__
 	uint operator()(const CVec3Int &vec) {
-		double lengthDifference = thrust::get < 0 > (vec);
-		double expectedLength = thrust::get < 1 > (vec);
+		double lengthDifference = thrust::get<0>(vec);
+		double expectedLength = thrust::get<1>(vec);
 		double currentLength = expectedLength - lengthDifference;
-		double growthProgress = thrust::get < 2 > (vec);
-		uint nodeCount = thrust::get < 3 > (vec);
+		double growthProgress = thrust::get<2>(vec);
+		uint nodeCount = thrust::get<3>(vec);
 		if (currentLength / expectedLength > _isDivideCriticalRatio
 				&& growthProgress >= 1.0 && nodeCount == _maxNodePerCell) {
 			return true;
@@ -717,11 +715,11 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 	}
 	__host__ __device__
 	CVec2 operator()(const Vel2DActiveTypeRank &nodeInfo) {
-		double velX = thrust::get < 0 > (nodeInfo);
-		double velY = thrust::get < 1 > (nodeInfo);
-		bool isActive = thrust::get < 2 > (nodeInfo);
-		SceNodeType type = thrust::get < 3 > (nodeInfo);
-		uint nodeRank = thrust::get < 4 > (nodeInfo);
+		double velX = thrust::get<0>(nodeInfo);
+		double velY = thrust::get<1>(nodeInfo);
+		bool isActive = thrust::get<2>(nodeInfo);
+		SceNodeType type = thrust::get<3>(nodeInfo);
+		uint nodeRank = thrust::get<4>(nodeInfo);
 		// boundary nodes should not move. Also, inactive nodes should not move.
 		if (type == Boundary || isActive == false) {
 			return thrust::make_tuple(0.0, 0.0);
@@ -756,45 +754,48 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
  * CellFinalLength is larger than this ratio and the cell growth progress
  *  is complete then we set cell ready to divide
  */
-class SceCells_M {
+class SceCells {
+	NodeAllocPara allocPara;
+	SceMiscPara miscPara;
+	SceBioPara bioPara;
+
+	void readMiscPara();
+	void readBioPara();
+
 public:
 
-	uint beginPosOfBdry;     // represents begining position of boundary.
-	uint maxNodeOfBdry;      // represents maximum number of nodes of boundary.
+	//uint beginPosOfBdry;     // represents begining position of boundary.
+	//uint maxNodeOfBdry;      // represents maximum number of nodes of boundary.
 
-	uint beginPosOfEpi; // represents begining position of epithilum layer (in cell perspective)
-	uint beginPosOfEpiNode; // represents begining position of epithilum layer (in node perspective)
-	uint maxNodeOfEpi; // represents maximum number of nodes of epithilum layer.
+	//uint beginPosOfEpi; // represents begining position of epithilum layer (in cell perspective)
+	//uint startPosProfile; // represents begining position of epithilum layer (in node perspective)
+	//uint maxProfileNodeCount; // represents maximum number of nodes of epithilum layer.
 
-	uint maxNodeOfECM;       // represents maximum number of nodes per ECM
-	uint beginPosOfECM; // represents begining position of ECM (in cell perspective)
-	uint beginPosOfECMNode; // represents begining position of ECM (in node perspective)
-	uint maxECMCount;        // represents maximum number of ECM.
+	//uint maxNodeOfECM;       // represents maximum number of nodes per ECM
+	//uint beginPosOfECM; // represents begining position of ECM (in cell perspective)
+	//uint startPosECM; // represents begining position of ECM (in node perspective)
+	//uint maxECMCount;        // represents maximum number of ECM.
 
-	uint beginPosOfCells; // represents begining position of cells (in cell perspective)
-	uint beginPosOfCellsNode; // represents begining position of cells (in node perspective)
-	uint maxNodeOfOneCell;   // represents maximum number of nodes per cell
-	uint maxCellCount;       // represents maximum number of cells in the system
+	//uint beginPosOfCells; // represents begining position of cells (in cell perspective)
+	//uint startPosCells; // represents begining position of cells (in node perspective)
+	//uint maxNodeOfOneCell;   // represents maximum number of nodes per cell
+	//uint maxCellCount;       // represents maximum number of cells in the system
 
-	uint maxCellCountAll;    // represents maximum number of all cells
-							 // (including pesudo-cells) in the system
-
-	uint maxTotalNodeCountCellOnly; // max possible node count for cell representation
-	uint currentActiveCellCount; // the number of active cells would keep changing
-	uint currentActiveECMCount;     // the number of active ECM might change.
-	uint currectActiveEpiNode;    // the number of epithilum nodes might change.
+	//uint maxTotalCellNodeCount; // max possible node count for cell representation
+	//uint currentActiveCellCount; // the number of active cells would keep changing
+	//uint currentActiveECMCount;     // the number of active ECM might change.
+	//uint currectActiveProfileNode; // the number of epithilum nodes might change.
 
 	// if growthProgress[i] - lastCheckPoint[i] > growThreshold then isScheduledToGrow[i] = true;
-	double growThreshold;
+	//double growThreshold;
+	//double isDivideCriticalRatio;
+	//double addNodeDistance;
+	//double minDistanceToOtherNode;
 
-	double isDivideCriticalRatio;
-
-	double addNodeDistance;
-	double minDistanceToOtherNode;
-	double cellInitLength;
-	double cellFinalLength;
-	double elongationCoefficient;
-	double chemoCoefficient;
+	//double cellInitLength;
+	//double cellFinalLength;
+	//double elongationCoefficient;
+	//double chemoCoefficient;
 
 	SceNodes* nodes;
 
@@ -896,8 +897,8 @@ public:
 	thrust::constant_iterator<uint> initCellCount;
 	thrust::constant_iterator<double> initGrowthProgress;
 
-	SceCells_M(SceNodes* nodesInput);
-	SceCells_M() {
+	SceCells(SceNodes* nodesInput);
+	SceCells() {
 	}
 
 	void distributeIsActiveInfo();
@@ -1051,11 +1052,19 @@ public:
 	}
 
 	uint getMaxTotalNodeCountCellOnly() const {
-		return maxTotalNodeCountCellOnly;
+		return allocPara.maxTotalCellNodeCount;
 	}
 
 	void setMaxTotalNodeCountCellOnly(uint maxTotalNodeCountCellOnly) {
-		this->maxTotalNodeCountCellOnly = maxTotalNodeCountCellOnly;
+		this->allocPara.maxTotalCellNodeCount = maxTotalNodeCountCellOnly;
+	}
+
+	const NodeAllocPara& getAllocPara() const {
+		return allocPara;
+	}
+
+	void setAllocPara(const NodeAllocPara& allocPara) {
+		this->allocPara = allocPara;
 	}
 };
 

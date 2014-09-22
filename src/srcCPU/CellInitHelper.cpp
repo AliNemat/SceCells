@@ -1205,10 +1205,7 @@ void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 			}
 			ECMCenters.push_back(pos);
 			if (std::isnan(pos.GetX())) {
-				cout
-						<< "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-						<< endl;
-				system("pause");
+				throw SceException("number is NAN!", InputInitException);
 			}
 			//cout << "pos = (" << pos.GetX() << "," << pos.GetY() << ","
 			//		<< pos.GetZ() << ")" << endl;

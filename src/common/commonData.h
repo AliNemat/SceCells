@@ -56,7 +56,12 @@ public:
  * This data structure contains mechanical parameters of the model.
  */
 struct SceMechPara {
-
+	double sceInterParaCPU[5];
+	double sceIntraParaCPU[4];
+	double sceInterDiffParaCPU[5];
+	double sceProfileParaCPU[7];
+	double sceECMParaCPU[5];
+	double sceDiffParaCPU[5];
 };
 
 /**
@@ -88,14 +93,20 @@ struct SceChemPara {
  * This data structure contains biology parameters of the model.
  */
 struct SceBioPara {
-
+	double cellInitLength;
+	double cellFinalLength;
+	double elongationCoefficient;
+	double chemoCoefficient;
 };
 
 /**
  * This data structure contains miscellaneous parameters of the model.
  */
 struct SceMiscPara {
-
+	double growThreshold;
+	double isDivideCriticalRatio;
+	double addNodeDistance;
+	double minDistanceToOtherNode;
 };
 
 /**
@@ -107,6 +118,16 @@ struct SceMemPara {
 	uint maxECMInDomain;
 	uint maxNodePerECM;
 	double FinalToInitProfileNodeCountRatio;
+};
+
+/**
+ * This data structure contains parameters about the memory layout of the cells
+ */
+struct CellsMemPara {
+	uint maxTotalCellNodeCount; // max possible node count for cell representation
+	uint currentActiveCellCount; // the number of active cells would keep changing
+	uint currentActiveECMCount;     // the number of active ECM might change.
+	uint currectActiveProfileNode; // the number of epithilum nodes might change.
 };
 
 /**
@@ -123,6 +144,41 @@ struct SceDomainPara {
 	uint numOfBucketsInXDim;
 	uint numOfBucketsInYDim;
 	uint totalBucketCount;
+};
+
+/**
+ * This data structure contains parameters about the memory allocation in SceNodes.
+ */
+struct NodeAllocPara {
+	// @maxNodeOfOneCell represents maximum number of nodes per cell
+	uint maxNodeOfOneCell;
+	// @maxCellCount represents maximum number of cells in the system
+	uint maxCellCount;
+	// @maxTotalNodeCount represents maximum total number of nodes of all cells
+	// maxTotalCellNodeCount = maxNodeOfOneCell * maxCellCount;
+	uint maxTotalCellNodeCount;
+	// @currentActiveCellCount represents number of cells that are currently active.
+	uint currentActiveCellCount;
+
+	// @maxNodePerECM represents maximum number of nodes per ECM
+	uint maxNodePerECM;
+	// @maxECMCount represents maximum number of ECM
+	uint maxECMCount;
+	// @maxTotalECMNodeCount represents maximum total number of node of ECM
+	uint maxTotalECMNodeCount;
+	// @currentActiveECM represents number of ECM that are currently active.
+	uint currentActiveECM;
+
+	// epithilum might grow or might not. Set maxProfileNodeCount as the maximum possible node count
+	uint maxProfileNodeCount;
+	// no matter whether epithilum grow or not we need to track the cucrent count.
+	uint currentActiveProfileNodeCount;
+
+	uint BdryNodeCount;
+
+	uint startPosProfile;
+	uint startPosECM;
+	uint startPosCells;
 };
 
 /**

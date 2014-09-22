@@ -1,7 +1,7 @@
 #MESSAGE(${GPU_SOURCE_DIR})
 #include_directories(${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
 
-include_directories(${COMMON_INCLUDES})
+include_directories(${COMMON_INCLUDES} ${GTEST_INCLUDE_DIRS})
 
 CUDA_ADD_LIBRARY(SceGPU
 	GrowthDistriMap.h
@@ -13,7 +13,7 @@ CUDA_ADD_LIBRARY(SceGPU
 	SimulationDomainGPU.h
 	SimulationDomainGPU.cu
     ${COMMON_INCLUDES}/commonData.h
-    #${COMMON_INCLUDES}/commonGPUData.h
+    ${COMMON_INCLUDES}/commonGPUData.h
     #${COMMON_INCLUDES}/commonGPUData.cu
 	#CellInitHelper.cpp
     #CellInitHelper.h

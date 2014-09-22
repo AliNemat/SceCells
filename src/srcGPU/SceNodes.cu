@@ -6,13 +6,6 @@ __constant__ double sceInterDiffPara[5];
 __constant__ double sceProfilePara[7];
 __constant__ double sceECMPara[5];
 __constant__ double sceDiffPara[5];
-
-double sceInterParaCPU[5];
-double sceIntraParaCPU[4];
-double sceInterDiffParaCPU[5];
-double sceProfileParaCPU[7];
-double sceECMParaCPU[5];
-double sceDiffParaCPU[5];
 __constant__ uint ProfilebeginPos;
 __constant__ uint ECMbeginPos;
 __constant__ uint cellNodeBeginPos;
@@ -62,90 +55,25 @@ OutputIterator expand(InputIterator1 first1, InputIterator1 last1,
 }
 
 SceNodes::SceNodes() {
-	currentActiveECM = 0;
-	maxNodePerECM = 0;
-	currentActiveProfileNodeCount = 0;
+	readDomainPara();
 }
 
-SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
-		uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
-		uint maxNodeInCell) {
-	std::cout << "start creating SceNodes object" << std::endl;
-	maxCellCount = maxTotalCellCount;
-	maxNodeOfOneCell = maxNodeInCell;
-	maxNodePerECM = maxNodeInECM;
-	maxECMCount = maxTotalECMCount;
-	this->maxProfileNodeCount = maxProfileNodeCount;
-	//std::cout << "break point 1" << std::endl;
-	currentActiveProfileNodeCount = 0;
-	BdryNodeCount = totalBdryNodeCount;
-	currentActiveCellCount = 0;
-	maxTotalECMNodeCount = maxECMCount * maxNodePerECM;
-	currentActiveECM = 0;
-	//std::cout << "break point 2" << std::endl;
-	// will need to change this value after we have more detail about ECM
-	maxTotalCellNodeCount = maxTotalCellCount * maxNodeOfOneCell;
-
-	//cellRanks.resize(maxTotalNodeCount);
-	//nodeRanks.resize(maxTotalNodeCount);
-	//std::cout << "before resizing vectors" << std::endl;
-	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
-			+ maxTotalECMNodeCount + maxTotalCellNodeCount;
-	//std::cout << "maxTotalNodeCount = " << maxTotalNodeCount << std::endl;
-	//thrust::host_vector<bool> nodeIsActiveHost
-
-	//std::cout << "max Total Node count = " << maxTotalNodeCount << std::endl;
-
-	nodeLocX.resize(maxTotalNodeCount);
-	//std::cout << "break point 3" << std::endl;
-	nodeLocY.resize(maxTotalNodeCount);
-	nodeLocZ.resize(maxTotalNodeCount);
-	nodeVelX.resize(maxTotalNodeCount);
-	nodeVelY.resize(maxTotalNodeCount);
-	nodeVelZ.resize(maxTotalNodeCount);
-	//std::cout << "break point 4" << std::endl;
-	nodeMaxForce.resize(maxTotalNodeCount);
-	nodeCellType.resize(maxTotalNodeCount);
-	nodeCellRank.resize(maxTotalNodeCount);
-	nodeIsActive.resize(maxTotalNodeCount);
-
-	startPosProfile = totalBdryNodeCount;
-	startPosECM = startPosProfile + maxProfileNodeCount;
-	startPosCells = startPosECM + maxTotalECMNodeCount;
-
-	//std::cout << "start pos Profile = " << startPosProfile << ", startPosECM = "
-	//		<< startPosECM << ", startPosCells = " << startPosCells
-	//		<< std::endl;
-	//int jj;
-	//std::cin >> jj;
-
-	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
-	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
-	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
-	for (int i = 0; i < maxTotalNodeCount; i++) {
-		if (i < startPosProfile) {
-			hostTmpVector[i] = Boundary;
-			hostTmpVector3[i] = 0;
-		} else if (i < startPosECM) {
-			hostTmpVector[i] = Profile;
-			hostTmpVector3[i] = 0;
-		} else if (i < startPosCells) {
-			hostTmpVector[i] = ECM;
-			hostTmpVector3[i] = (i - startPosECM) / maxNodeInECM;
-		} else {
-			// all initialized as FNM
-			hostTmpVector[i] = FNM;
-			hostTmpVector3[i] = (i - startPosCells) / maxNodeOfOneCell;
-		}
-		nodeIsActive[i] = false;
-	}
-	nodeCellType = hostTmpVector;
-	nodeIsActive = hostTmpVector2;
-	nodeCellRank = hostTmpVector3;
-	copyParaToGPUConstMem();
+void SceNodes::readDomainPara() {
+	domainPara.minX = globalConfigVars.getConfigValue("DOMAIN_XMIN").toDouble();
+	domainPara.maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
+	domainPara.minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
+	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
+	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
+	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
+	domainPara.gridSpacing = globalConfigVars.getConfigValue(
+			"DOMAIN_GRID_SPACING").toDouble();
+	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+			/ domainPara.gridSpacing + 1;
+	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
+			/ domainPara.gridSpacing + 1;
 }
 
-void SceNodes::copyParaToGPUConstMem() {
+void SceNodes::readMechPara() {
 	static const double U0 =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_U0_DivFactor").toDouble();
@@ -161,11 +89,11 @@ void SceNodes::copyParaToGPUConstMem() {
 	static const double interLinkEffectiveRange =
 			globalConfigVars.getConfigValue("InterCellLinkBreakRange").toDouble();
 
-	sceInterParaCPU[0] = U0;
-	sceInterParaCPU[1] = V0;
-	sceInterParaCPU[2] = k1;
-	sceInterParaCPU[3] = k2;
-	sceInterParaCPU[4] = interLinkEffectiveRange;
+	mechPara.sceInterParaCPU[0] = U0;
+	mechPara.sceInterParaCPU[1] = V0;
+	mechPara.sceInterParaCPU[2] = k1;
+	mechPara.sceInterParaCPU[3] = k2;
+	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
 
 	static const double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
@@ -179,19 +107,11 @@ void SceNodes::copyParaToGPUConstMem() {
 	static const double k2_Intra =
 			globalConfigVars.getConfigValue("IntraCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_k2_DivFactor").toDouble();
-	sceIntraParaCPU[0] = U0_Intra;
-	sceIntraParaCPU[1] = V0_Intra;
-	sceIntraParaCPU[2] = k1_Intra;
-	sceIntraParaCPU[3] = k2_Intra;
 
-	//std::cout << "in SceNodes, before cuda memory copy to symbol:" << std::endl;
-	cudaMemcpyToSymbol(sceInterPara, sceInterParaCPU, 5 * sizeof(double));
-	cudaMemcpyToSymbol(sceIntraPara, sceIntraParaCPU, 4 * sizeof(double));
-	cudaMemcpyToSymbol(ProfilebeginPos, &startPosProfile, sizeof(uint));
-	cudaMemcpyToSymbol(ECMbeginPos, &startPosECM, sizeof(uint));
-	cudaMemcpyToSymbol(cellNodeBeginPos, &startPosCells, sizeof(uint));
-	cudaMemcpyToSymbol(nodeCountPerECM, &maxNodePerECM, sizeof(uint));
-	cudaMemcpyToSymbol(nodeCountPerCell, &maxNodeOfOneCell, sizeof(uint));
+	mechPara.sceIntraParaCPU[0] = U0_Intra;
+	mechPara.sceIntraParaCPU[1] = V0_Intra;
+	mechPara.sceIntraParaCPU[2] = k1_Intra;
+	mechPara.sceIntraParaCPU[3] = k2_Intra;
 
 	static const double U0_Diff =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
@@ -209,11 +129,12 @@ void SceNodes::copyParaToGPUConstMem() {
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Diff_k2_DivFactor").toDouble();
-	sceInterDiffParaCPU[0] = U0_Diff;
-	sceInterDiffParaCPU[1] = V0_Diff;
-	sceInterDiffParaCPU[2] = k1_Diff;
-	sceInterDiffParaCPU[3] = k2_Diff;
-	sceInterDiffParaCPU[4] = interLinkEffectiveRange;
+
+	mechPara.sceInterDiffParaCPU[0] = U0_Diff;
+	mechPara.sceInterDiffParaCPU[1] = V0_Diff;
+	mechPara.sceInterDiffParaCPU[2] = k1_Diff;
+	mechPara.sceInterDiffParaCPU[3] = k2_Diff;
+	mechPara.sceInterDiffParaCPU[4] = interLinkEffectiveRange;
 
 	static const double U0_Bdry =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
@@ -241,18 +162,13 @@ void SceNodes::copyParaToGPUConstMem() {
 	static const double linearParameter = globalConfigVars.getConfigValue(
 			"Profile_linear_parameter").toDouble();
 
-	sceProfileParaCPU[0] = U0_Bdry;
-	sceProfileParaCPU[1] = V0_Bdry;
-	sceProfileParaCPU[2] = k1_Bdry;
-	sceProfileParaCPU[3] = k2_Bdry;
-	sceProfileParaCPU[4] = interLinkEffectiveRange;
-	sceProfileParaCPU[5] = linearParameter;
-	sceProfileParaCPU[6] = neutralLength;
-
-	std::cout << "linear parameter = " << linearParameter << std::endl;
-	std::cout << "neutralLength  =" << neutralLength << std::endl;
-	//int jj;
-	//std::cin >> jj;
+	mechPara.sceProfileParaCPU[0] = U0_Bdry;
+	mechPara.sceProfileParaCPU[1] = V0_Bdry;
+	mechPara.sceProfileParaCPU[2] = k1_Bdry;
+	mechPara.sceProfileParaCPU[3] = k2_Bdry;
+	mechPara.sceProfileParaCPU[4] = interLinkEffectiveRange;
+	mechPara.sceProfileParaCPU[5] = linearParameter;
+	mechPara.sceProfileParaCPU[6] = neutralLength;
 
 	static const double U0_ECM =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
@@ -270,78 +186,106 @@ void SceNodes::copyParaToGPUConstMem() {
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_ECM_k2_DivFactor").toDouble();
-	sceECMParaCPU[0] = U0_ECM;
-	sceECMParaCPU[1] = V0_ECM;
-	sceECMParaCPU[2] = k1_ECM;
-	sceECMParaCPU[3] = k2_ECM;
-	sceECMParaCPU[4] = interLinkEffectiveRange;
+	mechPara.sceECMParaCPU[0] = U0_ECM;
+	mechPara.sceECMParaCPU[1] = V0_ECM;
+	mechPara.sceECMParaCPU[2] = k1_ECM;
+	mechPara.sceECMParaCPU[3] = k2_ECM;
+	mechPara.sceECMParaCPU[4] = interLinkEffectiveRange;
+}
 
-	cudaMemcpyToSymbol(sceProfilePara, sceProfileParaCPU, 7 * sizeof(double));
+SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
+		uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
+		uint maxNodeInCell) {
+	readDomainPara();
+	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount, maxTotalECMCount,
+			maxNodeInECM, maxTotalCellCount, maxNodeInCell);
+	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
+			+ allocPara.maxTotalECMNodeCount + allocPara.maxTotalCellNodeCount;
+	allocSpaceForNodes(maxTotalNodeCount);
+	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
+	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
+	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
+	for (int i = 0; i < maxTotalNodeCount; i++) {
+		if (i < allocPara.startPosProfile) {
+			hostTmpVector[i] = Boundary;
+			hostTmpVector3[i] = 0;
+		} else if (i < allocPara.startPosECM) {
+			hostTmpVector[i] = Profile;
+			hostTmpVector3[i] = 0;
+		} else if (i < allocPara.startPosCells) {
+			hostTmpVector[i] = ECM;
+			hostTmpVector3[i] = (i - allocPara.startPosECM)
+					/ allocPara.maxNodePerECM;
+		} else {
+			// all initialized as FNM
+			hostTmpVector[i] = FNM;
+			hostTmpVector3[i] = (i - allocPara.startPosCells)
+					/ allocPara.maxNodeOfOneCell;
+		}
+		infoVecs.nodeIsActive[i] = false;
+	}
+	infoVecs.nodeCellType = hostTmpVector;
+	infoVecs.nodeIsActive = hostTmpVector2;
+	infoVecs.nodeCellRank = hostTmpVector3;
+	copyParaToGPUConstMem();
+}
 
-	cudaMemcpyToSymbol(sceInterDiffPara, sceInterDiffParaCPU,
+void SceNodes::copyParaToGPUConstMem() {
+
+	readMechPara();
+
+	cudaMemcpyToSymbol(sceInterPara, mechPara.sceInterParaCPU,
 			5 * sizeof(double));
-
-	cudaMemcpyToSymbol(sceECMPara, sceECMParaCPU, 5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIntraPara, mechPara.sceIntraParaCPU,
+			4 * sizeof(double));
+	cudaMemcpyToSymbol(ProfilebeginPos, &allocPara.startPosProfile,
+			sizeof(uint));
+	cudaMemcpyToSymbol(ECMbeginPos, &allocPara.startPosECM, sizeof(uint));
+	cudaMemcpyToSymbol(cellNodeBeginPos, &allocPara.startPosCells,
+			sizeof(uint));
+	cudaMemcpyToSymbol(nodeCountPerECM, &allocPara.maxNodePerECM, sizeof(uint));
+	cudaMemcpyToSymbol(nodeCountPerCell, &allocPara.maxNodeOfOneCell,
+			sizeof(uint));
+	cudaMemcpyToSymbol(sceProfilePara, mechPara.sceProfileParaCPU,
+			7 * sizeof(double));
+	cudaMemcpyToSymbol(sceInterDiffPara, mechPara.sceInterDiffParaCPU,
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceECMPara, mechPara.sceECMParaCPU, 5 * sizeof(double));
 	//std::cout << "finished SceNodes:" << std::endl;
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
 		double domainMinY, double domainMaxY, double domainBucketSize) {
-	minX = domainMinX;
-	maxX = domainMaxX;
-	minY = domainMinY;
-	maxY = domainMaxY;
-	bucketSize = domainBucketSize;
-	numOfBucketsInXDim = (maxX - minX) / bucketSize + 1;
-	numOfBucketsInYDim = (maxY - minY) / bucketSize + 1;
-	totalBucketCount = numOfBucketsInXDim * numOfBucketsInYDim;
+	domainPara.minX = domainMinX;
+	domainPara.maxX = domainMaxX;
+	domainPara.minY = domainMinY;
+	domainPara.maxY = domainMaxY;
+	domainPara.gridSpacing = domainBucketSize;
+	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+			/ domainPara.gridSpacing + 1;
+	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
+			/ domainPara.gridSpacing + 1;
+	domainPara.totalBucketCount = domainPara.numOfBucketsInXDim
+			* domainPara.numOfBucketsInYDim;
 
-	keyBegin.resize(totalBucketCount);
-	keyEnd.resize(totalBucketCount);
-
-	/*
-	 std::cout << "after initialization, values:" << std::endl;
-	 std::cout << "minX = " << minX << ", maxX = " << maxX << std::endl;
-	 std::cout << "minX = " << minX << ", maxX = " << maxX << std::endl;
-	 std::cout << "numOfBucketsInXDim = " << numOfBucketsInXDim
-	 << ", numOfBucketsInYDim = " << numOfBucketsInYDim << std::endl;
-	 std::cout << "totalBucketCount= " << totalBucketCount << std::endl;
-	 */
-
-	//int jj;
-	//std::cin >> jj;
+	auxVecs.keyBegin.resize(domainPara.totalBucketCount);
+	auxVecs.keyEnd.resize(domainPara.totalBucketCount);
 }
 
 std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
-	//std::clock_t t1, t2, t3, t4, t5, t6;
-	//t1 = std::clock();
+
 	std::vector<std::pair<uint, uint> > result;
-	thrust::host_vector<uint> keyBeginCPU = keyBegin;
-	thrust::host_vector<uint> keyEndCPU = keyEnd;
-	thrust::host_vector<uint> bucketKeysCPU = bucketKeys;
-	thrust::host_vector<uint> bucketValuesCPU = bucketValues;
+	thrust::host_vector<uint> keyBeginCPU = auxVecs.keyBegin;
+	thrust::host_vector<uint> keyEndCPU = auxVecs.keyEnd;
+	thrust::host_vector<uint> bucketKeysCPU = auxVecs.bucketKeys;
+	thrust::host_vector<uint> bucketValuesCPU = auxVecs.bucketValues;
 	thrust::host_vector<uint> bucketValuesExtendedCPU =
-			bucketValuesIncludingNeighbor;
+			auxVecs.bucketValuesIncludingNeighbor;
 
-	//t2 = std::clock();
+	//cout << "sizes = " << keyBeginCPU.size() << " " << keyEndCPU.size() << " "
+	//		<< bucketKeysCPU.size() << " " << bucketValuesCPU.size() << " "
+	//		<< bucketValuesExtendedCPU.size() << endl;
 
-	//std::vector<uint> keyBeginStd(keyBeginCPU.size());
-	//std::vector<uint> keyEndStd(keyBeginCPU.size());
-	//std::vector<uint> bucketKeysStd(bucketKeysCPU.size());
-	//std::vector<uint> bucketValuesStd(bucketValuesCPU.size());
-	//std::vector<uint> bucketValuesExtendedStd(bucketValuesExtendedCPU.size());
-
-	//thrustVecToStd<uint>(keyBeginCPU, keyBeginStd);
-	//thrustVecToStd<uint>(keyEndCPU, keyEndStd);
-	//thrustVecToStd<uint>(bucketKeysCPU, bucketKeysStd);
-	//thrustVecToStd<uint>(bucketValuesCPU, bucketValuesStd);
-	//thrustVecToStd<uint>(bucketValuesExtendedCPU, bucketValuesExtendedStd);
-
-	cout << "sizes = " << keyBeginCPU.size() << " " << keyEndCPU.size() << " "
-			<< bucketKeysCPU.size() << " " << bucketValuesCPU.size() << " "
-			<< bucketValuesExtendedCPU.size() << endl;
-
-	//t3 = std::clock();
 	uint iterationCounter = 0;
 
 	int size = bucketKeysCPU.size();
@@ -363,47 +307,7 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 			iterationCounter++;
 		}
 	}
-	cout << "iter counter = " << iterationCounter << endl;
-
-	/*
-	 t4 = std::clock();
-	 double thrustHostTime = t4 - t3;
-	 cout << "calculating thrust host time:" << thrustHostTime / CLOCKS_PER_SEC
-	 << endl;
-	 result.clear();
-	 for (int i = 0; i < size; i++) {
-
-	 for (int j = keyBeginStd[bucketKeysStd[i]];
-	 j < keyEndStd[bucketKeysStd[i]]; j++) {
-	 //std::cout << "pair node 1: " << bucketValues[i] << ",pair node2: "
-	 //		<< bucketValuesIncludingNeighbor[j] << std::endl;
-	 int node1 = bucketKeysStd[i];
-	 int node2 = bucketValuesExtendedStd[j];
-	 //cout << "node1 = " << node1 << "node2 = " << node2 << endl;
-	 if (node1 >= node2) {
-	 //cout << "not inserted, continue" << endl;
-	 continue;
-	 } else {
-	 //cout << "inserted!" << endl;
-	 result.push_back(std::make_pair<uint, uint>(node1, node2));
-	 }
-	 //iterationCounter++;
-	 }
-	 }
-	 t5 = std::clock();
-	 double stdTime = t5 - t4;
-	 cout << "calculating std time:" << stdTime / CLOCKS_PER_SEC << endl;
-	 result.clear();
-	 for (int i = 0; i < iterationCounter; i++) {
-	 result.push_back(std::make_pair<uint, uint>(i, i + 1));
-	 }
-
-	 t6 = std::clock();
-	 double dummyTime = t6 - t5;
-	 cout << "calculating dummy time:" << dummyTime / CLOCKS_PER_SEC << endl;
-	 int jj;
-	 cin >> jj;
-	 */
+	//cout << "iter counter = " << iterationCounter << endl;
 	return result;
 }
 
@@ -421,42 +325,43 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 	uint FNMNodeCountX = initFNMCellNodePosX.size();
 	uint MXNodeCountX = initMXCellNodePosX.size();
 
-	uint beginAddressOfProfile = startPosProfile;
+	uint beginAddressOfProfile = allocPara.startPosProfile;
 // find the begining position of ECM.
-	uint beginAddressOfECM = startPosECM;
+	uint beginAddressOfECM = allocPara.startPosECM;
 // find the begining position of FNM cells.
-	uint beginAddressOfFNM = startPosCells;
+	uint beginAddressOfFNM = allocPara.startPosCells;
 // find the begining position of MX cells.
 	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCountX;
 
 //std::cerr << "before copying arrays" << endl;
 
 	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
-			nodeLocX.begin());
+			infoVecs.nodeLocX.begin());
 	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
-			nodeLocY.begin());
+			infoVecs.nodeLocY.begin());
 
 //std::cerr << "copy 1" << endl;
 
 // copy x and y position of nodes of Profile to actual node position.
 	thrust::copy(initProfileNodePosX.begin(), initProfileNodePosX.end(),
-			nodeLocX.begin() + beginAddressOfProfile);
+			infoVecs.nodeLocX.begin() + beginAddressOfProfile);
 	thrust::copy(initProfileNodePosY.begin(), initProfileNodePosY.end(),
-			nodeLocY.begin() + beginAddressOfProfile);
+			infoVecs.nodeLocY.begin() + beginAddressOfProfile);
 
 //std::cerr << "copy 2" << endl;
 
 // copy x and y position of nodes of ECM to actual node position.
 	thrust::copy(initECMNodePosX.begin(), initECMNodePosX.end(),
-			nodeLocX.begin() + beginAddressOfECM);
+			infoVecs.nodeLocX.begin() + beginAddressOfECM);
 	thrust::copy(initECMNodePosY.begin(), initECMNodePosY.end(),
-			nodeLocY.begin() + beginAddressOfECM);
+			infoVecs.nodeLocY.begin() + beginAddressOfECM);
 
 // debug
 	for (int i = 0; i < initECMNodePosX.size(); i++) {
 		std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
-				<< "nodeLocX =" << nodeLocX[i + beginAddressOfECM] << std::endl;
-		assert(nodeLocX[i + beginAddressOfECM] == initECMNodePosX[i]);
+				<< "nodeLocX =" << infoVecs.nodeLocX[i + beginAddressOfECM]
+				<< std::endl;
+		assert(infoVecs.nodeLocX[i + beginAddressOfECM] == initECMNodePosX[i]);
 		assert(!isnan(initECMNodePosX[i]));
 	}
 
@@ -464,25 +369,26 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 
 // copy x and y position of nodes of FNM cells to actual node position.
 	thrust::copy(initFNMCellNodePosX.begin(), initFNMCellNodePosX.end(),
-			nodeLocX.begin() + beginAddressOfFNM);
+			infoVecs.nodeLocX.begin() + beginAddressOfFNM);
 	thrust::copy(initFNMCellNodePosY.begin(), initFNMCellNodePosY.end(),
-			nodeLocY.begin() + beginAddressOfFNM);
+			infoVecs.nodeLocY.begin() + beginAddressOfFNM);
 
 // std::cerr << "copy 4" << endl;
 
-	thrust::fill(nodeCellType.begin() + beginAddressOfFNM,
-			nodeCellType.begin() + beginAddressOfMX, FNM);
+	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfFNM,
+			infoVecs.nodeCellType.begin() + beginAddressOfMX, FNM);
 
 // copy x and y position of nodes of MX cells to actual node position.
 	thrust::copy(initMXCellNodePosX.begin(), initMXCellNodePosX.end(),
-			nodeLocX.begin() + beginAddressOfMX);
+			infoVecs.nodeLocX.begin() + beginAddressOfMX);
 	thrust::copy(initMXCellNodePosY.begin(), initMXCellNodePosY.end(),
-			nodeLocY.begin() + beginAddressOfMX);
+			infoVecs.nodeLocY.begin() + beginAddressOfMX);
 
 //std::cerr << "after copying arrays" << endl;
 
-	thrust::fill(nodeCellType.begin() + beginAddressOfMX,
-			nodeCellType.begin() + beginAddressOfMX + MXNodeCountX, MX);
+	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfMX,
+			infoVecs.nodeCellType.begin() + beginAddressOfMX + MXNodeCountX,
+			MX);
 
 //std::cout << "initial MX cell numbers: " << mxQuotient << std::endl;
 }
@@ -490,30 +396,32 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 void SceNodes::applyProfileForces() {
 	thrust::counting_iterator<uint> countingIterBegin(0);
 	thrust::counting_iterator<uint> countingIterEnd(
-			currentActiveProfileNodeCount);
+			allocPara.currentActiveProfileNodeCount);
 
 	double* nodeLocXAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeLocX[startPosProfile]);
+			&infoVecs.nodeLocX[allocPara.startPosProfile]);
 	double* nodeLocYAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeLocY[startPosProfile]);
+			&infoVecs.nodeLocY[allocPara.startPosProfile]);
 	double* nodeLocZAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeLocZ[startPosProfile]);
+			&infoVecs.nodeLocZ[allocPara.startPosProfile]);
 
 	double* nodeVelXAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeVelX[startPosProfile]);
+			&infoVecs.nodeVelX[allocPara.startPosProfile]);
 	double* nodeVelYAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeVelY[startPosProfile]);
+			&infoVecs.nodeVelY[allocPara.startPosProfile]);
 	double* nodeVelZAddressEpiBegin = thrust::raw_pointer_cast(
-			&nodeVelZ[startPosProfile]);
+			&infoVecs.nodeVelZ[allocPara.startPosProfile]);
 
 	thrust::transform(countingIterBegin, countingIterEnd,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(nodeVelX.begin(), nodeVelY.begin(),
-							nodeVelZ.begin())) + startPosProfile,
+					thrust::make_tuple(infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin(),
+							infoVecs.nodeVelZ.begin()))
+					+ allocPara.startPosProfile,
 			AddLinkForces(nodeLocXAddressEpiBegin, nodeLocYAddressEpiBegin,
 					nodeLocZAddressEpiBegin, nodeVelXAddressEpiBegin,
 					nodeVelYAddressEpiBegin, nodeVelZAddressEpiBegin,
-					currentActiveProfileNodeCount));
+					allocPara.currentActiveProfileNodeCount));
 }
 
 VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
@@ -530,14 +438,15 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 
 	// Doesn't have to copy the entire nodeLocX array.
 	// Only copy the first half will be sufficient
-	thrust::host_vector<double> hostTmpVectorLocX = nodeLocX;
-	thrust::host_vector<double> hostTmpVectorLocY = nodeLocY;
-	thrust::host_vector<double> hostTmpVectorLocZ = nodeLocZ;
-	thrust::host_vector<SceNodeType> hostTmpVectorNodeType = nodeCellType;
-	thrust::host_vector<uint> hostTmpVectorNodeRank = nodeCellRank;
+	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
+	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
+	thrust::host_vector<double> hostTmpVectorLocZ = infoVecs.nodeLocZ;
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
+			infoVecs.nodeCellType;
+	thrust::host_vector<uint> hostTmpVectorNodeRank = infoVecs.nodeCellRank;
 	thrust::host_vector<double> hostTmpVectorNodeStress;
 	if (aniCri.isStressMap) {
-		hostTmpVectorNodeStress = nodeMaxForce;
+		hostTmpVectorNodeStress = infoVecs.nodeMaxForce;
 	}
 
 	uint curIndex = 0;
@@ -605,20 +514,19 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 
 void SceNodes::findBucketBounds() {
 	thrust::counting_iterator<unsigned int> search_begin(0);
-	thrust::lower_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
-			search_begin, search_begin + totalBucketCount, keyBegin.begin());
-	thrust::upper_bound(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
-			search_begin, search_begin + totalBucketCount, keyEnd.begin());
+	thrust::lower_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.end(), search_begin,
+			search_begin + domainPara.totalBucketCount,
+			auxVecs.keyBegin.begin());
+	thrust::upper_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.end(), search_begin,
+			search_begin + domainPara.totalBucketCount, auxVecs.keyEnd.begin());
 }
 
 void SceNodes::prepareSceForceComputation() {
 	buildBuckets2D();
-	cout << "after building, bucket size = " << bucketKeys.size() << endl;
 	extendBuckets2D();
-	cout << "after extending, extended size = " << bucketKeysExpanded.size()
-			<< endl;
 	findBucketBounds();
-	cout << "after finding bounds, bound size = " << keyBegin.size() << endl;
 }
 
 void SceNodes::addNewlyDividedCells(
@@ -630,12 +538,12 @@ void SceNodes::addNewlyDividedCells(
 
 // data validation
 	uint nodesSize = nodeLocXNewCell.size();
-	assert(nodesSize % maxNodeOfOneCell == 0);
-	uint addCellCount = nodesSize / maxNodeOfOneCell;
+	assert(nodesSize % allocPara.maxNodeOfOneCell == 0);
+	uint addCellCount = nodesSize / allocPara.maxNodeOfOneCell;
 
 // position that we will add newly divided cells.
-	uint shiftStartPosNewCell = startPosCells
-			+ currentActiveCellCount * maxNodeOfOneCell;
+	uint shiftStartPosNewCell = allocPara.startPosCells
+			+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
 
 	thrust::copy(
 			thrust::make_zip_iterator(
@@ -649,21 +557,24 @@ void SceNodes::addNewlyDividedCells(
 							nodeIsActiveNewCell.end(),
 							nodeCellTypeNewCell.end())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(nodeLocX.begin(), nodeLocY.begin(),
-							nodeLocZ.begin(), nodeIsActive.begin(),
-							nodeCellType.begin())) + shiftStartPosNewCell);
+					thrust::make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(),
+							infoVecs.nodeCellType.begin()))
+					+ shiftStartPosNewCell);
 
 // total number of cells has increased.
-	currentActiveCellCount = currentActiveCellCount + addCellCount;
+	allocPara.currentActiveCellCount = allocPara.currentActiveCellCount
+			+ addCellCount;
 }
 
 void SceNodes::buildBuckets2D() {
-	int totalActiveNodes = startPosCells
-			+ currentActiveCellCount * maxNodeOfOneCell;
+	int totalActiveNodes = allocPara.startPosCells
+			+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
 
-	std::cout << "num of active nodes = " << totalActiveNodes << std::endl;
-	bucketKeys.resize(totalActiveNodes);
-	bucketValues.resize(totalActiveNodes);
+	auxVecs.bucketKeys.resize(totalActiveNodes);
+	auxVecs.bucketValues.resize(totalActiveNodes);
 	thrust::counting_iterator<uint> countingIterBegin(0);
 	thrust::counting_iterator<uint> countingIterEnd(totalActiveNodes);
 
@@ -672,30 +583,34 @@ void SceNodes::buildBuckets2D() {
 	// transform the points to their bucket indices
 	thrust::transform(
 			make_zip_iterator(
-					make_tuple(nodeLocX.begin(), nodeLocY.begin(),
-							nodeLocZ.begin(), nodeIsActive.begin(),
-							countingIterBegin)),
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), countingIterBegin)),
 			make_zip_iterator(
-					make_tuple(nodeLocX.begin(), nodeLocY.begin(),
-							nodeLocZ.begin(), nodeIsActive.begin(),
-							countingIterBegin)) + totalActiveNodes,
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), countingIterBegin))
+					+ totalActiveNodes,
 			make_zip_iterator(
-					make_tuple(bucketKeys.begin(), bucketValues.begin())),
-			pointToBucketIndex2D(minX, maxX, minY, maxY, bucketSize));
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
+			pointToBucketIndex2D(domainPara.minX, domainPara.maxX,
+					domainPara.minY, domainPara.maxY, domainPara.gridSpacing));
 
 	// sort the points by their bucket index
-	thrust::sort_by_key(bucketKeys.begin(), bucketKeys.end(),
-			bucketValues.begin());
+	thrust::sort_by_key(auxVecs.bucketKeys.begin(), auxVecs.bucketKeys.end(),
+			auxVecs.bucketValues.begin());
 	// for those nodes that are inactive, key value of UINT_MAX will be returned.
 	// we need to removed those keys along with their values.
-	int numberOfOutOfRange = thrust::count(bucketKeys.begin(), bucketKeys.end(),
-			UINT_MAX);
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeys.begin(),
+			auxVecs.bucketKeys.end(), UINT_MAX);
 
-	std::cout << "before erasing, size = " << bucketKeys.size() << std::endl;
-	bucketKeys.erase(bucketKeys.end() - numberOfOutOfRange, bucketKeys.end());
-	bucketValues.erase(bucketValues.end() - numberOfOutOfRange,
-			bucketValues.end());
-	std::cout << "after erasing, size = " << bucketKeys.size() << std::endl;
+	auxVecs.bucketKeys.erase(auxVecs.bucketKeys.end() - numberOfOutOfRange,
+			auxVecs.bucketKeys.end());
+	auxVecs.bucketValues.erase(auxVecs.bucketValues.end() - numberOfOutOfRange,
+			auxVecs.bucketValues.end());
 }
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
@@ -738,23 +653,6 @@ void calculateAndAddProfileForce(double &xPos, double &yPos, double &zPos,
 	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
 	double forceValue = 0;
 	forceValue = -sceProfilePara[5] * (linkLength - sceProfilePara[6]);
-	/*
-	 if (linkLength > sceProfilePara[4]) {
-	 forceValue = 0;
-	 } else {
-	 forceValue = -sceProfilePara[0] / sceProfilePara[2]
-	 * exp(-linkLength / sceProfilePara[2])
-	 + sceProfilePara[1] / sceProfilePara[3]
-	 * exp(-linkLength / sceProfilePara[3]);
-	 // positive value means force is attraction
-	 if (linkLength > sceProfilePara[6]) {
-	 forceValue = sceProfilePara[5] * (linkLength - sceProfilePara[6]);
-	 //if (forceValue < 0) {
-	 //	forceValue = 0;
-	 //}
-	 }
-	 }
-	 */
 
 	if (linkLength > 1.0e-12) {
 		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
@@ -945,23 +843,6 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 	yVel = yVel + forceValueRight * (yLocRight - yLoc) / linkLengthRight;
 	zVel = zVel + forceValueRight * (zLocRight - zLoc) / linkLengthRight;
 
-	/*
-	 if (linkLength > sceProfilePara[4]) {
-	 forceValue = 0;
-	 } else {
-	 forceValue = -sceProfilePara[0] / sceProfilePara[2]
-	 * exp(-linkLength / sceProfilePara[2])
-	 + sceProfilePara[1] / sceProfilePara[3]
-	 * exp(-linkLength / sceProfilePara[3]);
-	 // positive value means force is attraction
-	 if (linkLength > sceProfilePara[6]) {
-	 forceValue = sceProfilePara[5] * (linkLength - sceProfilePara[6]);
-	 //if (forceValue < 0) {
-	 //	forceValue = 0;
-	 //}
-	 }
-	 }
-	 */
 }
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
@@ -980,9 +861,6 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 					_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
 					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
 		} else {
-			// TODO: this function needs to be modified.
-			// (1) nodeCountPerCell need to be stored in constant memory.
-			// (2) begin address of cell nodes need to be stored in constant memory.
 			if (isSameCell(nodeRank1, nodeRank2)) {
 				calculateAndAddIntraForce(xPos, yPos, zPos,
 						_nodeLocXAddress[nodeRank2],
@@ -1011,9 +889,6 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 // this means that both nodes come from ECM and from same ECM
 	else if (type1 == ECM && type2 == ECM && isSameECM(nodeRank1, nodeRank2)) {
 		if (isNeighborECMNodes(nodeRank1, nodeRank2)) {
-			// TODO: need to create another two vectors that holds the neighbor information for ECM.
-			// TODO: alternatively, try to store ECM begin address and number of node per ECM in constant memory.
-			// TODO: implement this function.
 			calculateAndAddECMForce(xPos, yPos, zPos,
 					_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
 					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
@@ -1041,9 +916,10 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 
 void SceNodes::extendBuckets2D() {
 	static const uint extensionFactor2D = 9;
-	uint valuesCount = bucketValues.size();
-	bucketKeysExpanded.resize(valuesCount * extensionFactor2D);
-	bucketValuesIncludingNeighbor.resize(valuesCount * extensionFactor2D);
+	uint valuesCount = auxVecs.bucketValues.size();
+	auxVecs.bucketKeysExpanded.resize(valuesCount * extensionFactor2D);
+	auxVecs.bucketValuesIncludingNeighbor.resize(
+			valuesCount * extensionFactor2D);
 
 	/**
 	 * beginning of constant iterator
@@ -1059,10 +935,11 @@ void SceNodes::extendBuckets2D() {
 
 	expand(first, last,
 			make_zip_iterator(
-					make_tuple(bucketKeys.begin(), bucketValues.begin())),
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
 			make_zip_iterator(
-					make_tuple(bucketKeysExpanded.begin(),
-							bucketValuesIncludingNeighbor.begin())));
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							auxVecs.bucketValuesIncludingNeighbor.begin())));
 
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd = countingBegin
@@ -1079,101 +956,89 @@ void SceNodes::extendBuckets2D() {
 
 	thrust::transform(
 			make_zip_iterator(
-					make_tuple(bucketKeysExpanded.begin(), countingBegin)),
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
 			make_zip_iterator(
-					make_tuple(bucketKeysExpanded.end(), countingEnd)),
+					make_tuple(auxVecs.bucketKeysExpanded.end(), countingEnd)),
 			make_zip_iterator(
-					make_tuple(bucketKeysExpanded.begin(), countingBegin)),
-			NeighborFunctor2D(numOfBucketsInXDim, numOfBucketsInYDim));
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
+			NeighborFunctor2D(domainPara.numOfBucketsInXDim,
+					domainPara.numOfBucketsInYDim));
 
-	int numberOfOutOfRange = thrust::count(bucketKeysExpanded.begin(),
-			bucketKeysExpanded.end(), UINT_MAX);
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.end(), UINT_MAX);
 //std::cout << "number out of range = " << numberOfOutOfRange << std::endl;
-	int sizeBeforeShrink = bucketKeysExpanded.size();
+	int sizeBeforeShrink = auxVecs.bucketKeysExpanded.size();
 	int numberInsideRange = sizeBeforeShrink - numberOfOutOfRange;
-	thrust::sort_by_key(bucketKeysExpanded.begin(), bucketKeysExpanded.end(),
-			bucketValuesIncludingNeighbor.begin());
-	bucketKeysExpanded.erase(bucketKeysExpanded.begin() + numberInsideRange,
-			bucketKeysExpanded.end());
-	bucketValuesIncludingNeighbor.erase(
-			bucketValuesIncludingNeighbor.begin() + numberInsideRange,
-			bucketValuesIncludingNeighbor.end());
+	thrust::sort_by_key(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.end(),
+			auxVecs.bucketValuesIncludingNeighbor.begin());
+	auxVecs.bucketKeysExpanded.erase(
+			auxVecs.bucketKeysExpanded.begin() + numberInsideRange,
+			auxVecs.bucketKeysExpanded.end());
+	auxVecs.bucketValuesIncludingNeighbor.erase(
+			auxVecs.bucketValuesIncludingNeighbor.begin() + numberInsideRange,
+			auxVecs.bucketValuesIncludingNeighbor.end());
 }
 void SceNodes::applySceForces() {
-//std::cout << "begin apply sce forces" << std::endl;
-//std::cout << "size of lower = " << keyBegin.size() << std::endl;
-
-//findBucketBounds();
-
-//thrust::host_vector<uint> lowerCPU = keyBegin;
-
-//std::cout << "finished finding bounds" << std::endl;
-
-//int test1 = lowerCPU[0];
-//int test2 = lowerCPU[0];
-
-//std::cout << "test 1 =" << test1 << ", test 2 = " << test2 << std::endl;
-//std::cout.flush();
-
-//int test3 = keyBegin[totalBucketCount - 1];
-//int test4 = keyEnd[totalBucketCount - 1];
-
-//std::cout << "test 3 =" << test3 << ", test 4 = " << test4 << std::endl;
-
-//std::cout << "begin pointer casting" << std::endl;
 
 // reason for casting these pointers every time is for flexibility.
 // Because these are thrust vectors, the begin address could possibly change.
 // Therefore, we re-define the begin address of these pointers everytime.
 	uint* valueAddress = thrust::raw_pointer_cast(
-			&bucketValuesIncludingNeighbor[0]);
-	double* nodeLocXAddress = thrust::raw_pointer_cast(&nodeLocX[0]);
-	double* nodeLocYAddress = thrust::raw_pointer_cast(&nodeLocY[0]);
-	double* nodeLocZAddress = thrust::raw_pointer_cast(&nodeLocZ[0]);
-	uint* nodeRankAddress = thrust::raw_pointer_cast(&nodeCellRank[0]);
-	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(&nodeCellType[0]);
+			&auxVecs.bucketValuesIncludingNeighbor[0]);
+	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
+	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
+	uint* nodeRankAddress = thrust::raw_pointer_cast(&infoVecs.nodeCellRank[0]);
+	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(
+			&infoVecs.nodeCellType[0]);
 
 //std::cout << "begin transformation" << std::endl;
 
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(
-							make_permutation_iterator(keyBegin.begin(),
-									bucketKeys.begin()),
-							make_permutation_iterator(keyEnd.begin(),
-									bucketKeys.begin()), bucketValues.begin(),
-							make_permutation_iterator(nodeLocX.begin(),
-									bucketValues.begin()),
-							make_permutation_iterator(nodeLocY.begin(),
-									bucketValues.begin()),
-							make_permutation_iterator(nodeLocZ.begin(),
-									bucketValues.begin()))),
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.begin()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.begin()),
+							auxVecs.bucketValues.begin(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
+									auxVecs.bucketValues.begin()))),
 			make_zip_iterator(
 					make_tuple(
-							make_permutation_iterator(keyBegin.begin(),
-									bucketKeys.end()),
-							make_permutation_iterator(keyEnd.begin(),
-									bucketKeys.end()), bucketValues.end(),
-							make_permutation_iterator(nodeLocX.begin(),
-									bucketValues.end()),
-							make_permutation_iterator(nodeLocY.begin(),
-									bucketValues.end()),
-							make_permutation_iterator(nodeLocZ.begin(),
-									bucketValues.end()))),
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.end()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.end()),
+							auxVecs.bucketValues.end(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.end()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.end()),
+							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
+									auxVecs.bucketValues.end()))),
 			make_zip_iterator(
 					make_tuple(
-							make_permutation_iterator(nodeVelX.begin(),
-									bucketValues.begin()),
-							make_permutation_iterator(nodeVelY.begin(),
-									bucketValues.begin()),
-							make_permutation_iterator(nodeVelZ.begin(),
-									bucketValues.begin()),
-							make_permutation_iterator(nodeMaxForce.begin(),
-									bucketValues.begin()))),
+							make_permutation_iterator(infoVecs.nodeVelX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeVelY.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeVelZ.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(
+									infoVecs.nodeMaxForce.begin(),
+									auxVecs.bucketValues.begin()))),
 			AddSceForce(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeLocZAddress, nodeRankAddress, nodeTypeAddress,
-					maxTotalCellNodeCount, startPosCells, maxNodeOfOneCell,
-					maxNodePerECM));
+					allocPara.maxTotalCellNodeCount, allocPara.startPosCells,
+					allocPara.maxNodeOfOneCell, allocPara.maxNodePerECM));
 
 //std::cout << "after transformation" << std::endl;
 }
@@ -1182,5 +1047,77 @@ void SceNodes::calculateAndApplySceForces() {
 	prepareSceForceComputation();
 	applySceForces();
 	applyProfileForces();
+}
+
+const SceDomainPara& SceNodes::getDomainPara() const {
+	return domainPara;
+}
+
+void SceNodes::setDomainPara(const SceDomainPara& domainPara) {
+	this->domainPara = domainPara;
+}
+
+const NodeAllocPara& SceNodes::getAllocPara() const {
+	return allocPara;
+}
+
+void SceNodes::setAllocPara(const NodeAllocPara& allocPara) {
+	this->allocPara = allocPara;
+}
+
+const NodeAuxVecs& SceNodes::getAuxVecs() const {
+	return auxVecs;
+}
+
+void SceNodes::setAuxVecs(const NodeAuxVecs& auxVecs) {
+	this->auxVecs = auxVecs;
+}
+
+NodeInfoVecs& SceNodes::getInfoVecs() {
+	return infoVecs;
+}
+
+void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {
+	this->infoVecs = infoVecs;
+}
+
+void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
+	infoVecs.nodeLocX.resize(maxTotalNodeCount);
+	infoVecs.nodeLocY.resize(maxTotalNodeCount);
+	infoVecs.nodeLocZ.resize(maxTotalNodeCount);
+	infoVecs.nodeVelX.resize(maxTotalNodeCount);
+	infoVecs.nodeVelY.resize(maxTotalNodeCount);
+	infoVecs.nodeVelZ.resize(maxTotalNodeCount);
+	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
+	infoVecs.nodeCellType.resize(maxTotalNodeCount);
+	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
+	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
+}
+
+void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
+		uint maxProfileNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
+		uint maxTotalCellCount, uint maxNodeInCell) {
+	allocPara.maxCellCount = maxTotalCellCount;
+	allocPara.maxNodeOfOneCell = maxNodeInCell;
+	allocPara.maxNodePerECM = maxNodeInECM;
+	allocPara.maxECMCount = maxTotalECMCount;
+	allocPara.maxProfileNodeCount = maxProfileNodeCount;
+	//std::cout << "break point 1" << std::endl;
+	allocPara.currentActiveProfileNodeCount = 0;
+	allocPara.BdryNodeCount = totalBdryNodeCount;
+	allocPara.currentActiveCellCount = 0;
+	allocPara.maxTotalECMNodeCount = allocPara.maxECMCount
+			* allocPara.maxNodePerECM;
+	allocPara.currentActiveECM = 0;
+	//std::cout << "break point 2" << std::endl;
+	// will need to change this value after we have more detail about ECM
+	allocPara.maxTotalCellNodeCount = maxTotalCellCount
+			* allocPara.maxNodeOfOneCell;
+
+	allocPara.startPosProfile = totalBdryNodeCount;
+	allocPara.startPosECM = allocPara.startPosProfile
+			+ allocPara.maxProfileNodeCount;
+	allocPara.startPosCells = allocPara.startPosECM
+			+ allocPara.maxTotalECMNodeCount;
 }
 
