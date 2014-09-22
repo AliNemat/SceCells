@@ -194,7 +194,7 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	uint totalSize = nodes.getInfoVecs().nodeLocX.size();
 
 	// set cell types
-	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
+	//thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
 
 	nodes.initValues(initBdryCellNodePosX, initBdryCellNodePosY,
 			initProfileNodePosX, initProfileNodePosY, initECMNodePosX,
@@ -204,16 +204,15 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	/*
 	 * Initialize SceCells_M ( M means modified) by nodes information.
 	 */
-	cells_m = SceCells(&nodes);
-
+	//cells = SceCells(&nodes);
 	// copy initial active node count info to GPU
-	thrust::copy(numOfInitActiveNodesOfCells.begin(),
-			numOfInitActiveNodesOfCells.end(),
-			cells_m.activeNodeCountOfThisCell.begin());
-
+	//thrust::copy(numOfInitActiveNodesOfCells.begin(),
+	//		numOfInitActiveNodesOfCells.end(),
+	//		cells.activeNodeCountOfThisCell.begin());
 	// set cell types
-	cells_m.setCellTypes(cellTypesToPass);
-	cells_m.distributeIsActiveInfo();
+	//cells.setCellTypes(cellTypesToPass);
+	//cells.distributeIsActiveInfo();
+	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
 void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
@@ -235,7 +234,13 @@ void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
 	nodes.calculateAndApplySceForces();
-	cells_m.runAllCellLevelLogics(dt, growthMap, growthMap2);
+	//cout << "finished node logic" << endl;
+
+	//checkIfAllDataFieldsValid();
+
+	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
+	//cout << "finished cell logic" << endl;
+
 }
 
 void SimulationDomainGPU::readMemPara() {

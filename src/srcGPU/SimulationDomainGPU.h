@@ -25,7 +25,7 @@ class SimulationDomainGPU {
 	 * Variable that contains information for cells.
 	 * Handles cell level logics like growth and division.
 	 */
-	SceCells cells_m;
+	SceCells cells;
 
 	/**
 	 * Growth map that controls the growth for cells.

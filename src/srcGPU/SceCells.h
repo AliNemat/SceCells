@@ -17,7 +17,9 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
  * @return output: result from division
  */
 struct DivideFunctor: public thrust::unary_function<uint, uint> {
-	uint dividend;__host__ __device__
+	uint dividend;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	DivideFunctor(uint dividendInput) :
 			dividend(dividendInput) {
 	}
@@ -736,69 +738,7 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 	}
 };
 
-/**
- * Modified implementation of subcellular element.
- * Important component to process cell growth and division.
- * Boundary, epithilum layer and ECM are also treated as cells but computed seperately.
- * @param beginPosOfBdry   represents begining position of boundary.
- * @param maxNodeOfBdry    represents maximum number of nodes of boundary.
- * @param beginPosOfEpi    represents begining position of epithilum layer.
- * @param maxNodeOfEpi     represents maximum number of nodes of epithilum layer.
- * @param maxNodeOfECM     represents maximum number of nodes per ECM
- * @param beginPosOfECM    represents begining position of ECM.
- * @param maxECMCount      represents maximum number of ECM.
- * @param maxNodeOfOneCell represents maximum number of nodes per cell
- * @param beginPosOfCells  represents begining position of cells.
- * @param maxCellCount     represents maximum number of cells.
- * @param isDivideCrticalRatio If the current cell length divide
- * CellFinalLength is larger than this ratio and the cell growth progress
- *  is complete then we set cell ready to divide
- */
-class SceCells {
-	NodeAllocPara allocPara;
-	SceMiscPara miscPara;
-	SceBioPara bioPara;
-
-	void readMiscPara();
-	void readBioPara();
-
-public:
-
-	//uint beginPosOfBdry;     // represents begining position of boundary.
-	//uint maxNodeOfBdry;      // represents maximum number of nodes of boundary.
-
-	//uint beginPosOfEpi; // represents begining position of epithilum layer (in cell perspective)
-	//uint startPosProfile; // represents begining position of epithilum layer (in node perspective)
-	//uint maxProfileNodeCount; // represents maximum number of nodes of epithilum layer.
-
-	//uint maxNodeOfECM;       // represents maximum number of nodes per ECM
-	//uint beginPosOfECM; // represents begining position of ECM (in cell perspective)
-	//uint startPosECM; // represents begining position of ECM (in node perspective)
-	//uint maxECMCount;        // represents maximum number of ECM.
-
-	//uint beginPosOfCells; // represents begining position of cells (in cell perspective)
-	//uint startPosCells; // represents begining position of cells (in node perspective)
-	//uint maxNodeOfOneCell;   // represents maximum number of nodes per cell
-	//uint maxCellCount;       // represents maximum number of cells in the system
-
-	//uint maxTotalCellNodeCount; // max possible node count for cell representation
-	//uint currentActiveCellCount; // the number of active cells would keep changing
-	//uint currentActiveECMCount;     // the number of active ECM might change.
-	//uint currectActiveProfileNode; // the number of epithilum nodes might change.
-
-	// if growthProgress[i] - lastCheckPoint[i] > growThreshold then isScheduledToGrow[i] = true;
-	//double growThreshold;
-	//double isDivideCriticalRatio;
-	//double addNodeDistance;
-	//double minDistanceToOtherNode;
-
-	//double cellInitLength;
-	//double cellFinalLength;
-	//double elongationCoefficient;
-	//double chemoCoefficient;
-
-	SceNodes* nodes;
-
+struct CellInfoVecs {
 	/**
 	 * @param growthProgress is a vector of size maxCellCount.
 	 * In each cell, \n
@@ -810,7 +750,7 @@ public:
 	 *
 	 */
 	thrust::device_vector<double> expectedLength;
-	thrust::device_vector<double> currentLength;
+	//thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;
 	// array to hold temp value computed in growth phase.
 	// obtained by smallest value of vector product of (a cell node to the cell center)
@@ -835,13 +775,9 @@ public:
 
 	// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
+};
 
-	// these tmp coordinates will be temporary storage for division info
-	// their size will be the same with maximum node count.
-	//thrust::device_vector<double> xCoordTmp;
-	//thrust::device_vector<double> yCoordTmp;
-	//thrust::device_vector<double> zCoordTmp;
-
+struct CellNodeInfoVecs {
 	// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanks;
 	thrust::device_vector<double> activeXPoss;
@@ -850,8 +786,9 @@ public:
 
 	// temp value for holding a node direction to its corresponding center
 	thrust::device_vector<double> distToCenterAlongGrowDir;
+};
 
-	// ************************* these parameters are used for cell growth **************************
+struct CellGrowthAuxData {
 	double* growthFactorMagAddress;
 	double* growthFactorDirXAddress;
 	double* growthFactorDirYAddress;
@@ -866,10 +803,9 @@ public:
 	bool* nodeIsActiveAddress;
 	double* nodeXPosAddress;
 	double* nodeYPosAddress;
+};
 
-	double dt;
-	// ************************* these parameters are used for cell growth **************************
-
+struct CellDivAuxData {
 	// ************************ these parameters are used for cell division *************************
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
@@ -890,6 +826,36 @@ public:
 
 	thrust::device_vector<SceNodeType> tmpCellTypes;
 	// ************************ these parameters are used for cell division *************************
+};
+
+/**
+ * Modified implementation of subcellular element.
+ * Important component to process cell growth and division.
+ * Boundary, epithilum layer and ECM are also treated as cells but computed seperately.
+ * @param beginPosOfBdry   represents begining position of boundary.
+ * @param maxNodeOfBdry    represents maximum number of nodes of boundary.
+ * @param beginPosOfEpi    represents begining position of epithilum layer.
+ * @param maxNodeOfEpi     represents maximum number of nodes of epithilum layer.
+ * @param maxNodeOfECM     represents maximum number of nodes per ECM
+ * @param beginPosOfECM    represents begining position of ECM.
+ * @param maxECMCount      represents maximum number of ECM.
+ * @param maxNodeOfOneCell represents maximum number of nodes per cell
+ * @param beginPosOfCells  represents begining position of cells.
+ * @param maxCellCount     represents maximum number of cells.
+ * @param isDivideCrticalRatio If the current cell length divide
+ * CellFinalLength is larger than this ratio and the cell growth progress
+ *  is complete then we set cell ready to divide
+ */
+class SceCells {
+	SceNodes* nodes;
+
+	NodeAllocPara allocPara;
+	SceMiscPara miscPara;
+	SceBioPara bioPara;
+	CellInfoVecs cellInfoVecs;
+	CellNodeInfoVecs cellNodeInfoVecs;
+	CellGrowthAuxData growthAuxData;
+	CellDivAuxData divAuxData;
 
 	// in this class, there are a lot of arrays that store information for each cell
 	// this counting iterator is used for all these arrays indicating the begining.
@@ -897,11 +863,21 @@ public:
 	thrust::constant_iterator<uint> initCellCount;
 	thrust::constant_iterator<double> initGrowthProgress;
 
-	SceCells(SceNodes* nodesInput);
-	SceCells() {
-	}
+	uint totalNodeCountForActiveCells;
 
-	void distributeIsActiveInfo();
+	double dt;
+
+	void readMiscPara();
+	void readBioPara();
+
+	void copyInitActiveNodeCount(
+			std::vector<uint>& numOfInitActiveNodesOfCells);
+
+	void initCellInfoVecs();
+	void initCellNodeInfoVecs();
+	void initGrowthAuxData();
+
+	void initialize(SceNodes* nodesInput);
 
 	void distributeBdryIsActiveInfo();
 	void distributeProfileIsActiveInfo();
@@ -909,14 +885,13 @@ public:
 	void distributeCellIsActiveInfo();
 
 	void distributeIsCellRank();
-	void runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
-			GrowthDistriMap &region2);
+
 	void allComponentsMove();
 	void grow2DTwoRegions(double dt, GrowthDistriMap &region1,
 			GrowthDistriMap &region2);
 
 	void computeCenterPos();
-	void processDivisionInfoAndAddNewCells();
+
 	void divide2DSimplified();
 
 	/**
@@ -990,10 +965,6 @@ public:
 	 */
 	void addPointIfScheduledToGrow();
 
-	thrust::device_vector<SceNodeType> getCellTypes() const {
-		return cellTypes;
-	}
-
 	/**
 	 * 2D version of cell division.
 	 * Division process is done by creating two temporary vectors to hold the node information
@@ -1048,16 +1019,21 @@ public:
 	 */
 	void setCellTypes(thrust::device_vector<SceNodeType> cellTypesInput) {
 		thrust::copy(cellTypesInput.begin(), cellTypesInput.end(),
-				cellTypes.begin());
+				cellInfoVecs.cellTypes.begin());
 	}
 
-	uint getMaxTotalNodeCountCellOnly() const {
-		return allocPara.maxTotalCellNodeCount;
-	}
+	void distributeIsActiveInfo();
 
-	void setMaxTotalNodeCountCellOnly(uint maxTotalNodeCountCellOnly) {
-		this->allocPara.maxTotalCellNodeCount = maxTotalNodeCountCellOnly;
-	}
+public:
+
+	SceCells();
+
+	SceCells(SceNodes* nodesInput,
+			std::vector<uint> &numOfInitActiveNodesOfCells,
+			std::vector<SceNodeType> &cellTypes);
+
+	void runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
+			GrowthDistriMap &region2);
 
 	const NodeAllocPara& getAllocPara() const {
 		return allocPara;

@@ -36,118 +36,23 @@ void SceCells::distributeCellIsActiveInfo() {
 			* allocPara.maxNodeOfOneCell;
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
-	std::cout << "started distri cell active" << std::endl;
-	std::cout << "active node count = " << totalNodeCountForActiveCells
-			<< std::endl;
+	//std::cout << "started distri cell active" << std::endl;
+	//std::cout << "active node count = " << totalNodeCountForActiveCells
+	//		<< std::endl;
 	thrust::transform(
 			thrust::make_transform_iterator(countingBegin,
 					ModuloFunctor(allocPara.maxNodeOfOneCell)),
 			thrust::make_transform_iterator(countingEnd,
 					ModuloFunctor(allocPara.maxNodeOfOneCell)),
-			thrust::make_permutation_iterator(activeNodeCountOfThisCell.begin(),
+			thrust::make_permutation_iterator(
+					cellInfoVecs.activeNodeCountOfThisCell.begin(),
 					make_transform_iterator(countingBegin,
 							DivideFunctor(allocPara.maxNodeOfOneCell))),
 			nodes->getInfoVecs().nodeIsActive.begin() + allocPara.startPosCells,
 			thrust::less<uint>());
 }
 
-/**
- * constructor for SceCells.
- * takes SceNodes, which is a pre-allocated multi-array, as input argument.
- * This might be strange from a design perspective but has a better performance
- * while running on parallel.
- */
-SceCells::SceCells(SceNodes* nodesInput) :
-		countingBegin(0), initCellCount(
-				nodesInput->getAllocPara().maxNodeOfOneCell / 2), initGrowthProgress(
-				0.0) {
-
-	readMiscPara();
-	readBioPara();
-	allocPara = nodesInput->getAllocPara();
-
-	//addNodeDistance =
-	//		globalConfigVars.getConfigValue("DistanceForAddingNode").toDouble();
-	//minDistanceToOtherNode = globalConfigVars.getConfigValue(
-	//		"MinDistanceToOtherNode").toDouble();
-	//isDivideCriticalRatio = globalConfigVars.getConfigValue(
-	//		"IsDivideCrticalRatio").toDouble();
-	//cellInitLength =
-	//		globalConfigVars.getConfigValue("CellInitLength").toDouble();
-	//cellFinalLength =
-	//		globalConfigVars.getConfigValue("CellFinalLength").toDouble();
-	//elongationCoefficient = globalConfigVars.getConfigValue(
-	//		"ElongateCoefficient").toDouble();
-	//chemoCoefficient =
-	//		globalConfigVars.getConfigValue("ChemoCoefficient").toDouble();
-
-	//beginPosOfBdry = 0;
-//maxNodeOfBdry = nodesInput->cellSpaceForBdry;
-
-//beginPosOfEpi = 1;
-	//maxProfileNodeCount = nodesInput->getAllocPara().maxProfileNodeCount; // represents maximum number of nodes of epithilum layer.
-	//startPosProfile = nodesInput->getAllocPara().startPosProfile;
-
-	//maxNodeOfECM = nodesInput->getAllocPara().maxNodePerECM; // represents maximum number of nodes per ECM
-// represents begining position of ECM (in node perspective) value is 2
-	//beginPosOfECM = 2;
-// represents begining position of ECM (in cell perspective)
-	//startPosECM = nodesInput->getAllocPara().startPosECM;
-	//maxECMCount = nodesInput->getAllocPara().maxECMCount; // represents maximum number of ECM.
-
-	// beginPosOfCells = beginPosOfECM + maxECMCount; // represents begining position of cells (in cell perspective)
-	//startPosCells = nodesInput->getAllocPara().startPosCells; // represents begining position of cells (in node perspective)
-// maxCellCount only take FNM and MX cells into consideration.
-	//maxNodeOfOneCell = nodesInput->getAllocPara().maxNodeOfOneCell;
-	//maxCellCount = nodesInput->getAllocPara().maxCellCount;
-// maxCellCountAll counts all cells include pseduo cells
-	//maxCellCountAll = nodesInput->getAllocPara().maxCellCountAll;
-	//maxTotalCellNodeCount = nodesInput->getAllocPara().maxTotalCellNodeCount;
-	//currentActiveCellCount = nodesInput->getAllocPara().currentActiveCellCount;
-
-// cellSpaceForBdry = nodesInput->getCellSpaceForBdry();
-
-	nodes = nodesInput;
-	growthProgress.resize(allocPara.maxCellCount, 0.0);
-	expectedLength.resize(allocPara.maxCellCount, bioPara.cellInitLength);
-	lengthDifference.resize(allocPara.maxCellCount, 0.0);
-	smallestDistance.resize(allocPara.maxCellCount);
-	biggestDistance.resize(allocPara.maxCellCount);
-	activeNodeCountOfThisCell.resize(allocPara.maxCellCount);
-	lastCheckPoint.resize(allocPara.maxCellCount, 0.0);
-	isDivided.resize(allocPara.maxCellCount);
-	cellTypes.resize(allocPara.maxCellCount, MX);
-	isScheduledToGrow.resize(allocPara.maxCellCount, false);
-	centerCoordX.resize(allocPara.maxCellCount);
-	centerCoordY.resize(allocPara.maxCellCount);
-	centerCoordZ.resize(allocPara.maxCellCount);
-	cellRanksTmpStorage.resize(allocPara.maxCellCount);
-	growthSpeed.resize(allocPara.maxCellCount, 0.0);
-	growthXDir.resize(allocPara.maxCellCount);
-	growthYDir.resize(allocPara.maxCellCount);
-
-	//xCoordTmp.resize(maxTotalCellNodeCount);
-	//yCoordTmp.resize(maxTotalCellNodeCount);
-	//zCoordTmp.resize(maxTotalCellNodeCount);
-	cellRanks.resize(allocPara.maxTotalCellNodeCount);
-	activeXPoss.resize(allocPara.maxTotalCellNodeCount);
-	activeYPoss.resize(allocPara.maxTotalCellNodeCount);
-	activeZPoss.resize(allocPara.maxTotalCellNodeCount);
-	distToCenterAlongGrowDir.resize(allocPara.maxTotalCellNodeCount);
-
-// reason for adding a small term here is to avoid scenario when checkpoint might add many times
-// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
-// this small term we might risk adding one more node.
-	//growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2) + epsilon;
-
-	nodeIsActiveAddress = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeIsActive[allocPara.startPosCells]));
-	nodeXPosAddress = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeLocX[allocPara.startPosCells]));
-	nodeYPosAddress = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeLocY[allocPara.startPosCells]));
-
-	distributeIsCellRank();
+SceCells::SceCells() {
 }
 
 /**
@@ -184,19 +89,19 @@ void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
 	dt = d_t;
 
 // obtain pointer address for first region
-	growthFactorMagAddress = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorMagAddress = thrust::raw_pointer_cast(
 			&(region1.growthFactorMag[0]));
-	growthFactorDirXAddress = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorDirXAddress = thrust::raw_pointer_cast(
 			&(region1.growthFactorDirXComp[0]));
-	growthFactorDirYAddress = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorDirYAddress = thrust::raw_pointer_cast(
 			&(region1.growthFactorDirYComp[0]));
 
 // obtain pointer address for second region
-	growthFactorMagAddress2 = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorMagAddress2 = thrust::raw_pointer_cast(
 			&(region2.growthFactorMag[0]));
-	growthFactorDirXAddress2 = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorDirXAddress2 = thrust::raw_pointer_cast(
 			&(region2.growthFactorDirXComp[0]));
-	growthFactorDirYAddress2 = thrust::raw_pointer_cast(
+	growthAuxData.growthFactorDirYAddress2 = thrust::raw_pointer_cast(
 			&(region2.growthFactorDirYComp[0]));
 
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
@@ -235,31 +140,36 @@ void SceCells::copyGrowInfoFromGridToCells(GrowthDistriMap &region1,
 		GrowthDistriMap &region2) {
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), cellTypes.begin())),
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.cellTypes.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), cellTypes.begin()))
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.cellTypes.begin()))
 					+ allocPara.currentActiveCellCount,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(growthSpeed.begin(), growthXDir.begin(),
-							growthYDir.begin())),
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin())),
 			LoadChemDataToNode(region1.gridDimensionX, region1.gridDimensionY,
-					region1.gridSpacing, growthFactorMagAddress,
-					growthFactorDirXAddress, growthFactorDirYAddress,
+					region1.gridSpacing, growthAuxData.growthFactorMagAddress,
+					growthAuxData.growthFactorDirXAddress,
+					growthAuxData.growthFactorDirYAddress,
 					region2.gridDimensionX, region2.gridDimensionY,
-					region2.gridSpacing, growthFactorMagAddress2,
-					growthFactorDirXAddress2, growthFactorDirYAddress2));
+					region2.gridSpacing, growthAuxData.growthFactorMagAddress2,
+					growthAuxData.growthFactorDirXAddress2,
+					growthAuxData.growthFactorDirYAddress2));
 }
 
 /**
  * Use the growth magnitude and dt to update growthProgress.
  */
 void SceCells::updateGrowthProgress() {
-	thrust::transform(growthSpeed.begin(),
-			growthSpeed.begin() + allocPara.currentActiveCellCount,
-			growthProgress.begin(), growthProgress.begin(),
-			SaxpyFunctorWithMaxOfOne(dt));
+	thrust::transform(cellInfoVecs.growthSpeed.begin(),
+			cellInfoVecs.growthSpeed.begin() + allocPara.currentActiveCellCount,
+			cellInfoVecs.growthProgress.begin(),
+			cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
 }
 
 /**
@@ -269,13 +179,14 @@ void SceCells::updateGrowthProgress() {
 void SceCells::decideIsScheduleToGrow() {
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(growthProgress.begin(),
-							lastCheckPoint.begin())),
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(growthProgress.begin(),
-							lastCheckPoint.begin()))
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin()))
 					+ allocPara.currentActiveCellCount,
-			isScheduledToGrow.begin(), PtCondiOp(miscPara.growThreshold));
+			cellInfoVecs.isScheduledToGrow.begin(),
+			PtCondiOp(miscPara.growThreshold));
 }
 
 /**
@@ -283,9 +194,10 @@ void SceCells::decideIsScheduleToGrow() {
  * length is along the growth direction.
  */
 void SceCells::computeCellTargetLength() {
-	thrust::transform(growthProgress.begin(),
-			growthProgress.begin() + allocPara.currentActiveCellCount,
-			expectedLength.begin(),
+	thrust::transform(cellInfoVecs.growthProgress.begin(),
+			cellInfoVecs.growthProgress.begin()
+					+ allocPara.currentActiveCellCount,
+			cellInfoVecs.expectedLength.begin(),
 			CompuTarLen(bioPara.cellInitLength, bioPara.cellFinalLength));
 }
 
@@ -298,19 +210,23 @@ void SceCells::computeDistToCellCenter() {
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							make_permutation_iterator(centerCoordX.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(centerCoordY.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -322,19 +238,23 @@ void SceCells::computeDistToCellCenter() {
 									+ allocPara.startPosCells)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							make_permutation_iterator(centerCoordX.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(centerCoordY.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -345,7 +265,7 @@ void SceCells::computeDistToCellCenter() {
 							nodes->getInfoVecs().nodeIsActive.begin()
 									+ allocPara.startPosCells))
 					+ totalNodeCountForActiveCells,
-			distToCenterAlongGrowDir.begin(), CompuDist());
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(), CompuDist());
 }
 
 /**
@@ -354,26 +274,50 @@ void SceCells::computeDistToCellCenter() {
  * using max and min distance to the center.
  */
 void SceCells::findMinAndMaxDistToCenter() {
+	//cout << "total active cell nodes" << totalNodeCountForActiveCells << endl;
+	//cout << "maxNodeOfOneCell" << allocPara.maxNodeOfOneCell << endl;
+	//cout << "maxTotalCellNodeCount" << allocPara.maxTotalCellNodeCount << endl;
+
+	//cout << "cell node array size = "
+	//		<< cellNodeInfoVecs.distToCenterAlongGrowDir.size() << endl;
+
+	//cout << "cell array 1 size = " << cellInfoVecs.cellRanksTmpStorage.size()
+	//<< endl;
+
+	//cout << "cell array 2 size = " << cellInfoVecs.smallestDistance.size()
+	//		<< endl;
+
+	//thrust::counting_iterator<uint> countingStart(0);
+
+	//thrust::counting_iterator<uint> countingEnd(
+	//		countingStart + totalNodeCountForActiveCells);
+
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell)),
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell))
 					+ totalNodeCountForActiveCells,
-			distToCenterAlongGrowDir.begin(), cellRanksTmpStorage.begin(),
-			smallestDistance.begin(), thrust::equal_to<uint>(),
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.smallestDistance.begin(), thrust::equal_to<uint>(),
 			thrust::minimum<double>());
-// for nodes of each cell, find the maximum distance from the node to the corresponding
-// cell center along the pre-defined growth direction.
+
+	// for nodes of each cell, find the maximum distance from the node to the corresponding
+	// cell center along the pre-defined growth direction.
+
+	//cout << "half way" << endl;
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell)),
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell))
 					+ totalNodeCountForActiveCells,
-			distToCenterAlongGrowDir.begin(), cellRanksTmpStorage.begin(),
-			biggestDistance.begin(), thrust::equal_to<uint>(),
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.biggestDistance.begin(), thrust::equal_to<uint>(),
 			thrust::maximum<double>());
+
 }
 
 /**
@@ -382,13 +326,15 @@ void SceCells::findMinAndMaxDistToCenter() {
 void SceCells::computeLenDiffExpCur() {
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(expectedLength.begin(),
-							smallestDistance.begin(), biggestDistance.begin())),
+					thrust::make_tuple(cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.smallestDistance.begin(),
+							cellInfoVecs.biggestDistance.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(expectedLength.begin(),
-							smallestDistance.begin(), biggestDistance.begin()))
+					thrust::make_tuple(cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.smallestDistance.begin(),
+							cellInfoVecs.biggestDistance.begin()))
 					+ allocPara.currentActiveCellCount,
-			lengthDifference.begin(), CompuDiff());
+			cellInfoVecs.lengthDifference.begin(), CompuDiff());
 }
 
 /**
@@ -398,16 +344,20 @@ void SceCells::computeLenDiffExpCur() {
 void SceCells::stretchCellGivenLenDiff() {
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(distToCenterAlongGrowDir.begin(),
-							make_permutation_iterator(lengthDifference.begin(),
+					thrust::make_tuple(
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.lengthDifference.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -416,16 +366,20 @@ void SceCells::stretchCellGivenLenDiff() {
 							nodes->getInfoVecs().nodeVelY.begin()
 									+ allocPara.startPosCells)),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(distToCenterAlongGrowDir.begin(),
-							make_permutation_iterator(lengthDifference.begin(),
+					thrust::make_tuple(
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.lengthDifference.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -449,15 +403,18 @@ void SceCells::cellChemotaxis() {
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							make_permutation_iterator(growthSpeed.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthSpeed.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -467,15 +424,18 @@ void SceCells::cellChemotaxis() {
 									+ allocPara.startPosCells)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							make_permutation_iterator(growthSpeed.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthSpeed.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthXDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
-							make_permutation_iterator(growthYDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
 									make_transform_iterator(countingBegin,
 											DivideFunctor(
 													allocPara.maxNodeOfOneCell))),
@@ -550,24 +510,104 @@ void SceCells::addPointIfScheduledToGrow() {
 
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(isScheduledToGrow.begin(),
-							activeNodeCountOfThisCell.begin(),
-							centerCoordX.begin(), centerCoordY.begin(),
-							countingBegin, lastCheckPoint.begin())),
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							cellInfoVecs.activeNodeCountOfThisCell.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(), countingBegin,
+							cellInfoVecs.lastCheckPoint.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(isScheduledToGrow.begin(),
-							activeNodeCountOfThisCell.begin(),
-							centerCoordX.begin(), centerCoordY.begin(),
-							countingBegin, lastCheckPoint.begin()))
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							cellInfoVecs.activeNodeCountOfThisCell.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(), countingBegin,
+							cellInfoVecs.lastCheckPoint.begin()))
 					+ allocPara.currentActiveCellCount,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(isScheduledToGrow.begin(),
-							activeNodeCountOfThisCell.begin(),
-							lastCheckPoint.begin())),
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							cellInfoVecs.activeNodeCountOfThisCell.begin(),
+							cellInfoVecs.lastCheckPoint.begin())),
 			AddPtOp(allocPara.maxNodeOfOneCell, miscPara.addNodeDistance,
-					miscPara.minDistanceToOtherNode, nodeIsActiveAddress,
-					nodeXPosAddress, nodeYPosAddress, time(NULL),
+					miscPara.minDistanceToOtherNode,
+					growthAuxData.nodeIsActiveAddress,
+					growthAuxData.nodeXPosAddress,
+					growthAuxData.nodeYPosAddress, time(NULL),
 					miscPara.growThreshold));
+}
+
+SceCells::SceCells(SceNodes* nodesInput,
+		std::vector<uint>& numOfInitActiveNodesOfCells,
+		std::vector<SceNodeType>& cellTypes) :
+		countingBegin(0), initCellCount(
+				nodesInput->getAllocPara().maxNodeOfOneCell / 2), initGrowthProgress(
+				0.0) {
+	initialize(nodesInput);
+	copyInitActiveNodeCount(numOfInitActiveNodesOfCells);
+	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
+	setCellTypes(cellTypesToPass);
+	distributeIsActiveInfo();
+}
+
+void SceCells::initCellInfoVecs() {
+	cellInfoVecs.growthProgress.resize(allocPara.maxCellCount, 0.0);
+	cellInfoVecs.expectedLength.resize(allocPara.maxCellCount,
+			bioPara.cellInitLength);
+	cellInfoVecs.lengthDifference.resize(allocPara.maxCellCount, 0.0);
+	cellInfoVecs.smallestDistance.resize(allocPara.maxCellCount);
+	cellInfoVecs.biggestDistance.resize(allocPara.maxCellCount);
+	cellInfoVecs.activeNodeCountOfThisCell.resize(allocPara.maxCellCount);
+	cellInfoVecs.lastCheckPoint.resize(allocPara.maxCellCount, 0.0);
+	cellInfoVecs.isDivided.resize(allocPara.maxCellCount);
+	cellInfoVecs.cellTypes.resize(allocPara.maxCellCount, MX);
+	cellInfoVecs.isScheduledToGrow.resize(allocPara.maxCellCount, false);
+	cellInfoVecs.centerCoordX.resize(allocPara.maxCellCount);
+	cellInfoVecs.centerCoordY.resize(allocPara.maxCellCount);
+	cellInfoVecs.centerCoordZ.resize(allocPara.maxCellCount);
+	cellInfoVecs.cellRanksTmpStorage.resize(allocPara.maxCellCount);
+	cellInfoVecs.growthSpeed.resize(allocPara.maxCellCount, 0.0);
+	cellInfoVecs.growthXDir.resize(allocPara.maxCellCount);
+	cellInfoVecs.growthYDir.resize(allocPara.maxCellCount);
+}
+
+void SceCells::initCellNodeInfoVecs() {
+	cellNodeInfoVecs.cellRanks.resize(allocPara.maxTotalCellNodeCount);
+	cellNodeInfoVecs.activeXPoss.resize(allocPara.maxTotalCellNodeCount);
+	cellNodeInfoVecs.activeYPoss.resize(allocPara.maxTotalCellNodeCount);
+	cellNodeInfoVecs.activeZPoss.resize(allocPara.maxTotalCellNodeCount);
+	cellNodeInfoVecs.distToCenterAlongGrowDir.resize(
+			allocPara.maxTotalCellNodeCount);
+}
+
+void SceCells::initGrowthAuxData() {
+	growthAuxData.nodeIsActiveAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[allocPara.startPosCells]));
+	growthAuxData.nodeXPosAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[allocPara.startPosCells]));
+	growthAuxData.nodeYPosAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[allocPara.startPosCells]));
+}
+
+void SceCells::initialize(SceNodes* nodesInput) {
+	nodes = nodesInput;
+	readMiscPara();
+	readBioPara();
+
+	allocPara = nodesInput->getAllocPara();
+
+	initCellInfoVecs();
+	initCellNodeInfoVecs();
+	initGrowthAuxData();
+	// reason for adding a small term here is to avoid scenario when checkpoint might add many times
+	// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
+	// this small term we might risk adding one more node.
+	//growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2) + epsilon;
+	distributeIsCellRank();
+}
+
+void SceCells::copyInitActiveNodeCount(
+		std::vector<uint>& numOfInitActiveNodesOfCells) {
+	thrust::copy(numOfInitActiveNodesOfCells.begin(),
+			numOfInitActiveNodesOfCells.end(),
+			cellInfoVecs.activeNodeCountOfThisCell.begin());
 }
 
 /**
@@ -577,19 +617,19 @@ void SceCells::addPointIfScheduledToGrow() {
  */
 void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
 		GrowthDistriMap &region2) {
-	std::cerr << "enter run all cell level logics" << std::endl;
+	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
-	std::cerr << "after compute center position." << std::endl;
+	//std::cerr << "after compute center position." << std::endl;
 	grow2DTwoRegions(dt, region1, region2);
-	std::cerr << "after grow cells" << std::endl;
+	//std::cerr << "after grow cells" << std::endl;
 	distributeIsActiveInfo();
-	std::cerr << "after distribute is active info." << std::endl;
+	//std::cerr << "after distribute is active info." << std::endl;
 	divide2DSimplified();
-	std::cerr << "after divide 2D simplified." << std::endl;
+	//std::cerr << "after divide 2D simplified." << std::endl;
 	distributeIsActiveInfo();
-	std::cerr << "after distribute is active info." << std::endl;
+	//std::cerr << "after distribute is active info." << std::endl;
 	allComponentsMove();
-	std::cerr << "after all components move." << std::endl;
+	//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::allComponentsMove() {
@@ -642,8 +682,8 @@ void SceCells::computeCenterPos() {
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 	uint totalNumberOfActiveNodes = thrust::reduce(
-			activeNodeCountOfThisCell.begin(),
-			activeNodeCountOfThisCell.begin()
+			cellInfoVecs.activeNodeCountOfThisCell.begin(),
+			cellInfoVecs.activeNodeCountOfThisCell.begin()
 					+ allocPara.currentActiveCellCount);
 
 	thrust::copy_if(
@@ -670,32 +710,38 @@ void SceCells::computeCenterPos() {
 					+ totalNodeCountForActiveCells,
 			nodes->getInfoVecs().nodeIsActive.begin() + allocPara.startPosCells,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellRanks.begin(), activeXPoss.begin(),
-							activeYPoss.begin(), activeZPoss.begin())),
-			isTrue());
+					thrust::make_tuple(cellNodeInfoVecs.cellRanks.begin(),
+							cellNodeInfoVecs.activeXPoss.begin(),
+							cellNodeInfoVecs.activeYPoss.begin(),
+							cellNodeInfoVecs.activeZPoss.begin())), isTrue());
 
-	thrust::reduce_by_key(cellRanks.begin(),
-			cellRanks.begin() + totalNumberOfActiveNodes,
+	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
+			cellNodeInfoVecs.cellRanks.begin() + totalNumberOfActiveNodes,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(activeXPoss.begin(), activeYPoss.begin(),
-							activeZPoss.begin())), cellRanksTmpStorage.begin(),
+					thrust::make_tuple(cellNodeInfoVecs.activeXPoss.begin(),
+							cellNodeInfoVecs.activeYPoss.begin(),
+							cellNodeInfoVecs.activeZPoss.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), centerCoordZ.begin())),
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())),
 			thrust::equal_to<uint>(), CVec3Add());
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), centerCoordZ.begin())),
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), centerCoordZ.begin()))
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin()))
 					+ allocPara.currentActiveCellCount,
-			activeNodeCountOfThisCell.begin(),
+			cellInfoVecs.activeNodeCountOfThisCell.begin(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(centerCoordX.begin(),
-							centerCoordY.begin(), centerCoordZ.begin())),
-			CVec3Divide());
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())), CVec3Divide());
 }
 
 /**
@@ -746,14 +792,17 @@ void SceCells::decideIfGoingToDivide() {
 // step 1
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(lengthDifference.begin(),
-							expectedLength.begin(), growthProgress.begin(),
-							activeNodeCountOfThisCell.begin())),
+					thrust::make_tuple(cellInfoVecs.lengthDifference.begin(),
+							cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.activeNodeCountOfThisCell.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(lengthDifference.begin(),
-							expectedLength.begin(), growthProgress.begin(),
-							activeNodeCountOfThisCell.begin()))
-					+ allocPara.currentActiveCellCount, isDivided.begin(),
+					thrust::make_tuple(cellInfoVecs.lengthDifference.begin(),
+							cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.activeNodeCountOfThisCell.begin()))
+					+ allocPara.currentActiveCellCount,
+			cellInfoVecs.isDivided.begin(),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara.maxNodeOfOneCell));
 }
@@ -764,23 +813,37 @@ void SceCells::copyCellsPreDivision() {
 			* allocPara.maxNodeOfOneCell;
 // sum all bool values which indicate whether the cell is going to divide.
 // toBeDivideCount is the total number of cells going to divide.
-	toBeDivideCount = thrust::reduce(isDivided.begin(),
-			isDivided.begin() + allocPara.currentActiveCellCount, (uint) (0));
-	nodeStorageCount = toBeDivideCount * allocPara.maxNodeOfOneCell;
-	tmpIsActiveHold1 = thrust::device_vector<bool>(nodeStorageCount, true);
-	tmpDistToCenter1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpCellRankHold1 = thrust::device_vector<uint>(nodeStorageCount, 0.0);
-	tmpXValueHold1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpYValueHold1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpZValueHold1 = thrust::device_vector<double>(nodeStorageCount, 0.0);
+	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
+			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
+			(uint) (0));
+	divAuxData.nodeStorageCount = divAuxData.toBeDivideCount
+			* allocPara.maxNodeOfOneCell;
+	divAuxData.tmpIsActiveHold1 = thrust::device_vector<bool>(
+			divAuxData.nodeStorageCount, true);
+	divAuxData.tmpDistToCenter1 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpCellRankHold1 = thrust::device_vector<uint>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpXValueHold1 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpYValueHold1 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpZValueHold1 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
 
-	tmpCellTypes = thrust::device_vector<SceNodeType>(nodeStorageCount);
+	divAuxData.tmpCellTypes = thrust::device_vector<SceNodeType>(
+			divAuxData.nodeStorageCount);
 
-	tmpIsActiveHold2 = thrust::device_vector<bool>(nodeStorageCount, false);
-	tmpDistToCenter2 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpXValueHold2 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpYValueHold2 = thrust::device_vector<double>(nodeStorageCount, 0.0);
-	tmpZValueHold2 = thrust::device_vector<double>(nodeStorageCount, 0.0);
+	divAuxData.tmpIsActiveHold2 = thrust::device_vector<bool>(
+			divAuxData.nodeStorageCount, false);
+	divAuxData.tmpDistToCenter2 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpXValueHold2 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpYValueHold2 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpZValueHold2 = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
 
 // step 2 , continued
 	thrust::copy_if(
@@ -788,7 +851,7 @@ void SceCells::copyCellsPreDivision() {
 					thrust::make_tuple(
 							make_transform_iterator(countingBegin,
 									DivideFunctor(allocPara.maxNodeOfOneCell)),
-							distToCenterAlongGrowDir.begin(),
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara.startPosCells,
 							nodes->getInfoVecs().nodeLocY.begin()
@@ -801,7 +864,7 @@ void SceCells::copyCellsPreDivision() {
 					thrust::make_tuple(
 							make_transform_iterator(countingBegin,
 									DivideFunctor(allocPara.maxNodeOfOneCell)),
-							distToCenterAlongGrowDir.begin(),
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara.startPosCells,
 							nodes->getInfoVecs().nodeLocY.begin()
@@ -811,14 +874,16 @@ void SceCells::copyCellsPreDivision() {
 							nodes->getInfoVecs().nodeCellType.begin()
 									+ allocPara.startPosCells))
 					+ totalNodeCountForActiveCells,
-			thrust::make_permutation_iterator(isDivided.begin(),
+			thrust::make_permutation_iterator(cellInfoVecs.isDivided.begin(),
 					make_transform_iterator(countingBegin,
 							DivideFunctor(allocPara.maxNodeOfOneCell))),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpCellRankHold1.begin(),
-							tmpDistToCenter1.begin(), tmpXValueHold1.begin(),
-							tmpYValueHold1.begin(), tmpZValueHold1.begin(),
-							tmpCellTypes.begin())), isTrue());
+					thrust::make_tuple(divAuxData.tmpCellRankHold1.begin(),
+							divAuxData.tmpDistToCenter1.begin(),
+							divAuxData.tmpXValueHold1.begin(),
+							divAuxData.tmpYValueHold1.begin(),
+							divAuxData.tmpZValueHold1.begin(),
+							divAuxData.tmpCellTypes.begin())), isTrue());
 }
 
 /**
@@ -828,17 +893,19 @@ void SceCells::copyCellsPreDivision() {
  */
 void SceCells::sortNodesAccordingToDist() {
 //step 3
-	for (uint i = 0; i < toBeDivideCount; i++) {
+	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		thrust::sort_by_key(
-				tmpDistToCenter1.begin() + i * allocPara.maxNodeOfOneCell,
-				tmpDistToCenter1.begin() + (i + 1) * allocPara.maxNodeOfOneCell,
+				divAuxData.tmpDistToCenter1.begin()
+						+ i * allocPara.maxNodeOfOneCell,
+				divAuxData.tmpDistToCenter1.begin()
+						+ (i + 1) * allocPara.maxNodeOfOneCell,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(
-								tmpXValueHold1.begin()
+								divAuxData.tmpXValueHold1.begin()
 										+ i * allocPara.maxNodeOfOneCell,
-								tmpYValueHold1.begin()
+								divAuxData.tmpYValueHold1.begin()
 										+ i * allocPara.maxNodeOfOneCell,
-								tmpZValueHold1.begin()
+								divAuxData.tmpZValueHold1.begin()
 										+ i * allocPara.maxNodeOfOneCell)));
 	}
 }
@@ -855,26 +922,33 @@ void SceCells::copyLeftAndRightToSeperateArrays() {
 //step 4.
 	thrust::scatter_if(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpXValueHold1.begin(),
-							tmpYValueHold1.begin(), tmpZValueHold1.begin())),
+					thrust::make_tuple(divAuxData.tmpXValueHold1.begin(),
+							divAuxData.tmpYValueHold1.begin(),
+							divAuxData.tmpZValueHold1.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpXValueHold1.end(),
-							tmpYValueHold1.end(), tmpZValueHold1.end())),
+					thrust::make_tuple(divAuxData.tmpXValueHold1.end(),
+							divAuxData.tmpYValueHold1.end(),
+							divAuxData.tmpZValueHold1.end())),
 			make_transform_iterator(countingBegin,
 					LeftShiftFunctor(allocPara.maxNodeOfOneCell)),
 			make_transform_iterator(countingBegin,
 					IsRightSide(allocPara.maxNodeOfOneCell)),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpXValueHold2.begin(),
-							tmpYValueHold2.begin(), tmpZValueHold2.begin())));
+					thrust::make_tuple(divAuxData.tmpXValueHold2.begin(),
+							divAuxData.tmpYValueHold2.begin(),
+							divAuxData.tmpZValueHold2.begin())));
 }
 
 void SceCells::transformIsActiveArrayOfBothArrays() {
-	thrust::transform(countingBegin, countingBegin + nodeStorageCount,
-			tmpIsActiveHold1.begin(), IsLeftSide(allocPara.maxNodeOfOneCell));
-	thrust::transform(countingBegin, countingBegin + nodeStorageCount,
-			tmpIsActiveHold2.begin(), IsLeftSide(allocPara.maxNodeOfOneCell));
-	if (toBeDivideCount != 0) {
+	thrust::transform(countingBegin,
+			countingBegin + divAuxData.nodeStorageCount,
+			divAuxData.tmpIsActiveHold1.begin(),
+			IsLeftSide(allocPara.maxNodeOfOneCell));
+	thrust::transform(countingBegin,
+			countingBegin + divAuxData.nodeStorageCount,
+			divAuxData.tmpIsActiveHold2.begin(),
+			IsLeftSide(allocPara.maxNodeOfOneCell));
+	if (divAuxData.toBeDivideCount != 0) {
 		std::cout << "before insert, active cell count in nodes:"
 				<< nodes->getAllocPara().currentActiveCellCount << std::endl;
 	}
@@ -882,24 +956,27 @@ void SceCells::transformIsActiveArrayOfBothArrays() {
 
 void SceCells::addSecondArrayToCellArray() {
 /// step 6. call SceNodes function to add newly divided cells
-	nodes->addNewlyDividedCells(tmpXValueHold2, tmpYValueHold2, tmpZValueHold2,
-			tmpIsActiveHold2, tmpCellTypes);
+	nodes->addNewlyDividedCells(divAuxData.tmpXValueHold2,
+			divAuxData.tmpYValueHold2, divAuxData.tmpZValueHold2,
+			divAuxData.tmpIsActiveHold2, divAuxData.tmpCellTypes);
 }
 
 void SceCells::copyFirstArrayToPreviousPos() {
 	thrust::scatter(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpIsActiveHold1.begin(),
-							tmpXValueHold1.begin(), tmpYValueHold1.begin(),
-							tmpZValueHold1.begin())),
+					thrust::make_tuple(divAuxData.tmpIsActiveHold1.begin(),
+							divAuxData.tmpXValueHold1.begin(),
+							divAuxData.tmpYValueHold1.begin(),
+							divAuxData.tmpZValueHold1.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(tmpIsActiveHold1.end(),
-							tmpXValueHold1.end(), tmpYValueHold1.end(),
-							tmpZValueHold1.end())),
+					thrust::make_tuple(divAuxData.tmpIsActiveHold1.end(),
+							divAuxData.tmpXValueHold1.end(),
+							divAuxData.tmpYValueHold1.end(),
+							divAuxData.tmpZValueHold1.end())),
 			thrust::make_transform_iterator(
 					thrust::make_zip_iterator(
 							thrust::make_tuple(countingBegin,
-									tmpCellRankHold1.begin())),
+									divAuxData.tmpCellRankHold1.begin())),
 					CompuPos(allocPara.maxNodeOfOneCell)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -912,33 +989,41 @@ void SceCells::copyFirstArrayToPreviousPos() {
 							nodes->getInfoVecs().nodeLocZ.begin()
 									+ allocPara.startPosCells)));
 
-	thrust::scatter(initCellCount, initCellCount + toBeDivideCount,
-			tmpCellRankHold1.begin(), activeNodeCountOfThisCell.begin());
+	thrust::scatter(initCellCount, initCellCount + divAuxData.toBeDivideCount,
+			divAuxData.tmpCellRankHold1.begin(),
+			cellInfoVecs.activeNodeCountOfThisCell.begin());
 
-	thrust::scatter(initGrowthProgress, initGrowthProgress + toBeDivideCount,
-			tmpCellRankHold1.begin(), growthProgress.begin());
-	thrust::scatter(initGrowthProgress, initGrowthProgress + toBeDivideCount,
-			tmpCellRankHold1.begin(), lastCheckPoint.begin());
+	thrust::scatter(initGrowthProgress,
+			initGrowthProgress + divAuxData.toBeDivideCount,
+			divAuxData.tmpCellRankHold1.begin(),
+			cellInfoVecs.growthProgress.begin());
+	thrust::scatter(initGrowthProgress,
+			initGrowthProgress + divAuxData.toBeDivideCount,
+			divAuxData.tmpCellRankHold1.begin(),
+			cellInfoVecs.lastCheckPoint.begin());
 
 	thrust::fill(
-			activeNodeCountOfThisCell.begin()
+			cellInfoVecs.activeNodeCountOfThisCell.begin()
 					+ allocPara.currentActiveCellCount,
-			activeNodeCountOfThisCell.begin() + allocPara.currentActiveCellCount
-					+ toBeDivideCount, allocPara.maxNodeOfOneCell / 2);
+			cellInfoVecs.activeNodeCountOfThisCell.begin()
+					+ allocPara.currentActiveCellCount
+					+ divAuxData.toBeDivideCount,
+			allocPara.maxNodeOfOneCell / 2);
 
 }
 
 void SceCells::updateActiveCellCount() {
 	allocPara.currentActiveCellCount = allocPara.currentActiveCellCount
-			+ toBeDivideCount;
+			+ divAuxData.toBeDivideCount;
 	NodeAllocPara para = nodes->getAllocPara();
 	para.currentActiveCellCount = allocPara.currentActiveCellCount;
 	nodes->setAllocPara(para);
 }
 
 void SceCells::markIsDivideFalse() {
-	thrust::fill(isDivided.begin(),
-			isDivided.begin() + allocPara.currentActiveCellCount, false);
+	thrust::fill(cellInfoVecs.isDivided.begin(),
+			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
+			false);
 }
 
 void SceCells::readMiscPara() {
