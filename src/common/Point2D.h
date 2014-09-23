@@ -11,6 +11,7 @@
 namespace GEOMETRY {
 
 class Point2D {
+	bool isOnBdry;
 	double x;
 	double y;
 public:
@@ -33,6 +34,14 @@ public:
 
 	void setY(double y) {
 		this->y = y;
+	}
+
+	bool isIsOnBdry() const {
+		return isOnBdry;
+	}
+
+	void setIsOnBdry(bool isOnBdry) {
+		this->isOnBdry = isOnBdry;
 	}
 };
 

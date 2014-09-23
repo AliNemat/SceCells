@@ -10,6 +10,7 @@
 namespace GEOMETRY {
 
 Point2D::Point2D() {
+	isOnBdry = false;
 	x = 0.0;
 	y = 0.0;
 }
@@ -21,6 +22,7 @@ Point2D::~Point2D() {
 } /* namespace GEOMETRY */
 
 GEOMETRY::Point2D::Point2D(double inputX, double inputY) {
+	isOnBdry = false;
 	x = inputX;
 	y = inputY;
 }

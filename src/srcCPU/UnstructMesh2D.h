@@ -42,6 +42,7 @@ public:
 	void insertVertex(const GEOMETRY::Point2D& point2D);
 	void insertTriangle(const std::vector<int>& triangle);
 	void insertEdge(const std::pair<int, int>& edge);
+	void setPointAsBdry(int index);
 
 	UnstructMesh2D();
 	void outputVtkFile(std::string outputFileName);

@@ -44,6 +44,10 @@ std::vector<GEOMETRY::Point2D> UnstructMesh2D::outputTriangleVerticies() {
 	return result;
 }
 
+void UnstructMesh2D::setPointAsBdry(int index) {
+	points[index].setIsOnBdry(true);
+}
+
 UnstructMesh2D::~UnstructMesh2D() {
 
 }
@@ -94,7 +98,7 @@ void GEOMETRY::UnstructMesh2D::outputVtkFile(std::string outputFileName) {
 	fs << "SCALARS point_scalars float" << std::endl;
 	fs << "LOOKUP_TABLE default" << std::endl;
 	for (int i = 0; i < totalNNum; i++) {
-		fs << i << std::endl;
+		fs << points[i].isIsOnBdry() << std::endl;
 	}
 	fs.flush();
 	fs.close();

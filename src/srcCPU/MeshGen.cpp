@@ -72,6 +72,7 @@ UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints,
 	//list_of_seeds.push_back(Point(9999999, 0));
 	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(),
 			list_of_seeds.end(), criteria);
+	//CGAL::refine_Delaunay_mesh_2(cdt, criteria);
 	std::cout << "Number of vertices: " << cdt.number_of_vertices()
 			<< std::endl;
 	VertexHashMap vertexHandleToIndex;
@@ -140,6 +141,30 @@ UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints,
 					result.insertEdge(edge3);
 				}
 			}
+		}
+	}
+	for (CDT::Finite_edges_iterator eit = cdt.finite_edges_begin();
+			eit != cdt.finite_edges_end(); ++eit) {
+
+		const CDT::Face_handle& fh = eit->first;
+
+		int ctr = 0;
+		if (fh->is_in_domain()) {
+			ctr++;
+		}
+		if (fh->neighbor(eit->second)->is_in_domain()) {
+			ctr++;
+		}
+
+		// this means boundary edges
+		if (ctr == 1) {
+			int i = eit->second;
+			CDT::Vertex_handle vs = fh->vertex(fh->cw(i));
+			CDT::Vertex_handle vt = fh->vertex(fh->ccw(i));
+			VertexHashMap::iterator it = vertexHandleToIndex.find(vs);
+			result.setPointAsBdry(it->second);
+			it = vertexHandleToIndex.find(vt);
+			result.setPointAsBdry(it->second);
 		}
 	}
 	return result;
