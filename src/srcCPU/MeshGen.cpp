@@ -10,6 +10,7 @@
 #include <tr1/unordered_set>
 #include <tr1/functional>
 #include <list>
+#include "commonData.h"
 
 // C++ sucks; declaring these static class members here is so counter-intuitive.
 //std::list<Point> initList = std::list<Point>();
@@ -198,9 +199,156 @@ std::vector<Point2D> MeshGen::createBdryPointsOnCircle(double r, int n) {
 	return result;
 }
 
+UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
+	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	Criteria criteria(input.criteria_aspect_bound, input.criteria_size_bound);
+
+	UnstructMesh2D result;
+	CDT cdt;
+
+	uint ptCount = 0;
+	for (uint i = 0; i < input.bdryPts.size(); i++) {
+		ptCount += input.bdryPts[i].size();
+	}
+
+	std::vector<Vertex_handle> vertexHandles(ptCount);
+	uint vertexIndex = 0;
+	uint beginIndexOfLevel = 0;
+
+	for (uint i = 0; i < input.bdryPts.size(); i++) {
+
+		for (uint j = 0; j < input.bdryPts[i].size(); j++) {
+			vertexHandles[vertexIndex] = cdt.insert(
+					Point(input.bdryPts[i][j].GetX(),
+							input.bdryPts[i][j].GetY()));
+
+		}
+
+		for (uint j = 0; j < input.bdryPts[i].size(); j++) {
+			if (j != input.bdryPts[i].size() - 1) {
+				cdt.insert_constraint(vertexHandles[vertexIndex],
+						vertexHandles[vertexIndex + 1]);
+			} else {
+				cdt.insert_constraint(vertexHandles[vertexIndex],
+						vertexHandles[beginIndexOfLevel]);
+			}
+
+			vertexIndex++;
+		}
+
+		beginIndexOfLevel += input.bdryPts[i].size();
+	}
+
+	std::list<Point> seedList;
+	for (uint i = 0; i < input.seeds.size(); i++) {
+		seedList.push_back(Point(input.seeds[i].GetX(), input.seeds[i].GetY()));
+	}
+
+	CGAL::refine_Delaunay_mesh_2(cdt, seedList.begin(), seedList.end(),
+			criteria);
+
+	VertexHashMap vertexHandleToIndex;
+	EdgeHashSet edgeSet;
+	vertexIndex = 0;
+	for (CDT::Finite_vertices_iterator vit = cdt.finite_vertices_begin();
+			vit != cdt.finite_vertices_end(); ++vit) {
+		CDT::Vertex_handle vertexHandle = vit->handle();
+		VertexHashMap::iterator it = vertexHandleToIndex.find(vertexHandle);
+
+		if (it == vertexHandleToIndex.end()) {
+			vertexHandleToIndex.insert(
+					std::pair<CDT::Vertex_handle, int>(vertexHandle,
+							vertexIndex));
+			vertexIndex++;
+		} else {
+			std::string errMessage(
+					"Unexpected duplicate while iterate vertices");
+			throw GeoException(errMessage);
+		}
+		Point2D pt(vit->point().x(), vit->point().y());
+		result.insertVertex(pt);
+	}
+
+	for (CDT::Finite_faces_iterator fit = cdt.finite_faces_begin();
+			fit != cdt.finite_faces_end(); ++fit) {
+		CDT::Vertex_handle v1 = fit->vertex(0);
+		CDT::Vertex_handle v2 = fit->vertex(1);
+		CDT::Vertex_handle v3 = fit->vertex(2);
+		VertexHashMap::iterator it1 = vertexHandleToIndex.find(v1);
+		VertexHashMap::iterator it2 = vertexHandleToIndex.find(v2);
+		VertexHashMap::iterator it3 = vertexHandleToIndex.find(v3);
+
+		if (it1 == vertexHandleToIndex.end() || it2 == vertexHandleToIndex.end()
+				|| it3 == vertexHandleToIndex.end()) {
+			std::string errMessage(
+					"at least one triangle vertex was not found in vertex pool");
+			throw GeoException(errMessage);
+		} else {
+			if (fit->is_in_domain()) {
+				std::vector<int> triIndicies;
+				triIndicies.push_back(it1->second);
+				triIndicies.push_back(it2->second);
+				triIndicies.push_back(it3->second);
+				result.insertTriangle(triIndicies);
+
+				// sorting in order to make sure there is no duplicates
+				// when counting edges
+				std::sort(triIndicies.begin(), triIndicies.end());
+				std::pair<int, int> edge1 = std::pair<int, int>(triIndicies[0],
+						triIndicies[1]);
+				std::pair<int, int> edge2 = std::pair<int, int>(triIndicies[0],
+						triIndicies[2]);
+				std::pair<int, int> edge3 = std::pair<int, int>(triIndicies[1],
+						triIndicies[2]);
+				if (edgeSet.find(edge1) == edgeSet.end()) {
+					edgeSet.insert(edge1);
+					result.insertEdge(edge1);
+				}
+				if (edgeSet.find(edge2) == edgeSet.end()) {
+					edgeSet.insert(edge2);
+					result.insertEdge(edge2);
+				}
+				if (edgeSet.find(edge3) == edgeSet.end()) {
+					edgeSet.insert(edge3);
+					result.insertEdge(edge3);
+				}
+			}
+		}
+	}
+	for (CDT::Finite_edges_iterator eit = cdt.finite_edges_begin();
+			eit != cdt.finite_edges_end(); ++eit) {
+
+		const CDT::Face_handle& fh = eit->first;
+
+		int ctr = 0;
+		if (fh->is_in_domain()) {
+			ctr++;
+		}
+		if (fh->neighbor(eit->second)->is_in_domain()) {
+			ctr++;
+		}
+
+		// this means boundary edges
+		if (ctr == 1) {
+			int i = eit->second;
+			CDT::Vertex_handle vs = fh->vertex(fh->cw(i));
+			CDT::Vertex_handle vt = fh->vertex(fh->ccw(i));
+			VertexHashMap::iterator it = vertexHandleToIndex.find(vs);
+			result.setPointAsBdry(it->second);
+			it = vertexHandleToIndex.find(vt);
+			result.setPointAsBdry(it->second);
+		}
+	}
+	return result;
+}
+
 MeshGen::~MeshGen() {
 // TODO Auto-generated destructor stub
 }
 
 } /* namespace GEOMETRY */
 
+GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
+	GEOMETRY::MeshInput meshInput;
+	return meshInput;
+}

@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "UnstructMesh2D.h"
+#include "GeoVector.h"
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Constrained_Delaunay_triangulation_2.h>
@@ -29,6 +30,19 @@ typedef CDT::Point Point;
 
 namespace GEOMETRY {
 
+class MeshInput {
+public:
+	std::vector<std::vector<CVector> > bdryPts;
+	std::vector<CVector> seeds;
+	double criteria_aspect_bound;
+	double criteria_size_bound;
+};
+
+class MeshInputReader {
+public:
+	static GEOMETRY::MeshInput readFile(std::string &fileName);
+};
+
 class MeshGen {
 public:
 	static std::list<Point> default_list_of_seeds;
@@ -39,6 +53,7 @@ public:
 	UnstructMesh2D generateMesh2D(std::vector<Point2D> &boundaryPoints,
 			std::list<Point> list_of_seeds = default_list_of_seeds,
 			Criteria criteria = default_criteria);
+	UnstructMesh2D generateMesh2DFromFile(std::string &fileName);
 	virtual ~MeshGen();
 };
 
