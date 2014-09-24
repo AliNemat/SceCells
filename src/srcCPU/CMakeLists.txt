@@ -1,7 +1,3 @@
-find_package(CGAL REQUIRED)
-if(CGAL_FOUND)
-        include(${CGAL_USE_FILE})
-endif (CGAL_FOUND)
 #MESSAGE(${CGAL_INCLUDE_DIRS})
 #include_directories(${CGAL_INCLUDE_DIRS})
 
@@ -21,6 +17,16 @@ add_library(SceInit
         ${COMMON_INCLUDES}/GeoVector.h
         ${COMMON_INCLUDES}/GeoVector.cpp
 )
+
+#It seems that CMake CGAL Module would automatically add some
+#undesirable CXX FLAGS (e.g. -fstack-protector-strong, which is 
+#not supported by old version of g++.
+#Therefore, These CGAL related lines cannot be placed before building 
+#SceInit lib.
+find_package(CGAL REQUIRED)
+if(CGAL_FOUND)
+        include(${CGAL_USE_FILE})
+endif (CGAL_FOUND)
 
 target_link_libraries(SceInit 
                         ${CGAL_LIBRARIES}

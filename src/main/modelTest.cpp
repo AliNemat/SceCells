@@ -51,46 +51,50 @@ int main() {
 	std::string configFileName = "./resources/modelTest.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
+	/*
+	 double SimulationTotalTime = globalConfigVars.getConfigValue(
+	 "SimulationTotalTime").toDouble();
+	 double SimulationTimeStep = globalConfigVars.getConfigValue(
+	 "SimulationTimeStep").toDouble();
+	 int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+	 "TotalNumOfOutputFrames").toInt();
 
-	std::string loadMeshInput;
-	std::string animationInput;
-	std::vector<std::string> boundaryMeshFileNames;
-	std::string animationFolder;
-	generateStringInputs(loadMeshInput, animationInput, animationFolder,
-			boundaryMeshFileNames);
+	 std::string loadMeshInput;
+	 std::string animationInput;
+	 std::vector<std::string> boundaryMeshFileNames;
+	 std::string animationFolder;
+	 generateStringInputs(loadMeshInput, animationInput, animationFolder,
+	 boundaryMeshFileNames);
 
-	const double simulationTime = SimulationTotalTime;
-	const double dt = SimulationTimeStep;
-	const int numOfTimeSteps = simulationTime / dt;
-	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	const int outputAnimationAuxVarible = numOfTimeSteps
-			/ totalNumOfOutputFrame;
+	 const double simulationTime = SimulationTotalTime;
+	 const double dt = SimulationTimeStep;
+	 const int numOfTimeSteps = simulationTime / dt;
+	 const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
+	 const int outputAnimationAuxVarible = numOfTimeSteps
+	 / totalNumOfOutputFrame;
 
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = true;
+	 AnimationCriteria aniCri;
+	 aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+	 "IntraLinkDisplayRange").toDouble();
+	 aniCri.isStressMap = true;
 
-	CellInitHelper initHelper;
+	 CellInitHelper initHelper;
 
-	SimulationDomainGPU simuDomain;
-	SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
-	simuDomain.initialize_V2(initData);
+	 SimulationDomainGPU simuDomain;
+	 SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
+	 simuDomain.initialize_V2(initData);
 
-	simuDomain.checkIfAllDataFieldsValid();
+	 simuDomain.checkIfAllDataFieldsValid();
 
+	 */
 	GEOMETRY::MeshGen meshGen;
-	std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
-			8);
-	Criteria criteria(0.125, 2.0);
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
-			GEOMETRY::MeshGen::default_list_of_seeds, criteria);
+	//std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
+	//		8);
+	//Criteria criteria(0.125, 2.0);
+	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
+	//		GEOMETRY::MeshGen::default_list_of_seeds, criteria);
+	std::string testString = "./resources/BdryData_unit_test.txt";
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
 	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
 	mesh.outputVtkFile("modelTest.vtk");
 

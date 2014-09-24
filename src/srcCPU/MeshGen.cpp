@@ -211,6 +211,7 @@ UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
 		ptCount += input.bdryPts[i].size();
 	}
 
+	std::cout.flush();
 	std::vector<Vertex_handle> vertexHandles(ptCount);
 	uint vertexIndex = 0;
 	uint beginIndexOfLevel = 0;
@@ -221,21 +222,18 @@ UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
 			vertexHandles[vertexIndex] = cdt.insert(
 					Point(input.bdryPts[i][j].GetX(),
 							input.bdryPts[i][j].GetY()));
-
+			vertexIndex++;
 		}
 
 		for (uint j = 0; j < input.bdryPts[i].size(); j++) {
 			if (j != input.bdryPts[i].size() - 1) {
-				cdt.insert_constraint(vertexHandles[vertexIndex],
-						vertexHandles[vertexIndex + 1]);
+				cdt.insert_constraint(vertexHandles[beginIndexOfLevel + j],
+						vertexHandles[beginIndexOfLevel + j + 1]);
 			} else {
-				cdt.insert_constraint(vertexHandles[vertexIndex],
+				cdt.insert_constraint(vertexHandles[beginIndexOfLevel + j],
 						vertexHandles[beginIndexOfLevel]);
 			}
-
-			vertexIndex++;
 		}
-
 		beginIndexOfLevel += input.bdryPts[i].size();
 	}
 
@@ -348,7 +346,69 @@ MeshGen::~MeshGen() {
 
 } /* namespace GEOMETRY */
 
+std::vector<CVector> GEOMETRY::MeshInputReader::readPointVec(fstream& fs) {
+	std::vector<CVector> result;
+	char specialChar;
+	fs >> specialChar;
+	assert(specialChar == '{');
+	fs >> specialChar;
+	assert(specialChar == '$');
+	int numPoints;
+	fs >> numPoints;
+	assert(numPoints > 0);
+	for (int i = 0; i < numPoints; i++) {
+		CVector point = readPoint(fs);
+		result.push_back(point);
+	}
+	fs >> specialChar;
+	assert(specialChar == '}');
+	return result;
+}
+
+CVector GEOMETRY::MeshInputReader::readPoint(fstream& fs) {
+	char specialChar;
+	fs >> specialChar;
+	assert(specialChar == '(');
+	double x, y, z;
+	fs >> x >> y >> z;
+	fs >> specialChar;
+	assert(specialChar == ')');
+	CVector result(x, y, z);
+	return result;
+}
+
 GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 	GEOMETRY::MeshInput meshInput;
+	fstream fs(fileName.c_str());
+	char specialChar;
+	fs >> specialChar;
+	assert(specialChar == '#');
+
+	int count;
+	fs >> count;
+
+	assert(count > 0);
+	for (int i = 0; i < count; i++) {
+		std::vector<CVector> vec = readPointVec(fs);
+		meshInput.bdryPts.push_back(vec);
+	}
+
+	fs >> specialChar;
+	assert(specialChar == '#');
+	fs >> count;
+	assert(count == 1);
+	std::vector<CVector> vec = readPointVec(fs);
+	meshInput.seeds = vec;
+
+	fs >> specialChar;
+	assert(specialChar == '[');
+	double aspectRatio, size;
+	fs >> aspectRatio >> size;
+	fs >> specialChar;
+	assert(specialChar == ']');
+
+	meshInput.criteria_aspect_bound = aspectRatio;
+	meshInput.criteria_size_bound = size;
+
 	return meshInput;
 }

@@ -12,6 +12,7 @@
 
 #include "UnstructMesh2D.h"
 #include "GeoVector.h"
+#include <assert.h>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Constrained_Delaunay_triangulation_2.h>
@@ -34,11 +35,14 @@ class MeshInput {
 public:
 	std::vector<std::vector<CVector> > bdryPts;
 	std::vector<CVector> seeds;
+
 	double criteria_aspect_bound;
 	double criteria_size_bound;
 };
 
 class MeshInputReader {
+	static std::vector<CVector> readPointVec(fstream &fs);
+	static CVector readPoint(fstream &fs);
 public:
 	static GEOMETRY::MeshInput readFile(std::string &fileName);
 };
