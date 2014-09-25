@@ -23,7 +23,7 @@ void SceCells::distributeProfileIsActiveInfo() {
 void SceCells::distributeECMIsActiveInfo() {
 	uint totalNodeCountForActiveECM = allocPara.currentActiveECM
 			* allocPara.maxNodePerECM;
-	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::counting_iterator < uint > countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveECM);
 	thrust::fill(
 			nodes->getInfoVecs().nodeIsActive.begin() + allocPara.startPosECM,
@@ -34,7 +34,7 @@ void SceCells::distributeECMIsActiveInfo() {
 void SceCells::distributeCellIsActiveInfo() {
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
-	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::counting_iterator < uint > countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 	//std::cout << "started distri cell active" << std::endl;
 	//std::cout << "active node count = " << totalNodeCountForActiveCells
@@ -657,7 +657,7 @@ void SceCells::distributeIsActiveInfo() {
 void SceCells::distributeIsCellRank() {
 	uint totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
-	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::counting_iterator < uint > countingBegin(0);
 	thrust::counting_iterator<uint> countingCellEnd(
 			totalNodeCountForActiveCells);
 	std::cerr << "totalNodeCount for active cells "
@@ -679,7 +679,7 @@ void SceCells::distributeIsCellRank() {
 void SceCells::computeCenterPos() {
 	uint totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
-	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::counting_iterator < uint > countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 	uint totalNumberOfActiveNodes = thrust::reduce(
 			cellInfoVecs.activeNodeCountOfThisCell.begin(),
@@ -822,8 +822,8 @@ void SceCells::copyCellsPreDivision() {
 			divAuxData.nodeStorageCount, true);
 	divAuxData.tmpDistToCenter1 = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
-	divAuxData.tmpCellRankHold1 = thrust::device_vector<uint>(
-			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpCellRankHold1 = thrust::device_vector < uint
+			> (divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpXValueHold1 = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpYValueHold1 = thrust::device_vector<double>(
@@ -831,8 +831,8 @@ void SceCells::copyCellsPreDivision() {
 	divAuxData.tmpZValueHold1 = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
 
-	divAuxData.tmpCellTypes = thrust::device_vector<SceNodeType>(
-			divAuxData.nodeStorageCount);
+	divAuxData.tmpCellTypes = thrust::device_vector < SceNodeType
+			> (divAuxData.nodeStorageCount);
 
 	divAuxData.tmpIsActiveHold2 = thrust::device_vector<bool>(
 			divAuxData.nodeStorageCount, false);
@@ -1051,4 +1051,16 @@ void SceCells::readBioPara() {
 			"ElongateCoefficient").toDouble();
 	bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
 			"ChemoCoefficient").toDouble();
+}
+
+std::vector<CVector> SceCells::getAllCellCenters() {
+	thrust::host_vector<double> centerX = cellInfoVecs.centerCoordX;
+	thrust::host_vector<double> centerY = cellInfoVecs.centerCoordY;
+	thrust::host_vector<double> centerZ = cellInfoVecs.centerCoordZ;
+	std::vector<CVector> result;
+	for (uint i = 0; i < allocPara.currentActiveCellCount; i++) {
+		CVector pos = CVector(centerX[i], centerY[i], centerZ[i]);
+		result.push_back(pos);
+	}
+	return result;
 }

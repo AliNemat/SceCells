@@ -1008,6 +1008,55 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 	return rawData;
 }
 
+RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
+	RawDataInput rawData;
+	vector<CVector> insideCellCenters;
+	vector<CVector> outsideBdryNodePos;
+	std::string bdryInputFileName = globalConfigVars.getConfigValue(
+			"Bdry_InputFileName").toString();
+
+	GEOMETRY::MeshGen meshGen;
+
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
+			bdryInputFileName);
+
+	std::vector<GEOMETRY::Point2D> insideCenterPoints =
+			mesh.getAllInsidePoints();
+
+	double fine_Ratio =
+			globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
+
+	for (uint i = 0; i < insideCenterPoints.size(); i++) {
+		insideCellCenters.push_back(
+				CVector(insideCenterPoints[i].getX(),
+						insideCenterPoints[i].getY(), 0));
+	}
+
+	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
+
+	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
+
+	for (uint i = 0; i < bdryPoints.size(); i++) {
+		outsideBdryNodePos.push_back(
+				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
+	}
+
+	//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		CVector centerPos = insideCellCenters[i];
+		rawData.MXCellCenters.push_back(centerPos);
+	}
+
+	for(uint i=0;i<outsideBdryNodePos.size();i++){
+		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
+	}
+
+	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+
+	return rawData;
+}
+
 void CellInitHelper::generateProfileNodesArray(
 		vector<CVector> &initProfileNodes, double profileNodeInterval) {
 

@@ -199,8 +199,7 @@ std::vector<Point2D> MeshGen::createBdryPointsOnCircle(double r, int n) {
 	return result;
 }
 
-UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
-	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+UnstructMesh2D MeshGen::generateMeshGivenInput(MeshInput input) {
 	Criteria criteria(input.criteria_aspect_bound, input.criteria_size_bound);
 
 	UnstructMesh2D result;
@@ -338,6 +337,18 @@ UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
 		}
 	}
 	return result;
+}
+
+UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
+	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	return generateMeshGivenInput(input);
+}
+
+UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string &fileName,
+		double ratio) {
+	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	input.criteria_size_bound = input.criteria_size_bound/ratio;
+	return generateMeshGivenInput(input);
 }
 
 MeshGen::~MeshGen() {

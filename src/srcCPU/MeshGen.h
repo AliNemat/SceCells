@@ -48,6 +48,7 @@ public:
 };
 
 class MeshGen {
+	UnstructMesh2D generateMeshGivenInput(MeshInput input);
 public:
 	static std::list<Point> default_list_of_seeds;
 	static Criteria default_criteria;
@@ -57,7 +58,13 @@ public:
 	UnstructMesh2D generateMesh2D(std::vector<Point2D> &boundaryPoints,
 			std::list<Point> list_of_seeds = default_list_of_seeds,
 			Criteria criteria = default_criteria);
+
 	UnstructMesh2D generateMesh2DFromFile(std::string &fileName);
+	/**
+	 * Generating finer mesh than the meshinputfile.
+	 * Used to generate fine boundary nodes with everything else remain the same.
+	 */
+	UnstructMesh2D generateMesh2DFromFile(std::string &fileName, double ratio);
 	virtual ~MeshGen();
 };
 

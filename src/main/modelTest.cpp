@@ -51,6 +51,13 @@ int main() {
 	std::string configFileName = "./resources/modelTest.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
+	std::string loadMeshInput;
+	std::string animationInput;
+	std::vector<std::string> boundaryMeshFileNames;
+	std::string animationFolder;
+	generateStringInputs(loadMeshInput, animationInput, animationFolder,
+			boundaryMeshFileNames);
+
 	/*
 	 double SimulationTotalTime = globalConfigVars.getConfigValue(
 	 "SimulationTotalTime").toDouble();
@@ -59,12 +66,6 @@ int main() {
 	 int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
 	 "TotalNumOfOutputFrames").toInt();
 
-	 std::string loadMeshInput;
-	 std::string animationInput;
-	 std::vector<std::string> boundaryMeshFileNames;
-	 std::string animationFolder;
-	 generateStringInputs(loadMeshInput, animationInput, animationFolder,
-	 boundaryMeshFileNames);
 
 	 const double simulationTime = SimulationTotalTime;
 	 const double dt = SimulationTimeStep;
@@ -87,17 +88,26 @@ int main() {
 	 simuDomain.checkIfAllDataFieldsValid();
 
 	 */
-	GEOMETRY::MeshGen meshGen;
+	//GEOMETRY::MeshGen meshGen;
 	//std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
 	//		8);
 	//Criteria criteria(0.125, 2.0);
 	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
 	//		GEOMETRY::MeshGen::default_list_of_seeds, criteria);
 	//std::string testString = "./resources/BdryData_unit_test.txt";
-	std::string testString = "./resources/beakBdryInput.txt";
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
-	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
-	mesh.outputVtkFile("modelTest.vtk");
+	//std::string testString = "./resources/beakBdryInput.txt";
+	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
+	//std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
+	//mesh.outputVtkFile("modelTest.vtk");
+	CellInitHelper initHelper;
+
+	RawDataInput rawInput = initHelper.generateRawInput_stab(loadMeshInput);
+
+	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
+
+	SimulationDomainGPU simuDomain;
+
+	simuDomain.stablizeCellCenters(simuData);
 
 	return 0;
 }

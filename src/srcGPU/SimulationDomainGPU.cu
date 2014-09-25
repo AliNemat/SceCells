@@ -332,7 +332,38 @@ void SimulationDomainGPU::initializeGrowthMap() {
 
 std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 		SimulationInitData& initData) {
+
 	std::vector<CVector> result;
+
+	stabPara.outputFrameCount = globalConfigVars.getConfigValue(
+			"StabFrameCount").toInt();
+	stabPara.totalIterCount = globalConfigVars.getConfigValue(
+			"StabTotalIterCount").toInt();
+	stabPara.bdrySpacingRatio = globalConfigVars.getConfigValue(
+			"StabBdrySpacingRatio").toDouble();
+	stabPara.dt = globalConfigVars.getConfigValue("StabDt").toDouble();
+	stabPara.outputAniName =
+			globalConfigVars.getConfigValue("StabAniName").toString();
+
+	initialize_V2(initData);
+
+	int aniAuxPara = (double) (stabPara.totalIterCount)
+			/ stabPara.outputFrameCount;
+
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+			"IntraLinkDisplayRange").toDouble();
+	aniCri.isStressMap = false;
+
+	for (int i = 0; i < stabPara.totalIterCount; i++) {
+		runAllLogic(stabPara.dt);
+		if (i % aniAuxPara == 0) {
+			outputVtkFilesWithColor_v3(stabPara.outputAniName, i, aniCri);
+		}
+	}
+
+	result = cells.getAllCellCenters();
+
 	return result;
 }
 
@@ -386,7 +417,7 @@ void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 			<< nodes.getAllocPara().maxProfileNodeCount << endl;
 	cout << "current active profile node count is "
 			<< nodes.getAllocPara().currentActiveProfileNodeCount << endl;
-	//int jj;
-	//cin >> jj;
+//int jj;
+//cin >> jj;
 }
 

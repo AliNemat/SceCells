@@ -11,6 +11,15 @@
 #include <fstream>
 #include <string>
 
+class StabPara {
+public:
+	int outputFrameCount;
+	int totalIterCount;
+	double bdrySpacingRatio;
+	double dt;
+	std::string outputAniName;
+};
+
 /**
  * This class is responsible for domain-wise highest level logic, e.g. output animation.
  */
@@ -53,6 +62,11 @@ class SimulationDomainGPU {
 	SceChemPara chemPara;
 
 	/**
+	 * parameters used for stabilize the initial cell positions
+	 */
+	StabPara stabPara;
+
+	/**
 	 * reads memory related parameters.
 	 */
 	void readMemPara();
@@ -76,6 +90,13 @@ class SimulationDomainGPU {
 	 * initializes growth maps.
 	 */
 	void initializeGrowthMap();
+
+	/**
+	 * re-position the center positions.
+	 * @param totalIter total number of iterations to stabilize domain.
+	 * @param outputCount of how many frames will be generated (for quality assurance)
+	 */
+	void stabilize(uint totalIter, uint outputCount);
 
 	/**
 	 * Initializes data vectors by given vectors.

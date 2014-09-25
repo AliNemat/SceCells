@@ -103,3 +103,23 @@ void GEOMETRY::UnstructMesh2D::outputVtkFile(std::string outputFileName) {
 	fs.flush();
 	fs.close();
 }
+
+std::vector<GEOMETRY::Point2D> GEOMETRY::UnstructMesh2D::getAllInsidePoints() {
+	std::vector<GEOMETRY::Point2D> result;
+	for (uint i = 0; i < points.size(); i++) {
+		if (!points[i].isIsOnBdry()) {
+			result.push_back(points[i]);
+		}
+	}
+	return result;
+}
+
+std::vector<GEOMETRY::Point2D> GEOMETRY::UnstructMesh2D::getAllBdryPoints() {
+	std::vector<GEOMETRY::Point2D> result;
+	for (uint i = 0; i < points.size(); i++) {
+		if (points[i].isIsOnBdry()) {
+			result.push_back(points[i]);
+		}
+	}
+	return result;
+}

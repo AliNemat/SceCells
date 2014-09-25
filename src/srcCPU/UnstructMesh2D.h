@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include "Point2D.h"
+#include "commonData.h"
 
 namespace GEOMETRY {
 
@@ -48,6 +49,8 @@ public:
 	void outputVtkFile(std::string outputFileName);
 	std::vector<GEOMETRY::Point2D> outputTriangleCenters();
 	std::vector<GEOMETRY::Point2D> outputTriangleVerticies();
+	std::vector<GEOMETRY::Point2D> getAllInsidePoints();
+	std::vector<GEOMETRY::Point2D> getAllBdryPoints();
 	virtual ~UnstructMesh2D();
 };
 
