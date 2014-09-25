@@ -93,7 +93,8 @@ int main() {
 	//Criteria criteria(0.125, 2.0);
 	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
 	//		GEOMETRY::MeshGen::default_list_of_seeds, criteria);
-	std::string testString = "./resources/BdryData_unit_test.txt";
+	//std::string testString = "./resources/BdryData_unit_test.txt";
+	std::string testString = "./resources/beakBdryInput.txt";
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
 	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
 	mesh.outputVtkFile("modelTest.vtk");

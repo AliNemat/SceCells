@@ -69,7 +69,11 @@ void CellInitHelper::transformBoundaryPoints() {
 	for (unsigned int i = 0; i < initPoints.size(); i++) {
 		initPoints[i].x = (initPoints[i].x - xZeroPoint) / ratio;
 		initPoints[i].y = (yBound - initPoints[i].y) / ratio;
+		initPoints[i].Print();
 	}
+
+	int jj;
+	std::cin >> jj;
 }
 
 CVector CellInitHelper::getPointGivenAngle(double currentAngle, double r,

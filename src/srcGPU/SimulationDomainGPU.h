@@ -109,6 +109,14 @@ public:
 	void initialize_V2(SimulationInitData &initData);
 
 	/**
+	 * This method is used for producing more or less evenly distributed cell center positions.
+	 * Because CGAL mesh cannot guarantee that mesh vertices are relatively evenly distributed,
+	 * we would need this extra step in order to stabilize the cell center positions
+	 * so that cells can be allocated evenly in our simulation domain.
+	 */
+	std::vector<CVector> stablizeCellCenters(SimulationInitData &initData);
+
+	/**
 	 * Checks if all data fields are valid.
 	 * This methods only loosely checks the data validity.
 	 */

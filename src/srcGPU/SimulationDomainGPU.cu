@@ -330,6 +330,12 @@ void SimulationDomainGPU::initializeGrowthMap() {
 	//cout << "after created growthMap2" << endl;
 }
 
+std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
+		SimulationInitData& initData) {
+	std::vector<CVector> result;
+	return result;
+}
+
 void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
