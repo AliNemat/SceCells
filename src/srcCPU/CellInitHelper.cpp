@@ -1034,7 +1034,8 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 
 	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
 
-	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
+	//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
+	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
 
 	for (uint i = 0; i < bdryPoints.size(); i++) {
 		outsideBdryNodePos.push_back(
@@ -1048,7 +1049,7 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 		rawData.MXCellCenters.push_back(centerPos);
 	}
 
-	for(uint i=0;i<outsideBdryNodePos.size();i++){
+	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
 		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
 	}
 

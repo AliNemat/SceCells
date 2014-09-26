@@ -44,6 +44,9 @@ MeshGen::MeshGen() {
 	if (default_list_of_seeds.size() == 0) {
 		default_list_of_seeds.push_back(Point(9999999, 0));
 	}
+
+	delta1 = globalConfigVars.getConfigValue("MeshGen_Delta1").toDouble();
+	delta2 = globalConfigVars.getConfigValue("MeshGen_Delta2").toDouble();
 	//default_list_of_seeds.push_back(Point(9999999, 0));
 	//default_criteria = Criteria(0.125, 0.5);
 }
@@ -167,23 +170,6 @@ UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints,
 			it = vertexHandleToIndex.find(vt);
 			result.setPointAsBdry(it->second);
 		}
-	}
-	return result;
-}
-
-std::vector<GEOMETRY::Point2D> MeshGen::readBdryPointsFromFile(
-		std::string& fileName) {
-	std::vector<GEOMETRY::Point2D> result;
-	double x, y, z;
-	std::ifstream infile(fileName.c_str());
-	if (infile.is_open()) {
-		while (!infile.eof()) {
-			infile >> x >> y >> z;
-			GEOMETRY::Point2D pt(x, y);
-			result.push_back(pt);
-		}
-	} else {
-		throw GEOMETRY::GeoException("Boundary points input file not found!");
 	}
 	return result;
 }
@@ -336,6 +322,11 @@ UnstructMesh2D MeshGen::generateMeshGivenInput(MeshInput input) {
 			result.setPointAsBdry(it->second);
 		}
 	}
+
+	std::vector<GEOMETRY::Point2D> orderedBdryPts = obtainOrderedBdryPoints(
+			result, input);
+	result.setOrderedBdryPts(orderedBdryPts);
+
 	return result;
 }
 
@@ -347,8 +338,82 @@ UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
 UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string &fileName,
 		double ratio) {
 	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
-	input.criteria_size_bound = input.criteria_size_bound/ratio;
+	input.criteria_size_bound = input.criteria_size_bound / ratio;
 	return generateMeshGivenInput(input);
+}
+
+std::vector<GEOMETRY::Point2D> MeshGen::obtainOrderedBdryPoints(
+		UnstructMesh2D& mesh, MeshInput& input) {
+	std::vector<GEOMETRY::Point2D> result;
+
+	for (uint i = 0; i < input.bdryPts.size(); i++) {
+		uint cirSize = input.bdryPts[i].size();
+		for (uint j = 0; j < cirSize; j++) {
+			CVector pt1 = input.bdryPts[i][j];
+			// % for the last point, the neighbor point should be the first point.
+			CVector pt2 = input.bdryPts[i][(j + 1) % cirSize];
+			// orderPointsOnLine method should not only find points on the line but also
+			std::vector<GEOMETRY::Point2D> orderedPtOnLine = orderPointsOnLine(
+					mesh, pt1, pt2);
+			// This is probably not a good idea, but at least works for now.
+			result.insert(result.end(), orderedPtOnLine.begin(),
+					orderedPtOnLine.end());
+		}
+	}
+
+	return result;
+}
+
+std::vector<GEOMETRY::Point2D> MeshGen::orderPointsOnLine(UnstructMesh2D mesh,
+		CVector pt1, CVector pt2) {
+	//std::vector<GEOMETRY::Point2D> result;
+	std::vector<GEOMETRY::Point2D> bdryPts = mesh.getAllBdryPoints();
+	std::vector<GEOMETRY::Point2D> pointsOnLine = getPointsOnLine(bdryPts, pt1,
+			pt2);
+	//CVector pos(pt1.GetX(), pt1.GetY(), 0);
+	sort(pointsOnLine.begin(), pointsOnLine.end(), DistToPtComp(pt1));
+	return pointsOnLine;
+}
+
+std::vector<GEOMETRY::Point2D> MeshGen::getPointsOnLine(
+		std::vector<GEOMETRY::Point2D> bdryPts, CVector pt1, CVector pt2) {
+	std::vector<GEOMETRY::Point2D> result;
+	for (uint i = 0; i < bdryPts.size(); i++) {
+		if (isBetweenPoints(bdryPts[i], pt1, pt2)) {
+			result.push_back(bdryPts[i]);
+		}
+	}
+	//cout << "inside getPointsOnline, result size = " << result.size() << endl;
+	return result;
+}
+
+bool MeshGen::isBetweenPoints(GEOMETRY::Point2D point, CVector pt1,
+		CVector pt2) {
+	bool isParallel, isBounded;
+	CVector pt(point.getX(), point.getY(), 0);
+	CVector vec1 = pt - pt1;
+	CVector vec2 = pt1 - pt2;
+	double crossProduct = vec1.GetX() * vec2.GetY() - vec1.GetY() * vec2.GetX();
+	if (fabs(crossProduct) < delta1) {
+		isParallel = true;
+	} else {
+		isParallel = false;
+	}
+	double minX = std::min(pt1.GetX(), pt2.GetX()) - delta2;
+	double maxX = std::max(pt1.GetX(), pt2.GetX()) + delta2;
+	double minY = std::min(pt1.GetY(), pt2.GetY()) - delta2;
+	double maxY = std::max(pt1.GetY(), pt2.GetY()) + delta2;
+	if (pt.GetX() >= minX && pt.GetX() <= maxX && pt.GetY() >= minY
+			&& pt.GetY() <= maxY) {
+		isBounded = true;
+	} else {
+		isBounded = false;
+	}
+	if (isParallel && isBounded) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 MeshGen::~MeshGen() {

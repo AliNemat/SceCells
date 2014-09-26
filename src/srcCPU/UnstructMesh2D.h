@@ -39,6 +39,12 @@ class UnstructMesh2D {
 	std::vector<std::pair<int, int> > edges;
 	std::vector<GEOMETRY::Point2D> points;
 
+	/**
+	 * By default, boundary points are not generated in order.
+	 * Therefore an external method was used to order boundary points.
+	 */
+	std::vector<GEOMETRY::Point2D> orderedBdryPts;
+
 public:
 	void insertVertex(const GEOMETRY::Point2D& point2D);
 	void insertTriangle(const std::vector<int>& triangle);
@@ -52,6 +58,15 @@ public:
 	std::vector<GEOMETRY::Point2D> getAllInsidePoints();
 	std::vector<GEOMETRY::Point2D> getAllBdryPoints();
 	virtual ~UnstructMesh2D();
+
+	const std::vector<GEOMETRY::Point2D>& getOrderedBdryPts() const {
+		return orderedBdryPts;
+	}
+
+	void setOrderedBdryPts(
+			const std::vector<GEOMETRY::Point2D>& orderedBdryPts) {
+		this->orderedBdryPts = orderedBdryPts;
+	}
 };
 
 } /* namespace GEOMETRY */
