@@ -97,7 +97,6 @@ int main() {
 	//std::string testString = "./resources/BdryData_unit_test.txt";
 	//std::string testString = "./resources/beakBdryInput.txt";
 	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
-	//std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
 	//mesh.outputVtkFile("modelTest.vtk");
 	CellInitHelper initHelper;
 

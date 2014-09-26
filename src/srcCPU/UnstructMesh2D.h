@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <assert.h>
 
 #include "Point2D.h"
 #include "commonData.h"
@@ -45,6 +46,14 @@ class UnstructMesh2D {
 	 */
 	std::vector<GEOMETRY::Point2D> orderedBdryPts;
 
+	std::vector<GEOMETRY::Point2D> finalBdryPts;
+	std::vector<GEOMETRY::Point2D> finalProfilePts;
+
+	/**
+	 * profile nodes can be fetched from part of the bdry node array.
+	 */
+	uint beginIndexProfile, endIndexProfile;
+	uint findIndexGivenPos(CVector pos);
 public:
 	void insertVertex(const GEOMETRY::Point2D& point2D);
 	void insertTriangle(const std::vector<int>& triangle);
@@ -52,12 +61,14 @@ public:
 	void setPointAsBdry(int index);
 
 	UnstructMesh2D();
+	virtual ~UnstructMesh2D();
 	void outputVtkFile(std::string outputFileName);
 	std::vector<GEOMETRY::Point2D> outputTriangleCenters();
 	std::vector<GEOMETRY::Point2D> outputTriangleVerticies();
 	std::vector<GEOMETRY::Point2D> getAllInsidePoints();
 	std::vector<GEOMETRY::Point2D> getAllBdryPoints();
-	virtual ~UnstructMesh2D();
+
+	void generateFinalBdryAndProfilePoints(CVector posBegin, CVector posEnd);
 
 	const std::vector<GEOMETRY::Point2D>& getOrderedBdryPts() const {
 		return orderedBdryPts;
@@ -66,6 +77,14 @@ public:
 	void setOrderedBdryPts(
 			const std::vector<GEOMETRY::Point2D>& orderedBdryPts) {
 		this->orderedBdryPts = orderedBdryPts;
+	}
+
+	const std::vector<GEOMETRY::Point2D>& getFinalBdryPts() const {
+		return finalBdryPts;
+	}
+
+	const std::vector<GEOMETRY::Point2D>& getFinalProfilePts() const {
+		return finalProfilePts;
 	}
 };
 

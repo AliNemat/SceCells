@@ -123,3 +123,14 @@ std::vector<GEOMETRY::Point2D> GEOMETRY::UnstructMesh2D::getAllBdryPoints() {
 	}
 	return result;
 }
+
+uint GEOMETRY::UnstructMesh2D::findIndexGivenPos(CVector pos) {
+	assert(orderedBdryPts.size() > 0);
+	for (uint i = 0; i < orderedBdryPts.size(); i++) {
+
+	}
+}
+
+void GEOMETRY::UnstructMesh2D::generateFinalBdryAndProfilePoints(
+		CVector posBegin, CVector posEnd) {
+}
