@@ -477,6 +477,15 @@ GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 	meshInput.seeds = vec;
 
 	fs >> specialChar;
+	assert(specialChar == '#');
+	fs >> count;
+	assert(count == 1);
+	std::vector<CVector> endPts = readPointVec(fs);
+	assert(endPts.size() == 2);
+	meshInput.profileBeginPos = endPts[0];
+	meshInput.profileEndPos = endPts[1];
+
+	fs >> specialChar;
 	assert(specialChar == '[');
 	double aspectRatio, size;
 	fs >> aspectRatio >> size;

@@ -52,7 +52,8 @@ class MeshInput {
 public:
 	std::vector<std::vector<CVector> > bdryPts;
 	std::vector<CVector> seeds;
-
+	CVector profileBeginPos;
+	CVector profileEndPos;
 	double criteria_aspect_bound;
 	double criteria_size_bound;
 };

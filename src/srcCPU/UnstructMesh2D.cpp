@@ -126,11 +126,29 @@ std::vector<GEOMETRY::Point2D> GEOMETRY::UnstructMesh2D::getAllBdryPoints() {
 
 uint GEOMETRY::UnstructMesh2D::findIndexGivenPos(CVector pos) {
 	assert(orderedBdryPts.size() > 0);
+	uint index = 0;
+	double minDis = 999999999;
 	for (uint i = 0; i < orderedBdryPts.size(); i++) {
-
+		CVector vec = CVector(orderedBdryPts[i].getX() - pos.GetX(),
+				orderedBdryPts[i].getY() - pos.GetY(), 0);
+		double dist = vec.getModul();
+		if (dist < minDis) {
+			index = i;
+			minDis = dist;
+		}
 	}
+	return index;
 }
 
 void GEOMETRY::UnstructMesh2D::generateFinalBdryAndProfilePoints(
 		CVector posBegin, CVector posEnd) {
+	uint index1 = findIndexGivenPos(posBegin);
+	uint index2 = findIndexGivenPos(posEnd);
+	finalBdryPts.insert(finalBdryPts.end(), orderedBdryPts.begin(),
+			orderedBdryPts.begin() + index1);
+	finalProfilePts.insert(finalProfilePts.end(),
+			orderedBdryPts.begin() + index1,
+			orderedBdryPts.begin() + index2 + 1);
+	finalBdryPts.insert(finalBdryPts.end(), orderedBdryPts.begin() + index2 + 1,
+			orderedBdryPts.end());
 }
