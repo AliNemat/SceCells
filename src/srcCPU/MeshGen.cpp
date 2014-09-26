@@ -497,3 +497,14 @@ GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 
 	return meshInput;
 }
+
+GEOMETRY::UnstructMesh2D GEOMETRY::MeshGen::generateMesh2DWithProfile(
+		std::string& fileName, double ratio) {
+	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	input.criteria_size_bound = input.criteria_size_bound / ratio;
+	GEOMETRY::UnstructMesh2D mesh = generateMeshGivenInput(input);
+	mesh.generateFinalBdryAndProfilePoints(input.profileBeginPos,
+			input.profileEndPos);
+	return mesh;
+}
+

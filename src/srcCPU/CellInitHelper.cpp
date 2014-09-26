@@ -628,6 +628,67 @@ void CellInitHelper::initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 	cout << "finished init inputs" << endl;
 }
 
+RawDataInput CellInitHelper::generateRawInputWithProfile(
+		std::string meshInput) {
+	RawDataInput rawData;
+	vector<CVector> insideCellCenters;
+	vector<CVector> outsideBdryNodePos;
+	vector<CVector> outsideProfileNodePos;
+	std::string bdryInputFileName = globalConfigVars.getConfigValue(
+			"Bdry_InputFileName").toString();
+
+	GEOMETRY::MeshGen meshGen;
+
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
+			bdryInputFileName);
+
+	std::vector<GEOMETRY::Point2D> insideCenterPoints =
+			mesh.getAllInsidePoints();
+
+	double fine_Ratio =
+			globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
+
+	for (uint i = 0; i < insideCenterPoints.size(); i++) {
+		insideCellCenters.push_back(
+				CVector(insideCenterPoints[i].getX(),
+						insideCenterPoints[i].getY(), 0));
+	}
+
+	mesh = meshGen.generateMesh2DWithProfile(bdryInputFileName, fine_Ratio);
+
+	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getFinalBdryPts();
+	std::vector<GEOMETRY::Point2D> profilePoints = mesh.getFinalProfilePts();
+
+	for (uint i = 0; i < bdryPoints.size(); i++) {
+		outsideBdryNodePos.push_back(
+				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
+	}
+
+	for (uint i = 0; i < profilePoints.size(); i++) {
+		outsideProfileNodePos.push_back(
+				CVector(profilePoints[i].getX(), profilePoints[i].getY(), 0));
+	}
+
+	//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		CVector centerPos = insideCellCenters[i];
+		rawData.MXCellCenters.push_back(centerPos);
+	}
+
+	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
+		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
+	}
+
+	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
+		rawData.profileNodes.push_back(outsideProfileNodePos[i]);
+	}
+
+	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+
+	return rawData;
+}
+
 /**
  * Initialize inputs for five different components.
  */
@@ -857,9 +918,6 @@ RawDataInput CellInitHelper::generateRawInput(std::string meshInput) {
 			<< "Number of MX cells: " << rawData.MXCellCenters.size()
 			<< " and number of FNM cells:" << rawData.FNMCellCenters.size()
 			<< endl;
-
-	//int jj;
-	//cin >> jj;
 
 	return rawData;
 }

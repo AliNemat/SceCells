@@ -91,6 +91,13 @@ public:
 	 * Used to generate fine boundary nodes with everything else remain the same.
 	 */
 	UnstructMesh2D generateMesh2DFromFile(std::string &fileName, double ratio);
+
+	/**
+	 * Generating finer mesh than the meshinputfile.
+	 * Mesh now includes profile nodes.
+	 */
+	UnstructMesh2D generateMesh2DWithProfile(std::string &fileName,
+			double ratio);
 	virtual ~MeshGen();
 };
 
