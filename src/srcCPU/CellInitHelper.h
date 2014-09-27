@@ -397,6 +397,7 @@ class CellInitHelper {
 			int initProfileNodeSize);
 	void generateCellInitNodeInfo(vector<CVector> &initPos,
 			std::string meshInput);
+	void generateCellInitNodeInfo_v2(vector<CVector> &initPos);
 	void generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 			int initNodeCountPerECM);
 	void generateECMCenters(vector<CVector> &ECMCenters,
@@ -406,6 +407,11 @@ class CellInitHelper {
 	bool anyCellCenterTooClose(vector<CVector> &cellCenters, CVector position);
 	bool anyBoundaryNodeTooClose(vector<CVector> &bdryNodes, CVector position);
 	bool isInitNodesInitializedFlag;
+
+	double getRandomNum(double min, double max);
+	vector<CVector> generateInitCellNodes();
+	vector<CVector> attemptGeenerateInitCellNodes();
+	bool isPositionQualify(vector<CVector> &poss);
 
 public:
 
@@ -442,7 +448,8 @@ public:
 			double circleRadius);
 	RawDataInput generateDiskRawInput(std::string meshInput);
 	RawDataInput generateRawInput_stab(std::string meshInput);
-	RawDataInput generateRawInputWithProfile(std::string meshInput);
+	RawDataInput generateRawInputWithProfile(
+			std::vector<CVector> &cellCenterPoss);
 	SimulationInitData generateDiskInput(std::string meshInput);
 
 	SimulationInitData initInputsV2(RawDataInput &rawData);

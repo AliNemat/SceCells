@@ -629,9 +629,8 @@ void CellInitHelper::initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 }
 
 RawDataInput CellInitHelper::generateRawInputWithProfile(
-		std::string meshInput) {
+		std::vector<CVector> &cellCenterPoss) {
 	RawDataInput rawData;
-	vector<CVector> insideCellCenters;
 	vector<CVector> outsideBdryNodePos;
 	vector<CVector> outsideProfileNodePos;
 	std::string bdryInputFileName = globalConfigVars.getConfigValue(
@@ -639,22 +638,11 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 
 	GEOMETRY::MeshGen meshGen;
 
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
-			bdryInputFileName);
+	double genBdryRatio =
+			globalConfigVars.getConfigValue("GenBdrySpacingRatio").toDouble();
 
-	std::vector<GEOMETRY::Point2D> insideCenterPoints =
-			mesh.getAllInsidePoints();
-
-	double fine_Ratio =
-			globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
-
-	for (uint i = 0; i < insideCenterPoints.size(); i++) {
-		insideCellCenters.push_back(
-				CVector(insideCenterPoints[i].getX(),
-						insideCenterPoints[i].getY(), 0));
-	}
-
-	mesh = meshGen.generateMesh2DWithProfile(bdryInputFileName, fine_Ratio);
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
+			bdryInputFileName, genBdryRatio);
 
 	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getFinalBdryPts();
 	std::vector<GEOMETRY::Point2D> profilePoints = mesh.getFinalProfilePts();
@@ -663,28 +651,25 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 		outsideBdryNodePos.push_back(
 				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	}
+	rawData.bdryNodes = outsideBdryNodePos;
 
 	for (uint i = 0; i < profilePoints.size(); i++) {
 		outsideProfileNodePos.push_back(
 				CVector(profilePoints[i].getX(), profilePoints[i].getY(), 0));
 	}
+	rawData.profileNodes = outsideProfileNodePos;
 
-	//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
+		CVector centerPos = cellCenterPoss[i];
+		if (isMXType(centerPos)) {
+			rawData.MXCellCenters.push_back(centerPos);
+		} else {
+			rawData.FNMCellCenters.push_back(centerPos);
+		}
 
-	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
-		CVector centerPos = insideCellCenters[i];
-		rawData.MXCellCenters.push_back(centerPos);
 	}
 
-	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
-		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
-	}
-
-	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
-		rawData.profileNodes.push_back(outsideProfileNodePos[i]);
-	}
-
-	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
 
 	return rawData;
 }
@@ -1111,7 +1096,8 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
 	}
 
-	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+	//generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
 
 	return rawData;
 }
@@ -1365,25 +1351,6 @@ bool CellInitHelper::anyBoundaryNodeTooClose(vector<CVector> &bdryNodes,
 }
 
 CellInitHelper::~CellInitHelper() {
-	/*
-	 vector<BoundaryLine *>::iterator it = boundaryLines.begin();
-	 while (it != boundaryLines.end()) {
-	 delete ((*it));
-	 ++it;
-	 }
-
-	 it = boundariesForCellCenter.begin();
-	 while (it != boundariesForCellCenter.end()) {
-	 delete ((*it));
-	 ++it;
-	 }
-
-	 it = internalBoundaryLines.begin();
-	 while (it != internalBoundaryLines.end()) {
-	 delete ((*it));
-	 ++it;
-	 }
-	 */
 }
 
 std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
@@ -1403,3 +1370,67 @@ std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
 	}
 	return result;
 }
+
+void CellInitHelper::generateCellInitNodeInfo_v2(vector<CVector>& initPos) {
+	initPos = generateInitCellNodes();
+}
+
+double CellInitHelper::getRandomNum(double min, double max) {
+	double rand01 = rand() / ((double) RAND_MAX + 1);
+	double randNum = min + (rand01 * (max - min));
+	return randNum;
+}
+
+vector<CVector> CellInitHelper::generateInitCellNodes() {
+	bool isSuccess = false;
+	vector<CVector> attemptedPoss;
+	while (!isSuccess) {
+		attemptedPoss = attemptGeenerateInitCellNodes();
+		if (isPositionQualify(attemptedPoss)) {
+			isSuccess = true;
+		}
+	}
+	return attemptedPoss;
+}
+
+vector<CVector> CellInitHelper::attemptGeenerateInitCellNodes() {
+	double radius =
+			globalConfigVars.getConfigValue("InitCellRadius").toDouble();
+	int initCellNodeCount =
+			globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
+	vector<CVector> poss;
+	int foundCount = 0;
+	double randX, randY;
+	while (foundCount < initCellNodeCount) {
+		bool isInCircle = false;
+		while (!isInCircle) {
+			randX = getRandomNum(-radius, radius);
+			randY = getRandomNum(-radius, radius);
+			isInCircle = (sqrt(randX * randX + randY * randY) < radius);
+		}
+		poss.push_back(CVector(randX, randY, 0));
+		foundCount++;
+	}
+	return poss;
+}
+
+bool CellInitHelper::isPositionQualify(vector<CVector>& poss) {
+	double minInitDist = globalConfigVars.getConfigValue(
+			"MinInitDistToOtherNodes").toDouble();
+	bool isQualify = true;
+	for (uint i = 0; i < poss.size(); i++) {
+		for (uint j = 0; j < poss.size(); j++) {
+			if (i == j) {
+				continue;
+			} else {
+				CVector distDir = poss[i] - poss[j];
+				if (distDir.getModul() < minInitDist) {
+					isQualify = false;
+					return isQualify;
+				}
+			}
+		}
+	}
+	return isQualify;
+}
+

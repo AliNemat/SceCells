@@ -98,6 +98,9 @@ int main() {
 	//std::string testString = "./resources/beakBdryInput.txt";
 	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
 	//mesh.outputVtkFile("modelTest.vtk");
+	double SimulationTimeStep = globalConfigVars.getConfigValue(
+			"SimulationTimeStep").toDouble();
+
 	CellInitHelper initHelper;
 
 	RawDataInput rawInput = initHelper.generateRawInput_stab(loadMeshInput);
@@ -106,7 +109,17 @@ int main() {
 
 	SimulationDomainGPU simuDomain;
 
-	simuDomain.stablizeCellCenters(simuData);
+	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
+			simuData);
+
+	RawDataInput rawInput2 = initHelper.generateRawInputWithProfile(
+			stabilizedCenters);
+
+	SimulationInitData simuData2 = initHelper.initInputsV2(rawInput2);
+
+	simuDomain.initialize_V2(simuData2);
+
+	simuDomain.runAllLogic(SimulationTimeStep);
 
 	return 0;
 }
