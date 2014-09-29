@@ -386,6 +386,7 @@ class CellInitHelper {
 
 	bool isCellCenterInsidePreciseRegion(CVector position);
 	bool isMXType(CVector position);
+	bool isMXType_v2(CVector position);
 
 	CVector getPointGivenAngle(double currentAngle, double r,
 			CVector centerPos);
@@ -413,9 +414,14 @@ class CellInitHelper {
 	vector<CVector> attemptGeenerateInitCellNodes();
 	bool isPositionQualify(vector<CVector> &poss);
 
+	void initInternalBdry();
+	vector<CVector> internalBdryPts;
+	vector<StraightLineEquationNoneVertical> internalBdrys;
+
 public:
 
 	CellInitHelper();
+
 	virtual ~CellInitHelper();
 
 	vector<CellPlacementInfo> obtainPreciseCellInfoArray(double interval,

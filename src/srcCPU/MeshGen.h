@@ -52,6 +52,7 @@ class MeshInput {
 public:
 	std::vector<std::vector<CVector> > bdryPts;
 	std::vector<CVector> seeds;
+	std::vector<CVector> internalBdryPts;
 	CVector profileBeginPos;
 	CVector profileEndPos;
 	double criteria_aspect_bound;
@@ -67,6 +68,7 @@ public:
 
 class MeshGen {
 	double delta1, delta2;
+	MeshInput meshInput;
 	UnstructMesh2D generateMeshGivenInput(MeshInput input);
 	std::vector<GEOMETRY::Point2D> orderPointsOnLine(UnstructMesh2D mesh,
 			CVector pt1, CVector pt2);
@@ -82,6 +84,15 @@ public:
 			std::list<Point> list_of_seeds = default_list_of_seeds,
 			Criteria criteria = default_criteria);
 
+	/**
+	 * The mesh input is needed for some other classes as well.
+	 */
+	MeshInput obtainMeshInput();
+
+	/**
+	 * sort bdry pts so that neighbor points will be near each other in the array.
+	 * Important to visualization purpose.
+	 */
 	std::vector<GEOMETRY::Point2D> obtainOrderedBdryPoints(UnstructMesh2D &mesh,
 			MeshInput &input);
 

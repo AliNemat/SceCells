@@ -364,6 +364,8 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 
 	result = cells.getAllCellCenters();
 
+	cout << "finished stablizeCellCenters" << endl;
+	cout.flush();
 	return result;
 }
 

@@ -47,6 +47,11 @@ MeshGen::MeshGen() {
 
 	delta1 = globalConfigVars.getConfigValue("MeshGen_Delta1").toDouble();
 	delta2 = globalConfigVars.getConfigValue("MeshGen_Delta2").toDouble();
+
+	std::string bdryInputFileName = globalConfigVars.getConfigValue(
+			"Bdry_InputFileName").toString();
+
+	meshInput = GEOMETRY::MeshInputReader::readFile(bdryInputFileName);
 	//default_list_of_seeds.push_back(Point(9999999, 0));
 	//default_criteria = Criteria(0.125, 0.5);
 }
@@ -331,13 +336,13 @@ UnstructMesh2D MeshGen::generateMeshGivenInput(MeshInput input) {
 }
 
 UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string& fileName) {
-	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
-	return generateMeshGivenInput(input);
+	//MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	return generateMeshGivenInput(meshInput);
 }
 
 UnstructMesh2D MeshGen::generateMesh2DFromFile(std::string &fileName,
 		double ratio) {
-	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	MeshInput input = meshInput;
 	input.criteria_size_bound = input.criteria_size_bound / ratio;
 	return generateMeshGivenInput(input);
 }
@@ -355,9 +360,9 @@ std::vector<GEOMETRY::Point2D> MeshGen::obtainOrderedBdryPoints(
 			// orderPointsOnLine method should not only find points on the line but also
 			std::vector<GEOMETRY::Point2D> orderedPtOnLine = orderPointsOnLine(
 					mesh, pt1, pt2);
-			// This is probably not a good idea, but at least works for now.
+			// not inserting the entire vector to avoid duplication.
 			result.insert(result.end(), orderedPtOnLine.begin(),
-					orderedPtOnLine.end());
+					orderedPtOnLine.end() - 1);
 		}
 	}
 
@@ -414,6 +419,10 @@ bool MeshGen::isBetweenPoints(GEOMETRY::Point2D point, CVector pt1,
 	} else {
 		return false;
 	}
+}
+
+MeshInput MeshGen::obtainMeshInput() {
+	return meshInput;
 }
 
 MeshGen::~MeshGen() {
@@ -480,6 +489,13 @@ GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 	assert(specialChar == '#');
 	fs >> count;
 	assert(count == 1);
+	std::vector<CVector> vec2 = readPointVec(fs);
+	meshInput.internalBdryPts = vec2;
+
+	fs >> specialChar;
+	assert(specialChar == '#');
+	fs >> count;
+	assert(count == 1);
 	std::vector<CVector> endPts = readPointVec(fs);
 	assert(endPts.size() == 2);
 	meshInput.profileBeginPos = endPts[0];
@@ -500,7 +516,7 @@ GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 
 GEOMETRY::UnstructMesh2D GEOMETRY::MeshGen::generateMesh2DWithProfile(
 		std::string& fileName, double ratio) {
-	MeshInput input = GEOMETRY::MeshInputReader::readFile(fileName);
+	MeshInput input = meshInput;
 	input.criteria_size_bound = input.criteria_size_bound / ratio;
 	GEOMETRY::UnstructMesh2D mesh = generateMeshGivenInput(input);
 	mesh.generateFinalBdryAndProfilePoints(input.profileBeginPos,

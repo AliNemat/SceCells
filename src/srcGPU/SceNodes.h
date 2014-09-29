@@ -417,7 +417,6 @@ public:
 	thrust::device_vector<SceNodeType> nodeCellType;
 	// for each node, we need to identify which cell it belongs to.
 	thrust::device_vector<uint> nodeCellRank;
-
 };
 
 struct NodeAuxVecs {

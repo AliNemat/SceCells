@@ -428,8 +428,6 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	VtkAnimationData vtkData;
 	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs();
 	cout << "size of potential pairs = " << pairs.size() << endl;
-	//int jj;
-	//cin >> jj;
 	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
 
 	// unordered_map is more efficient than map, but it is a c++ 11 feature
@@ -505,10 +503,33 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 			linkData.node1Index = aniIndex1;
 			linkData.node2Index = aniIndex2;
 			vtkData.linksAniData.push_back(linkData);
-			//cout << "aaa" << endl;
 		}
-		//cout << "bbb" << endl;
 	}
+
+	uint profileStartIndex = allocPara.startPosProfile;
+	uint profileEndIndex = profileStartIndex
+			+ allocPara.currentActiveProfileNodeCount;
+	cout << "start index is : " << profileStartIndex << endl;
+	cout << "end index is : " << profileEndIndex << endl;
+	for (uint i = profileStartIndex; i < profileEndIndex; i++) {
+		PointAniData ptAniData;
+		ptAniData.pos = CVector(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
+				hostTmpVectorLocZ[i]);
+		if (aniCri.isStressMap) {
+			ptAniData.colorScale = hostTmpVectorNodeStress[i];
+		} else {
+			ptAniData.colorScale = nodeTypeToScale(hostTmpVectorNodeType[i]);
+		}
+		vtkData.pointsAniData.push_back(ptAniData);
+		LinkAniData linkData;
+		linkData.node1Index = curIndex;
+		linkData.node2Index = curIndex + 1;
+		if (i != profileEndIndex - 1) {
+			vtkData.linksAniData.push_back(linkData);
+		}
+		curIndex++;
+	}
+
 	return vtkData;
 }
 

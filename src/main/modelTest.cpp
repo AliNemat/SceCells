@@ -58,26 +58,21 @@ int main() {
 	generateStringInputs(loadMeshInput, animationInput, animationFolder,
 			boundaryMeshFileNames);
 
+	double SimulationTotalTime = globalConfigVars.getConfigValue(
+			"SimulationTotalTime").toDouble();
+	double SimulationTimeStep = globalConfigVars.getConfigValue(
+			"SimulationTimeStep").toDouble();
+	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+			"TotalNumOfOutputFrames").toInt();
+
+	const double simulationTime = SimulationTotalTime;
+	const double dt = SimulationTimeStep;
+	const int numOfTimeSteps = simulationTime / dt;
+	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
+	const int outputAnimationAuxVarible = numOfTimeSteps
+			/ totalNumOfOutputFrame;
+
 	/*
-	 double SimulationTotalTime = globalConfigVars.getConfigValue(
-	 "SimulationTotalTime").toDouble();
-	 double SimulationTimeStep = globalConfigVars.getConfigValue(
-	 "SimulationTimeStep").toDouble();
-	 int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-	 "TotalNumOfOutputFrames").toInt();
-
-
-	 const double simulationTime = SimulationTotalTime;
-	 const double dt = SimulationTimeStep;
-	 const int numOfTimeSteps = simulationTime / dt;
-	 const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	 const int outputAnimationAuxVarible = numOfTimeSteps
-	 / totalNumOfOutputFrame;
-
-	 AnimationCriteria aniCri;
-	 aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-	 "IntraLinkDisplayRange").toDouble();
-	 aniCri.isStressMap = true;
 
 	 CellInitHelper initHelper;
 
@@ -88,6 +83,7 @@ int main() {
 	 simuDomain.checkIfAllDataFieldsValid();
 
 	 */
+
 	//GEOMETRY::MeshGen meshGen;
 	//std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
 	//		8);
@@ -98,9 +94,8 @@ int main() {
 	//std::string testString = "./resources/beakBdryInput.txt";
 	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
 	//mesh.outputVtkFile("modelTest.vtk");
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-
+	//double SimulationTimeStep = globalConfigVars.getConfigValue(
+	//		"SimulationTimeStep").toDouble();
 	CellInitHelper initHelper;
 
 	RawDataInput rawInput = initHelper.generateRawInput_stab(loadMeshInput);
@@ -119,7 +114,18 @@ int main() {
 
 	simuDomain.initialize_V2(simuData2);
 
-	simuDomain.runAllLogic(SimulationTimeStep);
+	AnimationCriteria aniCri;
+	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+			"IntraLinkDisplayRange").toDouble();
+	aniCri.isStressMap = false;
+
+	for (int i = 0; i <= numOfTimeSteps; i++) {
+		cout << "step number = " << i << endl;
+		if (i % outputAnimationAuxVarible == 0) {
+			simuDomain.outputVtkFilesWithColor_v3(animationInput, i, aniCri);
+		}
+		simuDomain.runAllLogic(SimulationTimeStep);
+	}
 
 	return 0;
 }

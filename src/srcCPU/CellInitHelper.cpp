@@ -17,6 +17,7 @@ CellInitHelper::CellInitHelper() {
 			CVector(20, 20, 0));
 	linEqn4 = StraightLineEquationNoneVertical(CVector(15, 40, 0),
 			CVector(20, 20, 0));
+	initInternalBdry();
 }
 
 /**
@@ -46,7 +47,7 @@ void CellInitHelper::initPrecisionBoundaryPoints() {
 	initPoints.clear();
 	initPoints.push_back(P1);
 	initPoints.push_back(P2);
-	initPoints.push_back(P3);
+	initPoints.push_back(P3); //
 	initPoints.push_back(P4);
 	initPoints.push_back(P5);
 	initPoints.push_back(P6);
@@ -56,8 +57,8 @@ void CellInitHelper::initPrecisionBoundaryPoints() {
 	initPoints.push_back(P10);
 	initPoints.push_back(P11);
 	initPoints.push_back(P12);
-	initPoints.push_back(P13);
-	initPoints.push_back(P14);
+	initPoints.push_back(P13); //
+	initPoints.push_back(P14); //
 	initPoints.push_back(P15);
 	isInitNodesInitializedFlag = true;
 }
@@ -630,6 +631,8 @@ void CellInitHelper::initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 
 RawDataInput CellInitHelper::generateRawInputWithProfile(
 		std::vector<CVector> &cellCenterPoss) {
+	cout << "begining of generateRawInputWithProfile" << endl;
+	cout.flush();
 	RawDataInput rawData;
 	vector<CVector> outsideBdryNodePos;
 	vector<CVector> outsideProfileNodePos;
@@ -641,36 +644,64 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	double genBdryRatio =
 			globalConfigVars.getConfigValue("GenBdrySpacingRatio").toDouble();
 
+	cout << "before calling generateMesh2DWithProfile" << endl;
+	cout.flush();
+
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
 			bdryInputFileName, genBdryRatio);
 
-	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getFinalBdryPts();
-	std::vector<GEOMETRY::Point2D> profilePoints = mesh.getFinalProfilePts();
+	cout << "after calling generateMesh2DWithProfile" << endl;
+	cout.flush();
 
+	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getFinalBdryPts();
+	cout << "breakpoint 1" << endl;
+	cout.flush();
+	std::vector<GEOMETRY::Point2D> profilePoints = mesh.getFinalProfilePts();
+	cout << "breakpoint 2" << endl;
+	cout.flush();
 	for (uint i = 0; i < bdryPoints.size(); i++) {
 		outsideBdryNodePos.push_back(
 				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	}
+	cout << "breakpoint 3" << endl;
+	cout.flush();
 	rawData.bdryNodes = outsideBdryNodePos;
 
 	for (uint i = 0; i < profilePoints.size(); i++) {
 		outsideProfileNodePos.push_back(
 				CVector(profilePoints[i].getX(), profilePoints[i].getY(), 0));
 	}
+	cout << "breakpoint 4" << endl;
+	cout.flush();
 	rawData.profileNodes = outsideProfileNodePos;
+
+	// calculate average length of profile links
+	double sumLength = 0;
+	for (uint i = 0; i < profilePoints.size() - 1; i++) {
+		CVector tmpVec = outsideProfileNodePos[i]
+				- outsideProfileNodePos[i + 1];
+		sumLength += tmpVec.getModul();
+	}
+	double aveLen = sumLength / (profilePoints.size() - 1);
+	cout << "average length = " << aveLen << endl;
+	//int jj;
+	//cin >> jj;
 
 	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
 		CVector centerPos = cellCenterPoss[i];
-		if (isMXType(centerPos)) {
+		centerPos.Print();
+		if (isMXType_v2(centerPos)) {
 			rawData.MXCellCenters.push_back(centerPos);
 		} else {
 			rawData.FNMCellCenters.push_back(centerPos);
 		}
 
 	}
-
+	cout << "breakpoint 5" << endl;
+	cout.flush();
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
-
+	cout << "end of generateRawInputWithProfile" << endl;
+	cout.flush();
 	return rawData;
 }
 
@@ -1432,5 +1463,32 @@ bool CellInitHelper::isPositionQualify(vector<CVector>& poss) {
 		}
 	}
 	return isQualify;
+}
+
+bool CellInitHelper::isMXType_v2(CVector position) {
+	if (position.y >= internalBdryPts[0].y) {
+		return false;
+	}
+	if (position.x >= internalBdryPts[2].x) {
+		return false;
+	}
+	for (unsigned int i = 0; i < internalBdrys.size(); i++) {
+		if (!internalBdrys[i].isFitCondition(position)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+void CellInitHelper::initInternalBdry() {
+	GEOMETRY::MeshGen meshGen;
+	GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
+	internalBdryPts = input.internalBdryPts;
+	for (uint i = 0; i < internalBdryPts.size() - 1; i++) {
+		StraightLineEquationNoneVertical bdry(internalBdryPts[i],
+				internalBdryPts[i + 1]);
+		bdry.condiType = Left;
+		internalBdrys.push_back(bdry);
+	}
 }
 
