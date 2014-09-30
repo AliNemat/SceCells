@@ -24,6 +24,9 @@ public:
 
 	uint growNode1Index;
 	uint growNode2Index;
+
+	double growthSpeedNode1;
+	double growthSpeedNode2;
 	/**
 	 * moment of intertia.
 	 */
@@ -38,12 +41,15 @@ class Cartilage {
 	SceNodes* nodes;
 	CartPara cartPara;
 
+	std::vector<uint> tipIndicies;
+
 	void calculateGrowthDir();
 	void addPoint();
-	void grow();
+	void grow(double dt);
 	void calculateTotalTorque();
 	void move(double dt);
 public:
+	Cartilage();
 	void initialize(SceNodes* nodeInput);
 	void runAllLogics(double dt);
 };
