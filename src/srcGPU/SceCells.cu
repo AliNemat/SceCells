@@ -601,6 +601,7 @@ void SceCells::initCellInfoVecs() {
 	cellInfoVecs.growthSpeed.resize(allocPara.maxCellCount, 0.0);
 	cellInfoVecs.growthXDir.resize(allocPara.maxCellCount);
 	cellInfoVecs.growthYDir.resize(allocPara.maxCellCount);
+	cellInfoVecs.isRandGrowInited.resize(allocPara.maxCellCount, false);
 }
 
 void SceCells::initCellNodeInfoVecs() {
@@ -619,6 +620,10 @@ void SceCells::initGrowthAuxData() {
 			&(nodes->getInfoVecs().nodeLocX[allocPara.startPosCells]));
 	growthAuxData.nodeYPosAddress = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocY[allocPara.startPosCells]));
+	growthAuxData.randomGrowthSpeedMin = globalConfigVars.getConfigValue(
+			"RandomGrowthSpeedMin").toDouble();
+	growthAuxData.randomGrowthSpeedMax = globalConfigVars.getConfigValue(
+			"RandomGrowthSpeedMax").toDouble();
 }
 
 void SceCells::initialize(SceNodes* nodesInput) {
@@ -655,19 +660,9 @@ void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
-	<<<<<<< Updated upstream
-	<<<<<<< Updated upstream
-	grow2DTwoRegions(dt, region1, region2);
-	=======
-
 	// for wind disk project, switch from chemical based growth to random growth
-	//grow2DTwoRegions(dt, region1, region2);
-	growAtRandom(dt);
-	>>>>>>> Stashed changes
-	=======
 	growAtRandom(dt);
 	//grow2DTwoRegions(dt, region1, region2);
-	>>>>>>> Stashed changes
 	//std::cerr << "after grow cells" << std::endl;
 	distributeIsActiveInfo();
 	//std::cerr << "after distribute is active info." << std::endl;
@@ -822,7 +817,6 @@ void SceCells::computeCenterPos() {
  * step 9. mark isDivide of all cells to false.
  */
 
-//TODO: also pay attention to number of active nodes per cell. This seems to be omitted.
 void SceCells::divide2DSimplified() {
 	decideIfGoingToDivide();
 	copyCellsPreDivision();
@@ -1101,30 +1095,26 @@ void SceCells::readBioPara() {
 }
 
 void SceCells::randomizeGrowth() {
+	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.isRandGrowInited.begin(),
-							cellInfoVecs.growthSpeed.begin(),
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
 							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin())),
-							thrust::make_zip_iterator(
-											thrust::make_tuple(cellInfoVecs.isRandGrowInited.begin(),
-													cellInfoVecs.growthSpeed.begin(),
-													cellInfoVecs.growthXDir.begin(),
-													cellInfoVecs.growthYDir.begin()))
-					+ allocPara.currentActiveCellCount,
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin)) + allocPara.currentActiveCellCount,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
 							cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin())),
-			LoadChemDataToNode(region1.gridDimensionX, region1.gridDimensionY,
-					region1.gridSpacing, growthAuxData.growthFactorMagAddress,
-					growthAuxData.growthFactorDirXAddress,
-					growthAuxData.growthFactorDirYAddress,
-					region2.gridDimensionX, region2.gridDimensionY,
-					region2.gridSpacing, growthAuxData.growthFactorMagAddress2,
-					growthAuxData.growthFactorDirXAddress2,
-					growthAuxData.growthFactorDirYAddress2));
+			AssignRandIfNotInit(growthAuxData.randomGrowthSpeedMin,
+					growthAuxData.randomGrowthSpeedMax));
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {

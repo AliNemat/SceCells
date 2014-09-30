@@ -61,6 +61,7 @@ typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<double, double, double> CVec3;
 typedef thrust::tuple<double, double, double, uint> CVec3Int;
+typedef thrust::tuple<double, double, double, bool> CVec3Bool;
 typedef thrust::tuple<double, double, double, bool, uint> CVec3BoolInt;
 typedef thrust::tuple<double, double, double, double> CVec4;
 typedef thrust::tuple<double, double, double, double, double> CVec5;
