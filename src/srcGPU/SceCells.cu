@@ -656,12 +656,17 @@ void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	grow2DTwoRegions(dt, region1, region2);
 =======
 
 	// for wind disk project, switch from chemical based growth to random growth
 	//grow2DTwoRegions(dt, region1, region2);
 	growAtRandom(dt);
+>>>>>>> Stashed changes
+=======
+	growAtRandom(dt);
+	//grow2DTwoRegions(dt, region1, region2);
 >>>>>>> Stashed changes
 	//std::cerr << "after grow cells" << std::endl;
 	distributeIsActiveInfo();

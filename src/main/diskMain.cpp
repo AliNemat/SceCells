@@ -88,12 +88,11 @@ int main() {
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
-			//simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
-			//simuDomain.outputVtkFilesWithColor_v2_stress(animationInput, i);
 			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
 			cout << "finished output Animation" << endl;
 		}
 		simuDomain.runAllLogic(dt);
 	}
+
 	return 0;
 }
