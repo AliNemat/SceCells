@@ -131,6 +131,41 @@ void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
 	//std::cout << "after adding node" << std::endl;
 }
 
+void SceCells::growAtRandom(double d_t) {
+	dt = d_t;
+
+	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
+			* allocPara.maxNodeOfOneCell;
+	//std::cout << "totalNodeCount = " << totalNodeCountForActiveCells
+	//		<< std::endl;
+	//std::cout << "before all functions start" << std::endl;
+
+	// for wind disk project, assign random growth pattern
+	// to replace chemical induced growth
+	//copyGrowInfoFromGridToCells(region1, region2);
+	randomizeGrowth();
+
+	//std::cout << "after copy grow info" << std::endl;
+	updateGrowthProgress();
+	//std::cout << "after update growth progress" << std::endl;
+	decideIsScheduleToGrow();
+	//std::cout << "after decode os schedule to grow" << std::endl;
+	computeCellTargetLength();
+	//std::cout << "after compute cell target length" << std::endl;
+	computeDistToCellCenter();
+	//std::cout << "after compute dist to center" << std::endl;
+	findMinAndMaxDistToCenter();
+	//std::cout << "after find min and max dist" << std::endl;
+	computeLenDiffExpCur();
+	//std::cout << "after compute diff " << std::endl;
+	stretchCellGivenLenDiff();
+	//std::cout << "after apply stretch force" << std::endl;
+	cellChemotaxis();
+	//std::cout << "after apply cell chemotaxis" << std::endl;
+	addPointIfScheduledToGrow();
+	//std::cout << "after adding node" << std::endl;
+}
+
 /**
  * we need to copy the growth information from grid for chemical to cell nodes.
  *
@@ -620,7 +655,14 @@ void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
+<<<<<<< Updated upstream
 	grow2DTwoRegions(dt, region1, region2);
+=======
+
+	// for wind disk project, switch from chemical based growth to random growth
+	//grow2DTwoRegions(dt, region1, region2);
+	growAtRandom(dt);
+>>>>>>> Stashed changes
 	//std::cerr << "after grow cells" << std::endl;
 	distributeIsActiveInfo();
 	//std::cerr << "after distribute is active info." << std::endl;

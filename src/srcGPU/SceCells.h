@@ -890,6 +890,9 @@ class SceCells {
 	void grow2DTwoRegions(double dt, GrowthDistriMap &region1,
 			GrowthDistriMap &region2);
 
+	void growAtRandom(double d_t);
+	void randomizeGrowth();
+
 	void computeCenterPos();
 
 	void divide2DSimplified();
