@@ -468,6 +468,10 @@ class SceNodes {
 	void initNodeAllocPara(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
 			uint maxNodeInCell);
+
+	void initNodeAllocPara_v2(uint totalBdryNodeCount, uint maxProfileNodeCount,
+			uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
+			uint maxTotalCellCount, uint maxNodeInCell);
 	/**
 	 * This function copies parameters to GPU constant memory.
 	 */
@@ -526,11 +530,19 @@ public:
 	SceNodes();
 
 	/**
-	 * recommended constructor for beak project.
+	 * old constructor for beak project.
+	 * mark for deprication.
 	 */
 	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
 			uint maxNodeInCell);
+
+	/**
+	 * recommended constructor for beak project.
+	 */
+	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
+			uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
+			uint maxTotalCellCount, uint maxNodeInCell);
 
 	/**
 	 * Override dimension data introduced by config files.
@@ -551,6 +563,16 @@ public:
 			std::vector<double> &initFNMCellNodePosY,
 			std::vector<double> &initMXCellNodePosX,
 			std::vector<double> &initMXCellNodePosY);
+
+	/**
+	 * initialize data fields.
+	 */
+	void initValues_v2(std::vector<CVector> &initBdryCellNodePos,
+			std::vector<CVector> &initProfileNodePos,
+			std::vector<CVector> &initCartNodePos,
+			std::vector<CVector> &initECMNodePos,
+			std::vector<CVector> &initFNMCellNodePos,
+			std::vector<CVector> &initMXCellNodePos);
 
 	/**
 	 * this method contains all preparation work for SCE force calculation.

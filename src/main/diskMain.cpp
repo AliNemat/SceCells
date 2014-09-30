@@ -81,7 +81,7 @@ int main() {
 
 	SimulationDomainGPU simuDomain;
 	SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
-	simuDomain.initialize_V2(initData);
+	simuDomain.initialize(initData);
 
 	simuDomain.checkIfAllDataFieldsValid();
 
@@ -90,7 +90,7 @@ int main() {
 		if (i % outputAnimationAuxVarible == 0) {
 			//simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
 			//simuDomain.outputVtkFilesWithColor_v2_stress(animationInput, i);
-			simuDomain.outputVtkFilesWithColor_v3(animationInput, i, aniCri);
+			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
 			cout << "finished output Animation" << endl;
 		}
 		simuDomain.runAllLogic(dt);

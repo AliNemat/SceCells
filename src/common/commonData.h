@@ -27,7 +27,7 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
 
 enum SceNodeType {
-	Boundary, Profile, ECM, FNM, MX, Base
+	Boundary, Profile, ECM, FNM, MX, Cart, Base
 };
 std::string toString(SceNodeType type);
 
@@ -118,6 +118,7 @@ struct SceMemPara {
 	uint maxECMInDomain;
 	uint maxNodePerECM;
 	double FinalToInitProfileNodeCountRatio;
+	double FinalToInitCartNodeCountRatio;
 };
 
 /**
@@ -174,9 +175,15 @@ struct NodeAllocPara {
 	// no matter whether epithilum grow or not we need to track the cucrent count.
 	uint currentActiveProfileNodeCount;
 
+	// epithilum might grow or might not. Set maxProfileNodeCount as the maximum possible node count
+	uint maxCartNodeCount;
+	// no matter whether epithilum grow or not we need to track the cucrent count.
+	uint currentActiveCartNodeCount;
+
 	uint BdryNodeCount;
 
 	uint startPosProfile;
+	uint startPosCart;
 	uint startPosECM;
 	uint startPosCells;
 };
@@ -196,7 +203,7 @@ struct RawDataInput {
 };
 
 /**
- * an data structure that was specifically designed for Beak project.
+ * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData {
 	std::vector<SceNodeType> cellTypes;
@@ -214,6 +221,24 @@ struct SimulationInitData {
 };
 
 /**
+ * a data structure that was specifically designed for Beak project.
+ */
+struct SimulationInitData_V2 {
+	std::vector<SceNodeType> cellTypes;
+	std::vector<uint> numOfInitActiveNodesOfCells;
+	std::vector<CVector> initBdryNodeVec;
+	std::vector<CVector> initProfileNodeVec;
+	std::vector<CVector> initCartNodeVec;
+	std::vector<CVector> initECMNodeVec;
+	std::vector<CVector> initFNMNodeVec;
+	std::vector<CVector> initMXNodeVec;
+};
+
+std::vector<double> getArrayXComp(std::vector<CVector> &nodePosVec);
+std::vector<double> getArrayYComp(std::vector<CVector> &nodePosVec);
+std::vector<double> getArrayZComp(std::vector<CVector> &nodePosVec);
+
+/**
  * This class is not used for now but might be useful in the future
  */
 struct SceInputPoint {
@@ -223,9 +248,6 @@ struct SceInputPoint {
 	double xCoord;
 	double yCoord;
 	double zCoord;
-	//SceInputPoint(std::string inputLine);
-	//void initFromString(std::string inputLine);
-	//void outputToString(std::string& outputLine);
 };
 
 /**
@@ -235,9 +257,7 @@ struct inputInitialData {
 	SceMemPara memParas;
 	SceMechPara mechParas;
 	std::vector<SceInputPoint> inputPoints;
-	//void initFromFile(std::string fileName);
 	void addNewPoints(std::vector<SceInputPoint> &newPoints);
-	//void outputToFile(std::string fileName);
 };
 
 /**

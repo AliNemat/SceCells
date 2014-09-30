@@ -4,6 +4,8 @@
 include_directories(${COMMON_INCLUDES} ${GTEST_INCLUDE_DIRS})
 
 CUDA_ADD_LIBRARY(SceGPU
+    Cartilage.h
+    Cartilage.cu
 	GrowthDistriMap.h
 	GrowthDistriMap.cu
 	SceNodes.h
@@ -15,8 +17,6 @@ CUDA_ADD_LIBRARY(SceGPU
     ${COMMON_INCLUDES}/commonData.h
     ${COMMON_INCLUDES}/commonGPUData.h
     #${COMMON_INCLUDES}/commonGPUData.cu
-	#CellInitHelper.cpp
-    #CellInitHelper.h
 )
 #target_link_libraries(SceGPU SceUtilsGPU)
 #target_link_libraries(SceGPU ${COMMON_INCLUDES}/libSceUtilsGPU.a)

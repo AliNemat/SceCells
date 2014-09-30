@@ -215,7 +215,111 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
-void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
+void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
+		std::vector<uint>& numOfInitActiveNodesOfCells,
+		std::vector<CVector>& initBdryNodeVec,
+		std::vector<CVector>& initProfileNodeVec,
+		std::vector<CVector>& initCartNodeVec,
+		std::vector<CVector>& initECMNodeVec,
+		std::vector<CVector>& initFNMNodeVec,
+		std::vector<CVector>& initMXNodeVec) {
+	/*
+	 * number of boundary nodes is always fixed.
+	 */
+	uint bdryNodeCount = initBdryNodeVec.size();
+	/*
+	 * total potential number of profile nodes could be more than initial number provided,
+	 * because the total length of profile might increase.
+	 * FinalToInitProfileNodeCountRatio is defined in Config file.
+	 */
+	uint maxProfileNodeCount = initProfileNodeVec.size()
+			* memPara.FinalToInitProfileNodeCountRatio;
+	/*
+	 * similar to profile nodes.
+	 */
+	uint maxCartNodeCount = initCartNodeVec.size()
+			* memPara.FinalToInitCartNodeCountRatio;
+
+	/*
+	 * Initialize SceNodes by constructor. first two parameters come from input parameters
+	 * while the last four parameters come from Config file.
+	 */
+	nodes = SceNodes(bdryNodeCount, maxProfileNodeCount, maxCartNodeCount,
+			memPara.maxECMInDomain, memPara.maxNodePerECM,
+			memPara.maxCellInDomain, memPara.maxNodePerCell);
+
+	/*
+	 * first step: error checking.
+	 * we need to first check if inputs are valid
+	 */
+	cout << "begin init cells of five types" << endl;
+	// get max node per cell. should be defined previously.
+	uint maxNodePerCell = nodes.getAllocPara().maxNodeOfOneCell;
+	// get max node per ECM. Should be defined previously.
+	uint maxNodePerECM = nodes.getAllocPara().maxNodePerECM;
+	// check if we successfully loaded maxNodePerCell
+	assert(maxNodePerCell != 0);
+
+	// obtain sizes of the input arrays
+	//uint bdryNodeCount = initBdryNodeVec.size();
+	uint ProfileNodeCount = initProfileNodeVec.size();
+	uint CartNodeCount = initCartNodeVec.size();
+	uint ECMNodeCount = initECMNodeVec.size();
+	uint FNMNodeCount = initFNMNodeVec.size();
+	uint MXNodeCount = initMXNodeVec.size();
+
+	// array size of cell type array
+	uint cellTypeSize = cellTypes.size();
+	// array size of initial active node count of cells array.
+	uint initNodeCountSize = numOfInitActiveNodesOfCells.size();
+	// two sizes must match.
+	assert(cellTypeSize == initNodeCountSize);
+
+	// size of inputs must be divided exactly by max node per cell.
+	// uint bdryRemainder = bdryNodeCountX % maxNodePerCell;
+	uint ecmRemainder = ECMNodeCount % maxNodePerECM;
+	uint fnmRemainder = FNMNodeCount % maxNodePerCell;
+	uint mxRemainder = MXNodeCount % maxNodePerCell;
+
+	// uint bdryQuotient = bdryNodeCountX / maxNodePerCell;
+	uint ecmQuotient = ECMNodeCount / maxNodePerECM;
+	uint fnmQuotient = FNMNodeCount / maxNodePerCell;
+	uint mxQuotient = MXNodeCount / maxNodePerCell;
+
+	// remainder must be zero.
+	assert((fnmRemainder == 0) && (mxRemainder == 0) && (ecmRemainder == 0));
+	// size of cellType array and sum of all cell types must match.
+	assert(fnmQuotient + mxQuotient == cellTypeSize);
+
+	for (uint i = 0; i < cellTypeSize; i++) {
+		if (i < fnmQuotient) {
+			assert(cellTypes[i] == FNM);
+		} else {
+			assert(cellTypes[i] == MX);
+		}
+	}
+	/*
+	 * second part: actual initialization
+	 * copy data from main system memory to GPU memory
+	 */
+	NodeAllocPara para = nodes.getAllocPara();
+	para.currentActiveCellCount = fnmQuotient + mxQuotient;
+	para.currentActiveECM = ecmQuotient;
+	para.currentActiveProfileNodeCount = ProfileNodeCount;
+	nodes.setAllocPara(para);
+
+	assert(nodes.getAllocPara().startPosProfile == bdryNodeCount);
+
+	//uint totalSize = nodes.getInfoVecs().nodeLocX.size();
+
+	nodes.initValues_v2(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
+			initECMNodeVec, initFNMNodeVec, initMXNodeVec);
+
+	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
+
+}
+
+void SimulationDomainGPU::initialize(SimulationInitData &initData) {
 	initialCellsOfFiveTypes(initData.cellTypes,
 			initData.numOfInitActiveNodesOfCells, initData.initBdryCellNodePosX,
 			initData.initBdryCellNodePosY, initData.initProfileNodePosX,
@@ -224,6 +328,15 @@ void SimulationDomainGPU::initialize_V2(SimulationInitData &initData) {
 			initData.initFNMCellNodePosY, initData.initMXCellNodePosX,
 			initData.initMXCellNodePosY);
 	//cout << "finished init cells of five types" << endl;
+	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
+			domainPara.maxY, domainPara.gridSpacing);
+}
+
+void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
+	initializeNodes(initData.cellTypes, initData.numOfInitActiveNodesOfCells,
+			initData.initBdryNodeVec, initData.initProfileNodeVec,
+			initData.initCartNodeVec, initData.initECMNodeVec,
+			initData.initFNMNodeVec, initData.initMXNodeVec);
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
 }
@@ -254,6 +367,8 @@ void SimulationDomainGPU::readMemPara() {
 			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
 			"FinalToInitProfileNodeCountRatio").toDouble();
+	memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
+			"FinalToInitCartNodeCountRatio").toDouble();
 }
 
 void SimulationDomainGPU::readDomainPara() {
@@ -345,7 +460,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	stabPara.outputAniName =
 			globalConfigVars.getConfigValue("StabAniName").toString();
 
-	initialize_V2(initData);
+	initialize(initData);
 
 	int aniAuxPara = (double) (stabPara.totalIterCount)
 			/ stabPara.outputFrameCount;
@@ -358,7 +473,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	for (int i = 0; i < stabPara.totalIterCount; i++) {
 		runAllLogic(stabPara.dt);
 		if (i % aniAuxPara == 0) {
-			outputVtkFilesWithColor_v3(stabPara.outputAniName, i, aniCri);
+			outputVtkFilesWithColor(stabPara.outputAniName, i, aniCri);
 		}
 	}
 
@@ -369,7 +484,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	return result;
 }
 
-void SimulationDomainGPU::outputVtkFilesWithColor_v3(std::string scriptNameBase,
+void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
 	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);

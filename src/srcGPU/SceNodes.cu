@@ -222,7 +222,49 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			hostTmpVector3[i] = (i - allocPara.startPosCells)
 					/ allocPara.maxNodeOfOneCell;
 		}
-		infoVecs.nodeIsActive[i] = false;
+		hostTmpVector2[i] = false;
+	}
+	infoVecs.nodeCellType = hostTmpVector;
+	infoVecs.nodeIsActive = hostTmpVector2;
+	infoVecs.nodeCellRank = hostTmpVector3;
+	copyParaToGPUConstMem();
+}
+
+SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
+		uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
+		uint maxTotalCellCount, uint maxNodeInCell) {
+	readDomainPara();
+	initNodeAllocPara_v2(totalBdryNodeCount, maxProfileNodeCount,
+			maxCartNodeCount, maxTotalECMCount, maxNodeInECM, maxTotalCellCount,
+			maxNodeInCell);
+	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
+			+ maxCartNodeCount + allocPara.maxTotalECMNodeCount
+			+ allocPara.maxTotalCellNodeCount;
+	allocSpaceForNodes(maxTotalNodeCount);
+	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
+	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
+	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
+	for (int i = 0; i < maxTotalNodeCount; i++) {
+		if (i < allocPara.startPosProfile) {
+			hostTmpVector[i] = Boundary;
+			hostTmpVector3[i] = 0;
+		} else if (i < allocPara.startPosCart) {
+			hostTmpVector[i] = Profile;
+			hostTmpVector3[i] = 0;
+		} else if (i < allocPara.startPosECM) {
+			hostTmpVector[i] = Cart;
+			hostTmpVector3[i] = 0;
+		} else if (i < allocPara.startPosCells) {
+			hostTmpVector[i] = ECM;
+			hostTmpVector3[i] = (i - allocPara.startPosECM)
+					/ allocPara.maxNodePerECM;
+		} else {
+			// all initialized as FNM
+			hostTmpVector[i] = FNM;
+			hostTmpVector3[i] = (i - allocPara.startPosCells)
+					/ allocPara.maxNodeOfOneCell;
+		}
+		hostTmpVector2[i] = false;
 	}
 	infoVecs.nodeCellType = hostTmpVector;
 	infoVecs.nodeIsActive = hostTmpVector2;
@@ -391,6 +433,96 @@ void SceNodes::initValues(std::vector<double>& initBdryCellNodePosX,
 			MX);
 
 //std::cout << "initial MX cell numbers: " << mxQuotient << std::endl;
+}
+
+void SceNodes::initValues_v2(std::vector<CVector>& initBdryCellNodePos,
+		std::vector<CVector>& initProfileNodePos,
+		std::vector<CVector>& initCartNodePos,
+		std::vector<CVector>& initECMNodePos,
+		std::vector<CVector>& initFNMCellNodePos,
+		std::vector<CVector>& initMXCellNodePos) {
+
+	uint FNMNodeCount = initFNMCellNodePos.size();
+	uint MXNodeCount = initMXCellNodePos.size();
+
+	uint beginAddressOfProfile = allocPara.startPosProfile;
+	uint beginAddressOfCart = allocPara.startPosCart;
+	// find the begining position of ECM.
+	uint beginAddressOfECM = allocPara.startPosECM;
+	// find the begining position of FNM cells.
+	uint beginAddressOfFNM = allocPara.startPosCells;
+	// find the begining position of MX cells.
+	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCount;
+
+	//std::cerr << "before copying arrays" << endl;
+	std::vector<double> initBdryCellNodePosX = getArrayXComp(
+			initBdryCellNodePos);
+	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
+			infoVecs.nodeLocX.begin());
+	std::vector<double> initBdryCellNodePosY = getArrayYComp(
+			initBdryCellNodePos);
+	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
+			infoVecs.nodeLocY.begin());
+
+	// copy x and y position of nodes of Profile to actual node position.
+	std::vector<double> initProfileNodePosX = getArrayXComp(initProfileNodePos);
+	thrust::copy(initProfileNodePosX.begin(), initProfileNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfProfile);
+	std::vector<double> initProfileNodePosY = getArrayYComp(initProfileNodePos);
+	thrust::copy(initProfileNodePosY.begin(), initProfileNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfProfile);
+
+	// copy x and y position of nodes of Profile to actual node position.
+	std::vector<double> initCartNodePosX = getArrayXComp(initCartNodePos);
+	thrust::copy(initCartNodePosX.begin(), initCartNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfCart);
+	std::vector<double> initCartNodePosY = getArrayYComp(initCartNodePos);
+	thrust::copy(initCartNodePosY.begin(), initCartNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfCart);
+
+	// copy x and y position of nodes of ECM to actual node position.
+	std::vector<double> initECMNodePosX = getArrayXComp(initECMNodePos);
+	thrust::copy(initECMNodePosX.begin(), initECMNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfECM);
+	std::vector<double> initECMNodePosY = getArrayYComp(initECMNodePos);
+	thrust::copy(initECMNodePosY.begin(), initECMNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfECM);
+
+	// debug
+	for (int i = 0; i < initECMNodePosX.size(); i++) {
+		std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
+				<< "nodeLocX =" << infoVecs.nodeLocX[i + beginAddressOfECM]
+				<< std::endl;
+		assert(infoVecs.nodeLocX[i + beginAddressOfECM] == initECMNodePosX[i]);
+		assert(!isnan(initECMNodePosX[i]));
+	}
+
+	// std::cerr << "copy 3" << endl;
+
+	// copy x and y position of nodes of FNM cells to actual node position.
+	std::vector<double> initFNMCellNodePosX = getArrayXComp(initFNMCellNodePos);
+	thrust::copy(initFNMCellNodePosX.begin(), initFNMCellNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfFNM);
+	std::vector<double> initFNMCellNodePosY = getArrayYComp(initFNMCellNodePos);
+	thrust::copy(initFNMCellNodePosY.begin(), initFNMCellNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfFNM);
+
+	// std::cerr << "copy 4" << endl;
+
+	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfFNM,
+			infoVecs.nodeCellType.begin() + beginAddressOfMX, FNM);
+
+	// copy x and y position of nodes of MX cells to actual node position.
+	std::vector<double> initMXCellNodePosX = getArrayXComp(initMXCellNodePos);
+	thrust::copy(initMXCellNodePosX.begin(), initMXCellNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfMX);
+	std::vector<double> initMXCellNodePosY = getArrayYComp(initMXCellNodePos);
+	thrust::copy(initMXCellNodePosY.begin(), initMXCellNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfMX);
+
+	//std::cerr << "after copying arrays" << endl;
+	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfMX,
+			infoVecs.nodeCellType.begin() + beginAddressOfMX + MXNodeCount, MX);
 }
 
 void SceNodes::applyProfileForces() {
@@ -1138,6 +1270,36 @@ void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
 	allocPara.startPosProfile = totalBdryNodeCount;
 	allocPara.startPosECM = allocPara.startPosProfile
 			+ allocPara.maxProfileNodeCount;
+	allocPara.startPosCells = allocPara.startPosECM
+			+ allocPara.maxTotalECMNodeCount;
+}
+
+void SceNodes::initNodeAllocPara_v2(uint totalBdryNodeCount,
+		uint maxProfileNodeCount, uint maxCartNodeCount, uint maxTotalECMCount,
+		uint maxNodeInECM, uint maxTotalCellCount, uint maxNodeInCell) {
+	allocPara.maxCellCount = maxTotalCellCount;
+	allocPara.maxNodeOfOneCell = maxNodeInCell;
+	allocPara.maxNodePerECM = maxNodeInECM;
+	allocPara.maxECMCount = maxTotalECMCount;
+	allocPara.maxProfileNodeCount = maxProfileNodeCount;
+	allocPara.maxCartNodeCount = maxCartNodeCount;
+	//std::cout << "break point 1" << std::endl;
+	allocPara.currentActiveProfileNodeCount = 0;
+	allocPara.currentActiveCartNodeCount = 0;
+	allocPara.BdryNodeCount = totalBdryNodeCount;
+	allocPara.currentActiveCellCount = 0;
+	allocPara.maxTotalECMNodeCount = allocPara.maxECMCount
+			* allocPara.maxNodePerECM;
+	allocPara.currentActiveECM = 0;
+	//std::cout << "break point 2" << std::endl;
+	// will need to change this value after we have more detail about ECM
+	allocPara.maxTotalCellNodeCount = maxTotalCellCount
+			* allocPara.maxNodeOfOneCell;
+
+	allocPara.startPosProfile = totalBdryNodeCount;
+	allocPara.startPosCart = allocPara.startPosProfile
+			+ allocPara.maxProfileNodeCount;
+	allocPara.startPosECM = allocPara.startPosCart + allocPara.maxCartNodeCount;
 	allocPara.startPosCells = allocPara.startPosECM
 			+ allocPara.maxTotalECMNodeCount;
 }

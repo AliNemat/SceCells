@@ -112,7 +112,7 @@ int main() {
 
 	SimulationInitData simuData2 = initHelper.initInputsV2(rawInput2);
 
-	simuDomain.initialize_V2(simuData2);
+	simuDomain.initialize(simuData2);
 
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
@@ -122,7 +122,7 @@ int main() {
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
-			simuDomain.outputVtkFilesWithColor_v3(animationInput, i, aniCri);
+			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
 		}
 		simuDomain.runAllLogic(SimulationTimeStep);
 	}

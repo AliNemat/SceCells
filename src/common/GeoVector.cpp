@@ -34,7 +34,7 @@ CVector CVector::getUnitVector(double tolerance) {
 				"Warning ! two points are too close when calculating unit "
 						"vector of a vector");
 	} else {
-		result = *this/ Modul(*this);
+		result = *this / Modul(*this);
 	}
 	return result;
 }
@@ -86,8 +86,8 @@ CVector Cross(const CVector& a, const CVector& b) {
 			a.x * b.y - a.y * b.x);
 }
 
-ostream& operator<<(ostream& os, const CVector& vec){
-	os<<"("<<vec.x<<","<<vec.y<<","<<vec.z<<")";
+ostream& operator<<(ostream& os, const CVector& vec) {
+	os << "(" << vec.x << "," << vec.y << "," << vec.z << ")";
 	return os;
 }
 
@@ -97,3 +97,15 @@ Cvector::Cvector(void) {
 Cvector::~Cvector(void) {
 }
 
+CVector stringToVector(std::string str) {
+	stringstream ss(str);
+	char specialChar;
+	ss >> specialChar;
+	assert(specialChar == '(');
+	double x, y, z;
+	ss >> x >> y >> z;
+	ss >> specialChar;
+	assert(specialChar == ')');
+	CVector result(x, y, z);
+	return result;
+}

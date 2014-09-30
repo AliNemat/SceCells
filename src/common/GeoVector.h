@@ -15,6 +15,9 @@
 #include <iostream>
 #include <fstream>
 #include <exception>
+#include <string>
+#include <sstream>
+#include <assert.h>
 
 using namespace std;
 
@@ -70,5 +73,7 @@ public:
 	Cvector(void);
 	~Cvector(void);
 };
+
+CVector stringToVector(std::string str);
 
 #endif /* GEOVECTOR_H_ */

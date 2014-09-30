@@ -3,6 +3,7 @@
 
 #include "SceNodes.h"
 #include "SceCells.h"
+#include "Cartilage.h"
 //#include "CellInitHelper.h"
 #include "commonData.h"
 
@@ -35,6 +36,11 @@ class SimulationDomainGPU {
 	 * Handles cell level logics like growth and division.
 	 */
 	SceCells cells;
+
+	/**
+	 * Cartilage is another important components in the model.
+	 */
+	Cartilage cartilage;
 
 	/**
 	 * Growth map that controls the growth for cells.
@@ -92,13 +98,6 @@ class SimulationDomainGPU {
 	void initializeGrowthMap();
 
 	/**
-	 * re-position the center positions.
-	 * @param totalIter total number of iterations to stabilize domain.
-	 * @param outputCount of how many frames will be generated (for quality assurance)
-	 */
-	void stabilize(uint totalIter, uint outputCount);
-
-	/**
 	 * Initializes data vectors by given vectors.
 	 * This function was written in the past and may not be very robust.
 	 */
@@ -115,6 +114,19 @@ class SimulationDomainGPU {
 			std::vector<double> &initMXCellNodePosX,
 			std::vector<double> &initMXCellNodePosY);
 
+	/**
+	 * Initializes data vectors by given vectors.
+	 * improved from the previous version.
+	 */
+	void initializeNodes(std::vector<SceNodeType> &cellTypes,
+			std::vector<uint> &numOfInitActiveNodesOfCells,
+			std::vector<CVector> &initBdryNodeVec,
+			std::vector<CVector> &initProfileNodeVec,
+			std::vector<CVector> &initCartNodeVec,
+			std::vector<CVector> &initECMNodeVec,
+			std::vector<CVector> &initFNMNodeVec,
+			std::vector<CVector> &initMXNodeVec);
+
 public:
 	/**
 	 * Default constructor.
@@ -127,7 +139,14 @@ public:
 	 * Assigns values to the data fields in simulation domain.
 	 * @param initData initial data set for simulation domain
 	 */
-	void initialize_V2(SimulationInitData &initData);
+	void initialize(SimulationInitData &initData);
+
+	/**
+	 * Domain initialization.
+	 * Assigns values to the data fields in simulation domain.
+	 * @param initData initial data set for simulation domain
+	 */
+	void initialize_v2(SimulationInitData_V2 &initData);
 
 	/**
 	 * This method is used for producing more or less evenly distributed cell center positions.
@@ -156,7 +175,7 @@ public:
 	 * @param rank frame sequence in the vtk animation series.
 	 * @param aniCri criteria for outputing animation.
 	 */
-	void outputVtkFilesWithColor_v3(std::string scriptNameBase, int rank,
+	void outputVtkFilesWithColor(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 };
 

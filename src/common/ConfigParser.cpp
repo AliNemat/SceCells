@@ -155,8 +155,8 @@ GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 
 std::string ConfigParser::removeTrailingSemicolon(const std::string& str) {
 	std::string trailingSignal = " ;";
-	const size_t strBegin = 0;
 
+	const size_t strBegin = 0;
 	const size_t strEnd = str.find_last_not_of(trailingSignal);
 	const size_t strRange = strEnd - strBegin + 1;
 
