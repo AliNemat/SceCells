@@ -655,19 +655,19 @@ void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+	<<<<<<< Updated upstream
+	<<<<<<< Updated upstream
 	grow2DTwoRegions(dt, region1, region2);
-=======
+	=======
 
 	// for wind disk project, switch from chemical based growth to random growth
 	//grow2DTwoRegions(dt, region1, region2);
 	growAtRandom(dt);
->>>>>>> Stashed changes
-=======
+	>>>>>>> Stashed changes
+	=======
 	growAtRandom(dt);
 	//grow2DTwoRegions(dt, region1, region2);
->>>>>>> Stashed changes
+	>>>>>>> Stashed changes
 	//std::cerr << "after grow cells" << std::endl;
 	distributeIsActiveInfo();
 	//std::cerr << "after distribute is active info." << std::endl;
@@ -1098,6 +1098,33 @@ void SceCells::readBioPara() {
 			"ElongateCoefficient").toDouble();
 	bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
 			"ChemoCoefficient").toDouble();
+}
+
+void SceCells::randomizeGrowth() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isRandGrowInited.begin(),
+							cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin())),
+							thrust::make_zip_iterator(
+											thrust::make_tuple(cellInfoVecs.isRandGrowInited.begin(),
+													cellInfoVecs.growthSpeed.begin(),
+													cellInfoVecs.growthXDir.begin(),
+													cellInfoVecs.growthYDir.begin()))
+					+ allocPara.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin())),
+			LoadChemDataToNode(region1.gridDimensionX, region1.gridDimensionY,
+					region1.gridSpacing, growthAuxData.growthFactorMagAddress,
+					growthAuxData.growthFactorDirXAddress,
+					growthAuxData.growthFactorDirYAddress,
+					region2.gridDimensionX, region2.gridDimensionY,
+					region2.gridSpacing, growthAuxData.growthFactorMagAddress2,
+					growthAuxData.growthFactorDirXAddress2,
+					growthAuxData.growthFactorDirYAddress2));
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {
