@@ -492,7 +492,7 @@ struct CompuDist: thrust::unary_function<CVec6Bool, double> {
 		double nodeYPos = thrust::get<5>(vec6b);
 		bool nodeIsActive = thrust::get<6>(vec6b);
 		if (nodeIsActive == false) {
-			// this is not true. but those nodes that are inactive will be omitted.
+			// All nodes that are inactive will be omitted.
 			// I choose 0 because 0 will not be either maximum or minimum
 			return 0;
 		} else {

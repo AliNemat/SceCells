@@ -1032,18 +1032,26 @@ void SceCells::copyFirstArrayToPreviousPos() {
 							nodes->getInfoVecs().nodeLocZ.begin()
 									+ allocPara.startPosCells)));
 
-	thrust::scatter(initCellCount, initCellCount + divAuxData.toBeDivideCount,
-			divAuxData.tmpCellRankHold1.begin(),
-			cellInfoVecs.activeNodeCountOfThisCell.begin());
-
-	thrust::scatter(initGrowthProgress,
-			initGrowthProgress + divAuxData.toBeDivideCount,
-			divAuxData.tmpCellRankHold1.begin(),
-			cellInfoVecs.growthProgress.begin());
-	thrust::scatter(initGrowthProgress,
-			initGrowthProgress + divAuxData.toBeDivideCount,
-			divAuxData.tmpCellRankHold1.begin(),
-			cellInfoVecs.lastCheckPoint.begin());
+	/**
+	 * after dividing, the cell should resume the initial
+	 * (1) node count, which defaults to be half size of max node count
+	 * (2) growth progress, which defaults to 0
+	 * (3) last check point, which defaults to 0
+	 */
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(initCellCount, initGrowthProgress,
+							initGrowthProgress)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(initCellCount, initGrowthProgress,
+							initGrowthProgress))
+					+ allocPara.currentActiveCellCount,
+			cellInfoVecs.isDivided.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.activeNodeCountOfThisCell.begin(),
+							cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin())), isTrue());
 
 	thrust::fill(
 			cellInfoVecs.activeNodeCountOfThisCell.begin()
