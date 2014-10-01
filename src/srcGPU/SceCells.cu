@@ -818,7 +818,10 @@ void SceCells::computeCenterPos() {
  */
 
 void SceCells::divide2DSimplified() {
-	decideIfGoingToDivide();
+	bool isDivisionPresent = decideIfGoingToDivide();
+	if (!isDivisionPresent) {
+		return;
+	}
 	copyCellsPreDivision();
 	sortNodesAccordingToDist();
 	copyLeftAndRightToSeperateArrays();
@@ -829,7 +832,7 @@ void SceCells::divide2DSimplified() {
 	markIsDivideFalse();
 }
 
-void SceCells::decideIfGoingToDivide() {
+bool SceCells::decideIfGoingToDivide() {
 // step 1
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -848,17 +851,23 @@ void SceCells::decideIfGoingToDivide() {
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara.maxNodeOfOneCell));
+	// sum all bool values which indicate whether the cell is going to divide.
+	// toBeDivideCount is the total number of cells going to divide.
+	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
+			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
+			(uint) (0));
+	if (divAuxData.toBeDivideCount > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 void SceCells::copyCellsPreDivision() {
 // step 2 : copy all cell rank and distance to its corresponding center with divide flag = 1
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
-// sum all bool values which indicate whether the cell is going to divide.
-// toBeDivideCount is the total number of cells going to divide.
-	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
-			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
-			(uint) (0));
+
 	divAuxData.nodeStorageCount = divAuxData.toBeDivideCount
 			* allocPara.maxNodeOfOneCell;
 	divAuxData.tmpIsActiveHold1 = thrust::device_vector<bool>(
@@ -1038,14 +1047,14 @@ void SceCells::copyFirstArrayToPreviousPos() {
 	 * (2) growth progress, which defaults to 0
 	 * (3) last check point, which defaults to 0
 	 */
-	thrust::copy_if(
+	thrust::scatter_if(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(initCellCount, initGrowthProgress,
 							initGrowthProgress)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(initCellCount, initGrowthProgress,
 							initGrowthProgress))
-					+ allocPara.currentActiveCellCount,
+					+ allocPara.currentActiveCellCount, countingBegin,
 			cellInfoVecs.isDivided.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1053,6 +1062,7 @@ void SceCells::copyFirstArrayToPreviousPos() {
 							cellInfoVecs.growthProgress.begin(),
 							cellInfoVecs.lastCheckPoint.begin())), isTrue());
 
+	// TODO: combine this one with the previous scatter_if to improve efficiency.
 	thrust::fill(
 			cellInfoVecs.activeNodeCountOfThisCell.begin()
 					+ allocPara.currentActiveCellCount,

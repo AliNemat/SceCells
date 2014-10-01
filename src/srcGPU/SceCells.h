@@ -1059,7 +1059,7 @@ class SceCells {
 	 * step 9. mark isDivide of all cells to false.
 	 */
 
-	void decideIfGoingToDivide();
+	bool decideIfGoingToDivide();
 
 	void copyCellsPreDivision();
 
