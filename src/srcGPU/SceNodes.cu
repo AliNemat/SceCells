@@ -820,7 +820,7 @@ void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
 	double forceValue = 0;
 	if (linkLength > sceInterPara[4]) {
-		forceValue = 0;
+		//forceValue = 0;
 	} else {
 		forceValue = -sceInterPara[0] / sceInterPara[2]
 				* exp(-linkLength / sceInterPara[2])

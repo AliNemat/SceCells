@@ -843,7 +843,9 @@ void SceCells::decideIfGoingToDivide() {
 							cellInfoVecs.growthProgress.begin(),
 							cellInfoVecs.activeNodeCountOfThisCell.begin()))
 					+ allocPara.currentActiveCellCount,
-			cellInfoVecs.isDivided.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isDivided.begin(),
+							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara.maxNodeOfOneCell));
 }
@@ -1098,13 +1100,13 @@ void SceCells::randomizeGrowth() {
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
 							countingBegin)),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
@@ -1112,7 +1114,8 @@ void SceCells::randomizeGrowth() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
 							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin())),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin())),
 			AssignRandIfNotInit(growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax));
 }

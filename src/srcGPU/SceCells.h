@@ -691,8 +691,8 @@ struct CompuPos: thrust::unary_function<Tuint2, uint> {
  * thrid input: growth progress. should be 0.0 to 1.0. \n
  * @return isGoingToDivide result that indicates whether a cell is ready to divide.
  */
-struct CompuIsDivide: thrust::unary_function<CVec3Int, bool> {
-	uint _isDivideCriticalRatio;
+struct CompuIsDivide: thrust::unary_function<CVec3Int, BoolD> {
+	double _isDivideCriticalRatio;
 	uint _maxNodePerCell;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
@@ -701,7 +701,7 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, bool> {
 					maxNodePerCell) {
 	}
 	__host__ __device__
-	uint operator()(const CVec3Int &vec) {
+	BoolD operator()(const CVec3Int &vec) {
 		double lengthDifference = thrust::get<0>(vec);
 		double expectedLength = thrust::get<1>(vec);
 		double currentLength = expectedLength - lengthDifference;
@@ -709,9 +709,9 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, bool> {
 		uint nodeCount = thrust::get<3>(vec);
 		if (currentLength / expectedLength > _isDivideCriticalRatio
 				&& growthProgress >= 1.0 && nodeCount == _maxNodePerCell) {
-			return true;
+			return thrust::make_tuple(true, 0.0);
 		} else {
-			return false;
+			return thrust::make_tuple(false, growthProgress);
 		}
 	}
 };
@@ -754,7 +754,8 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 	}
 };
 
-struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt, CVec3> {
+struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
+		CVec3Bool> {
 	double _lowerLimit, _upperLimit;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
@@ -762,8 +763,34 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt, CVec3> {
 			_lowerLimit(low), _upperLimit(high) {
 	}
 	__host__ __device__
-	CVec3 operator()(const CVec3BoolInt &inputInfo) {
-		return thrust::make_tuple(0.0, 0.0, 0.0);
+	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
+		//double currentSpeed = thrust::get<0>(inputInfo);
+		//double seed1 = thrust::get<0>(inputInfo) * 1.0e4;
+		double currentDirX = thrust::get<1>(inputInfo);
+		double currentDirY = thrust::get<2>(inputInfo);
+		bool isInitBefore = thrust::get<3>(inputInfo);
+		//uint seed = thrust::get<4>(inputInfo) + (int) (seed1) % 10000;
+		uint seed = thrust::get<4>(inputInfo);
+		thrust::default_random_engine rng;
+		thrust::uniform_real_distribution<double> dist(_lowerLimit,
+				_upperLimit);
+
+		if (isInitBefore) {
+			// only generate random speed
+			rng.discard(seed);
+			double randomNum = dist(rng);
+			return thrust::make_tuple(randomNum, currentDirX, currentDirY, true);
+		} else {
+			rng.discard(seed);
+			double randomNum1 = dist(rng);
+			double PI = acos(-1.0);
+			thrust::uniform_real_distribution<double> dist2(0, 2 * PI);
+			rng.discard(seed);
+			double randomNum2 = dist2(rng);
+			double xDir = cos(randomNum2);
+			double yDir = sin(randomNum2);
+			return thrust::make_tuple(randomNum1, xDir, yDir, true);
+		}
 	}
 };
 

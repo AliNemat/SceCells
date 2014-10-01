@@ -999,7 +999,7 @@ vector<CVector> CellInitHelper::generateCircleCentersInDisk2(double diskRadius,
 	const double PI = acos(-1.0);
 	int sideCount = (int) (diskRadius / circleRadius);
 	vector<CVector> result;
-	CVector startPoint(circleRadius * sideCount, 0, 0);
+	CVector startPoint(-circleRadius * sideCount, 0, 0);
 	int maxNum = 2 * sideCount + 1;
 	CVector topIncrease = CVector(circleRadius * sin(PI / 6.0),
 			circleRadius * cos(PI / 6.0), 0.0);

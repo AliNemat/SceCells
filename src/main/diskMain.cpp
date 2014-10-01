@@ -33,16 +33,6 @@ void generateStringInputs(std::string &loadMeshInput,
 			globalConfigVars.getConfigValue("AnimationFolder").toString();
 	animationInput = animationFolder
 			+ globalConfigVars.getConfigValue("AnimationName").toString();
-
-	std::string boundaryMeshLocation = globalConfigVars.getConfigValue(
-			"BoundaryMeshLocation").toString();
-	std::string boundaryMeshName = globalConfigVars.getConfigValue(
-			"BoundaryMeshName").toString();
-	std::string boundaryMeshExtention = globalConfigVars.getConfigValue(
-			"BoundaryMeshExtention").toString();
-	std::string boundaryMeshInput = boundaryMeshLocation + boundaryMeshName
-			+ boundaryMeshExtention;
-	boundaryMeshFileNames.push_back(boundaryMeshInput);
 }
 
 int main() {
