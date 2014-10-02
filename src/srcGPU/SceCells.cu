@@ -624,6 +624,8 @@ void SceCells::initGrowthAuxData() {
 			"RandomGrowthSpeedMin").toDouble();
 	growthAuxData.randomGrowthSpeedMax = globalConfigVars.getConfigValue(
 			"RandomGrowthSpeedMax").toDouble();
+	growthAuxData.randGenAuxPara = globalConfigVars.getConfigValue(
+			"RandomGenerationAuxPara").toDouble();
 }
 
 void SceCells::initialize(SceNodes* nodesInput) {
@@ -1135,7 +1137,9 @@ void SceCells::randomizeGrowth() {
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.isRandGrowInited.begin())),
 			AssignRandIfNotInit(growthAuxData.randomGrowthSpeedMin,
-					growthAuxData.randomGrowthSpeedMax));
+					growthAuxData.randomGrowthSpeedMax,
+					allocPara.currentActiveCellCount,
+					growthAuxData.randGenAuxPara));
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {

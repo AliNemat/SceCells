@@ -757,26 +757,29 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 		CVec3Bool> {
 	double _lowerLimit, _upperLimit;
+	uint _currentCellCount, _randAux;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
-	AssignRandIfNotInit(double low, double high) :
-			_lowerLimit(low), _upperLimit(high) {
+	AssignRandIfNotInit(double low, double high, uint currentCellCount,
+			uint randAux) :
+			_lowerLimit(low), _upperLimit(high), _currentCellCount(
+					currentCellCount), _randAux(randAux) {
 	}
 	__host__ __device__
 	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
 		//double currentSpeed = thrust::get<0>(inputInfo);
 		//double seed1 = thrust::get<0>(inputInfo) * 1.0e4;
+		uint preSeed = _currentCellCount / _randAux;
 		double currentDirX = thrust::get<1>(inputInfo);
 		double currentDirY = thrust::get<2>(inputInfo);
 		bool isInitBefore = thrust::get<3>(inputInfo);
 		//uint seed = thrust::get<4>(inputInfo) + (int) (seed1) % 10000;
-		uint seed = thrust::get<4>(inputInfo);
+		uint seed = thrust::get<4>(inputInfo) + preSeed;
 		thrust::default_random_engine rng;
 		thrust::uniform_real_distribution<double> dist(_lowerLimit,
 				_upperLimit);
 
 		if (isInitBefore) {
-			// only generate random speed
 			rng.discard(seed);
 			double randomNum = dist(rng);
 			return thrust::make_tuple(randomNum, currentDirX, currentDirY, true);
@@ -848,6 +851,8 @@ struct CellNodeInfoVecs {
 struct CellGrowthAuxData {
 	double randomGrowthSpeedMin;
 	double randomGrowthSpeedMax;
+	// we need help from this parameter to generate better quality pseduo-random numbers.
+	uint randGenAuxPara;
 
 	double* growthFactorMagAddress;
 	double* growthFactorDirXAddress;
