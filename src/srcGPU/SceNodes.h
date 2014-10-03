@@ -24,6 +24,7 @@
 #include "ConfigParser.h"
 #include <assert.h>
 #include "commonData.h"
+#include "ResAnalysisHelper.h"
 //#include "commonGPUData.h"
 #include <ctime>
 

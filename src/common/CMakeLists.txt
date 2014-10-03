@@ -17,4 +17,6 @@ add_library(SceUtils
       ConfigParser.cpp
       commonData.h
       commonData.cpp
+      ResAnalysisHelper.h
+      ResAnalysisHelper.cpp
 )
