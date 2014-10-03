@@ -17,6 +17,9 @@ std::string toString(SceExceptionType type) {
 	case ConfigValueException:
 		result = "Configuration value Exception";
 		break;
+	case OutputAnalysisDataException:
+		result = "Exception while outputing analysis result";
+		break;
 	}
 	return result;
 }
@@ -144,7 +147,7 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 		fs << "3" << endl;
 	}
 	fs << "POINT_DATA " << pointsAniData.size() << endl;
-	fs << "SCALARS point_scalars float" << endl;
+	fs << "SCALARS relative_compression float" << endl;
 	fs << "LOOKUP_TABLE default" << endl;
 
 	for (uint i = 0; i < pointsAniData.size(); i++) {

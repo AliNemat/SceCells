@@ -21,6 +21,7 @@ struct PixelizePara {
 	double xMin, xMax;
 	double yMin, yMax;
 	double effectiveRange;
+	double allowedAbsoluteError;
 };
 
 struct NodeWithLabel {
@@ -34,18 +35,24 @@ struct LabelWithDist {
 };
 
 class ResAnalysisHelper {
+	PixelizePara _pixelPara;
+	double _pixelSpacing;
+	/**
+	 * This variable is used for
+	 */
+	uint _integerRadius;
 public:
-	ResAnalysisHelper();
-	static CVector obtainCenterLoc(Index2D index2D);
-	static std::vector<Index2D> obtainNeighborPixels(CVector &pos,
-			PixelizePara& paras);
-	static void updateRawMatrix(
+	ResAnalysisHelper(PixelizePara &pixelPara);
+	CVector obtainCenterLoc(Index2D index2D);
+	Index2D obtainIndex2D(CVector pos);
+	std::vector<Index2D> obtainNeighborPixels(NodeWithLabel &nodeLabel);
+	void updateRawMatrix(
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix,
 			std::vector<Index2D> &indicies2D, CVector &pos);
-	static void updateLabelMatrix(std::vector<std::vector<uint> > &resultMatrix,
+	void updateLabelMatrix(std::vector<std::vector<uint> > &resultMatrix,
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix);
-	static std::vector<std::vector<uint> > outputLabelMatrix(
-			std::vector<NodeWithLabel> &nodeLabels, PixelizePara &paras);
+	std::vector<std::vector<uint> > outputLabelMatrix(
+			std::vector<NodeWithLabel> &nodeLabels);
 	virtual ~ResAnalysisHelper();
 };
 

@@ -19,7 +19,11 @@ typedef unsigned int uint;
 typedef std::map<uint, uint> IndexMap;
 
 enum SceExceptionType {
-	BaseException, InputInitException, ConfigFileNotFound, ConfigValueException
+	BaseException,
+	InputInitException,
+	ConfigFileNotFound,
+	ConfigValueException,
+	OutputAnalysisDataException
 };
 
 std::string toString(SceExceptionType type);

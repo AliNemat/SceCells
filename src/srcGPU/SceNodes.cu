@@ -641,8 +641,8 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	uint profileStartIndex = allocPara.startPosProfile;
 	uint profileEndIndex = profileStartIndex
 			+ allocPara.currentActiveProfileNodeCount;
-	cout << "start index is : " << profileStartIndex << endl;
-	cout << "end index is : " << profileEndIndex << endl;
+	//cout << "start index is : " << profileStartIndex << endl;
+	//cout << "end index is : " << profileEndIndex << endl;
 	for (uint i = profileStartIndex; i < profileEndIndex; i++) {
 		PointAniData ptAniData;
 		ptAniData.pos = CVector(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
