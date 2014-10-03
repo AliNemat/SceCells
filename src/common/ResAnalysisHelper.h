@@ -43,12 +43,13 @@ class ResAnalysisHelper {
 	uint _integerRadius;
 public:
 	ResAnalysisHelper(PixelizePara &pixelPara);
-	CVector obtainCenterLoc(Index2D index2D);
-	Index2D obtainIndex2D(CVector pos);
+	double computeDist(NodeWithLabel& nodeLabel, Index2D &index2D);
+	CVector obtainCenterLoc(Index2D &index2D);
+	Index2D obtainIndex2D(CVector &pos);
 	std::vector<Index2D> obtainNeighborPixels(NodeWithLabel &nodeLabel);
 	void updateRawMatrix(
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix,
-			std::vector<Index2D> &indicies2D, CVector &pos);
+			NodeWithLabel &nodeLabel);
 	void updateLabelMatrix(std::vector<std::vector<uint> > &resultMatrix,
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix);
 	std::vector<std::vector<uint> > outputLabelMatrix(
