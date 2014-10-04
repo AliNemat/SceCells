@@ -7,9 +7,9 @@
 
 #include "ResAnalysisHelper.h"
 
-std::vector<std::vector<uint> > ResAnalysisHelper::outputLabelMatrix(
+std::vector<std::vector<int> > ResAnalysisHelper::outputLabelMatrix(
 		std::vector<NodeWithLabel>& nodeLabels) {
-	std::vector<std::vector<uint> > result;
+	std::vector<std::vector<int> > result;
 	std::vector<std::vector<std::vector<LabelWithDist> > > matrixRawData;
 	result.resize(_pixelPara.pixelYDim);
 	matrixRawData.resize(_pixelPara.pixelYDim);
@@ -17,9 +17,15 @@ std::vector<std::vector<uint> > ResAnalysisHelper::outputLabelMatrix(
 		result[i].resize(_pixelPara.pixelXDim, -1);
 		matrixRawData[i].resize(_pixelPara.pixelXDim);
 	}
+
+	//cout << "bb in outputLabelMatrix" << endl;
+	//cout.flush();
+
 	for (uint i = 0; i < nodeLabels.size(); i++) {
-		std::vector<Index2D> neighborPixels = obtainNeighborPixels(
-				nodeLabels[i]);
+		//std::vector<Index2D> neighborPixels = obtainNeighborPixels(
+		//		nodeLabels[i]);
+		//cout << "bb " << i << "in outputLabelMatrix" << endl;
+		//cout.flush();
 		updateRawMatrix(matrixRawData, nodeLabels[i]);
 	}
 	updateLabelMatrix(result, matrixRawData);
@@ -53,9 +59,18 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 			tmpIndex.indexY = j;
 			CVector tmpPos = obtainCenterLoc(tmpIndex);
 			CVector tmpDistVec = nodeLabel.position - tmpPos;
+			//cout << "node pos: ";
+			//nodeLabel.position.Print();
+			//cout << "tmp node pos: ";
+			//tmpPos.Print();
 			double dist = tmpDistVec.getModul();
-			if (dist < _pixelPara.effectiveRange) {
+			//cout << "distance =  " << dist << endl;
+			if (dist
+					< _pixelPara.effectiveRange
+							+ _pixelPara.allowedAbsoluteError) {
 				result.push_back(tmpIndex);
+				cout << "pixel X: " << tmpIndex.indexX << "pixel Y:"
+						<< tmpIndex.indexY << endl;
 			}
 		}
 	}
@@ -65,18 +80,24 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 void ResAnalysisHelper::updateRawMatrix(
 		std::vector<std::vector<std::vector<LabelWithDist> > >& rawMatrix,
 		NodeWithLabel& nodeLabel) {
+	//cout << "bb 0 in updateRawMatrix" << endl;
+	//cout.flush();
 	std::vector<Index2D> indicies2D = obtainNeighborPixels(nodeLabel);
+	//cout << "bb 1 in updateRawMatrix" << endl;
+	//cout.flush();
 	for (uint i = 0; i < indicies2D.size(); i++) {
+		//cout << "bbb" << i << " in updateRawMatrix" << endl;
+		//cout.flush();
 		LabelWithDist labelDist;
 		labelDist.dist = computeDist(nodeLabel, indicies2D[i]);
 		labelDist.label = nodeLabel.cellRank;
-		rawMatrix[indicies2D[i].indexX][indicies2D[i].indexY].push_back(
+		rawMatrix[indicies2D[i].indexY][indicies2D[i].indexX].push_back(
 				labelDist);
 	}
 }
 
 void ResAnalysisHelper::updateLabelMatrix(
-		std::vector<std::vector<uint> >& resultMatrix,
+		std::vector<std::vector<int> >& resultMatrix,
 		std::vector<std::vector<std::vector<LabelWithDist> > >& rawMatrix) {
 	for (uint i = 0; i < rawMatrix.size(); i++) {
 		for (uint j = 0; j < rawMatrix[i].size(); j++) {
@@ -97,20 +118,6 @@ void ResAnalysisHelper::updateLabelMatrix(
 	}
 }
 
-ResAnalysisHelper::ResAnalysisHelper(PixelizePara& pixelPara) {
-	_pixelPara = pixelPara;
-	double pixelSpacingX = (_pixelPara.xMax - _pixelPara.xMin)
-			/ _pixelPara.pixelXDim;
-	double pixelSpacingY = (_pixelPara.yMax - _pixelPara.yMin)
-			/ _pixelPara.pixelYDim;
-	if (fabs(pixelSpacingX - pixelSpacingY) > _pixelPara.allowedAbsoluteError) {
-		throw SceException("domain size and pixel size does not fit",
-				OutputAnalysisDataException);
-	}
-	_pixelSpacing = pixelSpacingX;
-	_integerRadius = _pixelPara.effectiveRange / _pixelSpacing + 1;
-}
-
 Index2D ResAnalysisHelper::obtainIndex2D(CVector &pos) {
 	Index2D result;
 	double xFromMin = pos.GetX() - _pixelPara.xMin;
@@ -129,7 +136,50 @@ double ResAnalysisHelper::computeDist(NodeWithLabel& nodeLabel,
 	return tmpDist.getModul();
 }
 
+ResAnalysisHelper::ResAnalysisHelper() {
+	_pixelPara.initFromConfigFile();
+	double pixelSpacingX = (_pixelPara.xMax - _pixelPara.xMin)
+			/ _pixelPara.pixelXDim;
+	double pixelSpacingY = (_pixelPara.yMax - _pixelPara.yMin)
+			/ _pixelPara.pixelYDim;
+	if (fabs(pixelSpacingX - pixelSpacingY) > _pixelPara.allowedAbsoluteError) {
+		throw SceException("domain size and pixel size does not fit",
+				OutputAnalysisDataException);
+	}
+	_pixelSpacing = pixelSpacingX;
+	_integerRadius = _pixelPara.effectiveRange / _pixelSpacing + 1;
+}
+
+void ResAnalysisHelper::setPixelPara(PixelizePara& pixelPara) {
+	_pixelPara = pixelPara;
+	double pixelSpacingX = (_pixelPara.xMax - _pixelPara.xMin)
+			/ _pixelPara.pixelXDim;
+	double pixelSpacingY = (_pixelPara.yMax - _pixelPara.yMin)
+			/ _pixelPara.pixelYDim;
+	if (fabs(pixelSpacingX - pixelSpacingY) > _pixelPara.allowedAbsoluteError) {
+		throw SceException("domain size and pixel size does not fit",
+				OutputAnalysisDataException);
+	}
+	_pixelSpacing = pixelSpacingX;
+	_integerRadius = _pixelPara.effectiveRange / _pixelSpacing + 1;
+}
+
 ResAnalysisHelper::~ResAnalysisHelper() {
 // TODO Auto-generated destructor stub
 }
 
+void PixelizePara::initFromConfigFile() {
+	pixelXDim = globalConfigVars.getConfigValue("Pixel_Para_X_DIM").toInt();
+	pixelYDim = globalConfigVars.getConfigValue("Pixel_Para_Y_DIM").toInt();
+
+	xMin = globalConfigVars.getConfigValue("Pixel_Para_X_MIN").toDouble();
+	xMax = globalConfigVars.getConfigValue("Pixel_Para_X_MAX").toDouble();
+
+	yMin = globalConfigVars.getConfigValue("Pixel_Para_Y_MIN").toDouble();
+	yMax = globalConfigVars.getConfigValue("Pixel_Para_Y_MAX").toDouble();
+
+	effectiveRange = globalConfigVars.getConfigValue(
+			"Pixel_Para_Effective_Range").toDouble();
+	allowedAbsoluteError = globalConfigVars.getConfigValue(
+			"Pixel_Para_Allowed_Error").toDouble();
+}
