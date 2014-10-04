@@ -49,7 +49,7 @@ TEST_F(ResAnalysisUtilTest, singleTest) {
 			double xCoord = j * 0.25 + 1.0 + 0.125;
 			double xDiff = xCoord - nodeLabel.position.GetX();
 			double yDiff = yCoord - nodeLabel.position.GetY();
-			if (sqrt(xDiff * xDiff + yDiff * yDiff) < 0.5) {
+			if (sqrt(xDiff * xDiff + yDiff * yDiff) < 0.1) {
 				EXPECT_EQ(2, result[i][j]);
 			} else {
 				EXPECT_EQ(-1, result[i][j]);
@@ -86,15 +86,26 @@ TEST_F(ResAnalysisUtilTest, realTest) {
 			double dist1 = sqrt(xDiff1 * xDiff1 + yDiff1 * yDiff1);
 			double dist2 = sqrt(xDiff2 * xDiff2 + yDiff2 * yDiff2);
 
-			if (dist1 <= 0.5 || dist2 <= 0.5) {
-				//cout << "expected i = " << i << ", j = " << j << endl;
-				if (dist1 < dist2) {
-					EXPECT_EQ(2, result[i][j]);
-				} else if (dist1 > dist2) {
+			if (dist1 > 0.5) {
+				if (dist2 > 0.1) {
+					EXPECT_EQ(-1, result[i][j]);
+				} else {
 					EXPECT_EQ(7, result[i][j]);
 				}
 			} else {
-				EXPECT_EQ(-1, result[i][j]);
+				if (dist2 > 0.5) {
+					if (dist1 < 0.1) {
+						EXPECT_EQ(2, result[i][j]);
+					} else {
+						EXPECT_EQ(-1, result[i][j]);
+					}
+				} else {
+					if (dist1 < dist2) {
+						EXPECT_EQ(2, result[i][j]);
+					} else if (dist1 > dist2) {
+						EXPECT_EQ(7, result[i][j]);
+					}
+				}
 			}
 		}
 	}

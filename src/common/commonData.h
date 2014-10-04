@@ -23,6 +23,7 @@ enum SceExceptionType {
 	InputInitException,
 	ConfigFileNotFound,
 	ConfigValueException,
+	FileIOException,
 	OutputAnalysisDataException
 };
 
@@ -308,4 +309,18 @@ struct VtkAnimationData {
 	void outputVtkAni(std::string scriptNameBase, int rank);
 };
 
+template<class T>
+void printMatrixToFile(vector<vector<T> >& matrix, std::string &fileName) {
+	ofstream ofs(fileName.c_str());
+	if (ofs.fail()) {
+		throw SceException("unable to open file for writing", FileIOException);
+	}
+	for (uint i = 0; i < matrix.size(); i++) {
+		for (uint j = 0; j < matrix[i].size(); j++) {
+			ofs << matrix[i][j] << " ";
+		}
+		ofs << std::endl;
+	}
+	ofs.close();
+}
 #endif /* COMMONDATA_H_ */

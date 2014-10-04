@@ -538,3 +538,12 @@ void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 //cin >> jj;
 }
 
+void SimulationDomainGPU::outputLabelMatrix(std::string resultNameBase,
+		int rank, PixelizePara& pixelPara) {
+	std::stringstream ss;
+	ss << std::setw(5) << std::setfill('0') << rank;
+	std::string resultNameRank = ss.str();
+	std::string matrixFileName = resultNameBase + resultNameRank + ".dat";
+	vector<vector<int> > matrix = nodes.obtainLabelMatrix(pixelPara);
+	printMatrixToFile(matrix, matrixFileName);
+}

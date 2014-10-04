@@ -600,6 +600,11 @@ public:
 	 */
 	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
 
+	/**
+	 * method that outputs label matrix.
+	 */
+	std::vector<std::vector<int> > obtainLabelMatrix(PixelizePara &pixelPara);
+
 	const SceDomainPara&getDomainPara() const;
 	void setDomainPara(const SceDomainPara& domainPara);
 

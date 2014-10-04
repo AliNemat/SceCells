@@ -67,6 +67,13 @@ int main() {
 			"IntraLinkDisplayRange").toDouble();
 	aniCri.isStressMap = true;
 
+	std::string dataFolder =
+			globalConfigVars.getConfigValue("DataFolder").toString();
+	std::string dataName = dataFolder
+			+ globalConfigVars.getConfigValue("DataName").toString();
+	PixelizePara pixelPara;
+	pixelPara.initFromConfigFile();
+
 	CellInitHelper initHelper;
 
 	SimulationDomainGPU simuDomain;
@@ -78,8 +85,12 @@ int main() {
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
+			cout << "started to output Animation" << endl;
 			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
 			cout << "finished output Animation" << endl;
+			cout << "started writing label matrix" << endl;
+			simuDomain.outputLabelMatrix(dataName, i, pixelPara);
+			cout << "finished writing label matrix" << endl;
 		}
 		simuDomain.runAllLogic(dt);
 	}

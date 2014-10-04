@@ -1230,6 +1230,38 @@ NodeInfoVecs& SceNodes::getInfoVecs() {
 	return infoVecs;
 }
 
+std::vector<std::vector<int> > SceNodes::obtainLabelMatrix(
+		PixelizePara& pixelPara) {
+	std::vector<std::vector<int> > result;
+	std::vector<NodeWithLabel> nodeLabels;
+	ResAnalysisHelper resHelper;
+	resHelper.setPixelPara(pixelPara);
+
+	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
+	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
+	thrust::host_vector<double> hostTmpVectorLocZ = infoVecs.nodeLocZ;
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
+			infoVecs.nodeCellType;
+	thrust::host_vector<uint> hostTmpVectorNodeRank = infoVecs.nodeCellRank;
+	thrust::host_vector<uint> hostTmpVectorIsActive = infoVecs.nodeIsActive;
+
+	uint startIndex = allocPara.startPosCells;
+	uint endIndex = startIndex
+			+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
+	for (uint i = startIndex; i < endIndex; i++) {
+		if (hostTmpVectorIsActive[i] == true) {
+			NodeWithLabel nodeLabel;
+			nodeLabel.cellRank = hostTmpVectorNodeRank[i];
+			nodeLabel.position = CVector(hostTmpVectorLocX[i],
+					hostTmpVectorLocY[i], hostTmpVectorLocZ[i]);
+			nodeLabels.push_back(nodeLabel);
+		}
+	}
+
+	result = resHelper.outputLabelMatrix(nodeLabels);
+	return result;
+}
+
 void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {
 	this->infoVecs = infoVecs;
 }

@@ -69,8 +69,8 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 					< _pixelPara.effectiveRange
 							+ _pixelPara.allowedAbsoluteError) {
 				result.push_back(tmpIndex);
-				cout << "pixel X: " << tmpIndex.indexX << "pixel Y:"
-						<< tmpIndex.indexY << endl;
+				//cout << "pixel X: " << tmpIndex.indexX << "pixel Y:"
+				//		<< tmpIndex.indexY << endl;
 			}
 		}
 	}
@@ -106,13 +106,31 @@ void ResAnalysisHelper::updateLabelMatrix(
 			} else {
 				double minDist = rawMatrix[i][j][0].dist;
 				uint label = rawMatrix[i][j][0].label;
+
+				uint originalLabel = label;
+				bool allSameLabel = true;
+
 				for (uint k = 1; k < rawMatrix[i][j].size(); k++) {
+
+					if (rawMatrix[i][j][k].label != originalLabel) {
+						allSameLabel = false;
+					}
+
 					if (rawMatrix[i][j][k].dist < minDist) {
 						minDist = rawMatrix[i][j][k].dist;
 						label = rawMatrix[i][j][k].label;
+
 					}
 				}
-				resultMatrix[i][j] = label;
+				if (!allSameLabel) {
+					resultMatrix[i][j] = label;
+				} else {
+					if (minDist < _pixelPara.effectiveRange_single) {
+						resultMatrix[i][j] = label;
+					} else {
+						resultMatrix[i][j] = -1;
+					}
+				}
 			}
 		}
 	}
@@ -180,6 +198,10 @@ void PixelizePara::initFromConfigFile() {
 
 	effectiveRange = globalConfigVars.getConfigValue(
 			"Pixel_Para_Effective_Range").toDouble();
+
+	effectiveRange_single = globalConfigVars.getConfigValue(
+			"Pixel_Para_Effective_Range_Single").toDouble();
+
 	allowedAbsoluteError = globalConfigVars.getConfigValue(
 			"Pixel_Para_Allowed_Error").toDouble();
 }

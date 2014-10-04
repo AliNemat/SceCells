@@ -177,6 +177,15 @@ public:
 	 */
 	void outputVtkFilesWithColor(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
+
+	/**
+	 * Method that animates the domain to VTK format.
+	 * @param resultNameBase name of the labelMatrix series.
+	 * @param rank frame sequence in the labelMatrix series.
+	 * @param pixelPara criteria for labelMatrix generation.
+	 */
+	void outputLabelMatrix(std::string resultNameBase, int rank,
+			PixelizePara &pixelPara);
 };
 
 #endif

@@ -18,8 +18,10 @@ std::string toString(SceExceptionType type) {
 		result = "Configuration value Exception";
 		break;
 	case OutputAnalysisDataException:
-		result = "Exception while outputing analysis result";
+		result = "Exception while outputting analysis result";
 		break;
+	case FileIOException:
+		result = "Exception while file IO";
 	}
 	return result;
 }
@@ -180,3 +182,4 @@ std::vector<double> getArrayZComp(std::vector<CVector>& nodePosVec) {
 	}
 	return result;
 }
+

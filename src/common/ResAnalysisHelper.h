@@ -24,6 +24,7 @@ struct PixelizePara {
 	double xMin, xMax;
 	double yMin, yMax;
 	double effectiveRange;
+	double effectiveRange_single;
 	double allowedAbsoluteError;
 	void initFromConfigFile();
 };
