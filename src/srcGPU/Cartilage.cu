@@ -30,11 +30,51 @@ void Cartilage::calculateGrowthDir() {
 }
 
 void Cartilage::calculateTotalTorque() {
-	cartPara.totalTorque = 0;
+	thrust::plus<double> plusOp;
+	uint indexBegin = nodes->getAllocPara().startPosCart;
+	uint indexEnd = indexBegin + cartPara.nodeIndexEnd;
+	cartPara.totalTorque = thrust::inner_product(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin()))
+					+ indexBegin,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin()))
+					+ indexEnd,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())), 0.0,
+			plusOp,
+			TorqueCompute(cartPara.fixedPt.x, cartPara.fixedPt.y,
+					cartPara.growthDir.x, cartPara.growthDir.y));
 }
 
 void Cartilage::move(double dt) {
+	uint indexBegin = nodes->getAllocPara().startPosCart;
+	uint indexEnd = indexBegin + cartPara.nodeIndexEnd;
 	cartPara.angularSpeed = cartPara.totalTorque / cartPara.moInertia;
+	// angle is counter-clock wise.
+	double angle = cartPara.angularSpeed * dt;
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin()))
+					+ indexBegin,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin()))
+					+ indexEnd,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin()))
+					+ indexBegin,
+			Rotation2D(cartPara.fixedPt.x, cartPara.fixedPt.y, angle));
+
 }
 
 Cartilage::Cartilage() {
@@ -47,7 +87,7 @@ void Cartilage::initializeMem(SceNodes* nodeInput) {
 
 void Cartilage::addPoint1(CVector &nodeBehindPos) {
 	CVector node1GrowthDir = cartPara.growNode1 - nodeBehindPos;
-	// get unit vector
+// get unit vector
 	node1GrowthDir = node1GrowthDir.getModul();
 	CVector incrementVec = node1GrowthDir * cartPara.growthThreshold;
 	CVector posNew = nodeBehindPos + incrementVec;
@@ -61,7 +101,7 @@ void Cartilage::addPoint1(CVector &nodeBehindPos) {
 
 void Cartilage::addPoint2(CVector &nodeBehindPos) {
 	CVector node2GrowthDir = cartPara.growNode2 - nodeBehindPos;
-	// get unit vector
+// get unit vector
 	node2GrowthDir = node2GrowthDir.getModul();
 	CVector incrementVec = node2GrowthDir * cartPara.growthThreshold;
 	CVector posNew = nodeBehindPos + incrementVec;

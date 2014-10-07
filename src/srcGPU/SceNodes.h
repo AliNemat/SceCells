@@ -12,6 +12,7 @@
 #include <thrust/binary_search.h>
 #include <thrust/tuple.h>
 #include <thrust/random.h>
+#include <thrust/inner_product.h>
 
 #include <thrust/gather.h>
 #include <thrust/scan.h>
@@ -57,6 +58,7 @@
  */
 
 typedef thrust::tuple<double, double> CVec2;
+typedef thrust::tuple<double, double, bool> CVec2Bool;
 typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
