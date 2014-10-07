@@ -24,7 +24,9 @@ enum SceExceptionType {
 	ConfigFileNotFound,
 	ConfigValueException,
 	FileIOException,
-	OutputAnalysisDataException
+	OutputAnalysisDataException,
+	MemoryInvalidAccess,
+	InvalidInput
 };
 
 std::string toString(SceExceptionType type);
@@ -195,9 +197,84 @@ struct NodeAllocPara {
 };
 
 /**
+ * contains raw information in order to initialize cartilage.
+ */
+struct CartilageRawData {
+	uint pivotNode1Index;
+	uint pivotNode2Index;
+
+	uint growNodeBehind1Index;
+	uint growNodeBehind2Index;
+
+	// these two indices are in tip.
+	uint growNode1Index_on_tip;
+	uint growNode2Index_on_tip;
+
+	std::vector<CVector> nonTipVerticies;
+	std::vector<CVector> tipVerticies;
+};
+
+/**
+ * parameters for cartilage.
+ */
+class CartPara {
+public:
+	CVector fixedPt;
+	CVector growthDir;
+
+	CVector node1GrowthDir;
+	CVector node2GrowthDir;
+
+	CVector growNode1;
+	CVector growNode2;
+
+	uint pivotNode1Index;
+	uint pivotNode2Index;
+
+	uint growNode1Index;
+	uint growNode2Index;
+
+	uint growNodeBehind1Index;
+	uint growNodeBehind2Index;
+
+	/**
+	 * memory allocation related parameter.
+	 * number of spaces allocated for tip nodes.
+	 * The are designed to fit the first part of Cart nodes.
+	 */
+	uint tipNodeIndexTotal;
+
+	/**
+	 * memory allocation related parameter.
+	 * should be the same with the corresponding parameter in SceNodes.
+	 */
+	uint totalAvailableIndicies;
+
+	/**
+	 * this value changes with the cartilage grows.
+	 */
+	uint nodeIndexEnd;
+
+	double growthSpeedNode1;
+	double growthSpeedNode2;
+
+	/**
+	 * moment of intertia.
+	 */
+	double moInertia;
+	//uint activeCartilageNodeCount;
+
+	double totalTorque;
+	double angularSpeed;
+
+	double growthThreshold;
+};
+
+/**
  * Generated Raw data that needs reformatting in order to be used for domain initialization.
  */
 struct RawDataInput {
+	CartilageRawData cartilageData;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> profileNodes;
 	std::vector<CVector> FNMCellCenters;
@@ -212,6 +289,12 @@ struct RawDataInput {
  * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData {
+
+	std::vector<bool> cartilageNodeIsActive;
+	std::vector<double> cartilageNodePosX;
+	std::vector<double> cartilageNodePosY;
+	CartPara cartPara;
+
 	std::vector<SceNodeType> cellTypes;
 	std::vector<uint> numOfInitActiveNodesOfCells;
 	std::vector<double> initBdryCellNodePosX;
@@ -323,4 +406,6 @@ void printMatrixToFile(vector<vector<T> >& matrix, std::string &fileName) {
 	}
 	ofs.close();
 }
+
+uint findClosestArrIndexGivenPos(std::vector<CVector> &vecArr, CVector &pos);
 #endif /* COMMONDATA_H_ */

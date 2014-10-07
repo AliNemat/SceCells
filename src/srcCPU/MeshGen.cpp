@@ -365,11 +365,79 @@ std::vector<GEOMETRY::Point2D> MeshGen::obtainOrderedBdryPoints(
 					orderedPtOnLine.end() - 1);
 		}
 	}
+	return result;
+}
+
+CartilageRawData MeshGen::obtainCartilageData(UnstructMesh2D& mesh,
+		MeshInput& input) {
+	CartilageRawData result;
+	/**
+	 * this method is valid only for two-loop boundary.
+	 */
+	assert(input.bdryPts.size() == 2);
+	/**
+	 * this method is valid for four-point second boundary only.
+	 */
+	assert(input.bdryPts[1].size() == 4);
+	/**
+	 * again, this method is not robust enough. it assumes several
+	 */
+	assert(input.bdryPts[1][1].x < input.bdryPts[1][0].x);
+	assert(input.bdryPts[1][0].x < input.bdryPts[1][2].x);
+	assert(input.bdryPts[1][2].x < input.bdryPts[1][3].x);
+
+	CVector pt1_1 = input.bdryPts[1][3];
+	CVector pt1_2 = input.bdryPts[1][0];
+	std::vector<CVector> orderedPtOnLine1 = orderPointsOnLine_vec3(mesh, pt1_1,
+			pt1_2);
+	CVector pt2_1 = input.bdryPts[1][0];
+	CVector pt2_2 = input.bdryPts[1][1];
+	std::vector<CVector> orderedPtOnLine2 = orderPointsOnLine_vec3(mesh, pt2_1,
+			pt2_2);
+	CVector pt3_1 = input.bdryPts[1][1];
+	CVector pt3_2 = input.bdryPts[1][2];
+	std::vector<CVector> orderedPtOnLine3 = orderPointsOnLine_vec3(mesh, pt3_1,
+			pt3_2);
+
+	// the +1 and -1 index are intentional.
+	result.nonTipVerticies.insert(result.nonTipVerticies.end(),
+			orderedPtOnLine1.begin() + 1, orderedPtOnLine1.end() - 1);
+	// the -1 index is intentional.
+	result.nonTipVerticies.insert(result.nonTipVerticies.end(),
+			orderedPtOnLine2.begin(), orderedPtOnLine2.end() - 1);
+	// the -1 index is intentional.
+	result.nonTipVerticies.insert(result.nonTipVerticies.end(),
+			orderedPtOnLine3.begin(), orderedPtOnLine3.end() - 1);
+
+	CVector pt4_1 = input.bdryPts[1][2];
+	CVector pt4_2 = input.bdryPts[1][3];
+	std::vector<CVector> orderedPtOnLine4 = orderPointsOnLine_vec3(mesh, pt4_1,
+			pt4_2);
+
+	result.tipVerticies.insert(result.tipVerticies.end(),
+			orderedPtOnLine4.begin(), orderedPtOnLine4.end());
+
+	result.growNode1Index_on_tip = findClosestArrIndexGivenPos(
+			result.tipVerticies, pt4_1);
+	assert(result.growNode1Index_on_tip == 0);
+	result.growNode2Index_on_tip = findClosestArrIndexGivenPos(
+			result.tipVerticies, pt4_2);
+
+	result.growNodeBehind1Index = findClosestArrIndexGivenPos(
+			result.nonTipVerticies, pt4_1);
+	result.growNodeBehind2Index = findClosestArrIndexGivenPos(
+			result.nonTipVerticies, pt4_2);
+
+	// pt2_2 is the left node of side 2
+	result.pivotNode1Index = findClosestArrIndexGivenPos(result.nonTipVerticies,
+			pt2_2);
+	result.pivotNode2Index = findClosestArrIndexGivenPos(result.nonTipVerticies,
+			pt2_1);
 
 	return result;
 }
 
-std::vector<GEOMETRY::Point2D> MeshGen::orderPointsOnLine(UnstructMesh2D mesh,
+std::vector<GEOMETRY::Point2D> MeshGen::orderPointsOnLine(UnstructMesh2D &mesh,
 		CVector pt1, CVector pt2) {
 	//std::vector<GEOMETRY::Point2D> result;
 	std::vector<GEOMETRY::Point2D> bdryPts = mesh.getAllBdryPoints();
@@ -378,6 +446,16 @@ std::vector<GEOMETRY::Point2D> MeshGen::orderPointsOnLine(UnstructMesh2D mesh,
 	//CVector pos(pt1.GetX(), pt1.GetY(), 0);
 	sort(pointsOnLine.begin(), pointsOnLine.end(), DistToPtComp(pt1));
 	return pointsOnLine;
+}
+
+std::vector<CVector> MeshGen::orderPointsOnLine_vec3(UnstructMesh2D &mesh,
+		CVector pt1, CVector pt2) {
+	std::vector<CVector> result;
+	std::vector<GEOMETRY::Point2D> vec2 = orderPointsOnLine(mesh, pt1, pt2);
+	for (uint i = 0; i < vec2.size(); i++) {
+		result.push_back(CVector(vec2[i].getX(), vec2[i].getY(), 0));
+	}
+	return result;
 }
 
 std::vector<GEOMETRY::Point2D> MeshGen::getPointsOnLine(

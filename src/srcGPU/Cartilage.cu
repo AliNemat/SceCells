@@ -25,8 +25,8 @@ void Cartilage::calculateGrowthDir() {
 	CVector direction = midPoint - cartPara.fixedPt;
 	cartPara.growthDir = direction.getUnitVector();
 
-	cartPara.growthDirNode1 = cartPara.growthDir;
-	cartPara.growthDirNode2 = cartPara.growthDir;
+	cartPara.node1GrowthDir = cartPara.growthDir;
+	cartPara.node2GrowthDir = cartPara.growthDir;
 }
 
 void Cartilage::calculateTotalTorque() {
@@ -114,7 +114,7 @@ void Cartilage::addPoint2(CVector &nodeBehindPos) {
 }
 
 void Cartilage::grow1(double dt) {
-	CVector movementVec = cartPara.growthDirNode1 * cartPara.growthSpeedNode1;
+	CVector movementVec = cartPara.node1GrowthDir * cartPara.growthSpeedNode1;
 	uint node1GlobalIndex = cartPara.growNode1Index
 			+ nodes->getAllocPara().startPosCart;
 	nodes->getInfoVecs().nodeLocX[node1GlobalIndex] += movementVec.GetX();
@@ -123,7 +123,7 @@ void Cartilage::grow1(double dt) {
 }
 
 void Cartilage::grow2(double dt) {
-	CVector movementVec = cartPara.growthDirNode2 * cartPara.growthSpeedNode2;
+	CVector movementVec = cartPara.node2GrowthDir * cartPara.growthSpeedNode2;
 	uint node2GlobalIndex = cartPara.growNode2Index
 			+ nodes->getAllocPara().startPosCart;
 	nodes->getInfoVecs().nodeLocX[node2GlobalIndex] += movementVec.GetX();

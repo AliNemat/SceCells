@@ -705,6 +705,23 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	return rawData;
 }
 
+RawDataInput CellInitHelper::generateRawInput_V2(
+		std::vector<CVector>& cellCenterPoss) {
+	RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss);
+
+	GEOMETRY::MeshGen meshGen;
+	double genBdryRatio =
+			globalConfigVars.getConfigValue("GenBdrySpacingRatio").toDouble();
+	std::string bdryInputFileName = globalConfigVars.getConfigValue(
+			"Bdry_InputFileName").toString();
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
+			bdryInputFileName, genBdryRatio);
+	GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
+	baseRawInput.cartilageData = meshGen.obtainCartilageData(mesh, input);
+
+	return baseRawInput;
+}
+
 /**
  * Initialize inputs for five different components.
  */
@@ -722,7 +739,7 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
-	//uint initTotalECMCount = rawData.ECMCenters.size();
+//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryCellNodePosX.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initBdryCellNodePosY.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initProfileNodePosX.resize(rawData.profileNodes.size());
@@ -759,8 +776,8 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	cout << "size of profileNodes is " << rawData.profileNodes.size() << endl;
 	cout << "size of initBdryCellNodePos = "
 			<< initData.initProfileNodePosX.size() << endl;
-	//int jj;
-	//cin>>jj;
+//int jj;
+//cin>>jj;
 
 	for (uint i = 0; i < rawData.bdryNodes.size(); i++) {
 		initData.initBdryCellNodePosX[i] = rawData.bdryNodes[i].x;
@@ -810,7 +827,7 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 		}
 	}
 
-	//cout << "begin init mx pos:" << endl;
+//cout << "begin init mx pos:" << endl;
 
 	for (uint i = 0; i < MxCellCount; i++) {
 		for (uint j = 0; j < initTotalCellCount; j++) {
@@ -824,8 +841,8 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 		}
 	}
 	cout << "finished init inputs, press any key to continue" << endl;
-	//int jj;
-	//cin >> jj;
+//int jj;
+//cin >> jj;
 	return initData;
 }
 
@@ -1048,7 +1065,7 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
 			GEOMETRY::MeshGen::default_list_of_seeds, criteria);
 	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
-	//mesh.outputVtkFile("testVTK");
+//mesh.outputVtkFile("testVTK");
 
 	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 
@@ -1108,7 +1125,7 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 
 	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
 
-	//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
+//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
 	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
 
 	for (uint i = 0; i < bdryPoints.size(); i++) {
@@ -1116,7 +1133,7 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	}
 
-	//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
 
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
@@ -1127,7 +1144,7 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
 	}
 
-	//generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+//generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
 
 	return rawData;
@@ -1175,7 +1192,7 @@ void CellInitHelper::generateProfileNodesArray(
 	cout << "finished init start and end points" << endl;
 
 	initProfileNodes.clear();
-	//double delta = 1.0e-6;
+//double delta = 1.0e-6;
 	vector<CVector> dirVectors;
 	for (uint i = 0; i < endNodes.size(); i++) {
 		dirVectors.push_back(endNodes[i] - beginNodes[i]);
@@ -1274,7 +1291,7 @@ void CellInitHelper::generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 	double ECMInitNodeInterval = globalConfigVars.getConfigValue(
 			"ECM_Init_Node_Interval").toDouble();
 	int numOfSegments = initNodeCountPerECM - 1;
-	//double totalLength = ECMInitNodeInterval * numOfSegments;
+//double totalLength = ECMInitNodeInterval * numOfSegments;
 	if (numOfSegments % 2 == 0) {
 		CVector initPt = CVector(0, 0, 0);
 		initECMNodePoss.push_back(initPt);

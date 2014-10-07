@@ -456,6 +456,7 @@ public:
 	RawDataInput generateRawInput_stab(std::string meshInput);
 	RawDataInput generateRawInputWithProfile(
 			std::vector<CVector> &cellCenterPoss);
+	RawDataInput generateRawInput_V2(std::vector<CVector> &cellCenterPoss);
 	SimulationInitData generateDiskInput(std::string meshInput);
 
 	SimulationInitData initInputsV2(RawDataInput &rawData);

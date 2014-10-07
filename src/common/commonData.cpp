@@ -22,6 +22,13 @@ std::string toString(SceExceptionType type) {
 		break;
 	case FileIOException:
 		result = "Exception while file IO";
+		break;
+	case MemoryInvalidAccess:
+		result = "Exception while executing memory operation";
+		break;
+	case InvalidInput:
+		result = "Exception processing method input";
+		break;
 	}
 	return result;
 }
@@ -183,3 +190,23 @@ std::vector<double> getArrayZComp(std::vector<CVector>& nodePosVec) {
 	return result;
 }
 
+uint findClosestArrIndexGivenPos(std::vector<CVector>& vecArr, CVector& pos) {
+	if (vecArr.size() == 0) {
+		std::string errorMsg =
+				"while finding closest array index, the input array has zero elements";
+		throw SceException(errorMsg, InvalidInput);
+	} else {
+		uint index = 0;
+		CVector tmpVec = vecArr[0] - pos;
+		double minDis = tmpVec.getModul();
+		for (uint i = 1; i < vecArr.size(); i++) {
+			tmpVec = vecArr[i] - pos;
+			double dist = tmpVec.getModul();
+			if (dist < minDis) {
+				index = i;
+				minDis = dist;
+			}
+		}
+		return index;
+	}
+}

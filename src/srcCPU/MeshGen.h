@@ -70,7 +70,9 @@ class MeshGen {
 	double delta1, delta2;
 	MeshInput meshInput;
 	UnstructMesh2D generateMeshGivenInput(MeshInput input);
-	std::vector<GEOMETRY::Point2D> orderPointsOnLine(UnstructMesh2D mesh,
+	std::vector<GEOMETRY::Point2D> orderPointsOnLine(UnstructMesh2D &mesh,
+			CVector pt1, CVector pt2);
+	std::vector<CVector> orderPointsOnLine_vec3(UnstructMesh2D &mesh,
 			CVector pt1, CVector pt2);
 	std::vector<GEOMETRY::Point2D> getPointsOnLine(
 			std::vector<GEOMETRY::Point2D> bdryPts, CVector pt1, CVector pt2);
@@ -94,6 +96,14 @@ public:
 	 * Important to visualization purpose.
 	 */
 	std::vector<GEOMETRY::Point2D> obtainOrderedBdryPoints(UnstructMesh2D &mesh,
+			MeshInput &input);
+
+	/**
+	 * obtain cartilage raw data for initialization purpose.
+	 * this method is not robust enough to handle all scenarios and can
+	 * only deal with twoo-loop boundary condition.
+	 */
+	CartilageRawData obtainCartilageData(UnstructMesh2D &mesh,
 			MeshInput &input);
 
 	UnstructMesh2D generateMesh2DFromFile(std::string &fileName);

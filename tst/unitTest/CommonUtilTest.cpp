@@ -23,9 +23,9 @@ TEST_F(ResAnalysisUtilTest, emptyTest) {
 	ResAnalysisHelper resHelper;
 	vector<NodeWithLabel> nodeWithLabels;
 	vector<vector<int> > result = resHelper.outputLabelMatrix(nodeWithLabels);
-	EXPECT_EQ(result.size(), 100);
+	EXPECT_EQ(result.size(), (uint )100);
 	for (uint i = 0; i < 100; i++) {
-		EXPECT_EQ(result[i].size(), 200);
+		EXPECT_EQ(result[i].size(), (uint )200);
 		for (uint j = 0; j < 200; j++) {
 			EXPECT_EQ(result[i][j], -1);
 		}
@@ -41,9 +41,9 @@ TEST_F(ResAnalysisUtilTest, singleTest) {
 	nodeWithLabels.push_back(nodeLabel);
 
 	vector<vector<int> > result = resHelper.outputLabelMatrix(nodeWithLabels);
-	EXPECT_EQ(result.size(), 100);
+	EXPECT_EQ(result.size(), (uint )100);
 	for (uint i = 0; i < 100; i++) {
-		EXPECT_EQ(result[i].size(), 200);
+		EXPECT_EQ(result[i].size(), (uint )200);
 		for (uint j = 0; j < 200; j++) {
 			double yCoord = i * 0.25 + 5.0 + 0.125;
 			double xCoord = j * 0.25 + 1.0 + 0.125;
@@ -71,9 +71,9 @@ TEST_F(ResAnalysisUtilTest, realTest) {
 	nodeWithLabels.push_back(nodeLabel2);
 
 	vector<vector<int> > result = resHelper.outputLabelMatrix(nodeWithLabels);
-	EXPECT_EQ(result.size(), 100);
+	EXPECT_EQ(result.size(), (uint )100);
 	for (uint i = 0; i < 100; i++) {
-		EXPECT_EQ(result[i].size(), 200);
+		EXPECT_EQ(result[i].size(), (uint )200);
 		for (uint j = 0; j < 200; j++) {
 			double yCoord = i * 0.25 + 5.0 + 0.125;
 			double xCoord = j * 0.25 + 1.0 + 0.125;
