@@ -255,7 +255,7 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	 * setting the cartilage related parameters in the simulation domain.
 	 */
 	cartilage.setCartPara(cartPara);
-	//cartilage.initializeMem(&nodes);
+	cartilage.initializeMem(&nodes);
 	//cartilage.distributeIsActive();
 	//cartilage.initializeNodes(initCartNodeVec);
 

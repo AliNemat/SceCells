@@ -771,6 +771,14 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartPara.nonTipNodeStartPos = maxTipSize;
 	cartPara.nodeIndexEnd = cartPara.nonTipNodeStartPos
 			+ cartRawData.nonTipVerticies.size();
+	cartPara.pivotNode1Index = cartPara.nonTipNodeStartPos
+			+ cartRawData.pivotNode1Index;
+	cartPara.pivotNode2Index = cartPara.nonTipNodeStartPos
+			+ cartRawData.pivotNode2Index;
+	cartPara.growNodeBehind1Index = cartPara.nonTipNodeStartPos
+			+ cartRawData.growNodeBehind1Index;
+	cartPara.growNodeBehind2Index = cartPara.nonTipNodeStartPos
+			+ cartRawData.growNodeBehind2Index;
 
 	// step 4, calculate size for all nodes
 	double cartmaxExpRatio = globalConfigVars.getConfigValue(
@@ -790,6 +798,32 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 		initNodePos[i + cartPara.nonTipNodeStartPos] =
 				cartRawData.nonTipVerticies[i];
 	}
+
+	for (uint i = 0; i < initNodePos.size(); i++) {
+		initNodePos[i].Print();
+	}
+
+	std::cout << "In cart para, grow node 1 index = " << cartPara.growNode1Index
+			<< std::endl;
+	std::cout << "In cart para, grow node 2 index = " << cartPara.growNode2Index
+			<< std::endl;
+	std::cout << "In cart para, tip node index end = "
+			<< cartPara.tipNodeIndexEnd << std::endl;
+	std::cout << "In cart para, grow node 1 behind index = "
+			<< cartPara.growNodeBehind1Index << std::endl;
+	std::cout << "In cart para, grow node 2 behind index = "
+			<< cartPara.growNodeBehind2Index << std::endl;
+	std::cout << "In cart para, node index end = " << cartPara.nodeIndexEnd
+			<< std::endl;
+	std::cout << "In cart para, node index total = " << cartPara.nodeIndexTotal
+			<< std::endl;
+	std::cout << "In cart para, pivot node 1 index = "
+			<< cartPara.pivotNode1Index << std::endl;
+	std::cout << "In cart para, pivot node 2 index = "
+			<< cartPara.pivotNode2Index << std::endl;
+
+	int jj;
+	cin >> jj;
 }
 
 /**
