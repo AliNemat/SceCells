@@ -118,7 +118,8 @@ class SimulationDomainGPU {
 	 * Initializes data vectors by given vectors.
 	 * improved from the previous version.
 	 */
-	void initializeNodes(std::vector<SceNodeType> &cellTypes,
+	void initializeNodes(CartPara &cartPara,
+			std::vector<SceNodeType> &cellTypes,
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<CVector> &initBdryNodeVec,
 			std::vector<CVector> &initProfileNodeVec,

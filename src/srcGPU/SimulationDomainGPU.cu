@@ -215,7 +215,8 @@ void SimulationDomainGPU::initialCellsOfFiveTypes(
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
-void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
+void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
+		std::vector<SceNodeType>& cellTypes,
 		std::vector<uint>& numOfInitActiveNodesOfCells,
 		std::vector<CVector>& initBdryNodeVec,
 		std::vector<CVector>& initProfileNodeVec,
@@ -223,6 +224,7 @@ void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
 		std::vector<CVector>& initECMNodeVec,
 		std::vector<CVector>& initFNMNodeVec,
 		std::vector<CVector>& initMXNodeVec) {
+
 	/*
 	 * number of boundary nodes is always fixed.
 	 */
@@ -234,11 +236,12 @@ void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
 	 */
 	uint maxProfileNodeCount = initProfileNodeVec.size()
 			* memPara.FinalToInitProfileNodeCountRatio;
-	/*
-	 * similar to profile nodes.
+
+	/**
+	 * different from profile nodes, the cartilage nodes should already
+	 * have buffer before executing this method.
 	 */
-	uint maxCartNodeCount = initCartNodeVec.size()
-			* memPara.FinalToInitCartNodeCountRatio;
+	uint maxCartNodeCount = initCartNodeVec.size();
 
 	/*
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
@@ -248,11 +251,18 @@ void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
 			memPara.maxECMInDomain, memPara.maxNodePerECM,
 			memPara.maxCellInDomain, memPara.maxNodePerCell);
 
+	/**
+	 * setting the cartilage related parameters in the simulation domain.
+	 */
+	cartilage.setCartPara(cartPara);
+	cartilage.initializeMem(&nodes);
+	//cartilage.distributeIsActive();
+	//cartilage.initializeNodes(initCartNodeVec);
+
 	/*
 	 * first step: error checking.
 	 * we need to first check if inputs are valid
 	 */
-	cout << "begin init cells of five types" << endl;
 	// get max node per cell. should be defined previously.
 	uint maxNodePerCell = nodes.getAllocPara().maxNodeOfOneCell;
 	// get max node per ECM. Should be defined previously.
@@ -310,13 +320,10 @@ void SimulationDomainGPU::initializeNodes(std::vector<SceNodeType>& cellTypes,
 
 	assert(nodes.getAllocPara().startPosProfile == bdryNodeCount);
 
-	//uint totalSize = nodes.getInfoVecs().nodeLocX.size();
-
 	nodes.initValues_v2(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
 			initECMNodeVec, initFNMNodeVec, initMXNodeVec);
 
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
-
 }
 
 void SimulationDomainGPU::initialize(SimulationInitData &initData) {
@@ -333,10 +340,11 @@ void SimulationDomainGPU::initialize(SimulationInitData &initData) {
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
-	initializeNodes(initData.cellTypes, initData.numOfInitActiveNodesOfCells,
-			initData.initBdryNodeVec, initData.initProfileNodeVec,
-			initData.initCartNodeVec, initData.initECMNodeVec,
-			initData.initFNMNodeVec, initData.initMXNodeVec);
+	initializeNodes(initData.cartPara, initData.cellTypes,
+			initData.numOfInitActiveNodesOfCells, initData.initBdryNodeVec,
+			initData.initProfileNodeVec, initData.initCartNodeVec,
+			initData.initECMNodeVec, initData.initFNMNodeVec,
+			initData.initMXNodeVec);
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
 }
@@ -347,13 +355,8 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
 	nodes.calculateAndApplySceForces();
-	//cout << "finished node logic" << endl;
-
-	//checkIfAllDataFieldsValid();
-
 	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
-	//cout << "finished cell logic" << endl;
-
+	cartilage.runAllLogics(dt);
 }
 
 void SimulationDomainGPU::readMemPara() {
@@ -367,8 +370,8 @@ void SimulationDomainGPU::readMemPara() {
 			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
 			"FinalToInitProfileNodeCountRatio").toDouble();
-	memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
-			"FinalToInitCartNodeCountRatio").toDouble();
+	//memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
+	//		"FinalToInitCartNodeCountRatio").toDouble();
 }
 
 void SimulationDomainGPU::readDomainPara() {

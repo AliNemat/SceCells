@@ -83,11 +83,12 @@ Cartilage::Cartilage() {
 
 void Cartilage::initializeMem(SceNodes* nodeInput) {
 	nodes = nodeInput;
+	initIsActive();
 }
 
 void Cartilage::addPoint1(CVector &nodeBehindPos) {
 	CVector node1GrowthDir = cartPara.growNode1 - nodeBehindPos;
-// get unit vector
+	// get unit vector
 	node1GrowthDir = node1GrowthDir.getModul();
 	CVector incrementVec = node1GrowthDir * cartPara.growthThreshold;
 	CVector posNew = nodeBehindPos + incrementVec;
@@ -95,6 +96,7 @@ void Cartilage::addPoint1(CVector &nodeBehindPos) {
 	nodes->getInfoVecs().nodeLocX[indexNew] = posNew.GetX();
 	nodes->getInfoVecs().nodeLocY[indexNew] = posNew.GetY();
 	nodes->getInfoVecs().nodeLocZ[indexNew] = posNew.GetZ();
+	nodes->getInfoVecs().nodeIsActive[indexNew] = true;
 	cartPara.growNodeBehind1Index = cartPara.nodeIndexEnd;
 	cartPara.nodeIndexEnd++;
 }
@@ -109,6 +111,7 @@ void Cartilage::addPoint2(CVector &nodeBehindPos) {
 	nodes->getInfoVecs().nodeLocX[indexNew] = posNew.GetX();
 	nodes->getInfoVecs().nodeLocY[indexNew] = posNew.GetY();
 	nodes->getInfoVecs().nodeLocZ[indexNew] = posNew.GetZ();
+	nodes->getInfoVecs().nodeIsActive[indexNew] = true;
 	cartPara.growNodeBehind2Index = cartPara.nodeIndexEnd;
 	cartPara.nodeIndexEnd++;
 }
@@ -170,37 +173,56 @@ void Cartilage::runGrowthLogics2(double dt) {
 void Cartilage::runGrowthLogics(double dt) {
 	runGrowthLogics1(dt);
 	runGrowthLogics2(dt);
-	updateTipNodes();
+	updateTipNodes(dt);
 }
 
-void Cartilage::initializeNodes(std::vector<CVector>& initFixedNodes,
-		std::vector<CVector>& initTipNodes, CVector& initGrowingNode1,
-		CVector& initGrowingNode2, CVector& initPivotNode1,
-		CVector& initPivotNode2) {
+/*
+ void Cartilage::initializeVal(std::vector<CVector>& initialNodes,
+ CVector& tipNode1, CVector& tipNode2, CVector &pivotNode1,
+ CVector pivotNode2) {
+ uint pivotIndex1 = cartPara.pivotNode1Index
+ + nodes->getAllocPara().startPosCart;
+ CVector pivotNode1Pos = CVector(nodes->getInfoVecs().nodeLocX[pivotIndex1],
+ nodes->getInfoVecs().nodeLocY[pivotIndex1],
+ nodes->getInfoVecs().nodeLocZ[pivotIndex1]);
+
+ uint pivotIndex2 = cartPara.pivotNode2Index
+ + nodes->getAllocPara().startPosCart;
+ CVector pivotNode2Pos = CVector(nodes->getInfoVecs().nodeLocX[pivotIndex2],
+ nodes->getInfoVecs().nodeLocY[pivotIndex2],
+ nodes->getInfoVecs().nodeLocZ[pivotIndex2]);
+
+ cartPara.fixedPt = pivotNode1Pos + pivotNode2Pos;
+ cartPara.fixedPt = cartPara.fixedPt / 2;
+ }
+ */
+
+void Cartilage::updateTipNodes(double dt) {
+	for (uint i = cartPara.tipNodeStartPos; i < cartPara.tipNodeIndexEnd; i++) {
+		CVector movementVec = cartPara.node2GrowthDir
+				* cartPara.growthSpeedNode2;
+		uint globalIndex = i + nodes->getAllocPara().startPosCart;
+		nodes->getInfoVecs().nodeLocX[globalIndex] += movementVec.GetX();
+		nodes->getInfoVecs().nodeLocY[globalIndex] += movementVec.GetY();
+		nodes->getInfoVecs().nodeLocZ[globalIndex] += movementVec.GetZ();
+	}
 }
 
-void Cartilage::initializeVal(std::vector<CVector>& initialNodes,
-		CVector& tipNode1, CVector& tipNode2, CVector &pivotNode1,
-		CVector pivotNode2) {
-	uint pivotIndex1 = cartPara.pivotNode1Index
-			+ nodes->getAllocPara().startPosCart;
-	CVector pivotNode1Pos = CVector(nodes->getInfoVecs().nodeLocX[pivotIndex1],
-			nodes->getInfoVecs().nodeLocY[pivotIndex1],
-			nodes->getInfoVecs().nodeLocZ[pivotIndex1]);
-
-	uint pivotIndex2 = cartPara.pivotNode2Index
-			+ nodes->getAllocPara().startPosCart;
-	CVector pivotNode2Pos = CVector(nodes->getInfoVecs().nodeLocX[pivotIndex2],
-			nodes->getInfoVecs().nodeLocY[pivotIndex2],
-			nodes->getInfoVecs().nodeLocZ[pivotIndex2]);
-
-	cartPara.fixedPt = pivotNode1Pos + pivotNode2Pos;
-	cartPara.fixedPt = cartPara.fixedPt / 2;
+void Cartilage::initIsActive() {
+	for (uint i = 0; i < cartPara.nodeIndexEnd; i++) {
+		uint gloablIndex = i + nodes->getAllocPara().startPosCart;
+		bool isActive = false;
+		if (i < cartPara.tipNodeIndexEnd
+				|| (i >= cartPara.nonTipNodeStartPos
+						&& i < cartPara.nodeIndexEnd)) {
+			isActive = true;
+		}
+		nodes->getInfoVecs().nodeIsActive[gloablIndex] = isActive;
+	}
 }
 
-void Cartilage::updateTipNodes() {
-
-}
+//void Cartilage::initializeNodes(CartilageRawData& rawData) {
+//}
 
 void Cartilage::runAllLogics(double dt) {
 	calculateTotalTorque();

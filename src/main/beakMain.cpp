@@ -122,12 +122,53 @@ int main() {
 	std::string configFileName = "./resources/beak.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
+	/*
+
+	 double SimulationTotalTime = globalConfigVars.getConfigValue(
+	 "SimulationTotalTime").toDouble();
+	 double SimulationTimeStep = globalConfigVars.getConfigValue(
+	 "SimulationTimeStep").toDouble();
+	 int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+	 "TotalNumOfOutputFrames").toInt();
+
+	 std::string loadMeshInput;
+	 std::string animationInput;
+	 std::vector<std::string> boundaryMeshFileNames;
+	 std::string animationFolder;
+	 generateStringInputs(loadMeshInput, animationInput, animationFolder,
+	 boundaryMeshFileNames);
+
+	 const double simulationTime = SimulationTotalTime;
+	 const double dt = SimulationTimeStep;
+	 const int numOfTimeSteps = simulationTime / dt;
+	 const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
+	 const int outputAnimationAuxVarible = numOfTimeSteps
+	 / totalNumOfOutputFrame;
+
+	 AnimationCriteria aniCri;
+	 aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+	 "IntraLinkDisplayRange").toDouble();
+	 aniCri.isStressMap = true;
+
+	 CellInitHelper initHelper;
+
+	 SimulationDomainGPU simuDomain;
+	 SimulationInitData initData = initHelper.generateInput(loadMeshInput);
+	 simuDomain.initialize(initData);
+
+	 simuDomain.checkIfAllDataFieldsValid();
+
+	 for (int i = 0; i <= numOfTimeSteps; i++) {
+	 cout << "step number = " << i << endl;
+	 if (i % outputAnimationAuxVarible == 0) {
+	 //simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
+	 simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
+	 cout << "finished output Animation" << endl;
+	 }
+	 simuDomain.runAllLogic(dt);
+	 }
+
+	 */
 
 	std::string loadMeshInput;
 	std::string animationInput;
@@ -136,6 +177,13 @@ int main() {
 	generateStringInputs(loadMeshInput, animationInput, animationFolder,
 			boundaryMeshFileNames);
 
+	double SimulationTotalTime = globalConfigVars.getConfigValue(
+			"SimulationTotalTime").toDouble();
+	double SimulationTimeStep = globalConfigVars.getConfigValue(
+			"SimulationTimeStep").toDouble();
+	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
+			"TotalNumOfOutputFrames").toInt();
+
 	const double simulationTime = SimulationTotalTime;
 	const double dt = SimulationTimeStep;
 	const int numOfTimeSteps = simulationTime / dt;
@@ -143,27 +191,34 @@ int main() {
 	const int outputAnimationAuxVarible = numOfTimeSteps
 			/ totalNumOfOutputFrame;
 
+	CellInitHelper initHelper;
+
+	RawDataInput rawInput = initHelper.generateRawInput_stab(loadMeshInput);
+
+	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
+
+	SimulationDomainGPU simuDomain;
+
+	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
+			simuData);
+
+	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
+
+	SimulationInitData_V2 simuData2 = initHelper.initInputsV3(rawInput2);
+
+	simuDomain.initialize_v2(simuData2);
+
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = true;
-
-	CellInitHelper initHelper;
-
-	SimulationDomainGPU simuDomain;
-	SimulationInitData initData = initHelper.generateInput(loadMeshInput);
-	simuDomain.initialize(initData);
-
-	simuDomain.checkIfAllDataFieldsValid();
+	aniCri.isStressMap = false;
 
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
-			//simuDomain.outputVtkFilesWithColor_v2(animationInput, i);
 			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
-			cout << "finished output Animation" << endl;
 		}
-		simuDomain.runAllLogic(dt);
+		simuDomain.runAllLogic(SimulationTimeStep);
 	}
 }
 

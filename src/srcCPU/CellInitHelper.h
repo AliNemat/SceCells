@@ -418,6 +418,9 @@ class CellInitHelper {
 	vector<CVector> internalBdryPts;
 	vector<StraightLineEquationNoneVertical> internalBdrys;
 
+	void transformRawCartData(CartilageRawData &cartRawData, CartPara &cartPara,
+			std::vector<CVector> &initNodePos);
+
 public:
 
 	CellInitHelper();
@@ -460,6 +463,7 @@ public:
 	SimulationInitData generateDiskInput(std::string meshInput);
 
 	SimulationInitData initInputsV2(RawDataInput &rawData);
+	SimulationInitData_V2 initInputsV3(RawDataInput &rawData);
 };
 
 #endif /* CELLINITHELPER_H_ */

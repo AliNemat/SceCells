@@ -722,12 +722,62 @@ RawDataInput CellInitHelper::generateRawInput_V2(
 	return baseRawInput;
 }
 
+void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
+		CartPara& cartPara, std::vector<CVector>& initNodePos) {
+	// step 1, switch tip node1 to pos 0
+	CVector tmpPos = cartRawData.tipVerticies[0];
+	cartRawData.tipVerticies[0] =
+			cartRawData.tipVerticies[cartRawData.growNode1Index_on_tip];
+	cartRawData.tipVerticies[cartRawData.growNode1Index_on_tip] = tmpPos;
+	cartPara.growNode1Index = 0;
+
+	// step 2, switch tip node 2 to pos 1
+	tmpPos = cartRawData.tipVerticies[1];
+	cartRawData.tipVerticies[1] =
+			cartRawData.tipVerticies[cartRawData.growNode2Index_on_tip];
+	cartRawData.tipVerticies[cartRawData.growNode2Index_on_tip] = tmpPos;
+	cartPara.growNode2Index = 1;
+	cartPara.tipNodeStartPos = 2;
+	cartPara.tipNodeIndexEnd = cartRawData.tipVerticies.size();
+
+	// step 3, calculate size for tip nodes
+	double tipMaxExpansionRatio = globalConfigVars.getConfigValue(
+			"TipMaxExpansionRatio").toDouble();
+	int maxTipSize = tipMaxExpansionRatio * cartRawData.tipVerticies.size();
+	cartPara.nonTipNodeStartPos = maxTipSize;
+	cartPara.nodeIndexEnd = cartPara.nonTipNodeStartPos
+			+ cartRawData.nonTipVerticies.size();
+
+	// step 4, calculate size for all nodes
+	double cartmaxExpRatio = globalConfigVars.getConfigValue(
+			"CartMaxExpansionRatio").toDouble();
+	int maxCartNodeSize = (cartRawData.tipVerticies.size()
+			+ cartRawData.nonTipVerticies.size()) * cartmaxExpRatio;
+	cartPara.nodeIndexTotal = maxCartNodeSize;
+
+	// step 5, initialize the first part of initNodePos
+	initNodePos.resize(cartPara.nodeIndexTotal);
+	for (uint i = 0; i < cartRawData.tipVerticies.size(); i++) {
+		initNodePos[i] = cartRawData.tipVerticies[i];
+	}
+
+	// step 6, initialize the second part of initNodePos
+	for (uint i = 0; i < cartRawData.nonTipVerticies.size(); i++) {
+		initNodePos[i + cartPara.nonTipNodeStartPos] =
+				cartRawData.nonTipVerticies[i];
+	}
+}
+
 /**
  * Initialize inputs for five different components.
  */
 SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 
 	SimulationInitData initData;
+
+	//transformRawCartData(rawData.cartilageData, initData.cartPara,
+	//		initData.cartilageNodeIsActive, initData.cartilageNodePosX,
+	//		initData.cartilageNodePosY);
 
 	uint FnmCellCount = rawData.FNMCellCenters.size();
 	uint MxCellCount = rawData.MXCellCenters.size();
@@ -827,8 +877,6 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 		}
 	}
 
-//cout << "begin init mx pos:" << endl;
-
 	for (uint i = 0; i < MxCellCount; i++) {
 		for (uint j = 0; j < initTotalCellCount; j++) {
 			index = i * maxNodePerCell + j;
@@ -840,9 +888,114 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 			//		<< initData.initMXCellNodePosY[index] << ")" << endl;
 		}
 	}
-	cout << "finished init inputs, press any key to continue" << endl;
-//int jj;
-//cin >> jj;
+//cout << "finished init inputs, press any key to continue" << endl;
+
+	return initData;
+}
+
+SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
+	SimulationInitData_V2 initData;
+
+	uint FnmCellCount = rawData.FNMCellCenters.size();
+	uint MxCellCount = rawData.MXCellCenters.size();
+	uint ECMCount = rawData.ECMCenters.size();
+
+	uint maxNodePerCell =
+			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
+	uint maxNodePerECM =
+			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+
+	uint initTotalCellCount = rawData.initCellNodePoss.size();
+	//uint initTotalECMCount = rawData.ECMCenters.size();
+	initData.initBdryNodeVec.resize(rawData.bdryNodes.size());
+	initData.initProfileNodeVec.resize(rawData.profileNodes.size());
+	transformRawCartData(rawData.cartilageData, initData.cartPara,
+			initData.initCartNodeVec);
+	initData.initECMNodeVec.resize(maxNodePerECM * ECMCount);
+	initData.initFNMNodeVec.resize(maxNodePerCell * FnmCellCount);
+	initData.initMXNodeVec.resize(maxNodePerCell * MxCellCount);
+
+	for (uint i = 0; i < FnmCellCount; i++) {
+		initData.cellTypes.push_back(FNM);
+		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
+	}
+
+	cout << "after fnm calculation, size of cellType is now "
+			<< initData.cellTypes.size() << endl;
+
+	for (uint i = 0; i < MxCellCount; i++) {
+		initData.cellTypes.push_back(MX);
+		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
+	}
+
+	cout << "after mx calculation, size of cellType is now "
+			<< initData.cellTypes.size() << endl;
+
+	cout << "begin init bdry pos:" << endl;
+
+	cout << "size of bdryNodes is " << rawData.bdryNodes.size() << endl;
+	cout << "size of initBdryCellNodePos = " << initData.initBdryNodeVec.size()
+			<< endl;
+
+	cout << "size of profileNodes is " << rawData.profileNodes.size() << endl;
+	cout << "size of initBdryCellNodePos = "
+			<< initData.initProfileNodeVec.size() << endl;
+	//int jj;
+	//cin>>jj;
+
+	for (uint i = 0; i < rawData.bdryNodes.size(); i++) {
+		initData.initBdryNodeVec[i] = rawData.bdryNodes[i];
+		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
+		//		<< ")" << endl;
+	}
+
+	for (uint i = 0; i < rawData.profileNodes.size(); i++) {
+		initData.initProfileNodeVec[i] = rawData.profileNodes[i];
+		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
+		//		<< ")" << endl;
+	}
+
+	uint index;
+	cout << "begin init fnm pos:" << endl;
+	cout << "current size is" << initData.initFNMNodeVec.size() << endl;
+	cout << "try to resize to: " << maxNodePerCell * FnmCellCount << endl;
+
+	cout << "size of fnm pos: " << initData.initFNMNodeVec.size() << endl;
+
+	cout.flush();
+
+	uint ECMInitNodeCount = rawData.initECMNodePoss.size();
+	for (uint i = 0; i < ECMCount; i++) {
+		vector<CVector> rotatedCoords = rotate2D(rawData.initECMNodePoss,
+				rawData.ECMAngles[i]);
+		for (uint j = 0; j < ECMInitNodeCount; j++) {
+			index = i * maxNodePerECM + j;
+			initData.initECMNodeVec[index] = rawData.ECMCenters[i]
+					+ rotatedCoords[j];
+		}
+	}
+
+	for (uint i = 0; i < FnmCellCount; i++) {
+		for (uint j = 0; j < initTotalCellCount; j++) {
+			index = i * maxNodePerCell + j;
+			initData.initFNMNodeVec[index] = rawData.FNMCellCenters[i]
+					+ rawData.initCellNodePoss[j];
+			//cout << "(" << initData.initFNMCellNodePosX[index] << ","
+			//		<< initData.initFNMCellNodePosY[index] << ")" << endl;
+		}
+	}
+
+	for (uint i = 0; i < MxCellCount; i++) {
+		for (uint j = 0; j < initTotalCellCount; j++) {
+			index = i * maxNodePerCell + j;
+			initData.initMXNodeVec[index] = rawData.MXCellCenters[i]
+					+ rawData.initCellNodePoss[j];
+			//cout << "(" << initData.initMXCellNodePosX[index] << ","
+			//		<< initData.initMXCellNodePosY[index] << ")" << endl;
+		}
+	}
+	//cout << "finished init inputs, press any key to continue" << endl;
+
 	return initData;
 }
 

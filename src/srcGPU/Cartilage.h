@@ -76,8 +76,7 @@ class Cartilage {
 	/**
 	 * the first two will be mainly for the two ends.
 	 */
-	std::vector<uint> tipNodeIndicies;
-
+	//std::vector<uint> tipNodeIndicies;
 	void calculateGrowthDir();
 	void addPoint1(CVector &nodeBehindPos);
 	void addPoint2(CVector &nodeBehindPos);
@@ -85,35 +84,34 @@ class Cartilage {
 	void grow2(double dt);
 	void runGrowthLogics1(double dt);
 	void runGrowthLogics2(double dt);
-	void updateTipNodes();
+
+	/**
+	 * TODO
+	 * really bad implementation for now.
+	 */
+	void updateTipNodes(double dt);
 	void runGrowthLogics(double dt);
 	void calculateTotalTorque();
 	void move(double dt);
 
 	/**
-	 * Initialize the values using processed information.
-	 * Need to change isActive and
+	 * distributes is active information to nodes.
 	 */
-	void initializeNodes(std::vector<CVector> &initFixedNodes,
-			std::vector<CVector> &initTipNodes, CVector &initGrowingNode1,
-			CVector &initGrowingNode2, CVector& initPivotNode1,
-			CVector& initPivotNode2);
+	void initIsActive();
 
 public:
 	Cartilage();
 	void initializeMem(SceNodes* nodeInput);
 
-	/**
-	 * Initialize the values.
-	 * @param initialNodes contains positions of all initial nodes
-	 * @param tipNode1 is the location of node1 on the tip of growth
-	 * @param tipNode2 is the location of node2 on the tip of growth
-	 * @param pivotNode1 is used for determine the fixed point
-	 * @param pivotNode2 is used for determine the fixed point
-	 */
-	void initializeVal(std::vector<CVector> &initialNodes, CVector &tipNode1,
-			CVector &tipNode2, CVector &pivotNode1, CVector pivotNode2);
 	void runAllLogics(double dt);
+
+	const CartPara& getCartPara() const {
+		return cartPara;
+	}
+
+	void setCartPara(const CartPara& cartPara) {
+		this->cartPara = cartPara;
+	}
 };
 
 #endif /* CARTILAGE_H_ */

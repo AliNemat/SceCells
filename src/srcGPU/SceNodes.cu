@@ -490,9 +490,8 @@ void SceNodes::initValues_v2(std::vector<CVector>& initBdryCellNodePos,
 
 	// debug
 	for (int i = 0; i < initECMNodePosX.size(); i++) {
-		std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
-				<< "nodeLocX =" << infoVecs.nodeLocX[i + beginAddressOfECM]
-				<< std::endl;
+		//std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
+		//		<< "nodeLocX =" << infoVecs.nodeLocX[i + beginAddressOfECM]
 		assert(infoVecs.nodeLocX[i + beginAddressOfECM] == initECMNodePosX[i]);
 		assert(!isnan(initECMNodePosX[i]));
 	}

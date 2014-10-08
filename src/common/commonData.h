@@ -126,7 +126,7 @@ struct SceMemPara {
 	uint maxECMInDomain;
 	uint maxNodePerECM;
 	double FinalToInitProfileNodeCountRatio;
-	double FinalToInitCartNodeCountRatio;
+	//double FinalToInitCartNodeCountRatio;
 };
 
 /**
@@ -219,6 +219,51 @@ struct CartilageRawData {
  */
 class CartPara {
 public:
+	/**
+	 * pivot node index should not change after initialization
+	 */
+	uint pivotNode1Index;
+	uint pivotNode2Index;
+
+	/**
+	 * grow node 1 and 2 index should be 0 and 1 respectively,
+	 * and they should not change.
+	 */
+	uint growNode1Index;
+	uint growNode2Index;
+
+	/**
+	 * these two indicies should be always changing.
+	 */
+	uint growNodeBehind1Index;
+	uint growNodeBehind2Index;
+
+	/**
+	 * memory allocation related parameter.
+	 * value should be 2.
+	 */
+	uint tipNodeStartPos;
+
+	/**
+	 * this value changes with the cartilage grows.
+	 */
+	uint tipNodeIndexEnd;
+
+	/**
+	 * memory allocation related parameter.
+	 */
+	uint nonTipNodeStartPos;
+
+	/**
+	 * this value changes with the cartilage grows.
+	 */
+	uint nodeIndexEnd;
+
+	/**
+	 * means maximum number of nodes in Cartilage.
+	 */
+	uint nodeIndexTotal;
+
 	CVector fixedPt;
 	CVector growthDir;
 
@@ -227,33 +272,6 @@ public:
 
 	CVector growNode1;
 	CVector growNode2;
-
-	uint pivotNode1Index;
-	uint pivotNode2Index;
-
-	uint growNode1Index;
-	uint growNode2Index;
-
-	uint growNodeBehind1Index;
-	uint growNodeBehind2Index;
-
-	/**
-	 * memory allocation related parameter.
-	 * number of spaces allocated for tip nodes.
-	 * The are designed to fit the first part of Cart nodes.
-	 */
-	uint tipNodeIndexTotal;
-
-	/**
-	 * memory allocation related parameter.
-	 * should be the same with the corresponding parameter in SceNodes.
-	 */
-	uint totalAvailableIndicies;
-
-	/**
-	 * this value changes with the cartilage grows.
-	 */
-	uint nodeIndexEnd;
 
 	double growthSpeedNode1;
 	double growthSpeedNode2;
@@ -289,12 +307,6 @@ struct RawDataInput {
  * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData {
-
-	std::vector<bool> cartilageNodeIsActive;
-	std::vector<double> cartilageNodePosX;
-	std::vector<double> cartilageNodePosY;
-	CartPara cartPara;
-
 	std::vector<SceNodeType> cellTypes;
 	std::vector<uint> numOfInitActiveNodesOfCells;
 	std::vector<double> initBdryCellNodePosX;
@@ -313,6 +325,11 @@ struct SimulationInitData {
  * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData_V2 {
+	/**
+	 * This parameter is necessary for Cartilage, because this CartPara
+	 * cannot be generated from config file directly.
+	 */
+	CartPara cartPara;
 	std::vector<SceNodeType> cellTypes;
 	std::vector<uint> numOfInitActiveNodesOfCells;
 	std::vector<CVector> initBdryNodeVec;
