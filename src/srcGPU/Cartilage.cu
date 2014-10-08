@@ -80,6 +80,7 @@ void Cartilage::move(double dt) {
 Cartilage::Cartilage() {
 	nodes = NULL;
 	isInitialized = false;
+	readValuesFromConfig();
 }
 
 void Cartilage::initializeMem(SceNodes* nodeInput) {
@@ -221,6 +222,17 @@ void Cartilage::initIsActive() {
 		}
 		nodes->getInfoVecs().nodeIsActive[gloablIndex] = isActive;
 	}
+}
+
+void Cartilage::readValuesFromConfig() {
+	cartPara.growthSpeedNode1 = globalConfigVars.getConfigValue(
+			"GrowthSpeedNode1").toDouble();
+	cartPara.growthSpeedNode2 = globalConfigVars.getConfigValue(
+			"GrowthSpeedNode2").toDouble();
+	cartPara.growthThreshold = globalConfigVars.getConfigValue(
+			"GrowthThreshold").toDouble();
+	cartPara.moInertia =
+			globalConfigVars.getConfigValue("InitMemonetInertia").toDouble();
 }
 
 //void Cartilage::initializeNodes(CartilageRawData& rawData) {

@@ -661,6 +661,39 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 		curIndex++;
 	}
 
+	uint cartStartIndex = allocPara.startPosCart;
+	uint cartEndIndex = cartStartIndex + allocPara.maxCartNodeCount;
+	for (uint i = cartStartIndex; i < cartEndIndex; i++) {
+		bool isActive = infoVecs.nodeIsActive[i];
+		if (!isActive) {
+			continue;
+		}
+
+		PointAniData ptAniData;
+		ptAniData.pos = CVector(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
+				hostTmpVectorLocZ[i]);
+		if (aniCri.isStressMap) {
+			ptAniData.colorScale = hostTmpVectorNodeStress[i];
+		} else {
+			ptAniData.colorScale = nodeTypeToScale(hostTmpVectorNodeType[i]);
+		}
+		vtkData.pointsAniData.push_back(ptAniData);
+
+		bool isNextActive;
+		if (i == cartEndIndex - 1) {
+			isNextActive = false;
+		} else {
+			isNextActive = infoVecs.nodeIsActive[i + 1];
+		}
+		if (isNextActive) {
+			LinkAniData linkData;
+			linkData.node1Index = curIndex;
+			linkData.node2Index = curIndex + 1;
+			vtkData.linksAniData.push_back(linkData);
+		}
+		curIndex++;
+	}
+
 	return vtkData;
 }
 

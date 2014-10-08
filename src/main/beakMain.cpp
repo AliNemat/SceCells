@@ -220,7 +220,6 @@ int main() {
 		}
 		simuDomain.runAllLogic(SimulationTimeStep);
 	}
-
 }
 
 //vector<CVector> initNodePosFromMesh;

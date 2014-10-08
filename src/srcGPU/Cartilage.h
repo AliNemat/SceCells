@@ -100,6 +100,8 @@ class Cartilage {
 	 */
 	void initIsActive();
 
+	void readValuesFromConfig();
+
 public:
 	Cartilage();
 	void initializeMem(SceNodes* nodeInput);
