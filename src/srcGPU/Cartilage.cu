@@ -79,11 +79,13 @@ void Cartilage::move(double dt) {
 
 Cartilage::Cartilage() {
 	nodes = NULL;
+	isInitialized = false;
 }
 
 void Cartilage::initializeMem(SceNodes* nodeInput) {
 	nodes = nodeInput;
 	initIsActive();
+	isInitialized = true;
 }
 
 void Cartilage::addPoint1(CVector &nodeBehindPos) {
@@ -225,7 +227,9 @@ void Cartilage::initIsActive() {
 //}
 
 void Cartilage::runAllLogics(double dt) {
-	calculateTotalTorque();
-	move(dt);
-	runGrowthLogics(dt);
+	if (isInitialized) {
+		calculateTotalTorque();
+		move(dt);
+		runGrowthLogics(dt);
+	}
 }

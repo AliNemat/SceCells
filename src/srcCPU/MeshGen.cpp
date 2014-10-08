@@ -593,8 +593,12 @@ GEOMETRY::MeshInput GEOMETRY::MeshInputReader::readFile(std::string& fileName) {
 }
 
 GEOMETRY::UnstructMesh2D GEOMETRY::MeshGen::generateMesh2DWithProfile(
-		std::string& fileName, double ratio) {
+		std::string& fileName, double ratio, bool isInnerBdryIncluded) {
 	MeshInput input = meshInput;
+	if (!isInnerBdryIncluded) {
+		input.bdryPts.erase(input.bdryPts.begin() + 1);
+		input.seeds.erase(input.seeds.begin());
+	}
 	input.criteria_size_bound = input.criteria_size_bound / ratio;
 	GEOMETRY::UnstructMesh2D mesh = generateMeshGivenInput(input);
 	mesh.generateFinalBdryAndProfilePoints(input.profileBeginPos,

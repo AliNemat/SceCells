@@ -118,7 +118,7 @@ public:
 	 * Mesh now includes profile nodes.
 	 */
 	UnstructMesh2D generateMesh2DWithProfile(std::string &fileName,
-			double ratio);
+			double ratio, bool isInnerBdryIncluded = true);
 	virtual ~MeshGen();
 };
 

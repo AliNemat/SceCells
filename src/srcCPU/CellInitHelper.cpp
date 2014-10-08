@@ -630,7 +630,7 @@ void CellInitHelper::initInputsFromCellInfoArray(vector<SceNodeType> &cellTypes,
 }
 
 RawDataInput CellInitHelper::generateRawInputWithProfile(
-		std::vector<CVector> &cellCenterPoss) {
+		std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded) {
 	cout << "begining of generateRawInputWithProfile" << endl;
 	cout.flush();
 	RawDataInput rawData;
@@ -648,7 +648,7 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	cout.flush();
 
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
-			bdryInputFileName, genBdryRatio);
+			bdryInputFileName, genBdryRatio, isInnerBdryIncluded);
 
 	cout << "after calling generateMesh2DWithProfile" << endl;
 	cout.flush();
@@ -707,7 +707,8 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 
 RawDataInput CellInitHelper::generateRawInput_V2(
 		std::vector<CVector>& cellCenterPoss) {
-	RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss);
+	RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss,
+			false);
 
 	GEOMETRY::MeshGen meshGen;
 	double genBdryRatio =
@@ -718,6 +719,29 @@ RawDataInput CellInitHelper::generateRawInput_V2(
 			bdryInputFileName, genBdryRatio);
 	GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
 	baseRawInput.cartilageData = meshGen.obtainCartilageData(mesh, input);
+
+	std::cout << "non tip verticies size = "
+			<< baseRawInput.cartilageData.nonTipVerticies.size() << std::endl;
+	std::cout << " tip verticies size = "
+			<< baseRawInput.cartilageData.tipVerticies.size() << std::endl;
+
+	std::cout << " grow node 1 index = "
+			<< baseRawInput.cartilageData.growNode1Index_on_tip << std::endl;
+	std::cout << " grow node 2 index = "
+			<< baseRawInput.cartilageData.growNode2Index_on_tip << std::endl;
+
+	std::cout << " grow behind node 1 index = "
+			<< baseRawInput.cartilageData.growNodeBehind1Index << std::endl;
+	std::cout << " grow behind node 2 index = "
+			<< baseRawInput.cartilageData.growNodeBehind2Index << std::endl;
+
+	std::cout << " grow povit node 1 index = "
+			<< baseRawInput.cartilageData.pivotNode1Index << std::endl;
+	std::cout << " grow povit node 2 index = "
+			<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
+
+	int jj;
+	cin >> jj;
 
 	return baseRawInput;
 }

@@ -458,7 +458,8 @@ public:
 	RawDataInput generateDiskRawInput(std::string meshInput);
 	RawDataInput generateRawInput_stab(std::string meshInput);
 	RawDataInput generateRawInputWithProfile(
-			std::vector<CVector> &cellCenterPoss);
+			std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded =
+					true);
 	RawDataInput generateRawInput_V2(std::vector<CVector> &cellCenterPoss);
 	SimulationInitData generateDiskInput(std::string meshInput);
 

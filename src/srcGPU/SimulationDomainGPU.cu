@@ -255,7 +255,7 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	 * setting the cartilage related parameters in the simulation domain.
 	 */
 	cartilage.setCartPara(cartPara);
-	cartilage.initializeMem(&nodes);
+	//cartilage.initializeMem(&nodes);
 	//cartilage.distributeIsActive();
 	//cartilage.initializeNodes(initCartNodeVec);
 
@@ -334,9 +334,10 @@ void SimulationDomainGPU::initialize(SimulationInitData &initData) {
 			initData.initECMNodePosY, initData.initFNMCellNodePosX,
 			initData.initFNMCellNodePosY, initData.initMXCellNodePosX,
 			initData.initMXCellNodePosY);
-	//cout << "finished init cells of five types" << endl;
+	std::cout << "finished init cells of five types" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
+	std::cout << "finished init nodes dimension" << std::endl;
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
@@ -474,6 +475,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	aniCri.isStressMap = false;
 
 	for (int i = 0; i < stabPara.totalIterCount; i++) {
+		//std::cout << "in stablizing, before run all logics" << std::endl;
 		runAllLogic(stabPara.dt);
 		if (i % aniAuxPara == 0) {
 			outputVtkFilesWithColor(stabPara.outputAniName, i, aniCri);

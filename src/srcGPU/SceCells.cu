@@ -576,10 +576,18 @@ SceCells::SceCells(SceNodes* nodesInput,
 				nodesInput->getAllocPara().maxNodeOfOneCell / 2), initGrowthProgress(
 				0.0) {
 	initialize(nodesInput);
+	std::cout << "in SceCells constructor, finished initialize nodes pointer"
+			<< std::endl;
 	copyInitActiveNodeCount(numOfInitActiveNodesOfCells);
+	std::cout << "in SceCells constructor, finished copying init active"
+			<< std::endl;
 	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
 	setCellTypes(cellTypesToPass);
+	std::cout << "in SceCells constructor, finished setting cell types"
+			<< std::endl;
 	distributeIsActiveInfo();
+	std::cout << "in SceCells constructor, finished distributing is active info"
+			<< std::endl;
 }
 
 void SceCells::initCellInfoVecs() {

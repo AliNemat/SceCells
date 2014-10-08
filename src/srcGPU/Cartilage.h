@@ -70,6 +70,7 @@ struct Rotation2D: public thrust::unary_function<CVec2Bool, CVec2> {
 };
 
 class Cartilage {
+	bool isInitialized;
 	SceNodes* nodes;
 	CartPara cartPara;
 
