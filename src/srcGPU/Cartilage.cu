@@ -58,6 +58,9 @@ void Cartilage::move(double dt) {
 	cartPara.angularSpeed = cartPara.totalTorque / cartPara.moInertia;
 	// angle is counter-clock wise.
 	double angle = cartPara.angularSpeed * dt;
+	std::cout << "angle = " << angle << std::endl;
+	std::cout << "fixed point = ";
+	cartPara.fixedPt.Print();
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
@@ -242,6 +245,6 @@ void Cartilage::runAllLogics(double dt) {
 	if (isInitialized) {
 		calculateTotalTorque();
 		move(dt);
-		runGrowthLogics(dt);
+		//runGrowthLogics(dt);
 	}
 }

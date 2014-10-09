@@ -356,8 +356,11 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
 	nodes.calculateAndApplySceForces();
-	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
+	// cartilage logics must come before cell logics, because node velocities will be modified
+	// in cell logic so we won't be able to compute cartilage data.
 	cartilage.runAllLogics(dt);
+	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
+
 }
 
 void SimulationDomainGPU::readMemPara() {

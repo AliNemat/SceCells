@@ -196,6 +196,13 @@ void SceNodes::readMechPara() {
 SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
 		uint maxNodeInCell) {
+	/*
+	 * cartilage was introduced after this constructor.
+	 * therefore, just make all related parameters 0.
+	 */
+	allocPara.maxCartNodeCount = 0;
+	allocPara.startPosCart = 0;
+
 	readDomainPara();
 	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount, maxTotalECMCount,
 			maxNodeInECM, maxTotalCellCount, maxNodeInCell);

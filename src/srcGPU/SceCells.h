@@ -739,7 +739,7 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 		SceNodeType type = thrust::get<3>(nodeInfo);
 		uint nodeRank = thrust::get<4>(nodeInfo);
 		// boundary nodes should not move. Also, inactive nodes should not move.
-		if (type == Boundary || isActive == false) {
+		if (type == Boundary || type == Cart || isActive == false) {
 			return thrust::make_tuple(0.0, 0.0);
 		}
 		// The end nodes of the profile should be fixed.
