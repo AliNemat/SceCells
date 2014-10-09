@@ -17,8 +17,7 @@ struct TorqueCompute: public thrust::binary_function<CVec2Bool, CVec2, double> {
 	__host__ __device__
 	TorqueCompute(double fixedPtX, double fixePtY, double growthDirX,
 			double growthDirY) :
-			_fixedPtX(fixedPtX), _fixedPtY(fixePtY), _growthDirX(growthDirX), _growthDirY(
-					growthDirY) {
+			_fixedPtX(fixedPtX), _fixedPtY(fixePtY) {
 		double length = sqrt(growthDirX * growthDirX + growthDirY * growthDirY);
 		_growthDirX = growthDirX / length;
 		_growthDirY = growthDirY / length;
@@ -63,14 +62,20 @@ struct Rotation2D: public thrust::unary_function<CVec2Bool, CVec2> {
 		if (!isActive) {
 			thrust::make_tuple(posX, posY);
 		}
-		double xPosNew = posX * cos(_angle) - posY * sin(_angle);
-		double yPosNew = posX * sin(_angle) + posY * cos(_angle);
+
+		double dirToFixX = posX - _fixedPtX;
+		double dirToFixY = posY - _fixedPtY;
+		double dirToFixXNew = dirToFixX * cos(_angle) - dirToFixY * sin(_angle);
+		double dirToFixYNew = dirToFixX * sin(_angle) + dirToFixY * cos(_angle);
+		double xPosNew = _fixedPtX + dirToFixXNew;
+		double yPosNew = _fixedPtY + dirToFixYNew;
 		return thrust::make_tuple(xPosNew, yPosNew);
 	}
 };
 
 class Cartilage {
 	bool isInitialized;
+	bool isParaInitialized;
 	SceNodes* nodes;
 	CartPara cartPara;
 
@@ -114,6 +119,7 @@ public:
 
 	void setCartPara(const CartPara& cartPara) {
 		this->cartPara = cartPara;
+		isParaInitialized = 1;
 	}
 };
 

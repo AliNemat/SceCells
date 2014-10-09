@@ -251,11 +251,6 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 			memPara.maxECMInDomain, memPara.maxNodePerECM,
 			memPara.maxCellInDomain, memPara.maxNodePerCell);
 
-	/**
-	 * setting the cartilage related parameters in the simulation domain.
-	 */
-	cartilage.setCartPara(cartPara);
-	cartilage.initializeMem(&nodes);
 	//cartilage.distributeIsActive();
 	//cartilage.initializeNodes(initCartNodeVec);
 
@@ -322,6 +317,12 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 
 	nodes.initValues_v2(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
 			initECMNodeVec, initFNMNodeVec, initMXNodeVec);
+
+	/**
+	 * setting the cartilage related parameters in the simulation domain.
+	 */
+	cartilage.setCartPara(cartPara);
+	cartilage.initializeMem(&nodes);
 
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
