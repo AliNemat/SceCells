@@ -43,6 +43,11 @@ struct TorqueCompute: public thrust::binary_function<CVec2Bool, CVec2, double> {
 		double forceDirY = thrust::get<1>(force);
 		double perpForce = forceDirX * _normalX + forceDirY * _normalY;
 		double torque = length * perpForce;
+
+		//TODO: remove this debug statement
+		//if (torque < 0) {
+		//	return 0;
+		//}
 		return torque;
 	}
 };

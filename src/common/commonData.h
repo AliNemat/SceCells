@@ -66,6 +66,7 @@ public:
 struct SceMechPara {
 	double sceInterParaCPU[5];
 	double sceIntraParaCPU[4];
+	double sceCartParaCPU[5];
 	double sceInterDiffParaCPU[5];
 	double sceProfileParaCPU[7];
 	double sceECMParaCPU[5];

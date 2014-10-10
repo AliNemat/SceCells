@@ -199,8 +199,10 @@ int main() {
 
 	SimulationDomainGPU simuDomain;
 
-	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
-			simuData);
+	std::vector<CVector> stabilizedCenters;
+	// TODO: These initialization statments are removed for debugging purpose.
+	//stabilizedCenters = simuDomain.stablizeCellCenters(
+	//		simuData);
 
 	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
 
@@ -213,10 +215,13 @@ int main() {
 			"IntraLinkDisplayRange").toDouble();
 	aniCri.isStressMap = false;
 
+	uint aniFrame = 0;
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
-			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
+			simuDomain.outputVtkFilesWithColor(animationInput, aniFrame,
+					aniCri);
+			aniFrame++;
 		}
 		simuDomain.runAllLogic(SimulationTimeStep);
 	}

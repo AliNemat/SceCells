@@ -56,6 +56,7 @@ void Cartilage::calculateTotalTorque() {
 					+ indexBegin, 0.0, plusOp,
 			TorqueCompute(cartPara.fixedPt.x, cartPara.fixedPt.y,
 					cartPara.growthDir.x, cartPara.growthDir.y));
+
 	std::cout << " total torque = " << cartPara.totalTorque << std::endl;
 }
 
@@ -128,6 +129,7 @@ void Cartilage::initializeMem(SceNodes* nodeInput) {
 	cartPara.fixedPt = pivotNode1Pos + pivotNode2Pos;
 	cartPara.fixedPt = cartPara.fixedPt / 2;
 
+	calculateGrowthDir();
 }
 
 void Cartilage::addPoint1(CVector &nodeBehindPos) {

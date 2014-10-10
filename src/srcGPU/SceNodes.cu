@@ -2,10 +2,13 @@
 
 __constant__ double sceInterPara[5];
 __constant__ double sceIntraPara[4];
+__constant__ double sceCartPara[5];
 __constant__ double sceInterDiffPara[5];
 __constant__ double sceProfilePara[7];
 __constant__ double sceECMPara[5];
 __constant__ double sceDiffPara[5];
+
+__constant__ double cartGrowDirVec[3];
 __constant__ uint ProfilebeginPos;
 __constant__ uint ECMbeginPos;
 __constant__ uint cellNodeBeginPos;
@@ -94,6 +97,27 @@ void SceNodes::readMechPara() {
 	mechPara.sceInterParaCPU[2] = k1;
 	mechPara.sceInterParaCPU[3] = k2;
 	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
+
+	static const double U0_Cart = globalConfigVars.getConfigValue(
+			"InterCell_U0_Original").toDouble()
+			/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
+	static const double V0_Cart = globalConfigVars.getConfigValue(
+			"InterCell_V0_Original").toDouble()
+			/ globalConfigVars.getConfigValue("Cart_V0_DivFactor").toDouble();
+	static const double k1_Cart = globalConfigVars.getConfigValue(
+			"InterCell_k1_Original").toDouble()
+			/ globalConfigVars.getConfigValue("Cart_k1_DivFactor").toDouble();
+	static const double k2_Cart = globalConfigVars.getConfigValue(
+			"InterCell_k2_Original").toDouble()
+			/ globalConfigVars.getConfigValue("Cart_k2_DivFactor").toDouble();
+	static const double cartProfileEffectiveRange =
+			globalConfigVars.getConfigValue("CartForceEffectiveRange").toDouble();
+
+	mechPara.sceCartParaCPU[0] = U0_Cart;
+	mechPara.sceCartParaCPU[1] = V0_Cart;
+	mechPara.sceCartParaCPU[2] = k1_Cart;
+	mechPara.sceCartParaCPU[3] = k2_Cart;
+	mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
 
 	static const double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
@@ -284,6 +308,8 @@ void SceNodes::copyParaToGPUConstMem() {
 	readMechPara();
 
 	cudaMemcpyToSymbol(sceInterPara, mechPara.sceInterParaCPU,
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceCartPara, mechPara.sceCartParaCPU,
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIntraPara, mechPara.sceIntraParaCPU,
 			4 * sizeof(double));
@@ -876,6 +902,39 @@ void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
+
+__device__
+void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
+		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
+		double &zRes) {
+	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
+	double forceValue = 0;
+	if (linkLength > sceCartPara[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceCartPara[0] / sceCartPara[2]
+				* exp(-linkLength / sceCartPara[2])
+				+ sceCartPara[1] / sceCartPara[3]
+						* exp(-linkLength / sceCartPara[3]);
+		if (linkLength > 1.0e-12) {
+			double dotProduct = (xPos2 - xPos) / linkLength * cartGrowDirVec[0]
+					+ (yPos2 - yPos) / linkLength * cartGrowDirVec[1]
+					+ (zPos2 - zPos) / linkLength * cartGrowDirVec[2];
+			forceValue = forceValue * dotProduct;
+			xRes = xRes + forceValue * cartGrowDirVec[0];
+			yRes = yRes + forceValue * cartGrowDirVec[1];
+			zRes = zRes + forceValue * cartGrowDirVec[2];
+		}
+		if (forceValue > 0) {
+			forceValue = forceValue * 0.01;
+			xRes = xRes + forceValue * (xPos2 - xPos);
+			yRes = yRes + forceValue * (yPos2 - yPos);
+			zRes = zRes + forceValue * (zPos2 - zPos);
+		}
+	}
+
+}
+
 __device__
 void calculateAndAddDiffInterCellForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -1086,17 +1145,13 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
 		}
 		// if both nodes belong to same ECM but are not neighbors they shouldn't interact.
-	}
-// this means that both nodes come from profile ( Epithilum layer).
-	else if (type1 == Profile && type2 == Profile) {
-		if (isNeighborProfileNodes(nodeRank1, nodeRank2)) {
-			// TODO: need a set of parameters for calculating linking force between profile nodes
-			//calculateAndAddProfileForce(xPos, yPos, zPos,
-			//		_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
-			//		_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
-		}
-		// if both nodes belong to Profile but are not neighbors they shouldn't interact.
-
+	} else if ((type1 == Profile && type2 == Cart)
+			|| (type1 == Cart && type2 == Profile)) {
+		calculateAndAddCartForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	} else if (type1 == Cart && type2 == Cart) {
+	} else if (type1 == Profile && type2 == Profile) {
 	} else {
 		// for now, we assume that interaction between other nodes are the same as inter-cell force.
 		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
@@ -1299,6 +1354,15 @@ std::vector<std::vector<int> > SceNodes::obtainLabelMatrix(
 
 	result = resHelper.outputLabelMatrix(nodeLabels);
 	return result;
+}
+
+void SceNodes::processCartGrowthDir(CVector dir) {
+	double growthDir[3];
+	dir = dir.getUnitVector();
+	growthDir[0] = dir.GetX();
+	growthDir[1] = dir.GetY();
+	growthDir[2] = dir.GetZ();
+	cudaMemcpyToSymbol(cartGrowDirVec, growthDir, 3 * sizeof(double));
 }
 
 void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {

@@ -247,6 +247,10 @@ void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
 __device__
+void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
+		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
+		double &zRes);
+__device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
@@ -577,6 +581,8 @@ public:
 			std::vector<CVector> &initECMNodePos,
 			std::vector<CVector> &initFNMCellNodePos,
 			std::vector<CVector> &initMXCellNodePos);
+
+	void processCartGrowthDir(CVector dir);
 
 	/**
 	 * this method contains all preparation work for SCE force calculation.

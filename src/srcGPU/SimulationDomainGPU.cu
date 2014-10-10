@@ -356,6 +356,11 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
  *
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
+	nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
+	std::cout << "growth direction is ";
+	cartilage.getCartPara().growthDir.Print();
+	//int jj;
+	//std::cin >> jj;
 	nodes.calculateAndApplySceForces();
 	// cartilage logics must come before cell logics, because node velocities will be modified
 	// in cell logic so we won't be able to compute cartilage data.

@@ -741,7 +741,7 @@ RawDataInput CellInitHelper::generateRawInput_V2(
 			<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
 
 	int jj;
-	cin >> jj;
+	//cin >> jj;
 
 	return baseRawInput;
 }
@@ -823,7 +823,7 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 			<< cartPara.pivotNode2Index << std::endl;
 
 	int jj;
-	cin >> jj;
+	//cin >> jj;
 }
 
 /**
