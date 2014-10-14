@@ -8,73 +8,7 @@
 #include "CellInitHelper.h"
 
 CellInitHelper::CellInitHelper() {
-	isInitNodesInitializedFlag = false;
-	linEqn1 = StraightLineEquationNoneVertical(CVector(0, 20, 0),
-			CVector(10, 40, 0));
-	linEqn2 = StraightLineEquationNoneVertical(CVector(0, 10, 0),
-			CVector(20, 20, 0));
-	linEqn3 = StraightLineEquationNoneVertical(CVector(0, 30, 0),
-			CVector(20, 20, 0));
-	linEqn4 = StraightLineEquationNoneVertical(CVector(15, 40, 0),
-			CVector(20, 20, 0));
 	initInternalBdry();
-}
-
-/**
- * These are original coordinates that we obtained from the experimental data.
- * Initialize 15 points with coordinate catched directly from snapshot
- */
-void CellInitHelper::initPrecisionBoundaryPoints() {
-
-	CVector P1(242, 26, 0);
-	CVector P2(232, 26, 0);
-	CVector P3(232, 168, 0);
-	CVector P4(142, 259, 0);
-	CVector P5(142, 307, 0);
-	//CVector P6(239, 246, 0);
-	CVector P6(239, 250, 0);
-	//CVector P7(266, 246, 0);
-	CVector P7(266, 250, 0);
-	CVector P8(303, 278, 0);
-	CVector P9(324, 277, 0);
-	CVector P10(337, 257, 0);
-	CVector P11(346, 250, 0);
-	CVector P12(276, 56, 0);
-	//CVector P13(292, 264, 0);
-	CVector P13(305, 275, 0);
-	CVector P14(271, 207, 0);
-	CVector P15(249, 97, 0);
-	initPoints.clear();
-	initPoints.push_back(P1);
-	initPoints.push_back(P2);
-	initPoints.push_back(P3); //
-	initPoints.push_back(P4);
-	initPoints.push_back(P5);
-	initPoints.push_back(P6);
-	initPoints.push_back(P7);
-	initPoints.push_back(P8);
-	initPoints.push_back(P9);
-	initPoints.push_back(P10);
-	initPoints.push_back(P11);
-	initPoints.push_back(P12);
-	initPoints.push_back(P13); //
-	initPoints.push_back(P14); //
-	initPoints.push_back(P15);
-	isInitNodesInitializedFlag = true;
-}
-
-void CellInitHelper::transformBoundaryPoints() {
-	double ratio = 10.0;
-	double xZeroPoint = 142;
-	double yBound = 350;
-	for (unsigned int i = 0; i < initPoints.size(); i++) {
-		initPoints[i].x = (initPoints[i].x - xZeroPoint) / ratio;
-		initPoints[i].y = (yBound - initPoints[i].y) / ratio;
-		initPoints[i].Print();
-	}
-
-	int jj;
-	std::cin >> jj;
 }
 
 CVector CellInitHelper::getPointGivenAngle(double currentAngle, double r,
@@ -82,429 +16,6 @@ CVector CellInitHelper::getPointGivenAngle(double currentAngle, double r,
 	double xPos = centerPos.x + r * cos(currentAngle);
 	double yPos = centerPos.y + r * sin(currentAngle);
 	return CVector(xPos, yPos, 0);
-}
-
-/*
- * bdryNodes is the result vector. Must be exactly divisable by number of nodes per cell.
- * interval controls distance between nodes.
- * beginPoint is not a real boundary and thus not in the boundary nodes list
- * but is also important in initialize our array.
- */
-void CellInitHelper::generateBoundaryCellNodesArray(vector<CVector> &bdryNodes,
-		double distance) {
-	CVector Point1 = CVector(0.0, (350 - 307) / 10.0, 0.0);
-	CVector Point2 = CVector(0.0, (350 - 259) / 10.0, 0.0);
-	CVector Point3 = CVector((232 - 142) / 10.0, (350 - 168) / 10.0, 0.0);
-	CVector Point4 = CVector((232 - 142) / 10.0, (350 - 26) / 10.0, 0.0);
-	CVector Point5 = CVector((342 - 142) / 10.0, (350 - 26) / 10.0, 0.0);
-	CVector Point6 = CVector((249 - 142) / 10.0, (350 - 97) / 10.0, 0);
-	//double tmpDiff1 = fabs(Point3.x - Point6.x);
-	//double tmpDiff2 = fabs(Point3.y - Point6.y);
-	CVector arcCenter = CVector(-4.97647, 25.3, 0);
-	double radius = Point6.x - arcCenter.x;
-	//fstream fs;
-
-	bdryNodes.clear();
-	//double delta = 1.0e-6;
-	CVector dirVector1 = Point2 - Point1;
-	CVector dirVector2 = Point3 - Point2;
-	CVector dirVector4 = Point5 - Point4;
-	//double totalDistance1 = Modul(dirVector1);
-	//double totalDistance2 = Modul(dirVector2);
-	assert(Point3.x == Point4.x);
-	double arcSpan = fabs(Point3.y - Point4.y);
-	double arcSpanAngle = asin(arcSpan / 2.0 / radius) * 2;
-	double totalDistance3 = radius * arcSpanAngle;
-	double angleIncrement = arcSpanAngle / (totalDistance3 / distance);
-
-	CVector unitVector1 = dirVector1.getUnitVector();
-	CVector unitVector2 = dirVector2.getUnitVector();
-	CVector unitVector4 = dirVector4.getUnitVector();
-	CVector unitIncrease1 = unitVector1 * distance;
-	CVector unitIncrease2 = unitVector2 * distance;
-	CVector unitIncrease4 = unitVector4 * distance;
-	CVector tempPoint;
-	//bool isOnLine2 = false;
-	//double distanceFromStart = 0.0;
-	//int nodeNumCounter = 0;
-	//int numOfPointsOnLine1 = floor(totalDistance1 / distance) + 1;
-	//double startDistFromStartOnLine2 = distance
-	//		- (totalDistance1 / distance - (int) (totalDistance1 / distance));
-	//CVector startPointOnLine2 = Point2
-	//		+ startDistFromStartOnLine2 * unitVector2;
-	//double actualDistance2 = Modul(Point3 - startPointOnLine2);
-	//int numOfPointsOnLine2 = floor(actualDistance2 / distance) + 1;
-	//int totalNumOfNodes = numOfPointsOnLine1 + numOfPointsOnLine2;
-	int totalNumOfNodes = 0;
-
-	tempPoint = Point1;
-	while (Modul(tempPoint - Point1) <= Modul(dirVector1)) {
-		// fs << tempPoint.x << " " << tempPoint.y << " " << tempPoint.z << endl;
-		bdryNodes.push_back(tempPoint);
-		tempPoint = tempPoint + unitIncrease1;
-		cout << "distance to Point1: " << Modul(tempPoint - Point1) << endl;
-		totalNumOfNodes++;
-	}
-	tempPoint = tempPoint - unitIncrease1;
-	double leftOver = Modul(tempPoint - Point2);
-	cout << "left over = " << leftOver << endl;
-	tempPoint = Point2 + (distance - leftOver) * unitIncrease2;
-	while (Modul(tempPoint - Point2) <= Modul(dirVector2)) {
-		//fs << tempPoint.x << " " << tempPoint.y << " " << tempPoint.z << endl;
-		bdryNodes.push_back(tempPoint);
-		tempPoint = tempPoint + unitIncrease2;
-		cout << "distance to Point2: " << Modul(tempPoint - Point2) << endl;
-		totalNumOfNodes++;
-	}
-
-	double theta = -atan(
-			fabs(tempPoint.y - arcCenter.y) / fabs(tempPoint.x - arcCenter.x));
-	double thetaAlternative = asin((tempPoint.y - arcCenter.y) / radius);
-	cout << "starting theta = " << theta << "alternative theta = "
-			<< thetaAlternative << endl;
-	cout << "starting point = ";
-	tempPoint.Print();
-	cout << "arcSpanAngle = " << arcSpanAngle / 2.0 << endl;
-	//theta = theta + angleIncrement;
-	while (theta <= arcSpanAngle / 2.0) {
-		tempPoint = getPointGivenAngle(theta, radius, arcCenter);
-		theta = theta + angleIncrement;
-		totalNumOfNodes++;
-		//fs << tempPoint.x << " " << tempPoint.y << " " << tempPoint.z << endl;
-		bdryNodes.push_back(tempPoint);
-		cout << "in arc stage, target point: ";
-		Point4.Print();
-		cout << "current theta = " << theta << "and current position: ";
-		tempPoint.Print();
-	}
-	double leftOverAngle = arcSpanAngle / 2.0 - (theta - angleIncrement);
-	//cout << "angle increment = " << angleIncrement << " and left over angle ="
-	//		<< leftOverAngle << endl;
-	double leftOverDistance = leftOverAngle * radius;
-	double increaseDist = distance - leftOverDistance;
-	CVector startPointOnLine4 = Point4 + increaseDist * unitVector4;
-	tempPoint = startPointOnLine4;
-	while (Modul(tempPoint - Point4) <= Modul(dirVector4)) {
-		//fs << tempPoint.x << " " << tempPoint.y << " " << tempPoint.z << endl;
-		bdryNodes.push_back(tempPoint);
-		tempPoint = tempPoint + unitIncrease4;
-		totalNumOfNodes++;
-	}
-
-}
-
-// initialize all boundary lines
-void CellInitHelper::initBoundaryLines(double interval) {
-	StraightLineEquationNoneVertical *B1 = new StraightLineEquationNoneVertical(
-			initPoints[0], initPoints[1]);
-	B1->condiType = Down;
-	Arc *B2 = new Arc(initPoints[1], initPoints[14], initPoints[2]);
-	B2->condiType = Outside;
-	StraightLineEquationNoneVertical *B3 = new StraightLineEquationNoneVertical(
-			initPoints[2], initPoints[3]);
-	B3->condiType = Right;
-	StraightLineEquationVertical *B4 = new StraightLineEquationVertical(
-			initPoints[3].x);
-	B4->condiType = Right;
-	StraightLineEquationNoneVertical *B5 = new StraightLineEquationNoneVertical(
-			initPoints[4], initPoints[5]);
-	B5->condiType = Up;
-	StraightLineEquationNoneVertical *B6 = new StraightLineEquationNoneVertical(
-			initPoints[5], initPoints[6]);
-	B6->condiType = Up;
-	StraightLineEquationNoneVertical *B7 = new StraightLineEquationNoneVertical(
-			initPoints[6], initPoints[7]);
-	B7->condiType = Up;
-	StraightLineEquationNoneVertical *B8 = new StraightLineEquationNoneVertical(
-			initPoints[7], initPoints[8]);
-	B8->condiType = Up;
-	StraightLineEquationNoneVertical *B9 = new StraightLineEquationNoneVertical(
-			initPoints[8], initPoints[9]);
-	B9->condiType = Up;
-	StraightLineEquationNoneVertical *B10 =
-			new StraightLineEquationNoneVertical(initPoints[9], initPoints[10]);
-	B10->condiType = Up;
-	StraightLineEquationNoneVertical *B11 =
-			new StraightLineEquationNoneVertical(initPoints[10],
-					initPoints[11]);
-	B11->condiType = Left;
-	StraightLineEquationNoneVertical *B12 =
-			new StraightLineEquationNoneVertical(initPoints[11], initPoints[0]);
-	B12->condiType = Left;
-
-	StraightLineEquationNoneVertical *D1 = new StraightLineEquationNoneVertical(
-			initPoints[2], initPoints[13]);
-	D1->condiType = Left;
-	StraightLineEquationNoneVertical *D2 = new StraightLineEquationNoneVertical(
-			initPoints[13], initPoints[12]);
-	D2->condiType = Left;
-
-	boundaryLines.clear();
-	internalBoundaryLines.clear();
-	boundariesForCellCenter.clear();
-	boundaryLines.push_back(B1);
-	boundaryLines.push_back(B2);
-	boundaryLines.push_back(B3);
-	boundaryLines.push_back(B4);
-	boundaryLines.push_back(B5);
-	boundaryLines.push_back(B6);
-	boundaryLines.push_back(B7);
-	boundaryLines.push_back(B8);
-	boundaryLines.push_back(B9);
-	boundaryLines.push_back(B10);
-	boundaryLines.push_back(B11);
-	boundaryLines.push_back(B12);
-
-	internalBoundaryLines.push_back(D1);
-	internalBoundaryLines.push_back(D2);
-
-	StraightLineEquationNoneVertical IB1 = B1->getDownOf(interval);
-	Arc IB2 = B2->getOutside(interval);
-	StraightLineEquationNoneVertical IB3 = B3->getDownOf(interval);
-	StraightLineEquationVertical IB4 = B4->getRightOf(interval);
-	StraightLineEquationNoneVertical IB5 = B5->getUpOf(interval);
-	StraightLineEquationNoneVertical IB6 = B6->getUpOf(interval);
-	StraightLineEquationNoneVertical IB7 = B7->getUpOf(interval);
-	StraightLineEquationNoneVertical IB8 = B8->getUpOf(interval);
-	StraightLineEquationNoneVertical IB9 = B9->getUpOf(interval);
-	StraightLineEquationNoneVertical IB10 = B10->getUpOf(interval);
-	StraightLineEquationNoneVertical IB11 = B11->getDownOf(interval);
-	StraightLineEquationNoneVertical IB12 = B12->getDownOf(interval);
-
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB1));
-	boundariesForCellCenter.push_back(new Arc(IB2));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB3));
-	boundariesForCellCenter.push_back(new StraightLineEquationVertical(IB4));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB5));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB6));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB7));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB8));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB9));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB10));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB11));
-	boundariesForCellCenter.push_back(
-			new StraightLineEquationNoneVertical(IB12));
-
-}
-
-vector<CVector> CellInitHelper::getCellCentersInside(double interval) {
-	// start from top left most point
-	double endX = initPoints[10].x;
-	double startingY = initPoints[0].y - interval / 2.0;
-	vector<CVector> result;
-	double currentY = startingY;
-	double currentX;
-	while (currentY > 0) {
-		try {
-			int count = 0;
-			currentX = getStartingXGivenY(currentY);
-			while (currentX < endX) {
-				CVector temp(currentX, currentY, 0);
-				cout << "Printing temp center location:";
-				temp.Print();
-				bool isInside = false;
-				try {
-					isInside = isCellCenterInsidePreciseRegion(temp);
-				} catch (CellInitHelperException &e) {
-					cout
-							<< " got exception from get starting X, error message:!"
-							<< e.what() << endl;
-				}
-				if (isInside) {
-					result.push_back(temp);
-				}
-				//if (count == 0) {
-				//	int jj;
-				//	cin >> jj;
-				//}
-				count++;
-				currentX = currentX + interval;
-			}
-			currentY = currentY - interval;
-		} catch (CellInitHelperException &e) {
-			cout << " got exception from get starting X, error message:!"
-					<< e.what() << endl;
-			break;
-		}
-	}
-	return result;
-}
-
-double CellInitHelper::getStartingXGivenY(double yPos) {
-	if (yPos <= initPoints[1].y && yPos > initPoints[2].y) {
-		Arc* boundaryArc = static_cast<Arc *>(boundariesForCellCenter[1]);
-		double centerX = boundaryArc->centerPos.x;
-		double centerY = boundaryArc->centerPos.y;
-		double radius = boundaryArc->r;
-		double xRes = sqrt(
-				radius * radius - (yPos - centerY) * (yPos - centerY))
-				+ centerX;
-		//CVector result(xRes, yPos, 0);
-		//cout << "y lower bound for arc is " << initPoints[2].y
-		//		<< "y upper bound for arc is " << initPoints[1].y << endl;
-		//cout << "r = " << radius;
-		//cout << " center of arc:";
-		//boundaryArc->centerPos.Print();
-		//cout << "intput y = " << yPos << " output x =" << xRes << endl;
-		//int jj;
-		//cin >> jj;
-		return xRes;
-	} else if (yPos <= initPoints[2].y && yPos > initPoints[3].y) {
-		StraightLineEquationNoneVertical* boundaryLine =
-				static_cast<StraightLineEquationNoneVertical *>(boundariesForCellCenter[2]);
-		double xRes = (yPos - boundaryLine->b) / boundaryLine->k;
-		//cout << "y lower bound for straight line is " << initPoints[3].y
-		//		<< "y upper bound for straight line is " << initPoints[2].y
-		//		<< endl;
-		//cout << "k = " << boundaryLine->k << " b = " << boundaryLine->b << endl;
-		//cout << "intput y = " << yPos << " output x =" << xRes << endl;
-		//int jj;
-		//cin >> jj;
-		//CVector result(xRes, yPos, 0);
-		return xRes;
-	} else if (yPos <= initPoints[3].y && yPos > initPoints[4].y) {
-		StraightLineEquationVertical* boundaryVerticalLine =
-				static_cast<StraightLineEquationVertical *>(boundariesForCellCenter[3]);
-		double xRes = boundaryVerticalLine->xPos;
-		//cout << "y lower bound for vertical line is " << initPoints[4].y
-		//		<< "y upper bound for vertical line is " << initPoints[3].y
-		//		<< endl;
-		//cout << "x value of this vertical line = " << boundaryVerticalLine->xPos
-		//		<< endl;
-		//cout << "intput y = " << yPos << " output x =" << xRes << endl;
-		//int jj;
-		//cin >> jj;
-		//CVector result(xRes, yPos, 0);
-		return xRes;
-	} else {
-		throw CellInitHelperException(
-				"Unexpected error while getting starting position");
-	}
-}
-
-bool CellInitHelper::isCellCenterInsidePreciseRegion(CVector position) {
-	//cout
-	//		<< "check the following Point to see if it is inside Simulation Region:";
-	//position.Print();
-	for (unsigned int i = 0; i < boundariesForCellCenter.size(); i++) {
-		//boundariesForCellCenter[i]->printWhoAmI();
-		if (!boundariesForCellCenter[i]->isFitCondition(position)) {
-			//cout << "The following point does not fit " << i
-			//		<< " th boundary line condition";
-			//position.Print();
-			return false;
-		} else {
-			//cout << "passed " << i << " th fit condition" << endl;
-		}
-	}
-	return true;
-}
-
-bool CellInitHelper::isMXType(CVector position) {
-	//cout << "debug: checking position";
-	//position.Print();
-	if (position.y >= initPoints[2].y) {
-		return false;
-	}
-	if (position.x >= initPoints[12].x) {
-		return false;
-	}
-	for (unsigned int i = 0; i < internalBoundaryLines.size(); i++) {
-		if (!internalBoundaryLines[i]->isFitCondition(position)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-bool CellInitHelper::isInsideFNMRegion(CVector position) {
-	bool result = linEqn1.isRightOfLine(position) && (position.y < 40)
-			&& linEqn3.isUpOfLine(position) && linEqn4.isLeftOfLine(position);
-	return result;
-}
-
-bool CellInitHelper::isInsideMXRegion(CVector position) {
-	bool result = linEqn1.isRightOfLine(position) && (position.x > 0)
-			&& linEqn3.isDownOfLine(position) && linEqn2.isUpOfLine(position);
-	return result;
-}
-
-double CellInitHelper::getMinDistanceFromFNMBorder(CVector position) {
-	double result = linEqn1.getDistance(position);
-	double tmp = fabs(40 - position.y);
-	if (tmp < result) {
-		result = tmp;
-	}
-// distance of line equation 3 is disabled.
-// because the point has to be placed at either region MX or region FNM
-//tmp = linEqn3.getDistance(position);
-//if (tmp < result) {
-//	result = tmp;
-//}
-	tmp = linEqn4.getDistance(position);
-	if (tmp < result) {
-		result = tmp;
-	}
-	return result;
-}
-
-double CellInitHelper::getMinDistanceFromMXBorder(CVector position) {
-	double result = linEqn1.getDistance(position);
-	double tmp = fabs(position.x);
-	if (tmp < result) {
-		result = tmp;
-	}
-// distance of line equation 3 is disabled.
-// because the point has to be placed at either region MX or region FNM
-//tmp = linEqn3.getDistance(position);
-//if (tmp < result) {
-//	result = tmp;
-//}
-	tmp = linEqn2.getDistance(position);
-	if (tmp < result) {
-		result = tmp;
-	}
-	return result;
-}
-
-vector<CellPlacementInfo> CellInitHelper::obtainPreciseCellInfoArray(
-		double interval, double deformRatio) {
-
-	vector<CellPlacementInfo> cellPlacementInfoArray;
-	cout << "BEGIN: " << cellPlacementInfoArray.size() << endl;
-	initPrecisionBoundaryPoints();
-	transformBoundaryPoints();
-	initBoundaryLines(interval / 1.8);
-	//CVector cellDeform = CVector(deformRatio, deformRatio, deformRatio);
-	vector<CVector> insideCellCenters = getCellCentersInside(interval);
-	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
-	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
-		CVector centerPos = insideCellCenters[i];
-		if (isMXType(centerPos)) {
-			CellPlacementInfo cellInfo;
-			cellInfo.centerLocation = centerPos;
-			cellInfo.cellNodeType = MX;
-			cellPlacementInfoArray.push_back(cellInfo);
-		} else {
-			CellPlacementInfo cellInfo;
-			cellInfo.centerLocation = centerPos;
-			cellInfo.cellNodeType = FNM;
-			cellPlacementInfoArray.push_back(cellInfo);
-		}
-	}
-	cout << "cellInfoArraySize: " << cellPlacementInfoArray.size() << endl;
-	//int jj;
-	//cin >> jj;
-	return cellPlacementInfoArray;
 }
 
 /**
@@ -740,7 +251,7 @@ RawDataInput CellInitHelper::generateRawInput_V2(
 	std::cout << " grow povit node 2 index = "
 			<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
 
-	int jj;
+	//int jj;
 	//cin >> jj;
 
 	return baseRawInput;
@@ -822,7 +333,7 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	std::cout << "In cart para, pivot node 2 index = "
 			<< cartPara.pivotNode2Index << std::endl;
 
-	int jj;
+	//int jj;
 	//cin >> jj;
 }
 
@@ -1057,39 +568,6 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	return initData;
 }
 
-//cout << "before debug:" << endl;
-
-void CellInitHelper::generateThreeInputCellInfoArrays(
-		vector<CVector> &bdryNodes, vector<CVector> &FNMCellCenters,
-		vector<CVector> &MXCellCenters, double cellCenterInterval,
-		double bdryNodeInterval) {
-	bdryNodes.clear();
-	FNMCellCenters.clear();
-	MXCellCenters.clear();
-
-	generateBoundaryCellNodesArray(bdryNodes, bdryNodeInterval);
-
-	initPrecisionBoundaryPoints();
-	transformBoundaryPoints();
-	initBoundaryLines(cellCenterInterval / 1.8);
-	vector<CVector> insideCellCenters = getCellCentersInside(
-			cellCenterInterval);
-	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
-
-	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
-		CVector centerPos = insideCellCenters[i];
-		if (isMXType(centerPos)) {
-			MXCellCenters.push_back(centerPos);
-		} else {
-			FNMCellCenters.push_back(centerPos);
-		}
-	}
-	cout << "Number of boundary nodes: " << bdryNodes.size()
-			<< "Number of MX cells: " << MXCellCenters.size()
-			<< " and number of FNM cells:" << FNMCellCenters.size() << endl;
-
-}
-
 vector<CVector> CellInitHelper::rotate2D(vector<CVector> &initECMNodePoss,
 		double angle) {
 	uint inputVectorSize = initECMNodePoss.size();
@@ -1116,60 +594,64 @@ vector<CVector> CellInitHelper::rotate2D(vector<CVector> &initECMNodePoss,
 /**
  * Generate RawDataInput.
  */
-RawDataInput CellInitHelper::generateRawInput(std::string meshInput) {
+/*
+ RawDataInput CellInitHelper::generateRawInput(std::string meshInput) {
 
-	RawDataInput rawData;
-	double cellCenterInterval = globalConfigVars.getConfigValue(
-			"Cell_Center_Interval").toDouble();
-	double bdryNodeInterval = globalConfigVars.getConfigValue(
-			"Bdry_Node_Interval").toDouble();
-	double profileNodeInterval = globalConfigVars.getConfigValue(
-			"Profile_Node_Interval").toDouble();
-	int initNodeCountPerECM = globalConfigVars.getConfigValue(
-			"InitECMNodeCount").toInt();
+ RawDataInput rawData;
+ double cellCenterInterval = globalConfigVars.getConfigValue(
+ "Cell_Center_Interval").toDouble();
+ double bdryNodeInterval = globalConfigVars.getConfigValue(
+ "Bdry_Node_Interval").toDouble();
+ double profileNodeInterval = globalConfigVars.getConfigValue(
+ "Profile_Node_Interval").toDouble();
+ int initNodeCountPerECM = globalConfigVars.getConfigValue(
+ "InitECMNodeCount").toInt();
 
-	initPrecisionBoundaryPoints();
-	transformBoundaryPoints();
-	initBoundaryLines(cellCenterInterval / 1.8);
+ initPrecisionBoundaryPoints();
+ transformBoundaryPoints();
+ initBoundaryLines(cellCenterInterval / 1.8);
 
-	generateBoundaryCellNodesArray(rawData.bdryNodes, bdryNodeInterval);
-	cout << "finished generating boundary cell nodes array" << endl;
-	generateProfileNodesArray(rawData.profileNodes, profileNodeInterval);
-	cout << "finished generating profile nodes array" << endl;
-	int initProfileNodeSize = rawData.profileNodes.size();
-	generateRandomAngles(rawData.ECMAngles, initProfileNodeSize);
-	generateECMInitNodeInfo(rawData.initECMNodePoss, initNodeCountPerECM);
-	generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
+ generateBoundaryCellNodesArray(rawData.bdryNodes, bdryNodeInterval);
+ cout << "finished generating boundary cell nodes array" << endl;
+ generateProfileNodesArray(rawData.profileNodes, profileNodeInterval);
+ cout << "finished generating profile nodes array" << endl;
+ int initProfileNodeSize = rawData.profileNodes.size();
+ generateRandomAngles(rawData.ECMAngles, initProfileNodeSize);
+ generateECMInitNodeInfo(rawData.initECMNodePoss, initNodeCountPerECM);
+ generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 
-	vector<CVector> insideCellCenters = getCellCentersInside(
-			cellCenterInterval);
-	cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
+ vector<CVector> insideCellCenters = getCellCentersInside(
+ cellCenterInterval);
+ cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
 
-	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
-		CVector centerPos = insideCellCenters[i];
-		if (isMXType(centerPos)) {
-			rawData.MXCellCenters.push_back(centerPos);
-		} else {
-			rawData.FNMCellCenters.push_back(centerPos);
-		}
-	}
+ for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+ CVector centerPos = insideCellCenters[i];
+ if (isMXType(centerPos)) {
+ rawData.MXCellCenters.push_back(centerPos);
+ } else {
+ rawData.FNMCellCenters.push_back(centerPos);
+ }
+ }
 
-	generateECMCenters(rawData.ECMCenters, insideCellCenters,
-			rawData.bdryNodes);
-	cout << "number of ECM: " << rawData.ECMCenters.size() << endl;
+ generateECMCenters(rawData.ECMCenters, insideCellCenters,
+ rawData.bdryNodes);
+ cout << "number of ECM: " << rawData.ECMCenters.size() << endl;
 
-	cout << "Number of boundary nodes: " << rawData.bdryNodes.size()
-			<< "Number of MX cells: " << rawData.MXCellCenters.size()
-			<< " and number of FNM cells:" << rawData.FNMCellCenters.size()
-			<< endl;
+ cout << "Number of boundary nodes: " << rawData.bdryNodes.size()
+ << "Number of MX cells: " << rawData.MXCellCenters.size()
+ << " and number of FNM cells:" << rawData.FNMCellCenters.size()
+ << endl;
 
-	return rawData;
-}
+ return rawData;
+ }
+ */
 
-SimulationInitData CellInitHelper::generateInput(std::string meshInput) {
-	RawDataInput rawData = generateRawInput(meshInput);
-	return initInputsV2(rawData);
-}
+/*
+ SimulationInitData CellInitHelper::generateInput(std::string meshInput) {
+ RawDataInput rawData = generateRawInput(meshInput);
+ return initInputsV2(rawData);
+ }
+ */
 
 vector<CVector> CellInitHelper::generateCircleCentersInDisk(double diskRadius,
 		double circleRadius) {
@@ -1361,96 +843,6 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 	return rawData;
 }
 
-void CellInitHelper::generateProfileNodesArray(
-		vector<CVector> &initProfileNodes, double profileNodeInterval) {
-
-// initPoints[5], initPoints[6];
-// initPoints[6], initPoints[7];
-// initPoints[7], initPoints[8];
-// initPoints[8], initPoints[9];
-// initPoints[9], initPoints[10]
-// initPoints[10], initPoints[11];
-// initPoints[11], initPoints[0];
-
-	if (isInitNodesInitializedFlag == false) {
-		cerr
-				<< "Fatal error: This function must be called after boundary nodes are initialized. Exit!"
-				<< endl;
-		exit(0);
-	}
-
-	cout << "starting generating profile nodes:" << endl;
-
-	vector<CVector> beginNodes;
-	beginNodes.push_back(initPoints[4]);
-	beginNodes.push_back(initPoints[5]);
-	beginNodes.push_back(initPoints[6]);
-	beginNodes.push_back(initPoints[7]);
-	beginNodes.push_back(initPoints[8]);
-	beginNodes.push_back(initPoints[9]);
-	beginNodes.push_back(initPoints[10]);
-	beginNodes.push_back(initPoints[11]);
-	vector<CVector> endNodes;
-	endNodes.push_back(initPoints[5]);
-	endNodes.push_back(initPoints[6]);
-	endNodes.push_back(initPoints[7]);
-	endNodes.push_back(initPoints[8]);
-	endNodes.push_back(initPoints[9]);
-	endNodes.push_back(initPoints[10]);
-	endNodes.push_back(initPoints[11]);
-	endNodes.push_back(initPoints[0]);
-
-	cout << "finished init start and end points" << endl;
-
-	initProfileNodes.clear();
-//double delta = 1.0e-6;
-	vector<CVector> dirVectors;
-	for (uint i = 0; i < endNodes.size(); i++) {
-		dirVectors.push_back(endNodes[i] - beginNodes[i]);
-	}
-	cout << "finished init dirvectors" << endl;
-
-	vector<double> totalDistances;
-	for (uint i = 0; i < dirVectors.size(); i++) {
-		totalDistances.push_back(Modul(dirVectors[i]));
-	}
-	cout << "finished init totalDistantces" << endl;
-
-	vector<CVector> unitVectors;
-	for (uint i = 0; i < dirVectors.size(); i++) {
-		unitVectors.push_back(dirVectors[i].getUnitVector());
-	}
-	cout << "finished unitVectors" << endl;
-
-	vector<CVector> unitIncreases;
-	for (uint i = 0; i < dirVectors.size(); i++) {
-		unitIncreases.push_back(unitVectors[i] * profileNodeInterval);
-	}
-	cout << "finished init unitIncrease" << endl;
-
-	CVector tempPoint;
-	initProfileNodes.push_back(beginNodes[0]);
-	double remainFromPrevious = 0.0;
-	CVector startPt;
-	for (uint i = 0; i < beginNodes.size(); i++) {
-		startPt = beginNodes[i]
-				+ (profileNodeInterval - remainFromPrevious) * unitIncreases[i];
-
-		double actualTotalDist = remainFromPrevious + totalDistances[i];
-		uint numberOfPieces = actualTotalDist / profileNodeInterval;
-		for (uint j = 0; j < numberOfPieces; j++) {
-			tempPoint = startPt + j * unitIncreases[i];
-
-			initProfileNodes.push_back(tempPoint);
-			std::cout << "added a new point: ";
-			tempPoint.Print();
-		}
-		remainFromPrevious = actualTotalDist
-				- numberOfPieces * profileNodeInterval;
-	}
-//int jj;
-//cin >> jj;
-}
 //TODO
 void CellInitHelper::generateRandomAngles(vector<double> &randomAngles,
 		int initProfileNodeSize) {
@@ -1700,8 +1092,11 @@ bool CellInitHelper::isMXType_v2(CVector position) {
 	if (position.x >= internalBdryPts[2].x) {
 		return false;
 	}
-	for (unsigned int i = 0; i < internalBdrys.size(); i++) {
-		if (!internalBdrys[i].isFitCondition(position)) {
+	for (uint i = 0; i < internalBdryPts.size() - 1; i++) {
+		CVector a = internalBdryPts[i + 1] - internalBdryPts[i];
+		CVector b = position - internalBdryPts[i];
+		CVector crossProduct = Cross(a, b);
+		if (crossProduct.z < 0) {
 			return false;
 		}
 	}
@@ -1712,11 +1107,5 @@ void CellInitHelper::initInternalBdry() {
 	GEOMETRY::MeshGen meshGen;
 	GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
 	internalBdryPts = input.internalBdryPts;
-	for (uint i = 0; i < internalBdryPts.size() - 1; i++) {
-		StraightLineEquationNoneVertical bdry(internalBdryPts[i],
-				internalBdryPts[i + 1]);
-		bdry.condiType = Left;
-		internalBdrys.push_back(bdry);
-	}
 }
 
