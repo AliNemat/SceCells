@@ -792,7 +792,7 @@ RawDataInput CellInitHelper::generateDiskRawInput(std::string meshInput) {
 	return rawData;
 }
 
-RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
+RawDataInput CellInitHelper::generateRawInput_stab() {
 	RawDataInput rawData;
 	vector<CVector> insideCellCenters;
 	vector<CVector> outsideBdryNodePos;
@@ -837,7 +837,6 @@ RawDataInput CellInitHelper::generateRawInput_stab(std::string meshInput) {
 		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
 	}
 
-//generateCellInitNodeInfo(rawData.initCellNodePoss, meshInput);
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
 
 	return rawData;

@@ -98,7 +98,7 @@ int main() {
 	//		"SimulationTimeStep").toDouble();
 	CellInitHelper initHelper;
 
-	RawDataInput rawInput = initHelper.generateRawInput_stab(loadMeshInput);
+	RawDataInput rawInput = initHelper.generateRawInput_stab();
 
 	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
 

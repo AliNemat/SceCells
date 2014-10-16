@@ -118,7 +118,7 @@ public:
 	vector<CVector> generateCircleCentersInDisk2(double diskRadius,
 			double circleRadius);
 	RawDataInput generateDiskRawInput(std::string meshInput);
-	RawDataInput generateRawInput_stab(std::string meshInput);
+	RawDataInput generateRawInput_stab();
 	RawDataInput generateRawInputWithProfile(
 			std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded =
 					true);
