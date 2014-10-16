@@ -4,42 +4,18 @@
 #include <stdlib.h>
 using namespace std;
 
-const int myDeviceID = 0;
 GlobalConfigVars globalConfigVars;
 
-void generateStringInputs(std::string &loadMeshInput,
-		std::string &animationInput, std::string &animationFolder,
-		std::vector<std::string> &boundaryMeshFileNames) {
-	std::string meshLocation =
-			globalConfigVars.getConfigValue("MeshLocation").toString();
-	std::string meshName =
-			globalConfigVars.getConfigValue("MeshName").toString();
-	std::string meshExtention =
-			globalConfigVars.getConfigValue("MeshExtention").toString();
-	loadMeshInput = meshLocation + meshName + meshExtention;
-
-	animationFolder =
-			globalConfigVars.getConfigValue("AnimationFolder").toString();
-	animationInput = animationFolder
-			+ globalConfigVars.getConfigValue("AnimationName").toString();
-
-	std::string boundaryMeshLocation = globalConfigVars.getConfigValue(
-			"BoundaryMeshLocation").toString();
-	std::string boundaryMeshName = globalConfigVars.getConfigValue(
-			"BoundaryMeshName").toString();
-	std::string boundaryMeshExtention = globalConfigVars.getConfigValue(
-			"BoundaryMeshExtention").toString();
-	std::string boundaryMeshInput = boundaryMeshLocation + boundaryMeshName
-			+ boundaryMeshExtention;
-	boundaryMeshFileNames.push_back(boundaryMeshInput);
-}
-
 int main() {
+	// initialize config file.
 	srand(time(NULL));
 	ConfigParser parser;
-	cudaSetDevice(myDeviceID);
 	std::string configFileName = "./resources/beak.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
+
+	// set GPU device.
+	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
+	cudaSetDevice(myDeviceID);
 
 	std::string animationInput = globalConfigVars.getConfigValue(
 			"AnimationFolder").toString()

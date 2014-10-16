@@ -917,19 +917,23 @@ void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
 				+ sceCartPara[1] / sceCartPara[3]
 						* exp(-linkLength / sceCartPara[3]);
 		if (linkLength > 1.0e-12) {
-			double dotProduct = (xPos2 - xPos) / linkLength * cartGrowDirVec[0]
-					+ (yPos2 - yPos) / linkLength * cartGrowDirVec[1]
-					+ (zPos2 - zPos) / linkLength * cartGrowDirVec[2];
-			forceValue = forceValue * dotProduct;
-			xRes = xRes + forceValue * cartGrowDirVec[0];
-			yRes = yRes + forceValue * cartGrowDirVec[1];
-			zRes = zRes + forceValue * cartGrowDirVec[2];
-		}
-		if (forceValue > 0) {
-			forceValue = forceValue * 0.01;
+			//double dotProduct = (xPos2 - xPos) / linkLength * cartGrowDirVec[0]
+			//		+ (yPos2 - yPos) / linkLength * cartGrowDirVec[1]
+			//		+ (zPos2 - zPos) / linkLength * cartGrowDirVec[2];
+			//forceValue = forceValue * dotProduct;
+			//xRes = xRes + forceValue * cartGrowDirVec[0];
+			//yRes = yRes + forceValue * cartGrowDirVec[1];
+			//zRes = zRes + forceValue * cartGrowDirVec[2];
 			xRes = xRes + forceValue * (xPos2 - xPos);
 			yRes = yRes + forceValue * (yPos2 - yPos);
 			zRes = zRes + forceValue * (zPos2 - zPos);
+		}
+		if (forceValue > 0) {
+			//forceValue = forceValue * 0.01;
+			forceValue = 0;
+			//xRes = xRes + forceValue * (xPos2 - xPos);
+			//yRes = yRes + forceValue * (yPos2 - yPos);
+			//zRes = zRes + forceValue * (zPos2 - zPos);
 		}
 	}
 
