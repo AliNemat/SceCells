@@ -60,6 +60,12 @@ public:
 	}
 };
 
+enum SimulationType {
+	Beak, Disc
+};
+
+SimulationType parseTypeFromConfig(int configValue);
+
 /**
  * This data structure contains mechanical parameters of the model.
  */
@@ -122,6 +128,7 @@ struct SceMiscPara {
  * This data structure contains parameters about the memory layout of the simulation domain.
  */
 struct SceMemPara {
+	SimulationType simuType;
 	uint maxCellInDomain;
 	uint maxNodePerCell;
 	uint maxECMInDomain;

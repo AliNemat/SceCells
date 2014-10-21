@@ -52,6 +52,7 @@ struct CellInitHelperException: public std::exception {
 };
 
 class CellInitHelper {
+	SimulationType simuType;
 	CVector getPointGivenAngle(double currentAngle, double r,
 			CVector centerPos);
 
@@ -119,6 +120,8 @@ public:
 			double circleRadius);
 	RawDataInput generateDiskRawInput(std::string meshInput);
 	RawDataInput generateRawInput_stab();
+	void initializeRawInput(RawDataInput &rawInput,
+			std::vector<CVector> &cellCenterPoss);
 	RawDataInput generateRawInputWithProfile(
 			std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded =
 					true);

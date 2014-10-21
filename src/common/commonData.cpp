@@ -190,6 +190,17 @@ std::vector<double> getArrayZComp(std::vector<CVector>& nodePosVec) {
 	return result;
 }
 
+SimulationType parseTypeFromConfig(int configValue) {
+	if (configValue == 0) {
+		return Beak;
+	} else if (configValue == 1) {
+		return Disc;
+	} else {
+		throw SceException("Simulation type in config file is not defined",
+				ConfigValueException);
+	}
+}
+
 uint findClosestArrIndexGivenPos(std::vector<CVector>& vecArr, CVector& pos) {
 	if (vecArr.size() == 0) {
 		std::string errorMsg =

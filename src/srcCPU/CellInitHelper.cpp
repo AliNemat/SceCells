@@ -8,7 +8,11 @@
 #include "CellInitHelper.h"
 
 CellInitHelper::CellInitHelper() {
-	initInternalBdry();
+	int type = globalConfigVars.getConfigValue("SimulationType").toInt();
+	simuType = parseTypeFromConfig(type);
+	if (simuType == Beak) {
+		initInternalBdry();
+	}
 }
 
 CVector CellInitHelper::getPointGivenAngle(double currentAngle, double r,
@@ -218,43 +222,52 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 
 RawDataInput CellInitHelper::generateRawInput_V2(
 		std::vector<CVector>& cellCenterPoss) {
-	RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss,
-			false);
+	if (simuType == Beak) {
+		RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss,
+				false);
 
-	GEOMETRY::MeshGen meshGen;
-	double genBdryRatio =
-			globalConfigVars.getConfigValue("GenBdrySpacingRatio").toDouble();
-	std::string bdryInputFileName = globalConfigVars.getConfigValue(
-			"Bdry_InputFileName").toString();
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
-			bdryInputFileName, genBdryRatio);
-	GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
-	baseRawInput.cartilageData = meshGen.obtainCartilageData(mesh, input);
+		GEOMETRY::MeshGen meshGen;
+		double genBdryRatio = globalConfigVars.getConfigValue(
+				"GenBdrySpacingRatio").toDouble();
+		std::string bdryInputFileName = globalConfigVars.getConfigValue(
+				"Bdry_InputFileName").toString();
+		GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
+				bdryInputFileName, genBdryRatio);
+		GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
+		baseRawInput.cartilageData = meshGen.obtainCartilageData(mesh, input);
 
-	std::cout << "non tip verticies size = "
-			<< baseRawInput.cartilageData.nonTipVerticies.size() << std::endl;
-	std::cout << " tip verticies size = "
-			<< baseRawInput.cartilageData.tipVerticies.size() << std::endl;
+		std::cout << "non tip verticies size = "
+				<< baseRawInput.cartilageData.nonTipVerticies.size()
+				<< std::endl;
+		std::cout << " tip verticies size = "
+				<< baseRawInput.cartilageData.tipVerticies.size() << std::endl;
 
-	std::cout << " grow node 1 index = "
-			<< baseRawInput.cartilageData.growNode1Index_on_tip << std::endl;
-	std::cout << " grow node 2 index = "
-			<< baseRawInput.cartilageData.growNode2Index_on_tip << std::endl;
+		std::cout << " grow node 1 index = "
+				<< baseRawInput.cartilageData.growNode1Index_on_tip
+				<< std::endl;
+		std::cout << " grow node 2 index = "
+				<< baseRawInput.cartilageData.growNode2Index_on_tip
+				<< std::endl;
 
-	std::cout << " grow behind node 1 index = "
-			<< baseRawInput.cartilageData.growNodeBehind1Index << std::endl;
-	std::cout << " grow behind node 2 index = "
-			<< baseRawInput.cartilageData.growNodeBehind2Index << std::endl;
+		std::cout << " grow behind node 1 index = "
+				<< baseRawInput.cartilageData.growNodeBehind1Index << std::endl;
+		std::cout << " grow behind node 2 index = "
+				<< baseRawInput.cartilageData.growNodeBehind2Index << std::endl;
 
-	std::cout << " grow povit node 1 index = "
-			<< baseRawInput.cartilageData.pivotNode1Index << std::endl;
-	std::cout << " grow povit node 2 index = "
-			<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
-
-	//int jj;
-	//cin >> jj;
-
-	return baseRawInput;
+		std::cout << " grow povit node 1 index = "
+				<< baseRawInput.cartilageData.pivotNode1Index << std::endl;
+		std::cout << " grow povit node 2 index = "
+				<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
+		return baseRawInput;
+	} else if (simuType == Disc) {
+		RawDataInput rawInput;
+		initializeRawInput(rawInput, cellCenterPoss);
+		return rawInput;
+	} else {
+		throw SceException(
+				"Simulation Type is not defined when trying to generate raw input",
+				InvalidInput);
+	}
 }
 
 void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
@@ -340,8 +353,8 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 /**
  * Initialize inputs for five different components.
  */
-SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 
+SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	SimulationInitData initData;
 
 	//transformRawCartData(rawData.cartilageData, initData.cartPara,
@@ -462,6 +475,22 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	return initData;
 }
 
+void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
+		std::vector<CVector>& cellCenterPoss) {
+
+	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
+		CVector centerPos = cellCenterPoss[i];
+		if (isMXType_v2(centerPos)) {
+			rawInput.MXCellCenters.push_back(centerPos);
+		} else {
+			rawInput.FNMCellCenters.push_back(centerPos);
+		}
+	}
+
+	generateCellInitNodeInfo_v2(rawInput.initCellNodePoss);
+
+}
+
 SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	SimulationInitData_V2 initData;
 
@@ -478,8 +507,10 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryNodeVec.resize(rawData.bdryNodes.size());
 	initData.initProfileNodeVec.resize(rawData.profileNodes.size());
-	transformRawCartData(rawData.cartilageData, initData.cartPara,
-			initData.initCartNodeVec);
+	if (simuType == Beak) {
+		transformRawCartData(rawData.cartilageData, initData.cartPara,
+				initData.initCartNodeVec);
+	}
 	initData.initECMNodeVec.resize(maxNodePerECM * ECMCount);
 	initData.initFNMNodeVec.resize(maxNodePerCell * FnmCellCount);
 	initData.initMXNodeVec.resize(maxNodePerCell * MxCellCount);
@@ -827,10 +858,11 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	}
 
 //cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
-
+	cout << "MX cell centers: " << insideCellCenters.size() << endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
 		rawData.MXCellCenters.push_back(centerPos);
+		centerPos.Print();
 	}
 
 	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
@@ -838,7 +870,10 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	}
 
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
-
+	cout << "random cell nodes: " << rawData.initCellNodePoss.size() << endl;
+	for (uint i = 0; i < rawData.initCellNodePoss.size(); i++) {
+		rawData.initCellNodePoss[i].Print();
+	}
 	return rawData;
 }
 
@@ -1085,6 +1120,9 @@ bool CellInitHelper::isPositionQualify(vector<CVector>& poss) {
 }
 
 bool CellInitHelper::isMXType_v2(CVector position) {
+	if (simuType != Beak) {
+		return true;
+	}
 	if (position.y >= internalBdryPts[0].y) {
 		return false;
 	}

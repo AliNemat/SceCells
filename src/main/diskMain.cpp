@@ -18,21 +18,15 @@ using namespace std;
 
 GlobalConfigVars globalConfigVars;
 
-void generateStringInputs(std::string &loadMeshInput,
-		std::string &animationInput, std::string &animationFolder,
-		std::vector<std::string> &boundaryMeshFileNames) {
-	std::string meshLocation =
-			globalConfigVars.getConfigValue("MeshLocation").toString();
-	std::string meshName =
-			globalConfigVars.getConfigValue("MeshName").toString();
-	std::string meshExtention =
-			globalConfigVars.getConfigValue("MeshExtention").toString();
-	loadMeshInput = meshLocation + meshName + meshExtention;
-
-	animationFolder =
-			globalConfigVars.getConfigValue("AnimationFolder").toString();
-	animationInput = animationFolder
-			+ globalConfigVars.getConfigValue("AnimationName").toString();
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
+		true) {
+	if (code != cudaSuccess) {
+		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+				line);
+		if (abort)
+			exit(code);
+	}
 }
 
 int main() {
@@ -41,19 +35,20 @@ int main() {
 	std::string configFileName = "./resources/disk.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
 
+	// set GPU device.
+	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
+	gpuErrchk(cudaSetDevice(myDeviceID));
+
+	std::string animationInput = globalConfigVars.getConfigValue(
+			"AnimationFolder").toString()
+			+ globalConfigVars.getConfigValue("AnimationName").toString();
+
 	double SimulationTotalTime = globalConfigVars.getConfigValue(
 			"SimulationTotalTime").toDouble();
 	double SimulationTimeStep = globalConfigVars.getConfigValue(
 			"SimulationTimeStep").toDouble();
 	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
 			"TotalNumOfOutputFrames").toInt();
-
-	std::string loadMeshInput;
-	std::string animationInput;
-	std::vector<std::string> boundaryMeshFileNames;
-	std::string animationFolder;
-	generateStringInputs(loadMeshInput, animationInput, animationFolder,
-			boundaryMeshFileNames);
 
 	const double simulationTime = SimulationTotalTime;
 	const double dt = SimulationTimeStep;
@@ -76,17 +71,34 @@ int main() {
 
 	CellInitHelper initHelper;
 
+	RawDataInput rawInput = initHelper.generateRawInput_stab();
+
+	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
+
 	SimulationDomainGPU simuDomain;
-	SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
-	simuDomain.initialize(initData);
 
-	simuDomain.checkIfAllDataFieldsValid();
+	std::vector<CVector> stabilizedCenters;
+	// TODO: These initialization statments are removed for debugging purpose.
+	stabilizedCenters = simuDomain.stablizeCellCenters(simuData);
+	std::cout << "begin generating raw input data" << std::endl;
+	std::cout.flush();
+	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
+	std::cout << "finished generating raw input data" << std::endl;
+	std::cout.flush();
+	SimulationInitData_V2 simuData2 = initHelper.initInputsV3(rawInput2);
 
+	std::cout << "finished generating simulation init data V2" << std::endl;
+	std::cout.flush();
+	simuDomain.initialize_v2(simuData2);
+
+	uint aniFrame = 0;
 	for (int i = 0; i <= numOfTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % outputAnimationAuxVarible == 0) {
 			cout << "started to output Animation" << endl;
-			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
+			simuDomain.outputVtkFilesWithColor(animationInput, aniFrame,
+					aniCri);
+			aniFrame++;
 			cout << "finished output Animation" << endl;
 			cout << "started writing label matrix" << endl;
 			simuDomain.outputLabelMatrix(dataName, i, pixelPara);

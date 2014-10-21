@@ -321,8 +321,10 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	/**
 	 * setting the cartilage related parameters in the simulation domain.
 	 */
-	cartilage.setCartPara(cartPara);
-	cartilage.initializeMem(&nodes);
+	if (memPara.simuType == Beak) {
+		cartilage.setCartPara(cartPara);
+		cartilage.initializeMem(&nodes);
+	}
 
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
@@ -356,20 +358,35 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
  *
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
-	nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
-	std::cout << "growth direction is ";
-	cartilage.getCartPara().growthDir.Print();
+	if (memPara.simuType == Beak) {
+		nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
+		//std::cout << "growth direction is ";
+		cartilage.getCartPara().growthDir.Print();
+	}
 	//int jj;
 	//std::cin >> jj;
 	nodes.calculateAndApplySceForces();
 	// cartilage logics must come before cell logics, because node velocities will be modified
 	// in cell logic so we won't be able to compute cartilage data.
-	cartilage.runAllLogics(dt);
+	if (memPara.simuType == Beak) {
+		cartilage.runAllLogics(dt);
+	}
 	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
 
 }
 
 void SimulationDomainGPU::readMemPara() {
+	int simuTypeConfigValue =
+			globalConfigVars.getConfigValue("SimulationType").toInt();
+	if (simuTypeConfigValue == 0) {
+		memPara.simuType = Beak;
+	} else if (simuTypeConfigValue == 1) {
+		memPara.simuType = Disc;
+	} else {
+		throw SceException("Simulation Type in config file is not recognized!",
+				ConfigValueException);
+	}
+
 	memPara.maxCellInDomain =
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
 	memPara.maxNodePerCell =
