@@ -31,6 +31,7 @@
 
 // include google test files in order to test private functions.
 #include "gtest/gtest_prod.h"
+#include "SceNodes.h"
 
 // I wish I could include some c++ 11 data structure here but it seems
 // Thrust is not compatible with c++ 11.
@@ -67,6 +68,7 @@ typedef thrust::tuple<double, double, double, uint> CVec3Int;
 typedef thrust::tuple<double, double, double, bool> CVec3Bool;
 typedef thrust::tuple<double, double, double, bool, uint> CVec3BoolInt;
 typedef thrust::tuple<double, double, double, double> CVec4;
+typedef thrust::tuple<double, double, double, double, bool> CVec4Bool;
 typedef thrust::tuple<double, double, double, double, double> CVec5;
 typedef thrust::tuple<double, double, double, double, double, double> CVec6;
 typedef thrust::tuple<double, double, double, double, double, double, bool> CVec6Bool;
@@ -277,6 +279,8 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
 		double &yLocRight, double &zLocRight, double &xVel, double &yVel,
 		double &zVel);
+
+
 
 /**
  * a complicated data structure for adding subcellular element force to cell nodes.
@@ -505,7 +509,7 @@ class SceNodes {
 	void findBucketBounds();
 
 	/**
-	 * @brief This is the most important part of the parallel algorithm.
+	 * This is the most important part of the parallel algorithm.
 	 * For each particle in SCE model (represented by bucketValues here),
 	 * the algorithm finds all particles that fits in the nearby grids and then
 	 * apply forces with them.
@@ -514,7 +518,9 @@ class SceNodes {
 	void applySceForces();
 
 	/**
-	 * @brief This function exerts force on the profile nodes.
+	 * This function exerts force on the profile nodes.
+	 * Because cartilage actually pins to the epitheilum layer, I have recently
+	 * added some new constraints in this function.
 	 */
 	void applyProfileForces();
 
@@ -628,6 +634,10 @@ public:
 	 */
 	NodeInfoVecs& getInfoVecs();
 	void setInfoVecs(const NodeInfoVecs& infoVecs);
+
+	const SceMechPara& getMechPara() const {
+		return mechPara;
+	}
 };
 
 #endif /* SCENODES_H_ */

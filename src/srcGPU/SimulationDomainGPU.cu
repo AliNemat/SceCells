@@ -363,14 +363,17 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 		//std::cout << "growth direction is ";
 		cartilage.getCartPara().growthDir.Print();
 	}
-	//int jj;
-	//std::cin >> jj;
+
+	// This function only calculates velocity.
 	nodes.calculateAndApplySceForces();
-	// cartilage logics must come before cell logics, because node velocities will be modified
-	// in cell logic so we won't be able to compute cartilage data.
+	// Only beak simulation need to take care of cartilage.
 	if (memPara.simuType == Beak) {
+		// cartilage logics must come before cell logics, because node velocities will be modified
+		// in cell logic and consequently we won't be able to compute cartilage data.
+		// also responsible for handling interaction between epithelium layer and carilage.
 		cartilage.runAllLogics(dt);
 	}
+	// This function applies velocity so nodes actually move inside this function.
 	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
 
 }
@@ -568,6 +571,7 @@ void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 //int jj;
 //cin >> jj;
 }
+
 
 void SimulationDomainGPU::outputLabelMatrix(std::string resultNameBase,
 		int rank, PixelizePara& pixelPara) {

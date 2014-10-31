@@ -921,12 +921,13 @@ void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
 			//		+ (yPos2 - yPos) / linkLength * cartGrowDirVec[1]
 			//		+ (zPos2 - zPos) / linkLength * cartGrowDirVec[2];
 			//forceValue = forceValue * dotProduct;
-			//xRes = xRes + forceValue * cartGrowDirVec[0];
-			//yRes = yRes + forceValue * cartGrowDirVec[1];
-			//zRes = zRes + forceValue * cartGrowDirVec[2];
-			xRes = xRes + forceValue * (xPos2 - xPos);
-			yRes = yRes + forceValue * (yPos2 - yPos);
-			zRes = zRes + forceValue * (zPos2 - zPos);
+			// this is just a temperary solution -- the direction should not be fixed.
+			xRes = xRes - forceValue * cartGrowDirVec[0];
+			yRes = yRes - forceValue * cartGrowDirVec[1];
+			zRes = zRes - forceValue * cartGrowDirVec[2];
+			//xRes = xRes + forceValue * (xPos2 - xPos);
+			//yRes = yRes + forceValue * (yPos2 - yPos);
+			//zRes = zRes + forceValue * (zPos2 - zPos);
 		}
 		if (forceValue > 0) {
 			//forceValue = forceValue * 0.01;

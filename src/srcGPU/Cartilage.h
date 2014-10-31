@@ -11,6 +11,31 @@
 #ifndef CARTILAGE_H_
 #define CARTILAGE_H_
 
+__device__
+void crossProduct(double &ax, double &ay, double &az, double &bx, double &by,
+		double &bz, double &cx, double &cy, double &cz);
+
+__device__
+double crossProduct2D(double& ax, double& ay, double& bx, double& by);
+
+__device__
+double dotProduct(double &ax, double &ay, double &az, double &bx, double &by,
+		double &bz);
+
+/**
+ * vector based method to determine if a node is close enough to cartilage.
+ */
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+__device__
+bool closeToCart(double &xPos, double &yPos);
+
+/**
+ * if a node is adhered to cartilage. we need to adjust the velocity.
+ */
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+__device__
+void modifyVelNoSlip(double &xPos, double &yPos, double &xVel, double &yVel);
+
 struct TorqueCompute: public thrust::binary_function<CVec2Bool, CVec2, double> {
 	double _fixedPtX, _fixedPtY, _growthDirX, _growthDirY, _normalX, _normalY;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -78,6 +103,30 @@ struct Rotation2D: public thrust::unary_function<CVec2Bool, CVec2> {
 	}
 };
 
+struct NoSlipHandler: public thrust::unary_function<CVec4Bool, CVec2> {
+	__host__ __device__
+	NoSlipHandler() {
+
+	}
+	__device__
+	CVec2 operator()(const CVec4Bool &locVel) {
+		double xPos = thrust::get<0>(locVel);
+		double yPos = thrust::get<1>(locVel);
+		double xVel = thrust::get<2>(locVel);
+		double yVel = thrust::get<3>(locVel);
+		bool isActive = thrust::get<4>(locVel);
+		if (!isActive) {
+			return thrust::make_tuple(0, 0);
+		}
+		if (closeToCart(xPos, yPos)) {
+			modifyVelNoSlip(xPos, yPos, xVel, yVel);
+			return thrust::make_tuple(xVel, yVel);
+		} else {
+			return thrust::make_tuple(xVel, yVel);
+		}
+	}
+};
+
 class Cartilage {
 	bool isInitialized;
 	bool isParaInitialized;
@@ -111,6 +160,16 @@ class Cartilage {
 	void initIsActive();
 
 	void readValuesFromConfig();
+
+	/**
+	 * Per conversation with Dr.Newman, we learned that cartilage would not slip over the epithelium,
+	 * This function was created to handle this special condition.
+	 * Basic idea is to limit the velocity of the epithelium nodes that are contacting cartilage.
+	 * velocity that is along the cartilage growth direction will not be changed.
+	 * velocity that is perpendicular to cartilage growth direction will be changed to
+	 * accomendate cartilage angular speed.
+	 */
+	void handleCartNoSlippage();
 
 public:
 	Cartilage();
