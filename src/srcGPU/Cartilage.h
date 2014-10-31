@@ -103,26 +103,73 @@ struct Rotation2D: public thrust::unary_function<CVec2Bool, CVec2> {
 	}
 };
 
-struct NoSlipHandler: public thrust::unary_function<CVec4Bool, CVec2> {
+struct NoSlipHandler: public thrust::unary_function<CVec4Bool, CVec2Bool> {
 	__host__ __device__
 	NoSlipHandler() {
 
 	}
 	__device__
-	CVec2 operator()(const CVec4Bool &locVel) {
+	CVec2Bool operator()(const CVec4Bool &locVel) {
 		double xPos = thrust::get<0>(locVel);
 		double yPos = thrust::get<1>(locVel);
 		double xVel = thrust::get<2>(locVel);
 		double yVel = thrust::get<3>(locVel);
 		bool isActive = thrust::get<4>(locVel);
+
 		if (!isActive) {
-			return thrust::make_tuple(0, 0);
+			return thrust::make_tuple(0.0, 0.0, false);
 		}
+		bool isCloseToCart = false;
 		if (closeToCart(xPos, yPos)) {
 			modifyVelNoSlip(xPos, yPos, xVel, yVel);
-			return thrust::make_tuple(xVel, yVel);
+			isCloseToCart = true;
+		}
+		return thrust::make_tuple(xVel, yVel, isCloseToCart);
+	}
+};
+
+struct MinCount: public thrust::binary_function<BoolInt, BoolInt, int> {
+	__host__ __device__
+	MinCount() {
+
+	}
+	__device__
+	int operator()(const BoolInt &i1, const BoolInt &i2) {
+		bool bool1 = thrust::get<0>(i1);
+		int index1 = thrust::get<1>(i1);
+		bool bool2 = thrust::get<0>(i2);
+		int index2 = thrust::get<1>(i2);
+		if (bool1 & bool2) {
+			return min(index1, index2);
+		} else if ((!bool1) && (!bool2)) {
+			return INT_MAX;
+		} else if (bool1) {
+			return index1;
 		} else {
-			return thrust::make_tuple(xVel, yVel);
+			return index2;
+		}
+	}
+};
+
+struct MaxCount: public thrust::binary_function<BoolInt, BoolInt, int> {
+	__host__ __device__
+	MaxCount() {
+
+	}
+	__device__
+	int operator()(const BoolInt &i1, const BoolInt &i2) {
+		bool bool1 = thrust::get<0>(i1);
+		int index1 = thrust::get<1>(i1);
+		bool bool2 = thrust::get<0>(i2);
+		int index2 = thrust::get<1>(i2);
+		if (bool1 & bool2) {
+			return max(index1, index2);
+		} else if ((!bool1) && (!bool2)) {
+			return INT_MIN;
+		} else if (bool1) {
+			return index1;
+		} else {
+			return index2;
 		}
 	}
 };

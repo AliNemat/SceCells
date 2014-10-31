@@ -3,6 +3,7 @@
 __device__ __constant__ double cartFixedPtConst[3];
 __device__ __constant__ double cartGrowDirConst[3];
 __device__ __constant__ double cartAngSpeedConst;
+__device__ __constant__ double cartCurLenConst;
 __device__ __constant__ double effectiveRangeConst;
 
 void Cartilage::calculateGrowthDir() {
@@ -30,7 +31,7 @@ void Cartilage::calculateGrowthDir() {
 	// compute current growth direction.
 	CVector direction = midPoint - cartPara.fixedPt;
 	cartPara.growthDir = direction.getUnitVector();
-
+	cartPara.currentLength = direction.getModul();
 	cartPara.node1GrowthDir = cartPara.growthDir;
 	cartPara.node2GrowthDir = cartPara.growthDir;
 }
@@ -61,6 +62,8 @@ void Cartilage::calculateTotalTorque() {
 					+ indexBegin, 0.0, plusOp,
 			TorqueCompute(cartPara.fixedPt.x, cartPara.fixedPt.y,
 					cartPara.growthDir.x, cartPara.growthDir.y));
+
+	cartPara.totalTorque += cartPara.torqueFromEpi;
 	cartPara.angularSpeed = cartPara.totalTorque / cartPara.moInertia;
 	std::cout << " total torque = " << cartPara.totalTorque << std::endl;
 }
@@ -133,6 +136,8 @@ void Cartilage::initializeMem(SceNodes* nodeInput) {
 
 	cartPara.fixedPt = pivotNode1Pos + pivotNode2Pos;
 	cartPara.fixedPt = cartPara.fixedPt / 2;
+
+	cartPara.torqueFromEpi = 0;
 
 	cudaMemcpyToSymbol(effectiveRangeConst,
 			&(nodes->getMechPara().sceCartParaCPU[4]), sizeof(double));
@@ -349,9 +354,16 @@ void Cartilage::handleCartNoSlippage() {
 	double angSpeed = cartPara.angularSpeed;
 	cudaMemcpyToSymbol(cartAngSpeedConst, &angSpeed, sizeof(double));
 
+	double curLen = cartPara.currentLength;
+	cudaMemcpyToSymbol(cartCurLenConst, &curLen, sizeof(double));
+
 	uint profileStartPos = nodes->getAllocPara().startPosProfile;
 	uint profileEndPos = profileStartPos
 			+ nodes->getAllocPara().currentActiveProfileNodeCount;
+
+	uint activeEpiNodeCount =
+			nodes->getAllocPara().currentActiveProfileNodeCount;
+	thrust::device_vector<bool> isMergedToCart(activeEpiNodeCount);
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -369,9 +381,45 @@ void Cartilage::handleCartNoSlippage() {
 							nodes->getInfoVecs().nodeIsActive.begin()))
 					+ profileEndPos,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin()))
-					+ profileStartPos, NoSlipHandler());
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ profileStartPos,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ profileStartPos, isMergedToCart.begin())),
+			NoSlipHandler());
+
+	thrust::counting_iterator<int> countingBegin(0);
+
+	//thrust::copy_if(countingBegin);
+
+	//FIXME: We probably need to do this on GPU. This problem seems to be easy but is actually non-
+
+	int contactingNodeCount = thrust::reduce(isMergedToCart.begin(),
+			isMergedToCart.end(), 0, thrust::plus<int>());
+
+	thrust::device_vector<int> epiIndicies(contactingNodeCount);
+	thrust::copy_if(countingBegin, countingBegin + activeEpiNodeCount,
+			isMergedToCart.begin(), epiIndicies, isTrue());
+
+	/*
+	 int minIndex = thrust::reduce(
+	 thrust::make_zip_iterator(
+	 thrust::make_tuple(isMergedToCart.begin(), countingBegin)),
+	 thrust::make_zip_iterator(
+	 thrust::make_tuple(isMergedToCart.begin(), countingBegin))
+	 + nodes->getAllocPara().currentActiveProfileNodeCount,
+	 INT_MAX, MinCount());
+
+	 */
+	/*
+	 int maxIndex = thrust::reduce(
+	 thrust::make_zip_iterator(
+	 thrust::make_tuple(isMergedToCart.begin(), countingBegin)),
+	 thrust::make_zip_iterator(
+	 thrust::make_tuple(isMergedToCart.begin(), countingBegin))
+	 + nodes->getAllocPara().currentActiveProfileNodeCount, -1,
+	 MaxCount());
+	 */
 }
 
 void Cartilage::runAllLogics(double dt) {
@@ -414,9 +462,11 @@ bool closeToCart(double& xPos, double& yPos) {
 	double bz = 0;
 	double cx, cy, cz;
 	crossProduct(ax, ay, az, bx, by, bz, cx, cy, cz);
-	// fabs(cz) is actually the area. because growthDir is a unit vector,
-	// fabs(cz) is also the distance of node to a vector.
-	if (fabs(cz) < effectiveRangeConst) {
+	double distToFixedPt = dotProduct(ax, ay, az, bx, by, bz);
+// fabs(cz) is actually the area. because growthDir is a unit vector,
+// fabs(cz) is also the distance of node to a vector.
+	if (fabs(cz) < effectiveRangeConst
+			&& fabs(distToFixedPt - cartCurLenConst) < effectiveRangeConst) {
 		// that means a node is very close to the cartilage bar.
 		return true;
 	} else {
@@ -427,15 +477,15 @@ bool closeToCart(double& xPos, double& yPos) {
 __device__
 void modifyVelNoSlip(double& xPos, double& yPos, double& xVel, double& yVel) {
 
-	// if an epithelium node is adhere to the cartilage, it will move together with cartilage.
-	// so as a first step we clear the previous result.
+// if an epithelium node is adhere to the cartilage, it will move together with cartilage.
+// so as a first step we clear the previous result.
 	double dummyz1 = 0, dummyz2 = 0;
 	double product = dotProduct(xVel, yVel, dummyz1, cartGrowDirConst[0],
 			cartGrowDirConst[1], dummyz2);
 	xVel = cartGrowDirConst[0] * product;
 	yVel = cartGrowDirConst[1] * product;
 
-	// we also want the attached epithelium nodes move along the cartilage.
+// we also want the attached epithelium nodes move along the cartilage.
 	double dirToFixX = xPos - cartFixedPtConst[0];
 	double dirToFixY = yPos - cartFixedPtConst[1];
 

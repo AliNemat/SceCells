@@ -284,6 +284,7 @@ public:
 	double growthSpeedNode1;
 	double growthSpeedNode2;
 
+	double currentLength;
 	/**
 	 * moment of intertia.
 	 */
@@ -291,6 +292,7 @@ public:
 	//uint activeCartilageNodeCount;
 
 	double totalTorque;
+	double torqueFromEpi;
 	double angularSpeed;
 
 	double growthThreshold;

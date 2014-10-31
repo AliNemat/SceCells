@@ -61,6 +61,7 @@
 typedef thrust::tuple<double, double> CVec2;
 typedef thrust::tuple<double, double, bool> CVec2Bool;
 typedef thrust::tuple<bool, double> BoolD;
+typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<double, double, double> CVec3;
@@ -279,8 +280,6 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
 		double &yLocRight, double &zLocRight, double &xVel, double &yVel,
 		double &zVel);
-
-
 
 /**
  * a complicated data structure for adding subcellular element force to cell nodes.
