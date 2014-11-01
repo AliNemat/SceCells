@@ -388,38 +388,66 @@ void Cartilage::handleCartNoSlippage() {
 									+ profileStartPos, isMergedToCart.begin())),
 			NoSlipHandler());
 
+	double normalDirX = -cartPara.growthDir.y;
+	double normalDirY = cartPara.growthDir.x;
+	CVector normalDir = CVector(normalDirX, normalDirY, 0);
+
 	thrust::counting_iterator<int> countingBegin(0);
-
-	//thrust::copy_if(countingBegin);
-
-	//FIXME: We probably need to do this on GPU. This problem seems to be easy but is actually non-
 
 	int contactingNodeCount = thrust::reduce(isMergedToCart.begin(),
 			isMergedToCart.end(), 0, thrust::plus<int>());
 
 	thrust::device_vector<int> epiIndicies(contactingNodeCount);
 	thrust::copy_if(countingBegin, countingBegin + activeEpiNodeCount,
-			isMergedToCart.begin(), epiIndicies, isTrue());
+			isMergedToCart.begin(), epiIndicies.begin(), isTrue());
 
-	/*
-	 int minIndex = thrust::reduce(
-	 thrust::make_zip_iterator(
-	 thrust::make_tuple(isMergedToCart.begin(), countingBegin)),
-	 thrust::make_zip_iterator(
-	 thrust::make_tuple(isMergedToCart.begin(), countingBegin))
-	 + nodes->getAllocPara().currentActiveProfileNodeCount,
-	 INT_MAX, MinCount());
+	MinMaxRes minMaxRes = thrust::minmax_element(epiIndicies.begin(),
+			epiIndicies.end());
 
-	 */
-	/*
-	 int maxIndex = thrust::reduce(
-	 thrust::make_zip_iterator(
-	 thrust::make_tuple(isMergedToCart.begin(), countingBegin)),
-	 thrust::make_zip_iterator(
-	 thrust::make_tuple(isMergedToCart.begin(), countingBegin))
-	 + nodes->getAllocPara().currentActiveProfileNodeCount, -1,
-	 MaxCount());
-	 */
+	int minEpiIndex = *minMaxRes.first;
+	int maxEpiIndex = *minMaxRes.second;
+
+	int minIndexM1 = minEpiIndex - 1;
+	int maxIndexP1 = maxEpiIndex + 1;
+
+	double pt1M1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + minIndexM1];
+	double pt1M1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + minIndexM1];
+	CVector pt1M1(pt1M1_X, pt1M1_Y, 0);
+
+	double pt1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + minEpiIndex];
+	double pt1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + minEpiIndex];
+	CVector pt1(pt1_X, pt1_Y, 0);
+
+	double pt2P1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + maxIndexP1];
+	double pt2P1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + maxIndexP1];
+	CVector pt2P1(pt2P1_X, pt2P1_Y, 0);
+
+	double pt2_X = nodes->getInfoVecs().nodeLocX[profileStartPos + maxEpiIndex];
+	double pt2_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + maxEpiIndex];
+	CVector pt2(pt2_X, pt2_Y, 0);
+
+	CVector vec1 = pt1M1 - pt1;
+	CVector dir1 = vec1.getUnitVector();
+	double dist1 = vec1.getModul();
+	double force1 = nodes->getMechPara().sceProfileParaCPU[5]
+			* (dist1 - nodes->getMechPara().sceProfileParaCPU[6]);
+	double perpForce1 = dir1 * normalDir * force1;
+
+	CVector vec2 = pt2P1 - pt2;
+	CVector dir2 = vec2.getUnitVector();
+	double dist2 = vec2.getModul();
+	double force2 = nodes->getMechPara().sceProfileParaCPU[5]
+			* (dist2 - nodes->getMechPara().sceProfileParaCPU[6]);
+	double perpForce2 = dir2 * normalDir * force2;
+
+	cartPara.torqueFromEpi = (perpForce1 + perpForce2) * cartPara.currentLength;
+	std::cout << "torque from epi is " << cartPara.torqueFromEpi << std::endl;
+	std::cout << "pt1 position:";
+	pt1.Print();
+	std::cout << "force 1 = " << perpForce1 << std::endl;
+	std::cout << "pt2 position:";
+	pt2.Print();
+	std::cout << "force 2 = " << perpForce2 << std::endl;
 }
 
 void Cartilage::runAllLogics(double dt) {

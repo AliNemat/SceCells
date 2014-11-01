@@ -19,6 +19,7 @@
 #include <thrust/fill.h>
 #include <thrust/count.h>
 #include <thrust/unique.h>
+#include <thrust/extrema.h>
 
 #include <thrust/for_each.h>
 #include <cuda_runtime.h>
@@ -76,6 +77,24 @@ typedef thrust::tuple<double, double, double, double, double, double, bool> CVec
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
+
+// special datatype required for Thrust minmax element function.
+typedef thrust::pair<thrust::device_vector<int>::iterator,
+		thrust::device_vector<int>::iterator> MinMaxRes;
+
+/**
+ * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
+ */
+struct isTrue {
+	__host__ __device__
+	bool operator()(bool b) {
+		if (b == true) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
 
 /**
  * functor to add two three dimensional vectors.

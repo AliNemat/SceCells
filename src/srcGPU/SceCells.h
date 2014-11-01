@@ -48,20 +48,6 @@ struct ModuloFunctor: public thrust::unary_function<uint, uint> {
 	}
 };
 
-/**
- * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
- */
-struct isTrue {
-	__host__ __device__
-	bool operator()(bool b) {
-		if (b == true) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
-
 struct isActiveNoneBdry {
 	__host__ __device__
 	bool operator()(boolType b) {
