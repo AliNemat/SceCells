@@ -13,6 +13,7 @@
 #include <thrust/tuple.h>
 #include <thrust/random.h>
 #include <thrust/inner_product.h>
+#include <thrust/transform_reduce.h>
 
 #include <thrust/gather.h>
 #include <thrust/scan.h>

@@ -56,8 +56,7 @@ int main() {
 
 	std::vector<CVector> stabilizedCenters;
 	// TODO: These initialization statments are removed for debugging purpose.
-	//stabilizedCenters = simuDomain.stablizeCellCenters(
-	//		simuData);
+	stabilizedCenters = simuDomain.stablizeCellCenters(simuData);
 
 	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
 

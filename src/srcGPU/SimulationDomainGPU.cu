@@ -341,6 +341,8 @@ void SimulationDomainGPU::initialize(SimulationInitData &initData) {
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
 	std::cout << "finished init nodes dimension" << std::endl;
+	// The domain task is not stabilization unless specified in the next steps.
+	stabPara.isProcessStab = false;
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
@@ -351,6 +353,8 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 			initData.initMXNodeVec);
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
+	// The domain task is not stabilization unless specified in the next steps.
+	stabPara.isProcessStab = false;
 }
 
 /**
@@ -358,24 +362,27 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
  *
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
-	if (memPara.simuType == Beak) {
+	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
 		nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
 		//std::cout << "growth direction is ";
-		cartilage.getCartPara().growthDir.Print();
+		//cartilage.getCartPara().growthDir.Print();
 	}
 
 	// This function only calculates velocity.
 	nodes.calculateAndApplySceForces();
 	// Only beak simulation need to take care of cartilage.
-	if (memPara.simuType == Beak) {
+	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
 		// cartilage logics must come before cell logics, because node velocities will be modified
 		// in cell logic and consequently we won't be able to compute cartilage data.
 		// also responsible for handling interaction between epithelium layer and carilage.
 		cartilage.runAllLogics(dt);
 	}
 	// This function applies velocity so nodes actually move inside this function.
-	cells.runAllCellLevelLogics(dt, growthMap, growthMap2);
-
+	if (memPara.simuType == Beak) {
+		cells.runAllCellLevelLogicsBeak(dt, growthMap, growthMap2);
+	} else if (memPara.simuType == Disc) {
+		cells.runAllCellLevelLogicsDisc(dt);
+	}
 }
 
 void SimulationDomainGPU::readMemPara() {
@@ -494,6 +501,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 			globalConfigVars.getConfigValue("StabAniName").toString();
 
 	initialize(initData);
+	stabPara.isProcessStab = true;
 
 	int aniAuxPara = (double) (stabPara.totalIterCount)
 			/ stabPara.outputFrameCount;
@@ -505,10 +513,10 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 
 	for (int i = 0; i < stabPara.totalIterCount; i++) {
 		//std::cout << "in stablizing, before run all logics" << std::endl;
-		runAllLogic(stabPara.dt);
 		if (i % aniAuxPara == 0) {
 			outputVtkFilesWithColor(stabPara.outputAniName, i, aniCri);
 		}
+		runAllLogic(stabPara.dt);
 	}
 
 	result = cells.getAllCellCenters();
@@ -571,7 +579,6 @@ void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 //int jj;
 //cin >> jj;
 }
-
 
 void SimulationDomainGPU::outputLabelMatrix(std::string resultNameBase,
 		int rank, PixelizePara& pixelPara) {

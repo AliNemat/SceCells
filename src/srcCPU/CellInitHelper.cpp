@@ -1133,7 +1133,7 @@ bool CellInitHelper::isMXType_v2(CVector position) {
 		CVector a = internalBdryPts[i + 1] - internalBdryPts[i];
 		CVector b = position - internalBdryPts[i];
 		CVector crossProduct = Cross(a, b);
-		if (crossProduct.z < 0) {
+		if (crossProduct.z > 0) {
 			return false;
 		}
 	}

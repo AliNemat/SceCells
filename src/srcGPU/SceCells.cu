@@ -660,30 +660,6 @@ void SceCells::copyInitActiveNodeCount(
 			cellInfoVecs.activeNodeCountOfThisCell.begin());
 }
 
-/**
- * To run all the cell level logics.
- * First step we got center positions of cells.
- * Grow.
- */
-void SceCells::runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
-		GrowthDistriMap &region2) {
-	//std::cerr << "enter run all cell level logics" << std::endl;
-	computeCenterPos();
-	//std::cerr << "after compute center position." << std::endl;
-	// for wind disk project, switch from chemical based growth to random growth
-	growAtRandom(dt);
-	//grow2DTwoRegions(dt, region1, region2);
-	//std::cerr << "after grow cells" << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
-	divide2DSimplified();
-	//std::cerr << "after divide 2D simplified." << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
-	allComponentsMove();
-	//std::cerr << "after all components move." << std::endl;
-}
-
 void SceCells::allComponentsMove() {
 	adjustNodeVel();
 	moveNodes();
@@ -1148,6 +1124,48 @@ void SceCells::randomizeGrowth() {
 					growthAuxData.randomGrowthSpeedMax,
 					allocPara.currentActiveCellCount,
 					growthAuxData.randGenAuxPara));
+}
+
+/**
+ * To run all the cell level logics.
+ * First step we got center positions of cells.
+ * Grow.
+ */
+void SceCells::runAllCellLevelLogicsDisc(double dt) {
+	//std::cerr << "enter run all cell level logics" << std::endl;
+	computeCenterPos();
+	//std::cerr << "after compute center position." << std::endl;
+	// for wind disk project, switch from chemical based growth to random growth
+	growAtRandom(dt);
+	//grow2DTwoRegions(dt, region1, region2);
+	//std::cerr << "after grow cells" << std::endl;
+	distributeIsActiveInfo();
+	//std::cerr << "after distribute is active info." << std::endl;
+	divide2DSimplified();
+	//std::cerr << "after divide 2D simplified." << std::endl;
+	distributeIsActiveInfo();
+	//std::cerr << "after distribute is active info." << std::endl;
+	allComponentsMove();
+	//std::cerr << "after all components move." << std::endl;
+}
+
+void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
+		GrowthDistriMap& region2) {
+	//std::cerr << "enter run all cell level logics" << std::endl;
+	computeCenterPos();
+	//std::cerr << "after compute center position." << std::endl;
+	// for wind disk project, switch from chemical based growth to random growth
+	//growAtRandom(dt);
+	grow2DTwoRegions(dt, region1, region2);
+	//std::cerr << "after grow cells" << std::endl;
+	distributeIsActiveInfo();
+	//std::cerr << "after distribute is active info." << std::endl;
+	divide2DSimplified();
+	//std::cerr << "after divide 2D simplified." << std::endl;
+	distributeIsActiveInfo();
+	//std::cerr << "after distribute is active info." << std::endl;
+	allComponentsMove();
+	//std::cerr << "after all components move." << std::endl;
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {

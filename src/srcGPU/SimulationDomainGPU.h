@@ -14,6 +14,8 @@
 
 class StabPara {
 public:
+	bool isProcessStab;
+
 	int outputFrameCount;
 	int totalIterCount;
 	double bdrySpacingRatio;

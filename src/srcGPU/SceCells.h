@@ -1086,7 +1086,9 @@ public:
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<SceNodeType> &cellTypes);
 
-	void runAllCellLevelLogics(double dt, GrowthDistriMap &region1,
+	void runAllCellLevelLogicsDisc(double dt);
+
+	void runAllCellLevelLogicsBeak(double dt, GrowthDistriMap &region1,
 			GrowthDistriMap &region2);
 
 	std::vector<CVector> getAllCellCenters();

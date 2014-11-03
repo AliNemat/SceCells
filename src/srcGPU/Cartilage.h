@@ -174,6 +174,37 @@ struct MaxCount: public thrust::binary_function<BoolInt, BoolInt, int> {
 	}
 };
 
+__device__
+double calDist(double &xPos, double &yPos, double &zPos, double &xPos2,
+		double &yPos2, double &zPos2);
+
+struct ComputeLinkLen: public thrust::unary_function<uint, double> {
+	double* _nodeLocXLinkBeginAddress;
+	double* _nodeLocYLinkBeginAddress;
+	double* _nodeLocZLinkBeginAddress;
+
+	__host__ __device__
+	ComputeLinkLen(double* nodeLocXLinkBeginAddress,
+			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress) :
+			_nodeLocXLinkBeginAddress(nodeLocXLinkBeginAddress), _nodeLocYLinkBeginAddress(
+					nodeLocYLinkBeginAddress), _nodeLocZLinkBeginAddress(
+					nodeLocZLinkBeginAddress) {
+	}
+
+	__device__
+	double operator()(const uint &index) {
+		double xLoc = _nodeLocXLinkBeginAddress[index];
+		double yLoc = _nodeLocYLinkBeginAddress[index];
+		double zLoc = _nodeLocZLinkBeginAddress[index];
+
+		double xLocN = _nodeLocXLinkBeginAddress[index + 1];
+		double yLocN = _nodeLocYLinkBeginAddress[index + 1];
+		double zLocN = _nodeLocZLinkBeginAddress[index + 1];
+
+		return calDist(xLoc, yLoc, zLoc, xLocN, yLocN, zLocN);
+	}
+};
+
 class Cartilage {
 	bool isInitialized;
 	bool isParaInitialized;

@@ -6,6 +6,14 @@ __device__ __constant__ double cartAngSpeedConst;
 __device__ __constant__ double cartCurLenConst;
 __device__ __constant__ double effectiveRangeConst;
 
+__device__
+double calDist(double &xPos, double &yPos, double &zPos, double &xPos2,
+		double &yPos2, double &zPos2) {
+	return sqrt(
+			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
+					+ (zPos - zPos2) * (zPos - zPos2));
+}
+
 void Cartilage::calculateGrowthDir() {
 
 	// first need to obtain the location of first node
@@ -40,10 +48,10 @@ void Cartilage::calculateTotalTorque() {
 	thrust::plus<double> plusOp;
 	uint indexBegin = nodes->getAllocPara().startPosCart;
 	uint indexEnd = indexBegin + cartPara.nodeIndexEnd;
-	std::cout << "growth dir = ";
-	cartPara.growthDir.Print();
-	std::cout << " fixed point = ";
-	cartPara.fixedPt.Print();
+	//std::cout << "growth dir = ";
+	//cartPara.growthDir.Print();
+	//std::cout << " fixed point = ";
+	//cartPara.fixedPt.Print();
 
 	cartPara.totalTorque = thrust::inner_product(
 			thrust::make_zip_iterator(
@@ -65,20 +73,20 @@ void Cartilage::calculateTotalTorque() {
 
 	cartPara.totalTorque += cartPara.torqueFromEpi;
 	cartPara.angularSpeed = cartPara.totalTorque / cartPara.moInertia;
-	std::cout << " total torque = " << cartPara.totalTorque << std::endl;
+	//std::cout << " total torque = " << cartPara.totalTorque << std::endl;
 }
 
 void Cartilage::move(double dt) {
 	uint indexBegin = nodes->getAllocPara().startPosCart;
 	uint indexEnd = indexBegin + cartPara.nodeIndexEnd;
-	std::cout << " in move, torque  = " << cartPara.totalTorque << std::endl;
-	std::cout << " in move, inertia  = " << cartPara.moInertia << std::endl;
+	//std::cout << " in move, torque  = " << cartPara.totalTorque << std::endl;
+	//std::cout << " in move, inertia  = " << cartPara.moInertia << std::endl;
 
-	std::cout << " angular speed  = " << cartPara.angularSpeed << std::endl;
+	//std::cout << " angular speed  = " << cartPara.angularSpeed << std::endl;
 	// angle is counter-clock wise.
 	double angle = cartPara.angularSpeed * dt;
-	std::cout << "angle = " << angle << std::endl;
-	std::cout << "fixed point = ";
+	//std::cout << "angle = " << angle << std::endl;
+	//std::cout << "fixed point = ";
 	//cartPara.fixedPt.Print();
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -122,8 +130,8 @@ void Cartilage::initializeMem(SceNodes* nodeInput) {
 			nodes->getInfoVecs().nodeLocY[pivotIndex1],
 			nodes->getInfoVecs().nodeLocZ[pivotIndex1]);
 
-	std::cout << "pivot point 1 = ";
-	pivotNode1Pos.Print();
+	//std::cout << "pivot point 1 = ";
+	//pivotNode1Pos.Print();
 
 	uint pivotIndex2 = cartPara.pivotNode2Index
 			+ nodes->getAllocPara().startPosCart;
@@ -131,8 +139,8 @@ void Cartilage::initializeMem(SceNodes* nodeInput) {
 			nodes->getInfoVecs().nodeLocY[pivotIndex2],
 			nodes->getInfoVecs().nodeLocZ[pivotIndex2]);
 
-	std::cout << "pivot point 2 = ";
-	pivotNode2Pos.Print();
+	//std::cout << "pivot point 2 = ";
+	//pivotNode2Pos.Print();
 
 	cartPara.fixedPt = pivotNode1Pos + pivotNode2Pos;
 	cartPara.fixedPt = cartPara.fixedPt / 2;
@@ -153,16 +161,16 @@ void Cartilage::addPoint1(CVector &nodeBehindPos) {
 	CVector posNew = nodeBehindPos + incrementVec;
 	uint indexNew = cartPara.nodeIndexEnd + nodes->getAllocPara().startPosCart;
 
-	std::cout << "In run addPoint1, new point index = " << indexNew
-			<< std::endl;
-	std::cout << "grow node1 pos = ";
-	cartPara.growNode1.Print();
-	std::cout << "nodeBehindPos position = ";
-	nodeBehindPos.Print();
-	std::cout << "node1GrowthDir= ";
-	node1GrowthDir.Print();
-	std::cout << "increment vector = ";
-	incrementVec.Print();
+	//std::cout << "In run addPoint1, new point index = " << indexNew
+	//		<< std::endl;
+	//std::cout << "grow node1 pos = ";
+	//cartPara.growNode1.Print();
+	//std::cout << "nodeBehindPos position = ";
+	//nodeBehindPos.Print();
+	//std::cout << "node1GrowthDir= ";
+	//node1GrowthDir.Print();
+	//std::cout << "increment vector = ";
+	//incrementVec.Print();
 
 	nodes->getInfoVecs().nodeLocX[indexNew] = posNew.GetX();
 	nodes->getInfoVecs().nodeLocY[indexNew] = posNew.GetY();
@@ -180,16 +188,16 @@ void Cartilage::addPoint2(CVector &nodeBehindPos) {
 	CVector posNew = nodeBehindPos + incrementVec;
 	uint indexNew = cartPara.nodeIndexEnd + nodes->getAllocPara().startPosCart;
 
-	std::cout << "grow node1 pos = ";
-	cartPara.growNode1.Print();
-	std::cout << "nodeBehindPos position = ";
-	nodeBehindPos.Print();
-	std::cout << "node2GrowthDir= ";
-	node2GrowthDir.Print();
-	std::cout << "In run addPoint2, new point index = " << indexNew
-			<< std::endl;
-	std::cout << "increment vector = ";
-	incrementVec.Print();
+	//std::cout << "grow node1 pos = ";
+	//cartPara.growNode1.Print();
+	//std::cout << "nodeBehindPos position = ";
+	//nodeBehindPos.Print();
+	//std::cout << "node2GrowthDir= ";
+	//node2GrowthDir.Print();
+	//std::cout << "In run addPoint2, new point index = " << indexNew
+	//		<< std::endl;
+	//std::cout << "increment vector = ";
+	//incrementVec.Print();
 
 	nodes->getInfoVecs().nodeLocX[indexNew] = posNew.GetX();
 	nodes->getInfoVecs().nodeLocY[indexNew] = posNew.GetY();
@@ -204,10 +212,10 @@ void Cartilage::grow1(double dt) {
 	uint node1GlobalIndex = cartPara.growNode1Index
 			+ nodes->getAllocPara().startPosCart;
 
-	std::cout << "In run grow1, node 1 index = " << node1GlobalIndex
-			<< std::endl;
-	std::cout << "movement vector = ";
-	movementVec.Print();
+	//std::cout << "In run grow1, node 1 index = " << node1GlobalIndex
+	//		<< std::endl;
+	//std::cout << "movement vector = ";
+	//movementVec.Print();
 
 	nodes->getInfoVecs().nodeLocX[node1GlobalIndex] += movementVec.GetX();
 	nodes->getInfoVecs().nodeLocY[node1GlobalIndex] += movementVec.GetY();
@@ -219,10 +227,10 @@ void Cartilage::grow2(double dt) {
 	uint node2GlobalIndex = cartPara.growNode2Index
 			+ nodes->getAllocPara().startPosCart;
 
-	std::cout << "In run grow2, node 2 index = " << node2GlobalIndex
-			<< std::endl;
-	std::cout << "movement vector = ";
-	movementVec.Print();
+	//std::cout << "In run grow2, node 2 index = " << node2GlobalIndex
+	//		<< std::endl;
+	//std::cout << "movement vector = ";
+	//movementVec.Print();
 
 	nodes->getInfoVecs().nodeLocX[node2GlobalIndex] += movementVec.GetX();
 	nodes->getInfoVecs().nodeLocY[node2GlobalIndex] += movementVec.GetY();
@@ -237,10 +245,10 @@ void Cartilage::runGrowthLogics1(double dt) {
 			nodes->getInfoVecs().nodeLocY[behind1Index],
 			nodes->getInfoVecs().nodeLocZ[behind1Index]);
 
-	std::cout << "In run growth logics 1, behind 1 index = " << behind1Index
-			<< std::endl;
-	std::cout << "In run growth logics 1, behind 1 position = ";
-	node1BehindPos.Print();
+	//std::cout << "In run growth logics 1, behind 1 index = " << behind1Index
+	//		<< std::endl;
+	//std::cout << "In run growth logics 1, behind 1 position = ";
+	//node1BehindPos.Print();
 
 	CVector node1GrowthDir = cartPara.growNode1 - node1BehindPos;
 	double distFromBehind1 = node1GrowthDir.getModul();
@@ -260,10 +268,10 @@ void Cartilage::runGrowthLogics2(double dt) {
 			nodes->getInfoVecs().nodeLocY[behind2Index],
 			nodes->getInfoVecs().nodeLocZ[behind2Index]);
 
-	std::cout << "In run growth logics 2 , behind 2 index = " << behind2Index
-			<< std::endl;
-	std::cout << "In run growth logics 2 , behind 2 position = ";
-	node2BehindPos.Print();
+	//std::cout << "In run growth logics 2 , behind 2 index = " << behind2Index
+	//		<< std::endl;
+	//std::cout << "In run growth logics 2 , behind 2 position = ";
+	//node2BehindPos.Print();
 
 	CVector node2GrowthDir = cartPara.growNode2 - node2BehindPos;
 	double distFromBehind2 = node2GrowthDir.getModul();
@@ -276,11 +284,11 @@ void Cartilage::runGrowthLogics2(double dt) {
 }
 
 void Cartilage::runGrowthLogics(double dt) {
-	std::cout << "before run growth logic 1 " << std::endl;
+	//std::cout << "before run growth logic 1 " << std::endl;
 	runGrowthLogics1(dt);
-	std::cout << "before run growth logic 2 " << std::endl;
+	//std::cout << "before run growth logic 2 " << std::endl;
 	runGrowthLogics2(dt);
-	std::cout << "before updating tip nodes " << std::endl;
+	//std::cout << "before updating tip nodes " << std::endl;
 	updateTipNodes(dt);
 
 	//int jj;
@@ -396,58 +404,94 @@ void Cartilage::handleCartNoSlippage() {
 
 	int contactingNodeCount = thrust::reduce(isMergedToCart.begin(),
 			isMergedToCart.end(), 0, thrust::plus<int>());
+	if (contactingNodeCount != 0) {
+		thrust::device_vector<int> epiIndicies(contactingNodeCount);
+		thrust::copy_if(countingBegin, countingBegin + activeEpiNodeCount,
+				isMergedToCart.begin(), epiIndicies.begin(), isTrue());
 
-	thrust::device_vector<int> epiIndicies(contactingNodeCount);
-	thrust::copy_if(countingBegin, countingBegin + activeEpiNodeCount,
-			isMergedToCart.begin(), epiIndicies.begin(), isTrue());
+		MinMaxRes minMaxRes = thrust::minmax_element(epiIndicies.begin(),
+				epiIndicies.end());
 
-	MinMaxRes minMaxRes = thrust::minmax_element(epiIndicies.begin(),
-			epiIndicies.end());
+		uint minEpiIndex = *minMaxRes.first;
+		uint maxEpiIndex = *minMaxRes.second;
 
-	int minEpiIndex = *minMaxRes.first;
-	int maxEpiIndex = *minMaxRes.second;
+		uint minIndexM1 = minEpiIndex - 1;
+		uint maxIndexP1 = maxEpiIndex + 1;
 
-	int minIndexM1 = minEpiIndex - 1;
-	int maxIndexP1 = maxEpiIndex + 1;
+		double pt1M1_X = nodes->getInfoVecs().nodeLocX[profileStartPos
+				+ minIndexM1];
+		double pt1M1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos
+				+ minIndexM1];
+		CVector pt1M1(pt1M1_X, pt1M1_Y, 0);
 
-	double pt1M1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + minIndexM1];
-	double pt1M1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + minIndexM1];
-	CVector pt1M1(pt1M1_X, pt1M1_Y, 0);
+		double pt1_X = nodes->getInfoVecs().nodeLocX[profileStartPos
+				+ minEpiIndex];
+		double pt1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos
+				+ minEpiIndex];
+		CVector pt1(pt1_X, pt1_Y, 0);
 
-	double pt1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + minEpiIndex];
-	double pt1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + minEpiIndex];
-	CVector pt1(pt1_X, pt1_Y, 0);
+		double pt2P1_X = nodes->getInfoVecs().nodeLocX[profileStartPos
+				+ maxIndexP1];
+		double pt2P1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos
+				+ maxIndexP1];
+		CVector pt2P1(pt2P1_X, pt2P1_Y, 0);
 
-	double pt2P1_X = nodes->getInfoVecs().nodeLocX[profileStartPos + maxIndexP1];
-	double pt2P1_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + maxIndexP1];
-	CVector pt2P1(pt2P1_X, pt2P1_Y, 0);
+		double pt2_X = nodes->getInfoVecs().nodeLocX[profileStartPos
+				+ maxEpiIndex];
+		double pt2_Y = nodes->getInfoVecs().nodeLocY[profileStartPos
+				+ maxEpiIndex];
+		CVector pt2(pt2_X, pt2_Y, 0);
 
-	double pt2_X = nodes->getInfoVecs().nodeLocX[profileStartPos + maxEpiIndex];
-	double pt2_Y = nodes->getInfoVecs().nodeLocY[profileStartPos + maxEpiIndex];
-	CVector pt2(pt2_X, pt2_Y, 0);
+		double* nodeLocXAddressEpiBegin = thrust::raw_pointer_cast(
+				&nodes->getInfoVecs().nodeLocX[profileStartPos]);
+		double* nodeLocYAddressEpiBegin = thrust::raw_pointer_cast(
+				&nodes->getInfoVecs().nodeLocY[profileStartPos]);
+		double* nodeLocZAddressEpiBegin = thrust::raw_pointer_cast(
+				&nodes->getInfoVecs().nodeLocZ[profileStartPos]);
 
-	CVector vec1 = pt1M1 - pt1;
-	CVector dir1 = vec1.getUnitVector();
-	double dist1 = vec1.getModul();
-	double force1 = nodes->getMechPara().sceProfileParaCPU[5]
-			* (dist1 - nodes->getMechPara().sceProfileParaCPU[6]);
-	double perpForce1 = dir1 * normalDir * force1;
+		thrust::counting_iterator<uint> indexBegin(0);
+		double length1 = thrust::transform_reduce(indexBegin,
+				indexBegin + minEpiIndex,
+				ComputeLinkLen(nodeLocXAddressEpiBegin, nodeLocYAddressEpiBegin,
+						nodeLocZAddressEpiBegin), 0.0, thrust::plus<double>());
+		double targetLength1 = minEpiIndex
+				* nodes->getMechPara().sceProfileParaCPU[6];
 
-	CVector vec2 = pt2P1 - pt2;
-	CVector dir2 = vec2.getUnitVector();
-	double dist2 = vec2.getModul();
-	double force2 = nodes->getMechPara().sceProfileParaCPU[5]
-			* (dist2 - nodes->getMechPara().sceProfileParaCPU[6]);
-	double perpForce2 = dir2 * normalDir * force2;
+		double length2 = thrust::transform_reduce(indexBegin + maxEpiIndex,
+				indexBegin + activeEpiNodeCount,
+				ComputeLinkLen(nodeLocXAddressEpiBegin, nodeLocYAddressEpiBegin,
+						nodeLocZAddressEpiBegin), 0.0, thrust::plus<double>());
+		double targetLength2 = (activeEpiNodeCount - maxEpiIndex)
+				* nodes->getMechPara().sceProfileParaCPU[6];
 
-	cartPara.torqueFromEpi = (perpForce1 + perpForce2) * cartPara.currentLength;
-	std::cout << "torque from epi is " << cartPara.torqueFromEpi << std::endl;
-	std::cout << "pt1 position:";
-	pt1.Print();
-	std::cout << "force 1 = " << perpForce1 << std::endl;
-	std::cout << "pt2 position:";
-	pt2.Print();
-	std::cout << "force 2 = " << perpForce2 << std::endl;
+		CVector vec1 = pt1M1 - pt1;
+		CVector dir1 = vec1.getUnitVector();
+		double dist1 = vec1.getModul();
+		//double force1 = nodes->getMechPara().sceProfileParaCPU[5]
+		//		* (dist1 - nodes->getMechPara().sceProfileParaCPU[6]);
+		double force1 = nodes->getMechPara().sceProfileParaCPU[5]
+				* (length1 - targetLength1) / 2000.0;
+		double perpForce1 = dir1 * normalDir * force1;
+
+		CVector vec2 = pt2P1 - pt2;
+		CVector dir2 = vec2.getUnitVector();
+		double dist2 = vec2.getModul();
+		//double force2 = nodes->getMechPara().sceProfileParaCPU[5]
+		//		* (dist2 - nodes->getMechPara().sceProfileParaCPU[6]);
+		double force2 = nodes->getMechPara().sceProfileParaCPU[5]
+				* (length2 - targetLength2) / 2000.0;
+		double perpForce2 = dir2 * normalDir * force2;
+
+		cartPara.torqueFromEpi = (perpForce1 + perpForce2)
+				* cartPara.currentLength;
+	}
+	//std::cout << "torque from epi is " << cartPara.torqueFromEpi << std::endl;
+	//std::cout << "pt1 position:";
+	//pt1.Print();
+	//std::cout << "force 1 = " << perpForce1 << std::endl;
+	//std::cout << "pt2 position:";
+	//pt2.Print();
+	//std::cout << "force 2 = " << perpForce2 << std::endl;
 }
 
 void Cartilage::runAllLogics(double dt) {
