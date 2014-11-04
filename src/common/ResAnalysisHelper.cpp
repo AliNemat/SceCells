@@ -182,6 +182,232 @@ void ResAnalysisHelper::setPixelPara(PixelizePara& pixelPara) {
 	_integerRadius = _pixelPara.effectiveRange / _pixelSpacing + 1;
 }
 
+void ResAnalysisHelper::outputImg_formatBMP(std::string fileName,
+		std::vector<std::vector<int> >& labelMatrix) {
+	if (labelMatrix.size() == 0) {
+		throw SceException("input label matrix must not be empty",
+				OutputAnalysisDataException);
+	}
+
+	int imgWidth = labelMatrix[0].size();
+	int imgHeight = labelMatrix.size();
+	FILE *f;
+	int imgIndexX, imgIndexY;
+	int r, g, b;
+	unsigned char *img = NULL;
+	int filesize = 54 + 3 * imgWidth * imgHeight;
+	img = (unsigned char *) malloc(3 * imgWidth * imgHeight);
+	memset(img, 0, sizeof(img));
+
+	vector<vector<double> > red, green, blue;
+	generateRGBMatrix(labelMatrix, red, green, blue);
+
+	for (int i = 0; i < imgWidth; i++) {
+		for (int j = 0; j < imgHeight; j++) {
+			imgIndexX = i;
+			imgIndexY = (imgHeight - 1) - j;
+			r = red[i][j] * 255;
+			g = green[i][j] * 255;
+			b = blue[i][j] * 255;
+			if (r > 255)
+				r = 255;
+			if (g > 255)
+				g = 255;
+			if (b > 255)
+				b = 255;
+			img[(imgIndexX + imgIndexY * imgWidth) * 3 + 2] =
+					(unsigned char) (r);
+			img[(imgIndexX + imgIndexY * imgWidth) * 3 + 1] =
+					(unsigned char) (g);
+			img[(imgIndexX + imgIndexY * imgWidth) * 3 + 0] =
+					(unsigned char) (b);
+		}
+	}
+
+	unsigned char bmpfileheader[14] = { 'B', 'M', 0, 0, 0, 0, 0, 0, 0, 0, 54, 0,
+			0, 0 };
+	unsigned char bmpinfoheader[40] = { 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+			0, 24, 0 };
+	unsigned char bmppad[3] = { 0, 0, 0 };
+
+	bmpfileheader[2] = (unsigned char) (filesize);
+	bmpfileheader[3] = (unsigned char) (filesize >> 8);
+	bmpfileheader[4] = (unsigned char) (filesize >> 16);
+	bmpfileheader[5] = (unsigned char) (filesize >> 24);
+
+	bmpinfoheader[4] = (unsigned char) (imgWidth);
+	bmpinfoheader[5] = (unsigned char) (imgWidth >> 8);
+	bmpinfoheader[6] = (unsigned char) (imgWidth >> 16);
+	bmpinfoheader[7] = (unsigned char) (imgWidth >> 24);
+	bmpinfoheader[8] = (unsigned char) (imgHeight);
+	bmpinfoheader[9] = (unsigned char) (imgHeight >> 8);
+	bmpinfoheader[10] = (unsigned char) (imgHeight >> 16);
+	bmpinfoheader[11] = (unsigned char) (imgHeight >> 24);
+
+	f = fopen(fileName.c_str(), "wb");
+	fwrite(bmpfileheader, 1, 14, f);
+	fwrite(bmpinfoheader, 1, 40, f);
+	for (int i = 0; i < imgHeight; i++) {
+		fwrite(img + (imgWidth * (imgHeight - i - 1) * 3), 3, imgWidth, f);
+		fwrite(bmppad, 1, (4 - (imgWidth * 3) % 4) % 4, f);
+	}
+	fclose(f);
+	free(img);
+}
+
+void ResAnalysisHelper::generateRGBMatrix(
+		std::vector<std::vector<int> >& labelMatrix,
+		std::vector<std::vector<double> >& red,
+		std::vector<std::vector<double> >& green,
+		std::vector<std::vector<double> >& blue) {
+	// check if input size is valid.
+	if (labelMatrix.size() == 0) {
+		throw SceException("input label matrix must not be empty",
+				OutputAnalysisDataException);
+	}
+
+	uint dimX = labelMatrix.size();
+	uint dimY = labelMatrix[0].size();
+
+	red.resize(dimY);
+	green.resize(dimY);
+	blue.resize(dimY);
+	for (uint i = 0; i < dimY; i++) {
+		red[i].resize(dimX);
+		green[i].resize(dimX);
+		blue[i].resize(dimX);
+	}
+
+	std::tr1::unordered_set<int> cellLabelSet;
+	for (uint i = 0; i < dimX; i++) {
+		for (uint j = 0; j < dimY; j++) {
+			cellLabelSet.insert(labelMatrix[i][j]);
+		}
+	}
+
+	int labelSetSize = cellLabelSet.size();
+
+	for (uint i = 0; i < dimX; i++) {
+		for (uint j = 0; j < dimY; j++) {
+			transformToRGB(labelMatrix[i][j], labelSetSize, red[j][i],
+					green[j][i], blue[j][i]);
+		}
+	}
+}
+
+void ResAnalysisHelper::transformToRGB(int& labelValue, int& maxLabelValue,
+		double& rValue, double& gValue, double& bValue) {
+	double relPos = (double) labelValue / (double) maxLabelValue;
+	// set as between Red and Green
+	if (relPos >= 0 && relPos < 1.0 / 3) {
+		rValue = 1.0 - relPos * 3;
+		gValue = relPos * 3;
+		bValue = 0;
+	}
+	// set as between Green and Blue
+	else if (relPos >= 1.0 / 3 && relPos < 2.0 / 3) {
+		rValue = 0.0;
+		gValue = (relPos - 1.0 / 3) * 3 * 3;
+		bValue = 1.0 - (relPos - 1.0 / 3) * 3;
+	}
+	// set as between Blue and Red
+	// slightly bigger than 1.0 to prevent possible numerical error.
+	else if (relPos >= 2.0 / 3 && relPos <= 1.000000001) {
+		rValue = 1.0 - (relPos - 2.0 / 3) * 3;
+		gValue = 0.0;
+		bValue = (relPos - 2.0 / 3) * 3;
+	}
+	// set as white
+	else {
+		rValue = 1.0;
+		gValue = 1.0;
+		bValue = 1.0;
+	}
+	if (rValue < 0) {
+		rValue = 0;
+	}
+	if (gValue < 0) {
+		gValue = 0;
+	}
+	if (bValue < 0) {
+		bValue = 0;
+	}
+}
+
+void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
+		uint step, std::vector<std::vector<int> >& labelMatrix) {
+	// check if input size is valid.
+	if (labelMatrix.size() == 0) {
+		throw SceException("input label matrix must not be empty",
+				OutputAnalysisDataException);
+	}
+
+	uint dimX = labelMatrix.size();
+	uint dimY = labelMatrix[0].size();
+
+	std::tr1::unordered_set<int> cellLabelSet;
+	int maxLabel = -1;
+	for (uint i = 0; i < dimX; i++) {
+		for (uint j = 0; j < dimY; j++) {
+			cellLabelSet.insert(labelMatrix[i][j]);
+			if (labelMatrix[i][j] > maxLabel) {
+				maxLabel = labelMatrix[i][j];
+			}
+		}
+	}
+	uint labelSetSize = cellLabelSet.size();
+	assert(maxLabel == (int )labelSetSize - 1);
+
+	std::tr1::unordered_set<int> neighborCellSet[labelSetSize];
+	for (uint i = 0; i < dimX; i++) {
+		for (uint j = 0; j < dimY; j++) {
+			int label = labelMatrix[i][j];
+			if (label == -1) {
+				continue;
+			}
+			if (i != 0) {
+				neighborCellSet[label].insert(labelMatrix[i - 1][j]);
+			}
+			if (i != dimX - 1) {
+				neighborCellSet[label].insert(labelMatrix[i + 1][j]);
+			}
+			if (j != 0) {
+				neighborCellSet[label].insert(labelMatrix[i][j - 1]);
+			}
+			if (j != dimY - 1) {
+				neighborCellSet[label].insert(labelMatrix[i][j + 1]);
+			}
+		}
+	}
+
+	uint sideCount[labelSetSize];
+	for (uint i = 0; i < labelSetSize; i++) {
+		// minus one because I need to remove the label of the cell itself.
+		sideCount[i] = neighborCellSet[i].size() - 1;
+	}
+
+	std::tr1::unordered_map<int, int> polygonCountingRes;
+	std::tr1::unordered_map<int, int>::iterator it;
+	for (uint i = 0; i < labelSetSize; i++) {
+		it = polygonCountingRes.find(sideCount[i]);
+		if (it == polygonCountingRes.end()) {
+			polygonCountingRes.insert(std::pair<int, int>(sideCount[i], 0));
+		} else {
+			it->second = it->second + 1;
+		}
+	}
+
+	ofstream ofs;
+	ofs.open(fileName.c_str(), ios::app);
+	ofs << step << " ";
+	for (it = polygonCountingRes.begin(); it != polygonCountingRes.end();
+			++it) {
+		ofs << it->first << "," << it->second << " ";
+	}
+	ofs << std::endl;
+	ofs.close();
+}
+
 ResAnalysisHelper::~ResAnalysisHelper() {
 // TODO Auto-generated destructor stub
 }

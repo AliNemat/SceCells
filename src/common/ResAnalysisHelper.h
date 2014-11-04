@@ -7,6 +7,10 @@
 
 #include "commonData.h"
 #include "ConfigParser.h"
+#include "string.h"
+#include <fstream>
+#include <tr1/unordered_set>
+#include <tr1/unordered_map>
 
 extern GlobalConfigVars globalConfigVars;
 
@@ -55,11 +59,25 @@ class ResAnalysisHelper {
 			NodeWithLabel &nodeLabel);
 	void updateLabelMatrix(std::vector<std::vector<int> > &resultMatrix,
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix);
+	void generateRGBMatrix(std::vector<std::vector<int> > &labelMatrix,
+			std::vector<std::vector<double> > &red,
+			std::vector<std::vector<double> > &green,
+			std::vector<std::vector<double> > &blue);
+	void transformToRGB(int &labelValue, int &maxLabelValue, double &rValue,
+			double &gValue, double &bValue);
 public:
 	ResAnalysisHelper();
 	void setPixelPara(PixelizePara &pixelPara);
 	std::vector<std::vector<int> > outputLabelMatrix(
 			std::vector<NodeWithLabel> &nodeLabels);
+	/**
+	 * convert a label matrix to a bmp image.
+	 * labels with value -1 are treated as empty.
+	 */
+	void outputImg_formatBMP(std::string fileName,
+			std::vector<std::vector<int> > &labelMatrix);
+	void outputStat_PolygonCounting(std::string fileName, uint step,
+			std::vector<std::vector<int> > &labelMatrix);
 	virtual ~ResAnalysisHelper();
 };
 
