@@ -77,21 +77,18 @@ int main() {
 
 	CellInitHelper initHelper;
 
-	RawDataInput rawInput = initHelper.generateRawInput_stab();
-
-	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
-
 	SimulationDomainGPU simuDomain;
 
-	std::vector<CVector> stabilizedCenters;
+	SimulationInitData_V2 initData = initHelper.initStabInput();
 
-	stabilizedCenters = simuDomain.stablizeCellCenters(simuData);
+	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
+			initData);
 	std::cout << "begin generating raw input data" << std::endl;
 	std::cout.flush();
-	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
 	std::cout << "finished generating raw input data" << std::endl;
 	std::cout.flush();
-	SimulationInitData_V2 simuData2 = initHelper.initInputsV3(rawInput2);
+	SimulationInitData_V2 simuData2 = initHelper.initSimuInput(
+			stabilizedCenters);
 
 	std::cout << "finished generating simulation init data V2" << std::endl;
 	std::cout.flush();

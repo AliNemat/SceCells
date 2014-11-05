@@ -1,5 +1,5 @@
 #MESSAGE(${GPU_SOURCE_DIR})
-#include_directories(${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
+#include_directories(${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES} )
 
 include_directories(${COMMON_INCLUDES} ${GTEST_INCLUDE_DIRS})
 

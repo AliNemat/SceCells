@@ -321,7 +321,7 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	/**
 	 * setting the cartilage related parameters in the simulation domain.
 	 */
-	if (memPara.simuType == Beak) {
+	if (memPara.simuType == Beak && !memPara.isStab) {
 		cartilage.setCartPara(cartPara);
 		cartilage.initializeMem(&nodes);
 	}
@@ -346,13 +346,17 @@ void SimulationDomainGPU::initialize(SimulationInitData &initData) {
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
+	std::cout << "begin initialization process" << std::endl;
+	memPara.isStab = initData.isStab;
 	initializeNodes(initData.cartPara, initData.cellTypes,
 			initData.numOfInitActiveNodesOfCells, initData.initBdryNodeVec,
 			initData.initProfileNodeVec, initData.initCartNodeVec,
 			initData.initECMNodeVec, initData.initFNMNodeVec,
 			initData.initMXNodeVec);
+	std::cout << "finished init simulation domain nodes" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
+	std::cout << "finished init nodes dimension" << std::endl;
 	// The domain task is not stabilization unless specified in the next steps.
 	stabPara.isProcessStab = false;
 }
@@ -486,7 +490,7 @@ void SimulationDomainGPU::initializeGrowthMap() {
 }
 
 std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
-		SimulationInitData& initData) {
+		SimulationInitData_V2 &initData) {
 
 	std::vector<CVector> result;
 
@@ -500,7 +504,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	stabPara.outputAniName =
 			globalConfigVars.getConfigValue("StabAniName").toString();
 
-	initialize(initData);
+	initialize_v2(initData);
 	stabPara.isProcessStab = true;
 
 	int aniAuxPara = (double) (stabPara.totalIterCount)

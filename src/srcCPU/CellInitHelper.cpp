@@ -136,10 +136,12 @@ RawDataInput CellInitHelper::generateRawInput_V2(
 				<< baseRawInput.cartilageData.pivotNode1Index << std::endl;
 		std::cout << " grow povit node 2 index = "
 				<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
+		baseRawInput.isStab = false;
 		return baseRawInput;
 	} else if (simuType == Disc) {
 		RawDataInput rawInput;
 		initializeRawInput(rawInput, cellCenterPoss);
+		rawInput.isStab = false;
 		return rawInput;
 	} else {
 		throw SceException(
@@ -157,6 +159,9 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartRawData.tipVerticies[cartRawData.growNode1Index_on_tip] = tmpPos;
 	cartPara.growNode1Index = 0;
 
+	std::cout << "finished step 1 " << std::endl;
+	std::cout.flush();
+
 	// step 2, switch tip node 2 to pos 1
 	tmpPos = cartRawData.tipVerticies[1];
 	cartRawData.tipVerticies[1] =
@@ -165,6 +170,9 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartPara.growNode2Index = 1;
 	cartPara.tipNodeStartPos = 2;
 	cartPara.tipNodeIndexEnd = cartRawData.tipVerticies.size();
+
+	std::cout << "finished step 2 " << std::endl;
+	std::cout.flush();
 
 	// step 3, calculate size for tip nodes
 	double tipMaxExpansionRatio = globalConfigVars.getConfigValue(
@@ -182,6 +190,9 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartPara.growNodeBehind2Index = cartPara.nonTipNodeStartPos
 			+ cartRawData.growNodeBehind2Index;
 
+	std::cout << "finished step 3 " << std::endl;
+	std::cout.flush();
+
 	// step 4, calculate size for all nodes
 	double cartmaxExpRatio = globalConfigVars.getConfigValue(
 			"CartMaxExpansionRatio").toDouble();
@@ -189,17 +200,26 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 			+ cartRawData.nonTipVerticies.size()) * cartmaxExpRatio;
 	cartPara.nodeIndexTotal = maxCartNodeSize;
 
+	std::cout << "finished step 4 " << std::endl;
+	std::cout.flush();
+
 	// step 5, initialize the first part of initNodePos
 	initNodePos.resize(cartPara.nodeIndexTotal);
 	for (uint i = 0; i < cartRawData.tipVerticies.size(); i++) {
 		initNodePos[i] = cartRawData.tipVerticies[i];
 	}
 
+	std::cout << "finished step 5 " << std::endl;
+	std::cout.flush();
+
 	// step 6, initialize the second part of initNodePos
 	for (uint i = 0; i < cartRawData.nonTipVerticies.size(); i++) {
 		initNodePos[i + cartPara.nonTipNodeStartPos] =
 				cartRawData.nonTipVerticies[i];
 	}
+
+	std::cout << "finished step 6 " << std::endl;
+	std::cout.flush();
 
 	for (uint i = 0; i < initNodePos.size(); i++) {
 		initNodePos[i].Print();
@@ -228,16 +248,28 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	//cin >> jj;
 }
 
+void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
+		std::vector<CVector>& cellCenterPoss) {
+
+	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
+		CVector centerPos = cellCenterPoss[i];
+		if (isMXType_v2(centerPos)) {
+			rawInput.MXCellCenters.push_back(centerPos);
+		} else {
+			rawInput.FNMCellCenters.push_back(centerPos);
+		}
+	}
+
+	generateCellInitNodeInfo_v2(rawInput.initCellNodePoss);
+
+}
+
 /**
  * Initialize inputs for five different components.
  */
 
 SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	SimulationInitData initData;
-
-	//transformRawCartData(rawData.cartilageData, initData.cartPara,
-	//		initData.cartilageNodeIsActive, initData.cartilageNodePosX,
-	//		initData.cartilageNodePosY);
 
 	uint FnmCellCount = rawData.FNMCellCenters.size();
 	uint MxCellCount = rawData.MXCellCenters.size();
@@ -353,24 +385,9 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	return initData;
 }
 
-void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
-		std::vector<CVector>& cellCenterPoss) {
-
-	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
-		CVector centerPos = cellCenterPoss[i];
-		if (isMXType_v2(centerPos)) {
-			rawInput.MXCellCenters.push_back(centerPos);
-		} else {
-			rawInput.FNMCellCenters.push_back(centerPos);
-		}
-	}
-
-	generateCellInitNodeInfo_v2(rawInput.initCellNodePoss);
-
-}
-
 SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	SimulationInitData_V2 initData;
+	initData.isStab = rawData.isStab;
 
 	uint FnmCellCount = rawData.FNMCellCenters.size();
 	uint MxCellCount = rawData.MXCellCenters.size();
@@ -385,10 +402,14 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryNodeVec.resize(rawData.bdryNodes.size());
 	initData.initProfileNodeVec.resize(rawData.profileNodes.size());
-	if (simuType == Beak) {
+	std::cout << "before beak node init" << std::endl;
+	std::cout.flush();
+	if (simuType == Beak && !initData.isStab) {
 		transformRawCartData(rawData.cartilageData, initData.cartPara,
 				initData.initCartNodeVec);
 	}
+	std::cout << "after beak node init" << std::endl;
+	std::cout.flush();
 	initData.initECMNodeVec.resize(maxNodePerECM * ECMCount);
 	initData.initFNMNodeVec.resize(maxNodePerCell * FnmCellCount);
 	initData.initMXNodeVec.resize(maxNodePerCell * MxCellCount);
@@ -551,6 +572,7 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	for (uint i = 0; i < rawData.initCellNodePoss.size(); i++) {
 		rawData.initCellNodePoss[i].Print();
 	}
+	rawData.isStab = true;
 	return rawData;
 }
 
@@ -823,3 +845,21 @@ void CellInitHelper::initInternalBdry() {
 	internalBdryPts = input.internalBdryPts;
 }
 
+SimulationInitData_V2 CellInitHelper::initStabInput() {
+	RawDataInput rawInput = generateRawInput_stab();
+	std::cout << "finished generation of stab raw inputs" << std::endl;
+	std::cout.flush();
+	SimulationInitData_V2 initData = initInputsV3(rawInput);
+	initData.isStab = true;
+	std::cout << "finished generation of init data" << std::endl;
+	std::cout.flush();
+	return initData;
+}
+
+SimulationInitData_V2 CellInitHelper::initSimuInput(
+		std::vector<CVector> &cellCenterPoss) {
+	RawDataInput rawInput = generateRawInput_V2(cellCenterPoss);
+	SimulationInitData_V2 simuInitData = initInputsV3(rawInput);
+	simuInitData.isStab = false;
+	return simuInitData;
+}

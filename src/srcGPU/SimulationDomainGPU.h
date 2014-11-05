@@ -157,7 +157,7 @@ public:
 	 * we would need this extra step in order to stabilize the cell center positions
 	 * so that cells can be allocated evenly in our simulation domain.
 	 */
-	std::vector<CVector> stablizeCellCenters(SimulationInitData &initData);
+	std::vector<CVector> stablizeCellCenters(SimulationInitData_V2 &initData);
 
 	/**
 	 * Checks if all data fields are valid.

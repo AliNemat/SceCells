@@ -48,21 +48,17 @@ int main() {
 
 	CellInitHelper initHelper;
 
-	RawDataInput rawInput = initHelper.generateRawInput_stab();
-
-	SimulationInitData simuData = initHelper.initInputsV2(rawInput);
-
 	SimulationDomainGPU simuDomain;
 
-	std::vector<CVector> stabilizedCenters;
-	// TODO: These initialization statments are removed for debugging purpose.
-	stabilizedCenters = simuDomain.stablizeCellCenters(simuData);
+	SimulationInitData_V2 initData = initHelper.initStabInput();
 
-	RawDataInput rawInput2 = initHelper.generateRawInput_V2(stabilizedCenters);
+	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
+			initData);
 
-	SimulationInitData_V2 simuData2 = initHelper.initInputsV3(rawInput2);
+	SimulationInitData_V2 simuData = initHelper.initSimuInput(
+			stabilizedCenters);
 
-	simuDomain.initialize_v2(simuData2);
+	simuDomain.initialize_v2(simuData);
 
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(

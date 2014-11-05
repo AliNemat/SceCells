@@ -128,6 +128,7 @@ struct SceMiscPara {
  * This data structure contains parameters about the memory layout of the simulation domain.
  */
 struct SceMemPara {
+	bool isStab;
 	SimulationType simuType;
 	uint maxCellInDomain;
 	uint maxNodePerCell;
@@ -302,6 +303,7 @@ public:
  * Generated Raw data that needs reformatting in order to be used for domain initialization.
  */
 struct RawDataInput {
+	bool isStab;
 	CartilageRawData cartilageData;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> profileNodes;
@@ -335,6 +337,7 @@ struct SimulationInitData {
  * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData_V2 {
+	bool isStab;
 	/**
 	 * This parameter is necessary for Cartilage, because this CartPara
 	 * cannot be generated from config file directly.
