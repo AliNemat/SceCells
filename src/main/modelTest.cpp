@@ -72,30 +72,6 @@ int main() {
 	const int outputAnimationAuxVarible = numOfTimeSteps
 			/ totalNumOfOutputFrame;
 
-	/*
-
-	 CellInitHelper initHelper;
-
-	 SimulationDomainGPU simuDomain;
-	 SimulationInitData initData = initHelper.generateDiskInput(loadMeshInput);
-	 simuDomain.initialize_V2(initData);
-
-	 simuDomain.checkIfAllDataFieldsValid();
-
-	 */
-
-	//GEOMETRY::MeshGen meshGen;
-	//std::vector<GEOMETRY::Point2D> points = meshGen.createBdryPointsOnCircle(7,
-	//		8);
-	//Criteria criteria(0.125, 2.0);
-	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(points,
-	//		GEOMETRY::MeshGen::default_list_of_seeds, criteria);
-	//std::string testString = "./resources/BdryData_unit_test.txt";
-	//std::string testString = "./resources/beakBdryInput.txt";
-	//GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(testString);
-	//mesh.outputVtkFile("modelTest.vtk");
-	//double SimulationTimeStep = globalConfigVars.getConfigValue(
-	//		"SimulationTimeStep").toDouble();
 	CellInitHelper initHelper;
 
 	RawDataInput rawInput = initHelper.generateRawInput_stab();
