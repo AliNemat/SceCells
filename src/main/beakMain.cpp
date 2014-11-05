@@ -28,52 +28,29 @@ int main() {
 	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 	gpuErrchk(cudaSetDevice(myDeviceID));
 
-	std::string animationInput = globalConfigVars.getConfigValue(
-			"AnimationFolder").toString()
-			+ globalConfigVars.getConfigValue("AnimationName").toString();
-
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
-
-	const double simulationTime = SimulationTotalTime;
-	const double dt = SimulationTimeStep;
-	const int numOfTimeSteps = simulationTime / dt;
-	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	const int outputAnimationAuxVarible = numOfTimeSteps
-			/ totalNumOfOutputFrame;
+	SimulationGlobalParameter mainPara;
+	mainPara.initFromConfig();
 
 	CellInitHelper initHelper;
-
 	SimulationDomainGPU simuDomain;
 
 	SimulationInitData_V2 initData = initHelper.initStabInput();
-
 	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
 			initData);
 
 	SimulationInitData_V2 simuData = initHelper.initSimuInput(
 			stabilizedCenters);
-
 	simuDomain.initialize_v2(simuData);
 
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = false;
-
 	uint aniFrame = 0;
-	for (int i = 0; i <= numOfTimeSteps; i++) {
+	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
-		if (i % outputAnimationAuxVarible == 0) {
-			simuDomain.outputVtkFilesWithColor(animationInput, aniFrame,
-					aniCri);
+		if (i % mainPara.aniAuxVar == 0) {
+			simuDomain.outputVtkFilesWithColor(mainPara.animationNameBase,
+					aniFrame, mainPara.aniCri);
 			aniFrame++;
 		}
-		simuDomain.runAllLogic(SimulationTimeStep);
+		simuDomain.runAllLogic(mainPara.dt);
 	}
 }
 

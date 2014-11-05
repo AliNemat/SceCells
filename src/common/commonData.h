@@ -40,6 +40,8 @@ std::string toString(SceNodeType type);
 
 double nodeTypeToScale(SceNodeType type);
 
+bool valueToType(int value);
+
 class SceException: public std::exception {
 private:
 	std::string _message;

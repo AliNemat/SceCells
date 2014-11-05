@@ -39,78 +39,40 @@ int main() {
 	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 	gpuErrchk(cudaSetDevice(myDeviceID));
 
-	std::string animationInput = globalConfigVars.getConfigValue(
-			"AnimationFolder").toString()
-			+ globalConfigVars.getConfigValue("AnimationName").toString();
-	std::string dataOutput = globalConfigVars.getConfigValue(
-			"PolygonStatFileName").toString();
-	std::string imgOutput =
-			globalConfigVars.getConfigValue("DataOutputFolder").toString()
-					+ globalConfigVars.getConfigValue("ImgSubFolder").toString()
-					+ globalConfigVars.getConfigValue("ImgFileNameBase").toString();
+	SimulationGlobalParameter mainPara;
+	mainPara.initFromConfig();
 
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
-
-	const double simulationTime = SimulationTotalTime;
-	const double dt = SimulationTimeStep;
-	const int numOfTimeSteps = simulationTime / dt;
-	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	const int outputAnimationAuxVarible = numOfTimeSteps
-			/ totalNumOfOutputFrame;
-
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = true;
-
-	std::string dataFolder =
-			globalConfigVars.getConfigValue("DataFolder").toString();
-	std::string dataName = dataFolder
-			+ globalConfigVars.getConfigValue("DataName").toString();
 	PixelizePara pixelPara;
 	pixelPara.initFromConfigFile();
 
 	CellInitHelper initHelper;
-
 	SimulationDomainGPU simuDomain;
 
 	SimulationInitData_V2 initData = initHelper.initStabInput();
-
 	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
 			initData);
-	std::cout << "begin generating raw input data" << std::endl;
-	std::cout.flush();
-	std::cout << "finished generating raw input data" << std::endl;
-	std::cout.flush();
+
 	SimulationInitData_V2 simuData2 = initHelper.initSimuInput(
 			stabilizedCenters);
-
-	std::cout << "finished generating simulation init data V2" << std::endl;
-	std::cout.flush();
 	simuDomain.initialize_v2(simuData2);
 
 	uint aniFrame = 0;
-	for (int i = 0; i <= numOfTimeSteps; i++) {
+	std::remove(mainPara.dataOutput.c_str());
+	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
-		if (i % outputAnimationAuxVarible == 0) {
-			cout << "started to output Animation" << endl;
-			simuDomain.outputVtkFilesWithColor(animationInput, aniFrame,
-					aniCri);
+		if (i % mainPara.aniAuxVar == 0) {
+			simuDomain.outputVtkFilesWithColor(mainPara.animationNameBase,
+					aniFrame, mainPara.aniCri);
 			cout << "finished output Animation" << endl;
-			cout << "started writing label matrix" << endl;
 			vector<vector<int> > labelMatrix = simuDomain.outputLabelMatrix(
-					dataName, aniFrame, pixelPara);
-			simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame, imgOutput,
-					dataOutput);
+					mainPara.dataName, aniFrame, pixelPara);
 			cout << "finished writing label matrix" << endl;
+			simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame,
+					mainPara.imgOutput, mainPara.dataOutput);
+			cout << "finished output matrix analysis" << endl;
 			aniFrame++;
 		}
-		simuDomain.runAllLogic(dt);
+		simuDomain.runAllLogic(mainPara.dt);
 	}
 
 	return 0;

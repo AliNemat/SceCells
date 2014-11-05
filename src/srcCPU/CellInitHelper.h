@@ -51,6 +51,22 @@ struct CellInitHelperException: public std::exception {
 	}
 };
 
+struct SimulationGlobalParameter {
+public:
+	std::string animationNameBase;
+	double totalSimuTime;
+	double dt;
+	int totalTimeSteps;
+	int totalFrameCount;
+	int aniAuxVar;
+	AnimationCriteria aniCri;
+	std::string dataOutput;
+	std::string imgOutput;
+	std::string dataFolder;
+	std::string dataName;
+	void initFromConfig();
+};
+
 /**
  * Handles cell initialization.
  */
@@ -60,11 +76,9 @@ class CellInitHelper {
 
 	CVector getPointGivenAngle(double currentAngle, double r,
 			CVector centerPos);
-
 	void generateRandomAngles(vector<double> &randomAngles,
 			int initProfileNodeSize);
-	void generateCellInitNodeInfo(vector<CVector> &initPos,
-			std::string meshInput);
+
 	void generateCellInitNodeInfo_v2(vector<CVector> &initPos);
 	void generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 			int initNodeCountPerECM);
@@ -74,22 +88,49 @@ class CellInitHelper {
 	bool anyECMCenterTooClose(vector<CVector> &ecmCenters, CVector position);
 	bool anyCellCenterTooClose(vector<CVector> &cellCenters, CVector position);
 	bool anyBoundaryNodeTooClose(vector<CVector> &bdryNodes, CVector position);
-	bool isInitNodesInitializedFlag;
 
+	/**
+	 * generate a random number between min and max.
+	 */
 	double getRandomNum(double min, double max);
+
+	/**
+	 * generates an array that could qualify for initial position of nodes in a cell.
+	 */
 	vector<CVector> generateInitCellNodes();
+
+	/**
+	 * Attempt to generate an array that represents relative position of nodes in a cell.
+	 */
 	vector<CVector> attemptGeenerateInitCellNodes();
+
+	/**
+	 * Determine if an array, representing relative position of nodes in a cell,
+	 * is qualified for initialization purpose.
+	 */
 	bool isPositionQualify(vector<CVector> &poss);
 
+	/**
+	 * Initialize internal boundary points given input file.
+	 */
 	void initInternalBdry();
 
+	/**
+	 * Initialize raw input given an array of cell center positions.
+	 */
 	void initializeRawInput(RawDataInput &rawInput,
 			std::vector<CVector> &cellCenterPoss);
 
+	/**
+	 * generate initial node positions given cartilage raw data.
+	 */
 	void transformRawCartData(CartilageRawData &cartRawData, CartPara &cartPara,
 			std::vector<CVector> &initNodePos);
 
-	bool isMXType_v2(CVector position);
+	/**
+	 * Given a cell center position, decide if the center position is MX type or not.
+	 */
+	bool isMXType(CVector position);
 
 	vector<CVector> rotate2D(vector<CVector> &initECMNodePoss, double angle);
 
@@ -97,7 +138,6 @@ class CellInitHelper {
 	 * Used for generate RawDataInput for actual simulation purpose.
 	 * The raw data generated does not only contain cell center positions but also
 	 * epithelium node positions and boundary node positions.
-	 * TODO: should become private someday.
 	 */
 	RawDataInput generateRawInputWithProfile(
 			std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded =
@@ -117,9 +157,9 @@ class CellInitHelper {
 	RawDataInput generateRawInput_stab();
 
 	/**
-	 * generate second version raw input data.
+	 * Used for generate RawDataInput for actual simulation purpose.
 	 */
-	RawDataInput generateRawInput_V2(std::vector<CVector> &cellCenterPoss);
+	RawDataInput generateRawInput_simu(std::vector<CVector> &cellCenterPoss);
 
 	/**
 	 * generate simulation initialization data given raw data.

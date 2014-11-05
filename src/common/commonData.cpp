@@ -201,6 +201,14 @@ SimulationType parseTypeFromConfig(int configValue) {
 	}
 }
 
+bool valueToType(int value) {
+	if (value != 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 uint findClosestArrIndexGivenPos(std::vector<CVector>& vecArr, CVector& pos) {
 	if (vecArr.size() == 0) {
 		std::string errorMsg =

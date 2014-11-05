@@ -83,7 +83,7 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
 		CVector centerPos = cellCenterPoss[i];
 		centerPos.Print();
-		if (isMXType_v2(centerPos)) {
+		if (isMXType(centerPos)) {
 			rawData.MXCellCenters.push_back(centerPos);
 		} else {
 			rawData.FNMCellCenters.push_back(centerPos);
@@ -98,7 +98,7 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	return rawData;
 }
 
-RawDataInput CellInitHelper::generateRawInput_V2(
+RawDataInput CellInitHelper::generateRawInput_simu(
 		std::vector<CVector>& cellCenterPoss) {
 	if (simuType == Beak) {
 		RawDataInput baseRawInput = generateRawInputWithProfile(cellCenterPoss,
@@ -253,7 +253,7 @@ void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
 
 	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
 		CVector centerPos = cellCenterPoss[i];
-		if (isMXType_v2(centerPos)) {
+		if (isMXType(centerPos)) {
 			rawInput.MXCellCenters.push_back(centerPos);
 		} else {
 			rawInput.FNMCellCenters.push_back(centerPos);
@@ -587,37 +587,6 @@ void CellInitHelper::generateRandomAngles(vector<double> &randomAngles,
 	}
 }
 
-void CellInitHelper::generateCellInitNodeInfo(vector<CVector> &initPos,
-		std::string meshInput) {
-	fstream fs;
-	uint NNum, LNum, ENum;
-	uint i;
-	double tmp;
-	std::cout << "mesh input is :" << meshInput << std::endl;
-	fs.open(meshInput.c_str(), ios::in);
-	if (!fs.is_open()) {
-		std::string errString =
-				"Unable to load mesh in string input mode, meshname: "
-						+ meshInput
-						+ " ,possible reason is the file is not located in the project folder \n";
-		std::cout << errString;
-	}
-	fs >> NNum >> LNum >> ENum;
-	cout << "NNum = " << NNum << std::endl;
-
-	initPos.resize(NNum);
-
-	for (i = 0; i < NNum; i++) {
-		fs >> initPos[i].x >> initPos[i].y >> tmp;
-		initPos[i].x = initPos[i].x / 20.0;
-		initPos[i].y = initPos[i].y / 10.0;
-		initPos[i].Print();
-	}
-//int jj;
-//cin >> jj;
-	fs.close();
-}
-
 /**
  * Initially, ECM nodes are alignd vertically.
  */
@@ -652,7 +621,7 @@ void CellInitHelper::generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 		}
 	}
 }
-//TODO
+
 void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 		vector<CVector> &CellCenters, vector<CVector> &bdryNodes) {
 	ECMCenters.clear();
@@ -818,7 +787,7 @@ bool CellInitHelper::isPositionQualify(vector<CVector>& poss) {
 	return isQualify;
 }
 
-bool CellInitHelper::isMXType_v2(CVector position) {
+bool CellInitHelper::isMXType(CVector position) {
 	if (simuType != Beak) {
 		return true;
 	}
@@ -858,8 +827,48 @@ SimulationInitData_V2 CellInitHelper::initStabInput() {
 
 SimulationInitData_V2 CellInitHelper::initSimuInput(
 		std::vector<CVector> &cellCenterPoss) {
-	RawDataInput rawInput = generateRawInput_V2(cellCenterPoss);
+	RawDataInput rawInput = generateRawInput_simu(cellCenterPoss);
 	SimulationInitData_V2 simuInitData = initInputsV3(rawInput);
 	simuInitData.isStab = false;
 	return simuInitData;
+}
+
+void SimulationGlobalParameter::initFromConfig() {
+	int type = globalConfigVars.getConfigValue("SimulationType").toInt();
+	SimulationType simuType = parseTypeFromConfig(type);
+
+	animationNameBase =
+			globalConfigVars.getConfigValue("AnimationFolder").toString()
+					+ globalConfigVars.getConfigValue("AnimationName").toString();
+
+	totalSimuTime =
+			globalConfigVars.getConfigValue("SimulationTotalTime").toDouble();
+
+	dt = globalConfigVars.getConfigValue("SimulationTimeStep").toDouble();
+
+	totalTimeSteps = totalSimuTime / dt;
+
+	totalFrameCount =
+			globalConfigVars.getConfigValue("TotalNumOfOutputFrames").toInt();
+
+	aniAuxVar = totalTimeSteps / totalFrameCount;
+
+	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+			"IntraLinkDisplayRange").toDouble();
+
+	aniCri.isStressMap = valueToType(
+			globalConfigVars.getConfigValue("AnimationType").toInt());
+
+	if (simuType == Disc) {
+		dataOutput =
+				globalConfigVars.getConfigValue("PolygonStatFileName").toString();
+		imgOutput =
+				globalConfigVars.getConfigValue("DataOutputFolder").toString()
+						+ globalConfigVars.getConfigValue("ImgSubFolder").toString()
+						+ globalConfigVars.getConfigValue("ImgFileNameBase").toString();
+		dataFolder = globalConfigVars.getConfigValue("DataFolder").toString();
+		dataName = dataFolder
+				+ globalConfigVars.getConfigValue("DataName").toString();
+	}
+
 }
