@@ -42,6 +42,12 @@ int main() {
 	std::string animationInput = globalConfigVars.getConfigValue(
 			"AnimationFolder").toString()
 			+ globalConfigVars.getConfigValue("AnimationName").toString();
+	std::string dataOutput =
+			globalConfigVars.getConfigValue("DataOutputFolder").toString()
+					+ globalConfigVars.getConfigValue("PolygonStatFileName").toString();
+	std::string imgOutput =
+			globalConfigVars.getConfigValue("DataOutputFolder").toString()
+					+ globalConfigVars.getConfigValue("ImgFileNameBase").toString();
 
 	double SimulationTotalTime = globalConfigVars.getConfigValue(
 			"SimulationTotalTime").toDouble();
@@ -78,7 +84,7 @@ int main() {
 	SimulationDomainGPU simuDomain;
 
 	std::vector<CVector> stabilizedCenters;
-	// TODO: These initialization statments are removed for debugging purpose.
+
 	stabilizedCenters = simuDomain.stablizeCellCenters(simuData);
 	std::cout << "begin generating raw input data" << std::endl;
 	std::cout.flush();
@@ -98,11 +104,14 @@ int main() {
 			cout << "started to output Animation" << endl;
 			simuDomain.outputVtkFilesWithColor(animationInput, aniFrame,
 					aniCri);
-			aniFrame++;
 			cout << "finished output Animation" << endl;
 			cout << "started writing label matrix" << endl;
-			simuDomain.outputLabelMatrix(dataName, i, pixelPara);
+			vector<vector<int> > labelMatrix = simuDomain.outputLabelMatrix(
+					dataName, aniFrame, pixelPara);
+			simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame, imgOutput,
+					dataOutput);
 			cout << "finished writing label matrix" << endl;
+			aniFrame++;
 		}
 		simuDomain.runAllLogic(dt);
 	}

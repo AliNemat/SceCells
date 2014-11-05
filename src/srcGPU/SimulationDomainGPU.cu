@@ -580,12 +580,26 @@ void SimulationDomainGPU::checkIfAllDataFieldsValid() {
 //cin >> jj;
 }
 
-void SimulationDomainGPU::outputLabelMatrix(std::string resultNameBase,
-		int rank, PixelizePara& pixelPara) {
+vector<vector<int> > SimulationDomainGPU::outputLabelMatrix(
+		std::string resultNameBase, int rank, PixelizePara& pixelPara) {
 	std::stringstream ss;
 	ss << std::setw(5) << std::setfill('0') << rank;
 	std::string resultNameRank = ss.str();
 	std::string matrixFileName = resultNameBase + resultNameRank + ".dat";
 	vector<vector<int> > matrix = nodes.obtainLabelMatrix(pixelPara);
 	printMatrixToFile(matrix, matrixFileName);
+	return matrix;
+}
+
+void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
+		int step, std::string &imageFileNameBase, std::string &statFileName) {
+	ResAnalysisHelper resHelper;
+
+	std::stringstream ss;
+	ss << std::setw(5) << std::setfill('0') << step;
+	std::string imgNameRank = ss.str();
+	std::string imgFileName = imageFileNameBase + imgNameRank + ".bmp";
+
+	resHelper.outputImg_formatBMP(imgFileName, labelMatrix);
+	resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix);
 }

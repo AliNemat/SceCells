@@ -187,8 +187,11 @@ public:
 	 * @param rank frame sequence in the labelMatrix series.
 	 * @param pixelPara criteria for labelMatrix generation.
 	 */
-	void outputLabelMatrix(std::string resultNameBase, int rank,
+	vector<vector<int> > outputLabelMatrix(std::string resultNameBase, int rank,
 			PixelizePara &pixelPara);
+
+	void analyzeLabelMatrix(vector<vector<int> > &labelMatrix, int step,
+			std::string &imageFileNameBase, std::string &statFileName);
 };
 
 #endif

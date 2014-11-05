@@ -197,7 +197,7 @@ void ResAnalysisHelper::outputImg_formatBMP(std::string fileName,
 	unsigned char *img = NULL;
 	int filesize = 54 + 3 * imgWidth * imgHeight;
 	img = (unsigned char *) malloc(3 * imgWidth * imgHeight);
-	memset(img, 0, sizeof(img));
+	memset(img, 0, sizeof(3 * imgWidth * imgHeight));
 
 	vector<vector<double> > red, green, blue;
 	generateRGBMatrix(labelMatrix, red, green, blue);
@@ -355,10 +355,13 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 			}
 		}
 	}
-	uint labelSetSize = cellLabelSet.size();
+	uint labelSetSize = cellLabelSet.size() - 1;
+	std::cout << "max label = " << maxLabel << ", labelSetsize = "
+			<< labelSetSize << std::endl;
 	assert(maxLabel == (int )labelSetSize - 1);
 
 	std::tr1::unordered_set<int> neighborCellSet[labelSetSize];
+	std::tr1::unordered_set<int> boundaryCellsSet;
 	for (uint i = 0; i < dimX; i++) {
 		for (uint j = 0; j < dimY; j++) {
 			int label = labelMatrix[i][j];
@@ -366,15 +369,27 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 				continue;
 			}
 			if (i != 0) {
+				if (labelMatrix[i - 1][j] == -1) {
+					boundaryCellsSet.insert(label);
+				}
 				neighborCellSet[label].insert(labelMatrix[i - 1][j]);
 			}
 			if (i != dimX - 1) {
+				if (labelMatrix[i + 1][j] == -1) {
+					boundaryCellsSet.insert(label);
+				}
 				neighborCellSet[label].insert(labelMatrix[i + 1][j]);
 			}
 			if (j != 0) {
+				if (labelMatrix[i][j - 1] == -1) {
+					boundaryCellsSet.insert(label);
+				}
 				neighborCellSet[label].insert(labelMatrix[i][j - 1]);
 			}
 			if (j != dimY - 1) {
+				if (labelMatrix[i][j + 1] == -1) {
+					boundaryCellsSet.insert(label);
+				}
 				neighborCellSet[label].insert(labelMatrix[i][j + 1]);
 			}
 		}
@@ -382,8 +397,14 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 
 	uint sideCount[labelSetSize];
 	for (uint i = 0; i < labelSetSize; i++) {
-		// minus one because I need to remove the label of the cell itself.
-		sideCount[i] = neighborCellSet[i].size() - 1;
+		// the cell is not a boundary cell
+		if (boundaryCellsSet.find(i) == boundaryCellsSet.end()) {
+			// minus one because I need to remove the label of the cell itself.
+			sideCount[i] = neighborCellSet[i].size() - 1;
+		} else {
+			// for boundary cells, assign value -1.
+			sideCount[i] = -1;
+		}
 	}
 
 	std::tr1::unordered_map<int, int> polygonCountingRes;
@@ -391,10 +412,16 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 	for (uint i = 0; i < labelSetSize; i++) {
 		it = polygonCountingRes.find(sideCount[i]);
 		if (it == polygonCountingRes.end()) {
-			polygonCountingRes.insert(std::pair<int, int>(sideCount[i], 0));
+			polygonCountingRes.insert(std::pair<int, int>(sideCount[i], 1));
 		} else {
 			it->second = it->second + 1;
 		}
+	}
+
+	// -1 comes from boundary cells and should be removed.
+	it = polygonCountingRes.find(-1);
+	if (it != polygonCountingRes.end()) {
+		polygonCountingRes.erase(it);
 	}
 
 	ofstream ofs;
