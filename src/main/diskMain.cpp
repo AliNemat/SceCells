@@ -42,11 +42,11 @@ int main() {
 	std::string animationInput = globalConfigVars.getConfigValue(
 			"AnimationFolder").toString()
 			+ globalConfigVars.getConfigValue("AnimationName").toString();
-	std::string dataOutput =
-			globalConfigVars.getConfigValue("DataOutputFolder").toString()
-					+ globalConfigVars.getConfigValue("PolygonStatFileName").toString();
+	std::string dataOutput = globalConfigVars.getConfigValue(
+			"PolygonStatFileName").toString();
 	std::string imgOutput =
 			globalConfigVars.getConfigValue("DataOutputFolder").toString()
+					+ globalConfigVars.getConfigValue("ImgSubFolder").toString()
 					+ globalConfigVars.getConfigValue("ImgFileNameBase").toString();
 
 	double SimulationTotalTime = globalConfigVars.getConfigValue(
