@@ -9,6 +9,7 @@
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --share
+#SBATCH --gres=gpu:1
 
 sleep 10
 srun -l ./bin/runDiskSimulation
