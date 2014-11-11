@@ -29,18 +29,46 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 	// initialize random seed.
 	srand(time(NULL));
 
 	// read configuration.
 	ConfigParser parser;
-	std::string configFileName = "./resources/disk.cfg";
-	globalConfigVars = parser.parseConfigFile(configFileName);
+	std::string configFileNameDefault = "./resources/disc_master.cfg";
+	std::string configFileNameBaseL = "./resources/disc_";
+	std::string configFileNameBaseR = ".cfg";
 
-	// set GPU device.
-	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
-	gpuErrchk(cudaSetDevice(myDeviceID));
+	// Unknown number of input arguments.
+	if (argc != 1 && argc != 3) {
+		std::cout << "ERROR: Incorrect input argument count.\n"
+				<< "Expect either no command line argument or three arguments"
+				<< std::endl;
+		exit(0);
+	}
+	// one input argument. It has to be "-slurm".
+	else if (argc == 3) {
+		if (strcmp(argv[1], "-slurm") != 0) {
+			std::cout
+					<< "ERROR: one argument received from commandline but it's not recognized.\n"
+					<< "Currently, the argument value must be -slurm"
+					<< std::endl;
+			exit(0);
+		} else {
+			std::string configFileNameM(argv[2]);
+			std::string configFileNameCombined = configFileNameBaseL
+					+ configFileNameM + configFileNameBaseR;
+			globalConfigVars = parser.parseConfigFile(configFileNameCombined);
+		}
+	}
+	// no input argument. Take default.
+	else if (argc == 1) {
+		globalConfigVars = parser.parseConfigFile(configFileNameDefault);
+		// set GPU device.
+		int myDeviceID =
+				globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
+		gpuErrchk(cudaSetDevice(myDeviceID));
+	}
 
 	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;

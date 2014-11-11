@@ -15,7 +15,7 @@ To obtain source code copy:
 git clone https://github.com/laosunhust/SceCells.git
 
 To compile:
- (1) In project root folder, type "cmake ."
+ (1) In project root folder, type "cmake ." ("sudo cmake ." preferred)
  (2) type "make" 
 
 To run unit test:

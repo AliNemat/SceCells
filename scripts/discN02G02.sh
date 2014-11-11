@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH -o myjob.%j.%N.out 
+#SBATCH -o DiscSimu.%j.%N.out 
 ##SBATCH -D 
-#SBATCH -J tutorial_1 
+#SBATCH -J DiscSimu_N02_2 
 #SBATCH --ntasks=1 
 #SBATCH --mail-type=end 
-#SBATCH --mail-user=@nd.edu 
-#SBATCH --time=00:01:00 
+#SBATCH --mail-user=wsun2@nd.edu 
+#SBATCH --time=99:00:00 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
 #SBATCH --share
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=gpu02
-srun ./bin/runDiskSimulation
+srun --gres=gpu:1 ./bin/runDiskSimulation -slurm N02_2
