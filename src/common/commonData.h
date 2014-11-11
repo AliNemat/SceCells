@@ -312,6 +312,7 @@ public:
  */
 struct RawDataInput {
 	bool isStab;
+	SimulationType simuType;
 	CartilageRawData cartilageData;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> profileNodes;
@@ -346,6 +347,7 @@ struct SimulationInitData {
  */
 struct SimulationInitData_V2 {
 	bool isStab;
+	SimulationType simuType;
 	/**
 	 * This parameter is necessary for Cartilage, because this CartPara
 	 * cannot be generated from config file directly.

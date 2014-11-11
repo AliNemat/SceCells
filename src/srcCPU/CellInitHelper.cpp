@@ -137,11 +137,13 @@ RawDataInput CellInitHelper::generateRawInput_simu(
 		std::cout << " grow povit node 2 index = "
 				<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
 		baseRawInput.isStab = false;
+		baseRawInput.simuType = simuType;
 		return baseRawInput;
 	} else if (simuType == Disc) {
 		RawDataInput rawInput;
 		initializeRawInput(rawInput, cellCenterPoss);
 		rawInput.isStab = false;
+		rawInput.simuType = simuType;
 		return rawInput;
 	} else {
 		throw SceException(
@@ -277,8 +279,10 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 
 	uint maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
-	uint maxNodePerECM =
-			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	uint maxNodePerECM = 0;
+	if(rawData.simuType == Beak){
+	    maxNodePerECM = globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	}
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
 //uint initTotalECMCount = rawData.ECMCenters.size();
@@ -388,6 +392,7 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	SimulationInitData_V2 initData;
 	initData.isStab = rawData.isStab;
+	initData.simuType = rawData.simuType;
 
 	uint FnmCellCount = rawData.FNMCellCenters.size();
 	uint MxCellCount = rawData.MXCellCenters.size();
@@ -395,8 +400,11 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 
 	uint maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
-	uint maxNodePerECM =
-			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	uint maxNodePerECM = 0;
+	if(initData.simuType == Beak){
+	    maxNodePerECM = 
+	    globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	}
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
 	//uint initTotalECMCount = rawData.ECMCenters.size();
@@ -523,6 +531,7 @@ vector<CVector> CellInitHelper::rotate2D(vector<CVector> &initECMNodePoss,
 
 RawDataInput CellInitHelper::generateRawInput_stab() {
 	RawDataInput rawData;
+	rawData.simuType = simuType;
 	vector<CVector> insideCellCenters;
 	vector<CVector> outsideBdryNodePos;
 	std::string bdryInputFileName = globalConfigVars.getConfigValue(

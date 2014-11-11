@@ -85,12 +85,16 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 
 	// size of inputs must be divided exactly by max node per cell.
 	// uint bdryRemainder = bdryNodeCountX % maxNodePerCell;
-	uint ecmRemainder = ECMNodeCount % maxNodePerECM;
+	uint ecmRemainder = 0; 
+	uint ecmQuotient = 0;
+	if(memPara.simuType == Beak){
+	    ecmQuotient = ECMNodeCount / maxNodePerECM;
+	    ecmRemainder = ECMNodeCount % maxNodePerECM;
+	}
 	uint fnmRemainder = FNMNodeCount % maxNodePerCell;
 	uint mxRemainder = MXNodeCount % maxNodePerCell;
 
 	// uint bdryQuotient = bdryNodeCountX / maxNodePerCell;
-	uint ecmQuotient = ECMNodeCount / maxNodePerECM;
 	uint fnmQuotient = FNMNodeCount / maxNodePerCell;
 	uint mxQuotient = MXNodeCount / maxNodePerCell;
 
@@ -192,14 +196,20 @@ void SimulationDomainGPU::readMemPara() {
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
 	memPara.maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
-	memPara.maxECMInDomain =
+	if(memPara.simuType == Beak){
+	    memPara.maxECMInDomain =
 			globalConfigVars.getConfigValue("MaxECMInDomain").toInt();
-	memPara.maxNodePerECM =
+	    memPara.maxNodePerECM =
 			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
-	memPara.FinalToInitProfileNodeCountRatio = globalConfigVars.getConfigValue(
-			"FinalToInitProfileNodeCountRatio").toDouble();
+            memPara.FinalToInitProfileNodeCountRatio = 
+	                globalConfigVars.getConfigValue("FinalToInitProfileNodeCountRatio").toDouble();
 	//memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
 	//		"FinalToInitCartNodeCountRatio").toDouble();
+	}else{
+	    memPara.maxECMInDomain = 0;
+	    memPara.maxNodePerECM = 0;
+            memPara.FinalToInitProfileNodeCountRatio = 0;
+	}
 }
 
 void SimulationDomainGPU::readDomainPara() {
