@@ -29,6 +29,9 @@ std::string toString(SceExceptionType type) {
 	case InvalidInput:
 		result = "Exception processing method input";
 		break;
+	case AlgorithmBug:
+		result = "Possible bug in algorithm used";
+		break;
 	}
 	return result;
 }

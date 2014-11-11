@@ -19,38 +19,11 @@
 #include <string>
 #include "MeshGen.h"
 
-const double numericalErrorEps = 1.0e-10;
-
 using namespace std;
 
-/*
- * This class helps the simulation domain to determine
- * center position of a cell and its cell type.
+/**
+ * Parameter the controls the simualtion.
  */
-class CellPlacementInfo {
-public:
-	CVector centerLocation;
-	SceNodeType cellNodeType;
-};
-
-class CellInitHelper2 {
-public:
-	std::vector<CellPlacementInfo> obtainCentersInCircle(double radius,
-			int precision, Criteria criteria);
-};
-
-struct CellInitHelperException: public std::exception {
-	std::string errorMessage;
-	CellInitHelperException(std::string errMsg) :
-			errorMessage(errMsg) {
-	}
-	~CellInitHelperException() throw () {
-	}
-	const char* what() const throw () {
-		return errorMessage.c_str();
-	}
-};
-
 struct SimulationGlobalParameter {
 public:
 	std::string animationNameBase;

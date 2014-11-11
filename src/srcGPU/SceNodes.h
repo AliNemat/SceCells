@@ -38,6 +38,7 @@
 // I wish I could include some c++ 11 data structure here but it seems
 // Thrust is not compatible with c++ 11.
 // #include <unordered_map>
+// TODO: maybe it's because of the -ansi compiler option instead of Thrust?
 
 /**
  * @mainpage chicken beak development project main documentation page
@@ -485,7 +486,7 @@ class SceNodes {
 	NodeAllocPara allocPara;
 	NodeInfoVecs infoVecs;
 	NodeAuxVecs auxVecs;
-
+	ControlPara controlPara;
 	/**
 	 * reads domain related parameters.
 	 */
@@ -552,6 +553,8 @@ class SceNodes {
 	 */
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
+	void initControlPara(bool isStab);
+
 	// friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, FindingPossiblePairsTest);
 	// friend unit test so these it can test private functions
@@ -563,19 +566,11 @@ public:
 	SceNodes();
 
 	/**
-	 * old constructor for beak project.
-	 * mark for deprication.
-	 */
-	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
-			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
-			uint maxNodeInCell);
-
-	/**
 	 * recommended constructor for beak project.
 	 */
 	SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
-			uint maxTotalCellCount, uint maxNodeInCell);
+			uint maxTotalCellCount, uint maxNodeInCell, bool isStab);
 
 	/**
 	 * Override dimension data introduced by config files.
@@ -656,6 +651,14 @@ public:
 
 	const SceMechPara& getMechPara() const {
 		return mechPara;
+	}
+
+	ControlPara getControlPara() const {
+		return controlPara;
+	}
+
+	void setControlPara(ControlPara controlPara) {
+		this->controlPara = controlPara;
 	}
 };
 

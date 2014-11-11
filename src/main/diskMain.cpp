@@ -30,7 +30,10 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 }
 
 int main() {
+	// initialize random seed.
 	srand(time(NULL));
+
+	// read configuration.
 	ConfigParser parser;
 	std::string configFileName = "./resources/disk.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileName);
@@ -39,25 +42,37 @@ int main() {
 	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 	gpuErrchk(cudaSetDevice(myDeviceID));
 
+	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;
 	mainPara.initFromConfig();
 
+	// initialize post-processing related parameters from config file.
 	PixelizePara pixelPara;
 	pixelPara.initFromConfigFile();
 
+	// initialize simulation initialization helper.
 	CellInitHelper initHelper;
+	// initialize simulation domain.
 	SimulationDomainGPU simuDomain;
 
+	// initialize stabilization inputs.
 	SimulationInitData_V2 initData = initHelper.initStabInput();
+	// Stabilize the initial inputs and output stablized inputs.
 	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
 			initData);
 
+	// Generate initial inputs for simulation domain.
 	SimulationInitData_V2 simuData2 = initHelper.initSimuInput(
 			stabilizedCenters);
+	// initialize domain based on initial inputs.
 	simuDomain.initialize_v2(simuData2);
 
-	uint aniFrame = 0;
+	// delete old data file.
 	std::remove(mainPara.dataOutput.c_str());
+
+	// preparation.
+	uint aniFrame = 0;
+	// main simulation steps.
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % mainPara.aniAuxVar == 0) {
@@ -72,6 +87,7 @@ int main() {
 			cout << "finished output matrix analysis" << endl;
 			aniFrame++;
 		}
+		// for each step, run all logics of the domain.
 		simuDomain.runAllLogic(mainPara.dt);
 	}
 

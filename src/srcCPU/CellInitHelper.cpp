@@ -576,7 +576,6 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	return rawData;
 }
 
-//TODO
 void CellInitHelper::generateRandomAngles(vector<double> &randomAngles,
 		int initProfileNodeSize) {
 	static const double PI = acos(-1.0);
@@ -704,24 +703,6 @@ bool CellInitHelper::anyBoundaryNodeTooClose(vector<CVector> &bdryNodes,
 }
 
 CellInitHelper::~CellInitHelper() {
-}
-
-std::vector<CellPlacementInfo> CellInitHelper2::obtainCentersInCircle(
-		double radius, int precision, Criteria criteria) {
-	std::vector<CellPlacementInfo> result;
-	GEOMETRY::MeshGen meshGen;
-	std::vector<GEOMETRY::Point2D> bdryPoints =
-			meshGen.createBdryPointsOnCircle(radius, precision);
-	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2D(bdryPoints);
-	std::vector<GEOMETRY::Point2D> centerPoints = mesh.outputTriangleCenters();
-	CellPlacementInfo info;
-	for (uint i = 0; i < centerPoints.size(); i++) {
-		info.centerLocation = CVector(centerPoints[i].getX(),
-				centerPoints[i].getY(), 0);
-		info.cellNodeType = Base;
-		result.push_back(info);
-	}
-	return result;
 }
 
 void CellInitHelper::generateCellInitNodeInfo_v2(vector<CVector>& initPos) {

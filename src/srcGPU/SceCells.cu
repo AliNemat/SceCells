@@ -638,6 +638,7 @@ void SceCells::initGrowthAuxData() {
 
 void SceCells::initialize(SceNodes* nodesInput) {
 	nodes = nodesInput;
+	controlPara = nodes->getControlPara();
 	readMiscPara();
 	readBioPara();
 

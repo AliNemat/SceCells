@@ -19,12 +19,6 @@ __constant__ double sceProfilePara[7];
 __constant__ double sceECMPara[5];
 __constant__ double sceDiffPara[5];
 
-extern double sceInterParaCPU[5];
-extern double sceIntraParaCPU[4];
-extern double sceInterDiffParaCPU[5];
-extern double sceProfileParaCPU[7];
-extern double sceECMParaCPU[5];
-extern double sceDiffParaCPU[5];
 __constant__ uint ProfilebeginPos;
 __constant__ uint ECMbeginPos;
 __constant__ uint cellNodeBeginPos;

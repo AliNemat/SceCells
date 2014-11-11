@@ -16,6 +16,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
+# After some performance testing, there is no significant performance difference
+# between compute_20 and compute_30. 
+# Therefore, for compatibility reason, compute 2.0 is used.
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_20,code=compute_20)
 
 MESSAGE("NVCC flags are : " ${CUDA_NVCC_FLAGS})
@@ -51,23 +54,18 @@ SET(CMAKE_PERFTEST_DIR ${CMAKE_SOURCE_DIR}/tst/perfTest)
 
 # make VERBOSE =1
 
-#find_path(STL_INCLUDE_PATH exception)
 find_path(STDIO_INCLUDE_PATH stdio.h)
-# later version c++ seems to be incompatible with the CUDA version we are using. 
+# later version c++ seems to be incompatible with the CUDA version we are using.
+# Therefore, I have changed the system C++ version to make everything compatible.
+# known compatible g++ version: 4.6.4
+
 SET(STL_INCLUDE_PATH "${STDIO_INCLUDE_PATH}/c++")
-#find_path(STL_INCLUDE_PATH vector)
 SET(CMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT TRUE)
 include_directories(${STL_INCLUDE_PATH} ${STDIO_INCLUDE_PATH})
 
 find_package(CGAL QUIET COMPONENTS Core)
-#set(CGAL_INCLUDE_DIR "/usr/include/CGAL")
-#MESSAGE(${CGAL_USE_FILE})
 include(${CGAL_USE_FILE})
-#MESSAGE(${CGAL_INCLUDE_DIRS})
 include_directories(${CGAL_INCLUDE_DIRS})
-
-#SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModule")
-#MESSAGE(CMAKE_MODULE_PATH)
 
 if(CUDA_FOUND)
         include_directories(${CUDA_INCLUDE_DIRS})
@@ -103,14 +101,6 @@ endif()
 add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
 ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/src)
 ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/tst)
-
-# start CPack logic for source code distribution
-#INCLUDE(CPack)
-#SET(CPACK_SOURCE_GENERATOR "TGZ")
-#SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CUDA code for cell simulations")
-#SET(CPACK_PACKAGE_VENDOR "Wenzhao Sun, ACMS Dept, University of Notre Dame")
-
-#LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/src  ${CMAKE_SOURCE_DIR}/srcCUDA)
 
 ENABLE_TESTING()
 

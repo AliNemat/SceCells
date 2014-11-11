@@ -907,6 +907,7 @@ class SceCells {
 	CellNodeInfoVecs cellNodeInfoVecs;
 	CellGrowthAuxData growthAuxData;
 	CellDivAuxData divAuxData;
+	ControlPara controlPara;
 
 	// in this class, there are a lot of arrays that store information for each cell
 	// this counting iterator is used for all these arrays indicating the begining.
@@ -917,7 +918,6 @@ class SceCells {
 	uint totalNodeCountForActiveCells;
 
 	double dt;
-
 	void readMiscPara();
 	void readBioPara();
 

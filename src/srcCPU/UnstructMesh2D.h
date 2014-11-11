@@ -17,22 +17,8 @@
 #include "commonData.h"
 
 namespace GEOMETRY {
-
-struct GeoException: public std::exception {
-	std::string errorMessage;
-	GeoException(std::string errMsg) :
-			errorMessage(errMsg) {
-	}
-	~GeoException() throw () {
-	}
-	const char* what() const throw () {
-		return errorMessage.c_str();
-	}
-};
-
 /**
  * Help class for further processing generated mesh data.
- *
  */
 class UnstructMesh2D {
 

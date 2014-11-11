@@ -4,7 +4,6 @@
 #include "SceNodes.h"
 #include "SceCells.h"
 #include "Cartilage.h"
-//#include "CellInitHelper.h"
 #include "commonData.h"
 
 #include <sstream>
@@ -12,6 +11,9 @@
 #include <fstream>
 #include <string>
 
+/**
+ * This class will control the process of stabilizing cell centers.
+ */
 class StabPara {
 public:
 	bool isProcessStab;
@@ -101,23 +103,6 @@ class SimulationDomainGPU {
 
 	/**
 	 * Initializes data vectors by given vectors.
-	 * This function was written in the past and may not be very robust.
-	 */
-	void initialCellsOfFiveTypes(std::vector<SceNodeType> &cellTypes,
-			std::vector<uint> &numOfInitActiveNodesOfCells,
-			std::vector<double> &initBdryCellNodePosX,
-			std::vector<double> &initBdryCellNodePosY,
-			std::vector<double> &initProfileNodePosX,
-			std::vector<double> &initProfileNodePosY,
-			std::vector<double> &initECMNodePosX,
-			std::vector<double> &initECMNodePosY,
-			std::vector<double> &initFNMCellNodePosX,
-			std::vector<double> &initFNMCellNodePosY,
-			std::vector<double> &initMXCellNodePosX,
-			std::vector<double> &initMXCellNodePosY);
-
-	/**
-	 * Initializes data vectors by given vectors.
 	 * improved from the previous version.
 	 */
 	void initializeNodes(CartPara &cartPara,
@@ -142,13 +127,6 @@ public:
 	 * Assigns values to the data fields in simulation domain.
 	 * @param initData initial data set for simulation domain
 	 */
-	void initialize(SimulationInitData &initData);
-
-	/**
-	 * Domain initialization.
-	 * Assigns values to the data fields in simulation domain.
-	 * @param initData initial data set for simulation domain
-	 */
 	void initialize_v2(SimulationInitData_V2 &initData);
 
 	/**
@@ -163,7 +141,7 @@ public:
 	 * Checks if all data fields are valid.
 	 * This methods only loosely checks the data validity.
 	 */
-	void checkIfAllDataFieldsValid();
+	void printDomainInformation();
 
 	/**
 	 * Run one step of simulation in the domain.
@@ -190,6 +168,9 @@ public:
 	vector<vector<int> > outputLabelMatrix(std::string resultNameBase, int rank,
 			PixelizePara &pixelPara);
 
+	/**
+	 * Post processing for the label matrix.
+	 */
 	void analyzeLabelMatrix(vector<vector<int> > &labelMatrix, int step,
 			std::string &imageFileNameBase, std::string &statFileName);
 };

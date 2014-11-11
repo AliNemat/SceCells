@@ -61,12 +61,6 @@ void computeResultFromCPUAllIntra2D(vector<double> &xPoss,
 		vector<double> &paraSet, double bucketSize, double minX, double maxX,
 		double minY, double maxY) {
 	unsigned int i, j;
-	//double xMax = *std::max_element(xPoss.begin(), xPoss.end());
-	//double xMin = *std::min_element(xPoss.begin(), xPoss.end());
-	//double yMax = *std::max_element(yPoss.begin(), yPoss.end());
-	//double yMin = *std::min_element(yPoss.begin(), yPoss.end());
-	//uint xBucketCount = (xMax - xMin) / bucketSize + 1;
-	//uint yBuckeyCount = (yMax - yMin) / bucketSize + 1;
 	for (i = 0; i < xVels.size(); i++) {
 		xVels[i] = 0.0;
 		yVels[i] = 0.0;
@@ -186,8 +180,8 @@ TEST(DummyTest, SanityTest) {
 TEST_F(SceNodeTest, SceNodeInitTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 }
 
 TEST_F(SceNodeTest, ParameterInitTest) {
@@ -200,8 +194,8 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	cout << " point 1.1 " << endl;
 
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 
 	cout << " point 1.2 " << endl;
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
@@ -238,8 +232,8 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 TEST_F(SceNodeTest, MemSizeTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
 			Test_bucketSize);
 	int totalNodeSize = Test_totalBdryNodeCount + Test_maxProfileNodeCount
@@ -268,8 +262,8 @@ TEST_F(SceNodeTest, MemSizeTest) {
 TEST_F(SceNodeTest, InitialValueTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
 			Test_bucketSize);
 	//nodes.initValues();
@@ -278,8 +272,8 @@ TEST_F(SceNodeTest, InitialValueTest) {
 TEST_F(SceNodeTest,BuildBucketFixedTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
 			Test_bucketSize);
 
@@ -343,8 +337,8 @@ TEST_F(SceNodeTest,BuildBucketFixedTest) {
 TEST_F(SceNodeTest,BuildBucketRandomTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	const double minX = 0.5;
 	const double maxX = 1.5;
 	const double minY = 0.1;
@@ -406,8 +400,8 @@ TEST_F(SceNodeTest,BuildBucketRandomTest) {
 TEST_F(SceNodeTest, ExtendBucketfixedTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	const uint testCellCount = 2;
 	const uint testNodePerCell = 2;
 	const uint testTotalNodeCount = testCellCount * testNodePerCell;
@@ -474,8 +468,8 @@ TEST_F(SceNodeTest, ExtendBucketfixedTest) {
 TEST(SceExtendBucket2D, extendBucketRandomTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
-			Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
-			Test_maxNodeInCell);
+			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
+			Test_maxNodeInCell, false);
 	uint maxNodeCount = 5253;
 
 	thrust::host_vector<double> nodeLocXHost(maxNodeCount);
@@ -590,7 +584,7 @@ TEST(SceExtendBucket2D, extendBucketRandomTest) {
 TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	// means that we have four nodes.
-	SceNodes nodes = SceNodes(1, 1, 1, 1, 1, 1);
+	SceNodes nodes = SceNodes(1, 1, 0, 1, 1, 1, 1, false);
 	const uint testCellCount = 1;
 	const uint testNodePerCell = 1;
 	const uint testTotalNodeCount = 4;
@@ -687,7 +681,7 @@ TEST_F(SceNodeTest, FindingPossiblePairsTest) {
 TEST_F(SceNodeTest, outputAnimationLinks) {
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
 	// means that we have four nodes.
-	SceNodes nodes = SceNodes(2, 0, 0, 0, 2, 2);
+	SceNodes nodes = SceNodes(2, 0, 0, 0, 0, 2, 2, false);
 	const uint testCellCount = 2;
 	const uint testNodePerCell = 2;
 	const uint testTotalNodeCount = 6;

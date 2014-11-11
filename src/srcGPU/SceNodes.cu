@@ -98,27 +98,6 @@ void SceNodes::readMechPara() {
 	mechPara.sceInterParaCPU[3] = k2;
 	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
 
-	static const double U0_Cart = globalConfigVars.getConfigValue(
-			"InterCell_U0_Original").toDouble()
-			/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
-	static const double V0_Cart = globalConfigVars.getConfigValue(
-			"InterCell_V0_Original").toDouble()
-			/ globalConfigVars.getConfigValue("Cart_V0_DivFactor").toDouble();
-	static const double k1_Cart = globalConfigVars.getConfigValue(
-			"InterCell_k1_Original").toDouble()
-			/ globalConfigVars.getConfigValue("Cart_k1_DivFactor").toDouble();
-	static const double k2_Cart = globalConfigVars.getConfigValue(
-			"InterCell_k2_Original").toDouble()
-			/ globalConfigVars.getConfigValue("Cart_k2_DivFactor").toDouble();
-	static const double cartProfileEffectiveRange =
-			globalConfigVars.getConfigValue("CartForceEffectiveRange").toDouble();
-
-	mechPara.sceCartParaCPU[0] = U0_Cart;
-	mechPara.sceCartParaCPU[1] = V0_Cart;
-	mechPara.sceCartParaCPU[2] = k1_Cart;
-	mechPara.sceCartParaCPU[3] = k2_Cart;
-	mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
-
 	static const double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_U0_DivFactor").toDouble();
@@ -176,94 +155,73 @@ void SceNodes::readMechPara() {
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Bdry_k2_DivFactor").toDouble();
-	// 1.8 comes from standard
-	static const double neutralLength =
-			globalConfigVars.getConfigValue("Bdry_base_neutral_dist").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Bdry_k2_DivFactor").toDouble()
-					* globalConfigVars.getConfigValue("baseline_k_value").toDouble();
+	if (controlPara.simuType == Beak) {
+		static const double U0_Cart =
+				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
+						/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
+		static const double V0_Cart =
+				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
+						/ globalConfigVars.getConfigValue("Cart_V0_DivFactor").toDouble();
+		static const double k1_Cart =
+				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
+						/ globalConfigVars.getConfigValue("Cart_k1_DivFactor").toDouble();
+		static const double k2_Cart =
+				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
+						/ globalConfigVars.getConfigValue("Cart_k2_DivFactor").toDouble();
+		static const double cartProfileEffectiveRange =
+				globalConfigVars.getConfigValue("CartForceEffectiveRange").toDouble();
+		mechPara.sceCartParaCPU[0] = U0_Cart;
+		mechPara.sceCartParaCPU[1] = V0_Cart;
+		mechPara.sceCartParaCPU[2] = k1_Cart;
+		mechPara.sceCartParaCPU[3] = k2_Cart;
+		mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
 
-	static const double linearParameter = globalConfigVars.getConfigValue(
-			"Profile_linear_parameter").toDouble();
+		// 1.8 comes from standard
+		static const double neutralLength =
+				globalConfigVars.getConfigValue("Bdry_base_neutral_dist").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Bdry_k2_DivFactor").toDouble()
+						* globalConfigVars.getConfigValue("baseline_k_value").toDouble();
 
-	mechPara.sceProfileParaCPU[0] = U0_Bdry;
-	mechPara.sceProfileParaCPU[1] = V0_Bdry;
-	mechPara.sceProfileParaCPU[2] = k1_Bdry;
-	mechPara.sceProfileParaCPU[3] = k2_Bdry;
-	mechPara.sceProfileParaCPU[4] = interLinkEffectiveRange;
-	mechPara.sceProfileParaCPU[5] = linearParameter;
-	mechPara.sceProfileParaCPU[6] = neutralLength;
+		static const double linearParameter = globalConfigVars.getConfigValue(
+				"Profile_linear_parameter").toDouble();
 
-	static const double U0_ECM =
-			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_ECM_U0_DivFactor").toDouble();
-	static const double V0_ECM =
-			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_ECM_V0_DivFactor").toDouble();
-	static const double k1_ECM =
-			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_ECM_k1_DivFactor").toDouble();
-	static const double k2_ECM =
-			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_ECM_k2_DivFactor").toDouble();
-	mechPara.sceECMParaCPU[0] = U0_ECM;
-	mechPara.sceECMParaCPU[1] = V0_ECM;
-	mechPara.sceECMParaCPU[2] = k1_ECM;
-	mechPara.sceECMParaCPU[3] = k2_ECM;
-	mechPara.sceECMParaCPU[4] = interLinkEffectiveRange;
-}
+		mechPara.sceProfileParaCPU[0] = U0_Bdry;
+		mechPara.sceProfileParaCPU[1] = V0_Bdry;
+		mechPara.sceProfileParaCPU[2] = k1_Bdry;
+		mechPara.sceProfileParaCPU[3] = k2_Bdry;
+		mechPara.sceProfileParaCPU[4] = interLinkEffectiveRange;
+		mechPara.sceProfileParaCPU[5] = linearParameter;
+		mechPara.sceProfileParaCPU[6] = neutralLength;
 
-SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
-		uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
-		uint maxNodeInCell) {
-	/*
-	 * cartilage was introduced after this constructor.
-	 * therefore, just make all related parameters 0.
-	 */
-	allocPara.maxCartNodeCount = 0;
-	allocPara.startPosCart = 0;
-
-	readDomainPara();
-	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount, maxTotalECMCount,
-			maxNodeInECM, maxTotalCellCount, maxNodeInCell);
-	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
-			+ allocPara.maxTotalECMNodeCount + allocPara.maxTotalCellNodeCount;
-	allocSpaceForNodes(maxTotalNodeCount);
-	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
-	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
-	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
-	for (int i = 0; i < maxTotalNodeCount; i++) {
-		if (i < allocPara.startPosProfile) {
-			hostTmpVector[i] = Boundary;
-			hostTmpVector3[i] = 0;
-		} else if (i < allocPara.startPosECM) {
-			hostTmpVector[i] = Profile;
-			hostTmpVector3[i] = 0;
-		} else if (i < allocPara.startPosCells) {
-			hostTmpVector[i] = ECM;
-			hostTmpVector3[i] = (i - allocPara.startPosECM)
-					/ allocPara.maxNodePerECM;
-		} else {
-			// all initialized as FNM
-			hostTmpVector[i] = FNM;
-			hostTmpVector3[i] = (i - allocPara.startPosCells)
-					/ allocPara.maxNodeOfOneCell;
-		}
-		hostTmpVector2[i] = false;
+		static const double U0_ECM =
+				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_ECM_U0_DivFactor").toDouble();
+		static const double V0_ECM =
+				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_ECM_V0_DivFactor").toDouble();
+		static const double k1_ECM =
+				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_ECM_k1_DivFactor").toDouble();
+		static const double k2_ECM =
+				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_ECM_k2_DivFactor").toDouble();
+		mechPara.sceECMParaCPU[0] = U0_ECM;
+		mechPara.sceECMParaCPU[1] = V0_ECM;
+		mechPara.sceECMParaCPU[2] = k1_ECM;
+		mechPara.sceECMParaCPU[3] = k2_ECM;
+		mechPara.sceECMParaCPU[4] = interLinkEffectiveRange;
 	}
-	infoVecs.nodeCellType = hostTmpVector;
-	infoVecs.nodeIsActive = hostTmpVector2;
-	infoVecs.nodeCellRank = hostTmpVector3;
-	copyParaToGPUConstMem();
 }
 
 SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
-		uint maxTotalCellCount, uint maxNodeInCell) {
+		uint maxTotalCellCount, uint maxNodeInCell, bool isStab) {
+	initControlPara(isStab);
 	readDomainPara();
 	initNodeAllocPara_v2(totalBdryNodeCount, maxProfileNodeCount,
 			maxCartNodeCount, maxTotalECMCount, maxNodeInECM, maxTotalCellCount,
@@ -309,8 +267,7 @@ void SceNodes::copyParaToGPUConstMem() {
 
 	cudaMemcpyToSymbol(sceInterPara, mechPara.sceInterParaCPU,
 			5 * sizeof(double));
-	cudaMemcpyToSymbol(sceCartPara, mechPara.sceCartParaCPU,
-			5 * sizeof(double));
+
 	cudaMemcpyToSymbol(sceIntraPara, mechPara.sceIntraParaCPU,
 			4 * sizeof(double));
 	cudaMemcpyToSymbol(ProfilebeginPos, &allocPara.startPosProfile,
@@ -321,6 +278,8 @@ void SceNodes::copyParaToGPUConstMem() {
 	cudaMemcpyToSymbol(nodeCountPerECM, &allocPara.maxNodePerECM, sizeof(uint));
 	cudaMemcpyToSymbol(nodeCountPerCell, &allocPara.maxNodeOfOneCell,
 			sizeof(uint));
+	cudaMemcpyToSymbol(sceCartPara, mechPara.sceCartParaCPU,
+			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceProfilePara, mechPara.sceProfileParaCPU,
 			7 * sizeof(double));
 	cudaMemcpyToSymbol(sceInterDiffPara, mechPara.sceInterDiffParaCPU,
@@ -1368,6 +1327,20 @@ void SceNodes::processCartGrowthDir(CVector dir) {
 	growthDir[1] = dir.GetY();
 	growthDir[2] = dir.GetZ();
 	cudaMemcpyToSymbol(cartGrowDirVec, growthDir, 3 * sizeof(double));
+}
+
+void SceNodes::initControlPara(bool isStab) {
+	int simuTypeConfigValue =
+			globalConfigVars.getConfigValue("SimulationType").toInt();
+	if (simuTypeConfigValue == 0) {
+		controlPara.simuType = Beak;
+	} else if (simuTypeConfigValue == 1) {
+		controlPara.simuType = Disc;
+	} else {
+		throw SceException("Simulation Type in config file is not recognized!",
+				ConfigValueException);
+	}
+	controlPara.isStab = isStab;
 }
 
 void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {

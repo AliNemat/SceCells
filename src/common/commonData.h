@@ -26,7 +26,8 @@ enum SceExceptionType {
 	FileIOException,
 	OutputAnalysisDataException,
 	MemoryInvalidAccess,
-	InvalidInput
+	InvalidInput,
+	AlgorithmBug
 };
 
 std::string toString(SceExceptionType type);
@@ -67,6 +68,11 @@ enum SimulationType {
 };
 
 SimulationType parseTypeFromConfig(int configValue);
+
+struct ControlPara {
+	SimulationType simuType;
+	bool isStab;
+};
 
 /**
  * This data structure contains mechanical parameters of the model.

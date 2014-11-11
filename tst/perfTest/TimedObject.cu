@@ -90,7 +90,7 @@ double TimedObject::countSceMove(uint size) {
 
 	utils.transformVals(nodeXVector, nodeYVector, nodeInitPos, centerInitPos);
 
-	SceNodes nodes = SceNodes(0, 0, 0, 0, size, 20);
+	SceNodes nodes = SceNodes(0, 0, 0, 0, 0, size, 20, false);
 	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
 
 	NodeAllocPara para = nodes.getAllocPara();

@@ -12,14 +12,6 @@
 #include <list>
 #include "commonData.h"
 
-// C++ sucks; declaring these static class members here is so counter-intuitive.
-//std::list<Point> initList = std::list<Point>();
-//initList.push_back(Point(9999999, 0));
-std::list<Point> GEOMETRY::MeshGen::default_list_of_seeds = std::list<Point>();
-//GEOMETRY::MeshGen::default_list_of_seeds.
-//.push_back(Point(9999999, 0));
-Criteria GEOMETRY::MeshGen::default_criteria = Criteria(0.125, 0.5);
-
 struct HandleHashFunc {
 	std::size_t operator()(const CDT::Vertex_handle& vHandle) const {
 		double xCoord = vHandle->point().x();
@@ -41,9 +33,6 @@ typedef std::tr1::unordered_set<std::pair<int, int>, IntPairHashFunc> EdgeHashSe
 namespace GEOMETRY {
 
 MeshGen::MeshGen() {
-	if (default_list_of_seeds.size() == 0) {
-		default_list_of_seeds.push_back(Point(9999999, 0));
-	}
 
 	delta1 = globalConfigVars.getConfigValue("MeshGen_Delta1").toDouble();
 	delta2 = globalConfigVars.getConfigValue("MeshGen_Delta2").toDouble();
@@ -52,131 +41,6 @@ MeshGen::MeshGen() {
 			"Bdry_InputFileName").toString();
 
 	meshInput = GEOMETRY::MeshInputReader::readFile(bdryInputFileName);
-	//default_list_of_seeds.push_back(Point(9999999, 0));
-	//default_criteria = Criteria(0.125, 0.5);
-}
-
-UnstructMesh2D MeshGen::generateMesh2D(std::vector<Point2D> &boundaryPoints,
-		std::list<Point> list_of_seeds, Criteria criteria) {
-	UnstructMesh2D result;
-	CDT cdt;
-
-	int pointCount = boundaryPoints.size();
-	std::vector<Vertex_handle> vertexHandles(pointCount);
-	for (int i = 0; i < pointCount; i++) {
-		vertexHandles[i] = cdt.insert(
-				Point(boundaryPoints[i].getX(), boundaryPoints[i].getY()));
-	}
-
-	for (int i = 0; i < pointCount; i++) {
-		cdt.insert_constraint(vertexHandles[i],
-				vertexHandles[(i + 1) % pointCount]);
-	}
-
-	std::cout << "Number of vertices: " << cdt.number_of_vertices()
-			<< std::endl;
-	std::cout << "Meshing the triangulation ..." << std::endl;
-
-	//std::list<Point> list_of_seeds;
-	//list_of_seeds.push_back(Point(9999999, 0));
-	CGAL::refine_Delaunay_mesh_2(cdt, list_of_seeds.begin(),
-			list_of_seeds.end(), criteria);
-	//CGAL::refine_Delaunay_mesh_2(cdt, criteria);
-	std::cout << "Number of vertices: " << cdt.number_of_vertices()
-			<< std::endl;
-	VertexHashMap vertexHandleToIndex;
-	EdgeHashSet edgeSet;
-	int vertexIndex = 0;
-	for (CDT::Finite_vertices_iterator vit = cdt.finite_vertices_begin();
-			vit != cdt.finite_vertices_end(); ++vit) {
-		CDT::Vertex_handle vertexHandle = vit->handle();
-		VertexHashMap::iterator it = vertexHandleToIndex.find(vertexHandle);
-
-		if (it == vertexHandleToIndex.end()) {
-			vertexHandleToIndex.insert(
-					std::pair<CDT::Vertex_handle, int>(vertexHandle,
-							vertexIndex));
-			vertexIndex++;
-		} else {
-			std::string errMessage(
-					"Unexpected duplicate while iterate vertices");
-			throw GeoException(errMessage);
-		}
-		Point2D pt(vit->point().x(), vit->point().y());
-		result.insertVertex(pt);
-	}
-
-	for (CDT::Finite_faces_iterator fit = cdt.finite_faces_begin();
-			fit != cdt.finite_faces_end(); ++fit) {
-		CDT::Vertex_handle v1 = fit->vertex(0);
-		CDT::Vertex_handle v2 = fit->vertex(1);
-		CDT::Vertex_handle v3 = fit->vertex(2);
-		VertexHashMap::iterator it1 = vertexHandleToIndex.find(v1);
-		VertexHashMap::iterator it2 = vertexHandleToIndex.find(v2);
-		VertexHashMap::iterator it3 = vertexHandleToIndex.find(v3);
-
-		if (it1 == vertexHandleToIndex.end() || it2 == vertexHandleToIndex.end()
-				|| it3 == vertexHandleToIndex.end()) {
-			std::string errMessage(
-					"at least one triangle vertex was not found in vertex pool");
-			throw GeoException(errMessage);
-		} else {
-			if (fit->is_in_domain()) {
-				std::vector<int> triIndicies;
-				triIndicies.push_back(it1->second);
-				triIndicies.push_back(it2->second);
-				triIndicies.push_back(it3->second);
-				result.insertTriangle(triIndicies);
-
-				// sorting in order to make sure there is no duplicates
-				// when counting edges
-				std::sort(triIndicies.begin(), triIndicies.end());
-				std::pair<int, int> edge1 = std::pair<int, int>(triIndicies[0],
-						triIndicies[1]);
-				std::pair<int, int> edge2 = std::pair<int, int>(triIndicies[0],
-						triIndicies[2]);
-				std::pair<int, int> edge3 = std::pair<int, int>(triIndicies[1],
-						triIndicies[2]);
-				if (edgeSet.find(edge1) == edgeSet.end()) {
-					edgeSet.insert(edge1);
-					result.insertEdge(edge1);
-				}
-				if (edgeSet.find(edge2) == edgeSet.end()) {
-					edgeSet.insert(edge2);
-					result.insertEdge(edge2);
-				}
-				if (edgeSet.find(edge3) == edgeSet.end()) {
-					edgeSet.insert(edge3);
-					result.insertEdge(edge3);
-				}
-			}
-		}
-	}
-	for (CDT::Finite_edges_iterator eit = cdt.finite_edges_begin();
-			eit != cdt.finite_edges_end(); ++eit) {
-
-		const CDT::Face_handle& fh = eit->first;
-
-		int ctr = 0;
-		if (fh->is_in_domain()) {
-			ctr++;
-		}
-		if (fh->neighbor(eit->second)->is_in_domain()) {
-			ctr++;
-		}
-
-		// this means boundary edges
-		if (ctr == 1) {
-			int i = eit->second;
-			CDT::Vertex_handle vs = fh->vertex(fh->cw(i));
-			CDT::Vertex_handle vt = fh->vertex(fh->ccw(i));
-			VertexHashMap::iterator it = vertexHandleToIndex.find(vs);
-			result.setPointAsBdry(it->second);
-			it = vertexHandleToIndex.find(vt);
-			result.setPointAsBdry(it->second);
-		}
-	}
-	return result;
 }
 
 std::vector<Point2D> MeshGen::createBdryPointsOnCircle(double r, int n) {
@@ -251,7 +115,7 @@ UnstructMesh2D MeshGen::generateMeshGivenInput(MeshInput input) {
 		} else {
 			std::string errMessage(
 					"Unexpected duplicate while iterate vertices");
-			throw GeoException(errMessage);
+			throw SceException(errMessage, AlgorithmBug);
 		}
 		Point2D pt(vit->point().x(), vit->point().y());
 		result.insertVertex(pt);
@@ -270,7 +134,7 @@ UnstructMesh2D MeshGen::generateMeshGivenInput(MeshInput input) {
 				|| it3 == vertexHandleToIndex.end()) {
 			std::string errMessage(
 					"at least one triangle vertex was not found in vertex pool");
-			throw GeoException(errMessage);
+			throw SceException(errMessage, AlgorithmBug);
 		} else {
 			if (fit->is_in_domain()) {
 				std::vector<int> triIndicies;

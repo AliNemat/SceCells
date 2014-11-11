@@ -78,13 +78,8 @@ class MeshGen {
 			std::vector<GEOMETRY::Point2D> bdryPts, CVector pt1, CVector pt2);
 	bool isBetweenPoints(GEOMETRY::Point2D point, CVector pt1, CVector pt2);
 public:
-	static std::list<Point> default_list_of_seeds;
-	static Criteria default_criteria;
 	MeshGen();
 	std::vector<Point2D> createBdryPointsOnCircle(double r, int n);
-	UnstructMesh2D generateMesh2D(std::vector<Point2D> &boundaryPoints,
-			std::list<Point> list_of_seeds = default_list_of_seeds,
-			Criteria criteria = default_criteria);
 
 	/**
 	 * The mesh input is needed for some other classes as well.
@@ -101,7 +96,7 @@ public:
 	/**
 	 * obtain cartilage raw data for initialization purpose.
 	 * this method is not robust enough to handle all scenarios and can
-	 * only deal with twoo-loop boundary condition.
+	 * only deal with two-loop boundary condition.
 	 */
 	CartilageRawData obtainCartilageData(UnstructMesh2D &mesh,
 			MeshInput &input);
