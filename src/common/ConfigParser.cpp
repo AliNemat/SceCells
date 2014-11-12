@@ -60,6 +60,35 @@ void GlobalConfigVars::insertData(std::string varName, std::string varValue) {
 	configMap.insert(std::pair<std::string, ConfigVar>(varName, dataEntry));
 	configVars.push_back(dataEntry);
 }
+
+void GlobalConfigVars::updateData(std::string varName, std::string varValue) {
+	std::vector<ConfigVar>::iterator it = configVars.begin();
+	uint keyCount = 0;
+	while (it != configVars.end()) {
+		if (it->getVarName() == varName) {
+			it->setValue(varValue);
+			keyCount++;
+		}
+		++it;
+	}
+	if (keyCount > 1) {
+		throw SceException(
+				"Try to update, but Old config file is illegal because multiple definitions found",
+				ConfigValueException);
+	}
+	ConfigVar dataEntry(varName);
+	dataEntry.setValue(varValue);
+	std::tr1::unordered_map<std::string, ConfigVar>::iterator it2 =
+			configMap.find(varName);
+	if (it2 != configMap.end()) {
+		it2->second = dataEntry;
+	} else {
+		configMap.insert(std::pair<std::string, ConfigVar>(varName, dataEntry));
+	}
+	configVars.push_back(dataEntry);
+
+}
+
 ConfigVarValue GlobalConfigVars::getConfigValue(std::string varName) {
 	std::tr1::unordered_map<std::string, ConfigVar>::iterator it =
 			configMap.find(varName);
@@ -73,6 +102,7 @@ ConfigVarValue GlobalConfigVars::getConfigValue(std::string varName) {
 		return (it->second.getValue());
 	}
 }
+
 void GlobalConfigVars::printAll() {
 	std::vector<ConfigVar>::iterator it = configVars.begin();
 	while (it != configVars.end()) {
@@ -140,6 +170,7 @@ GlobalConfigVars ConfigParser::parseConfigFile(std::string configFileName) {
 		varValue = removeTrailingSemicolon(varValue);
 		result.insertData(varName, varValue);
 	}
+	infile.close();
 	std::vector<ConfigVar> configVaribles = result.getConfigVars();
 	std::vector<ConfigVar>::iterator it = configVaribles.begin();
 	while (it != configVaribles.end()) {
@@ -161,4 +192,45 @@ std::string ConfigParser::removeTrailingSemicolon(const std::string& str) {
 	const size_t strRange = strEnd - strBegin + 1;
 
 	return str.substr(strBegin, strRange);
+}
+
+void ConfigParser::updateConfigFile(GlobalConfigVars& configVar,
+		std::string configFileName) {
+	std::ifstream infile(configFileName.c_str());
+	if (!infile.is_open()) {
+		throw SceException(
+				"Fatal error: Config file not found!" + configFileName,
+				ConfigFileNotFound);
+	}
+	std::string line;
+	std::vector<std::string> tmpReading;
+	while (std::getline(infile, line)) {
+		std::string tmp = removeLeadingAndTrailingSpace(line);
+		if (tmp.length() == 0) {
+			continue;
+		} else if (tmp[0] == '#') {
+			continue;
+		}
+		tmpReading = splitLineByEqualSign(line);
+		if (tmpReading.size() != 2) {
+			throw SceException(
+					"Error in Config file: More than one equal sign found in one line :"
+							+ line, ConfigValueException);
+		}
+		std::string varName = removeLeadingAndTrailingSpace(tmpReading[0]);
+		std::string varValue = removeLeadingAndTrailingSpace(tmpReading[1]);
+		varValue = removeTrailingSemicolon(varValue);
+		configVar.updateData(varName, varValue);
+	}
+	infile.close();
+	std::vector<ConfigVar> configVaribles = configVar.getConfigVars();
+	std::vector<ConfigVar>::iterator it = configVaribles.begin();
+	while (it != configVaribles.end()) {
+		if (it->getValue().toString().length() == 0) {
+			throw SceException(
+					"one or more config value is not defined in config file",
+					ConfigValueException);
+		}
+		++it;
+	}
 }

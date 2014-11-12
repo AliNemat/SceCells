@@ -8,6 +8,9 @@
 #ifndef CONFIGPARSER_H_
 #define CONFIGPARSER_H_
 
+/**
+ * Config value represented by string but could be translated to other types.
+ */
 class ConfigVarValue {
 private:
 	std::string varibleValue;
@@ -18,6 +21,9 @@ public:
 	double toDouble() const;
 };
 
+/**
+ * A config variable is represented by name-value pair.
+ */
 class ConfigVar {
 private:
 	std::string varibleName;
@@ -35,6 +41,9 @@ public:
 	}
 };
 
+/**
+ * Global configuration variables.
+ */
 class GlobalConfigVars {
 	std::vector<ConfigVar> configVars;
 	std::tr1::unordered_map<std::string, ConfigVar> configMap;
@@ -44,38 +53,14 @@ public:
 	}
 	GlobalConfigVars();
 	void insertData(std::string varName, std::string varValue);
+	void updateData(std::string varName, std::string varValue);
 	ConfigVarValue getConfigValue(std::string varName);
 	void printAll();
 };
 
-class ConfigParserException: public std::exception {
-private:
-	std::string _message;
-public:
-	ConfigParserException(const std::string& message) :
-			_message(message) {
-	}
-	~ConfigParserException() throw () {
-	}
-	virtual const char* what() const throw () {
-		return _message.c_str();
-	}
-};
-
-class ConfigParserWarning: public std::exception {
-private:
-	std::string _message;
-public:
-	ConfigParserWarning(const std::string& message) :
-			_message(message) {
-	}
-	~ConfigParserWarning() throw () {
-	}
-	virtual const char* what() const throw () {
-		return _message.c_str();
-	}
-};
-
+/**
+ * Parser for configuration file.
+ */
 class ConfigParser {
 	std::string removeLeadingAndTrailingSpace(const std::string& str,
 			const std::string& whitespace = " \t");
@@ -84,8 +69,13 @@ class ConfigParser {
 	std::string removeTrailingSemicolon(const std::string& str);
 public:
 	GlobalConfigVars parseConfigFile(std::string configFileName);
+	void updateConfigFile(GlobalConfigVars &configVar,
+			std::string configFileName);
 };
 
+/**
+ * All files that include this header file will aware of this global config variable.
+ */
 extern GlobalConfigVars globalConfigVars;
 
 #endif /* CONFIGPARSER_H_ */

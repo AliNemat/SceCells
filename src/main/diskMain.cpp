@@ -29,13 +29,11 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 	}
 }
 
-int main(int argc, char* argv[]) {
-	// initialize random seed.
-	srand(time(NULL));
-
+void handleCommandLineInput(int argc, char* argv[]) {
 	// read configuration.
 	ConfigParser parser;
 	std::string configFileNameDefault = "./resources/disc_master.cfg";
+	globalConfigVars = parser.parseConfigFile(configFileNameDefault);
 	std::string configFileNameBaseL = "./resources/disc_";
 	std::string configFileNameBaseR = ".cfg";
 
@@ -58,17 +56,24 @@ int main(int argc, char* argv[]) {
 			std::string configFileNameM(argv[2]);
 			std::string configFileNameCombined = configFileNameBaseL
 					+ configFileNameM + configFileNameBaseR;
-			globalConfigVars = parser.parseConfigFile(configFileNameCombined);
+			parser.updateConfigFile(globalConfigVars, configFileNameCombined);
 		}
 	}
 	// no input argument. Take default.
 	else if (argc == 1) {
-		globalConfigVars = parser.parseConfigFile(configFileNameDefault);
+
 		// set GPU device.
 		int myDeviceID =
 				globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 		gpuErrchk(cudaSetDevice(myDeviceID));
 	}
+}
+
+int main(int argc, char* argv[]) {
+	// initialize random seed.
+	srand(time(NULL));
+
+	handleCommandLineInput(argc, argv);
 
 	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;
