@@ -82,7 +82,7 @@ double TimedObject::countSceMove(uint size) {
 	double maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
 
 	double gridSpacing =
-			globalConfigVars.getConfigValue("Cell_Center_Interval").toDouble();
+			globalConfigVars.getConfigValue("DOMAIN_GRID_SPACING").toDouble();
 
 	std::vector<double> emptyVector;
 	std::vector<double> nodeXVector(size * 20);

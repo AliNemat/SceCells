@@ -93,6 +93,7 @@ std::vector<CVector> PerfTestUtils::obtainCellInitCentersForTesting(
 		botCount++;
 		botIter = botIter + bottomIncrease;
 	}
+	cout << "when generating, result size = " << result.size() << endl;
 	return result;
 }
 
@@ -100,9 +101,9 @@ void PerfTestUtils::transformVals(std::vector<double> &nodeXVector,
 		std::vector<double> &nodeYVector, std::vector<CVector>& nodeInitPos,
 		std::vector<CVector>& centerInitPos) {
 	//assert(nodeXVector.size() == nodeYVector.size());
-	cout << "size 1 = " << nodeXVector.size() << ",size 2 ="
-			<< nodeInitPos.size() << ",size 3 = " << centerInitPos.size()
-			<< endl;
+	cout << "node total size = " << nodeXVector.size() << endl;
+	cout << "single cell init pos size =" << nodeInitPos.size() << endl;
+	cout << "all cell centers pos size= " << centerInitPos.size() << endl;
 	uint maxIndex = nodeXVector.size();
 	uint cellCount = centerInitPos.size();
 	uint nodeInCellCount = nodeInitPos.size();
