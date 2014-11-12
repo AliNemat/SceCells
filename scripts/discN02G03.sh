@@ -11,4 +11,5 @@
 #SBATCH --share
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=gpu02
+cd ../
 srun --gres=gpu:1 ./bin/runDiskSimulation -slurm N02_3

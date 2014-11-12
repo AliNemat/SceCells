@@ -8,7 +8,8 @@
 #SBATCH --time=99:00:00 
 #SBATCH --nodes=1 
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
 #SBATCH --share
+#SBATCH --gres=gpu:1
 #SBATCH --nodelist=gpu01
+cd ../
 srun --gres=gpu:1 ./bin/runDiskSimulation -slurm N01_1

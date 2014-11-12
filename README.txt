@@ -25,6 +25,11 @@ To run unit test:
 To run simulation:
 in project root folder, type "./bin/run***Simulation"
 
+To run simulation on slurm cluster (acms-gpu is powered by slurm)
+ (1) In project root folder, cd ./scripts
+ (2) sbatch *.sh, for example, sbatch discN01G02.sh means take the first configuration file for Gpu02 that I plan to run on compute Node 01. The actual GPU number is controled by slurm.
+
 Location of configuration files:
 ./resources
+
 
