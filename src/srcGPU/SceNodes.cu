@@ -1,7 +1,7 @@
 #include "SceNodes.h"
 
 __constant__ double sceInterPara[5];
-__constant__ double sceIntraPara[4];
+__constant__ double sceIntraPara[5];
 __constant__ double sceCartPara[5];
 __constant__ double sceInterDiffPara[5];
 __constant__ double sceProfilePara[7];
@@ -68,8 +68,7 @@ void SceNodes::readDomainPara() {
 	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
 	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
 	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
-	domainPara.gridSpacing = globalConfigVars.getConfigValue(
-			"DOMAIN_GRID_SPACING").toDouble();
+	domainPara.gridSpacing = getMaxEffectiveRange();
 	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
 	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
@@ -90,7 +89,7 @@ void SceNodes::readMechPara() {
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_k2_DivFactor").toDouble();
 	static const double interLinkEffectiveRange =
-			globalConfigVars.getConfigValue("InterCellLinkBreakRange").toDouble();
+			globalConfigVars.getConfigValue("InterCellLinkEffectRange").toDouble();
 
 	mechPara.sceInterParaCPU[0] = U0;
 	mechPara.sceInterParaCPU[1] = V0;
@@ -110,11 +109,14 @@ void SceNodes::readMechPara() {
 	static const double k2_Intra =
 			globalConfigVars.getConfigValue("IntraCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_k2_DivFactor").toDouble();
+	static const double intraLinkEffectiveRange =
+			globalConfigVars.getConfigValue("IntraCellLinkEffectRange").toDouble();
 
 	mechPara.sceIntraParaCPU[0] = U0_Intra;
 	mechPara.sceIntraParaCPU[1] = V0_Intra;
 	mechPara.sceIntraParaCPU[2] = k1_Intra;
 	mechPara.sceIntraParaCPU[3] = k2_Intra;
+	mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
 
 	static const double U0_Diff =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
@@ -177,14 +179,11 @@ void SceNodes::readMechPara() {
 		mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
 
 		// 1.8 comes from standard
-		static const double neutralLength =
-				globalConfigVars.getConfigValue("Bdry_base_neutral_dist").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Bdry_k2_DivFactor").toDouble()
-						* globalConfigVars.getConfigValue("baseline_k_value").toDouble();
+		static const double neutralLength = globalConfigVars.getConfigValue(
+				"Epi_link_neutral_dist").toDouble();
 
 		static const double linearParameter = globalConfigVars.getConfigValue(
-				"Profile_linear_parameter").toDouble();
+				"Epi_linear_parameter").toDouble();
 
 		mechPara.sceProfileParaCPU[0] = U0_Bdry;
 		mechPara.sceProfileParaCPU[1] = V0_Bdry;
@@ -269,7 +268,7 @@ void SceNodes::copyParaToGPUConstMem() {
 			5 * sizeof(double));
 
 	cudaMemcpyToSymbol(sceIntraPara, mechPara.sceIntraParaCPU,
-			4 * sizeof(double));
+			5 * sizeof(double));
 	cudaMemcpyToSymbol(ProfilebeginPos, &allocPara.startPosProfile,
 			sizeof(uint));
 	cudaMemcpyToSymbol(ECMbeginPos, &allocPara.startPosECM, sizeof(uint));
@@ -816,12 +815,9 @@ void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 			forceValue = forceValue * 0.3;
 		}
 	}
-	if (linkLength > 1.0e-12) {
-		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-		yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-	}
-
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 __device__
 void calculateAndAddProfileForce(double &xPos, double &yPos, double &zPos,
@@ -844,7 +840,7 @@ void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
 	double forceValue = 0;
 	if (linkLength > sceInterPara[4]) {
-		//forceValue = 0;
+		forceValue = 0;
 	} else {
 		forceValue = -sceInterPara[0] / sceInterPara[2]
 				* exp(-linkLength / sceInterPara[2])
@@ -855,11 +851,9 @@ void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 			forceValue = forceValue * 0.5;
 		}
 	}
-	if (linkLength > 1.0e-12) {
-		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-		yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 
 __device__
@@ -917,11 +911,9 @@ void calculateAndAddDiffInterCellForce(double &xPos, double &yPos, double &zPos,
 			forceValue = forceValue * 0.2;
 		}
 	}
-	if (linkLength > 1.0e-12) {
-		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-		yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 __device__
 void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
@@ -941,26 +933,27 @@ void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 			forceValue = forceValue * 0.3;
 		}
 	}
-	if (linkLength > 1.0e-12) {
-		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-		yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 __device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes) {
 	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
-	double forceValue = -sceIntraPara[0] / sceIntraPara[2]
-			* exp(-linkLength / sceIntraPara[2])
-			+ sceIntraPara[1] / sceIntraPara[3]
-					* exp(-linkLength / sceIntraPara[3]);
-	if (linkLength > 1.0e-12) {
-		xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-		yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
+	double forceValue;
+	if (linkLength > sceIntraPara[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceIntraPara[0] / sceIntraPara[2]
+				* exp(-linkLength / sceIntraPara[2])
+				+ sceIntraPara[1] / sceIntraPara[3]
+						* exp(-linkLength / sceIntraPara[3]);
 	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 __device__ bool bothNodesCellNode(uint nodeGlobalRank1, uint nodeGlobalRank2,
 		uint cellNodesThreshold) {
@@ -1156,15 +1149,6 @@ void SceNodes::extendBuckets2D() {
 	thrust::counting_iterator<uint> countingEnd = countingBegin
 			+ valuesCount * extensionFactor2D;
 
-//std::cout << "number of values for array holding extended value= "
-//		<< valuesCount * extensionFactor2D << std::endl;
-//thrust::for_each(
-//		thrust::make_zip_iterator(
-//				make_tuple(bucketKeysExpanded.begin(), countingBegin)),
-//		thrust::make_zip_iterator(
-//				make_tuple(bucketKeysExpanded.end(), countingEnd)),
-//		NeighborFunctor2D(numOfBucketsInXDim, numOfBucketsInYDim));
-
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(auxVecs.bucketKeysExpanded.begin(),
@@ -1343,6 +1327,31 @@ void SceNodes::initControlPara(bool isStab) {
 	controlPara.isStab = isStab;
 }
 
+double SceNodes::getMaxEffectiveRange() {
+	double interLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"InterCellLinkEffectRange").toDouble();
+	double maxEffectiveRange = interLinkEffectiveRange;
+
+	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraCellLinkEffectRange").toDouble();
+	if (intraLinkEffectiveRange > maxEffectiveRange) {
+		maxEffectiveRange = intraLinkEffectiveRange;
+	}
+
+	double cartEffectiveRange = 0;
+	// cartilage effective range does not apply for other types of simulation.
+	try {
+		cartEffectiveRange = globalConfigVars.getConfigValue(
+				"CartForceEffectiveRange").toDouble();
+	} catch (SceException &exce) {
+
+	}
+	if (cartEffectiveRange > maxEffectiveRange) {
+		maxEffectiveRange = cartEffectiveRange;
+	}
+	return maxEffectiveRange;
+}
+
 void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {
 	this->infoVecs = infoVecs;
 }
@@ -1368,15 +1377,15 @@ void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
 	allocPara.maxNodePerECM = maxNodeInECM;
 	allocPara.maxECMCount = maxTotalECMCount;
 	allocPara.maxProfileNodeCount = maxProfileNodeCount;
-	//std::cout << "break point 1" << std::endl;
+//std::cout << "break point 1" << std::endl;
 	allocPara.currentActiveProfileNodeCount = 0;
 	allocPara.BdryNodeCount = totalBdryNodeCount;
 	allocPara.currentActiveCellCount = 0;
 	allocPara.maxTotalECMNodeCount = allocPara.maxECMCount
 			* allocPara.maxNodePerECM;
 	allocPara.currentActiveECM = 0;
-	//std::cout << "break point 2" << std::endl;
-	// will need to change this value after we have more detail about ECM
+//std::cout << "break point 2" << std::endl;
+// will need to change this value after we have more detail about ECM
 	allocPara.maxTotalCellNodeCount = maxTotalCellCount
 			* allocPara.maxNodeOfOneCell;
 
@@ -1396,7 +1405,7 @@ void SceNodes::initNodeAllocPara_v2(uint totalBdryNodeCount,
 	allocPara.maxECMCount = maxTotalECMCount;
 	allocPara.maxProfileNodeCount = maxProfileNodeCount;
 	allocPara.maxCartNodeCount = maxCartNodeCount;
-	//std::cout << "break point 1" << std::endl;
+//std::cout << "break point 1" << std::endl;
 	allocPara.currentActiveProfileNodeCount = 0;
 	allocPara.currentActiveCartNodeCount = 0;
 	allocPara.BdryNodeCount = totalBdryNodeCount;
@@ -1404,8 +1413,8 @@ void SceNodes::initNodeAllocPara_v2(uint totalBdryNodeCount,
 	allocPara.maxTotalECMNodeCount = allocPara.maxECMCount
 			* allocPara.maxNodePerECM;
 	allocPara.currentActiveECM = 0;
-	//std::cout << "break point 2" << std::endl;
-	// will need to change this value after we have more detail about ECM
+//std::cout << "break point 2" << std::endl;
+// will need to change this value after we have more detail about ECM
 	allocPara.maxTotalCellNodeCount = maxTotalCellCount
 			* allocPara.maxNodeOfOneCell;
 

@@ -369,6 +369,9 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	}
 };
 
+/**
+ * calculate force in epithilum.
+ */
 struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	double* _nodeLocXLinkBeginAddress;
 	double* _nodeLocYLinkBeginAddress;
@@ -424,6 +427,9 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	}
 };
 
+/**
+ * Store information for each node, including position and velocity.
+ */
 struct NodeInfoVecs {
 public:
 	// this vector is used to indicate whether a node is active or not.
@@ -451,6 +457,9 @@ public:
 	thrust::device_vector<uint> nodeCellRank;
 };
 
+/**
+ * Store temporary values while computing for Sub-cellular element method.
+ */
 struct NodeAuxVecs {
 	// bucket key means which bucket ID does a certain point fit into
 	thrust::device_vector<uint> bucketKeys;
@@ -660,6 +669,8 @@ public:
 	void setControlPara(ControlPara controlPara) {
 		this->controlPara = controlPara;
 	}
+
+	double getMaxEffectiveRange();
 };
 
 #endif /* SCENODES_H_ */

@@ -69,7 +69,7 @@ protected:
 		initNodesPos = utils.obtainCellInitPointForTesting(cellRadius,
 				cellNodeInterval);
 		initNodesPos.push_back(CVector(0.2, 0.0, 0.0));
-		initCentersPos = utils.obtainCellInitCentersForTesting(80, 0.85,
+		initCentersPos = utils.obtainCellInitCentersForTesting(82, 0.85,
 				CVector(25.0, 25.0, 0));
 		//std::cout << "when setting up, center pos size = "
 		//		<< initCentersPos.size() << std::endl;

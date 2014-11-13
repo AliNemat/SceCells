@@ -85,11 +85,11 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 
 	// size of inputs must be divided exactly by max node per cell.
 	// uint bdryRemainder = bdryNodeCountX % maxNodePerCell;
-	uint ecmRemainder = 0; 
+	uint ecmRemainder = 0;
 	uint ecmQuotient = 0;
-	if(memPara.simuType == Beak){
-	    ecmQuotient = ECMNodeCount / maxNodePerECM;
-	    ecmRemainder = ECMNodeCount % maxNodePerECM;
+	if (memPara.simuType == Beak) {
+		ecmQuotient = ECMNodeCount / maxNodePerECM;
+		ecmRemainder = ECMNodeCount % maxNodePerECM;
 	}
 	uint fnmRemainder = FNMNodeCount % maxNodePerCell;
 	uint mxRemainder = MXNodeCount % maxNodePerCell;
@@ -196,19 +196,20 @@ void SimulationDomainGPU::readMemPara() {
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
 	memPara.maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
-	if(memPara.simuType == Beak){
-	    memPara.maxECMInDomain =
-			globalConfigVars.getConfigValue("MaxECMInDomain").toInt();
-	    memPara.maxNodePerECM =
-			globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
-            memPara.FinalToInitProfileNodeCountRatio = 
-	                globalConfigVars.getConfigValue("FinalToInitProfileNodeCountRatio").toDouble();
-	//memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
-	//		"FinalToInitCartNodeCountRatio").toDouble();
-	}else{
-	    memPara.maxECMInDomain = 0;
-	    memPara.maxNodePerECM = 0;
-            memPara.FinalToInitProfileNodeCountRatio = 0;
+	if (memPara.simuType == Beak) {
+		memPara.maxECMInDomain = globalConfigVars.getConfigValue(
+				"MaxECMInDomain").toInt();
+		memPara.maxNodePerECM =
+				globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+		memPara.FinalToInitProfileNodeCountRatio =
+				globalConfigVars.getConfigValue(
+						"FinalToInitProfileNodeCountRatio").toDouble();
+		//memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
+		//		"FinalToInitCartNodeCountRatio").toDouble();
+	} else {
+		memPara.maxECMInDomain = 0;
+		memPara.maxNodePerECM = 0;
+		memPara.FinalToInitProfileNodeCountRatio = 0;
 	}
 }
 
@@ -219,8 +220,7 @@ void SimulationDomainGPU::readDomainPara() {
 	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
 	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
 	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
-	domainPara.gridSpacing = globalConfigVars.getConfigValue(
-			"DOMAIN_GRID_SPACING").toDouble();
+	domainPara.gridSpacing = nodes.getMaxEffectiveRange();
 	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
 	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
