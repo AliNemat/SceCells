@@ -1133,38 +1133,49 @@ void SceCells::randomizeGrowth() {
  * Grow.
  */
 void SceCells::runAllCellLevelLogicsDisc(double dt) {
+	this->dt = dt;
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
 	// for wind disk project, switch from chemical based growth to random growth
-	growAtRandom(dt);
-	//grow2DTwoRegions(dt, region1, region2);
-	//std::cerr << "after grow cells" << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
-	divide2DSimplified();
-	//std::cerr << "after divide 2D simplified." << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
+
+	//distributeIsActiveInfo();
+	if (!nodes->getControlPara().isStab) {
+		growAtRandom(dt);
+		//grow2DTwoRegions(dt, region1, region2);
+		//std::cerr << "after grow cells" << std::endl;
+		distributeIsActiveInfo();
+		//std::cerr << "after distribute is active info." << std::endl;
+		divide2DSimplified();
+		//std::cerr << "after divide 2D simplified." << std::endl;
+		distributeIsActiveInfo();
+		//std::cerr << "after distribute is active info." << std::endl;
+	}
+
 	allComponentsMove();
 	//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 		GrowthDistriMap& region2) {
+	this->dt = dt;
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
 	// for wind disk project, switch from chemical based growth to random growth
 	//growAtRandom(dt);
-	grow2DTwoRegions(dt, region1, region2);
-	//std::cerr << "after grow cells" << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
-	divide2DSimplified();
-	//std::cerr << "after divide 2D simplified." << std::endl;
-	distributeIsActiveInfo();
-	//std::cerr << "after distribute is active info." << std::endl;
+
+	if (!nodes->getControlPara().isStab) {
+		grow2DTwoRegions(dt, region1, region2);
+		//std::cerr << "after grow cells" << std::endl;
+		distributeIsActiveInfo();
+		//std::cerr << "after distribute is active info." << std::endl;
+		divide2DSimplified();
+		//std::cerr << "after divide 2D simplified." << std::endl;
+		distributeIsActiveInfo();
+		//std::cerr << "after distribute is active info." << std::endl;
+	}
+
 	allComponentsMove();
 	//std::cerr << "after all components move." << std::endl;
 }

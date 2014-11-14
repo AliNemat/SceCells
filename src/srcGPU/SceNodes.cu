@@ -97,6 +97,11 @@ void SceNodes::readMechPara() {
 	mechPara.sceInterParaCPU[3] = k2;
 	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
 
+	std::cout << "inter parameters:" << mechPara.sceInterParaCPU[0] << ","
+			<< mechPara.sceInterParaCPU[1] << "," << mechPara.sceInterParaCPU[2]
+			<< "," << mechPara.sceInterParaCPU[3] << ","
+			<< mechPara.sceInterParaCPU[4] << std::endl;
+
 	static const double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_U0_DivFactor").toDouble();
@@ -117,6 +122,13 @@ void SceNodes::readMechPara() {
 	mechPara.sceIntraParaCPU[2] = k1_Intra;
 	mechPara.sceIntraParaCPU[3] = k2_Intra;
 	mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
+
+	std::cout << "intra parameters:" << mechPara.sceIntraParaCPU[0] << ","
+			<< mechPara.sceIntraParaCPU[1] << "," << mechPara.sceIntraParaCPU[2]
+			<< "," << mechPara.sceIntraParaCPU[3] << ","
+			<< mechPara.sceIntraParaCPU[4] << std::endl;
+
+	getchar();
 
 	static const double U0_Diff =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
@@ -833,6 +845,26 @@ void calculateAndAddProfileForce(double &xPos, double &yPos, double &zPos,
 		zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 	}
 }
+
+__device__
+void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
+		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
+		double &zRes) {
+	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
+	double forceValue;
+	if (linkLength > sceIntraPara[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceIntraPara[0] / sceIntraPara[2]
+				* exp(-linkLength / sceIntraPara[2])
+				+ sceIntraPara[1] / sceIntraPara[3]
+						* exp(-linkLength / sceIntraPara[3]);
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
+}
+
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -937,24 +969,7 @@ void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
-__device__
-void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
-		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes) {
-	double linkLength = computeDist(xPos, yPos, zPos, xPos2, yPos2, zPos2);
-	double forceValue;
-	if (linkLength > sceIntraPara[4]) {
-		forceValue = 0;
-	} else {
-		forceValue = -sceIntraPara[0] / sceIntraPara[2]
-				* exp(-linkLength / sceIntraPara[2])
-				+ sceIntraPara[1] / sceIntraPara[3]
-						* exp(-linkLength / sceIntraPara[3]);
-	}
-	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-}
+
 __device__ bool bothNodesCellNode(uint nodeGlobalRank1, uint nodeGlobalRank2,
 		uint cellNodesThreshold) {
 	if (nodeGlobalRank1 < cellNodesThreshold
