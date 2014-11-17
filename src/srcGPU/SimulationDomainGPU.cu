@@ -15,7 +15,9 @@ using namespace std;
  */
 SimulationDomainGPU::SimulationDomainGPU() {
 	readAllParameters();
-	initializeGrowthMap();
+	if (memPara.simuType == Beak) {
+		initializeGrowthMap();
+	}
 }
 
 void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
@@ -265,7 +267,9 @@ void SimulationDomainGPU::readChemPara() {
 void SimulationDomainGPU::readAllParameters() {
 	readMemPara();
 	readDomainPara();
-	readChemPara();
+	if (memPara.simuType == Beak) {
+		readChemPara();
+	}
 }
 
 void SimulationDomainGPU::initializeGrowthMap() {
@@ -303,9 +307,13 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 
 	initialize_v2(initData);
 	stabPara.isProcessStab = true;
-
-	int aniAuxPara = (double) (stabPara.totalIterCount)
-			/ stabPara.outputFrameCount;
+	int aniAuxPara;
+	if (stabPara.outputFrameCount == 0) {
+		aniAuxPara = INT_MAX;
+	} else {
+		aniAuxPara = (double) (stabPara.totalIterCount)
+				/ stabPara.outputFrameCount;
+	}
 
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(

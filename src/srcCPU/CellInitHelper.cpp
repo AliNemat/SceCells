@@ -280,8 +280,9 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	uint maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
 	uint maxNodePerECM = 0;
-	if(rawData.simuType == Beak){
-	    maxNodePerECM = globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	if (rawData.simuType == Beak) {
+		maxNodePerECM =
+				globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 	}
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
@@ -401,9 +402,9 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	uint maxNodePerCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
 	uint maxNodePerECM = 0;
-	if(initData.simuType == Beak){
-	    maxNodePerECM = 
-	    globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
+	if (initData.simuType == Beak) {
+		maxNodePerECM =
+				globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
 	}
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
@@ -861,4 +862,38 @@ void SimulationGlobalParameter::initFromConfig() {
 				+ globalConfigVars.getConfigValue("DataName").toString();
 	}
 
+}
+
+RawDataInput CellInitHelper::generateRawInput_singleCell() {
+	RawDataInput rawData;
+	rawData.simuType = simuType;
+
+	std::string initPosFileName = globalConfigVars.getConfigValue(
+			"SingleCellCenterPos").toString();
+
+	fstream fs(initPosFileName.c_str());
+	vector<CVector> insideCellCenters = GEOMETRY::MeshInputReader::readPointVec(
+			fs);
+	fs.close();
+
+	cout << "cell centers: " << insideCellCenters.size() << endl;
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		CVector centerPos = insideCellCenters[i];
+		rawData.MXCellCenters.push_back(centerPos);
+	}
+
+	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
+	rawData.isStab = true;
+	return rawData;
+}
+
+SimulationInitData_V2 CellInitHelper::initSingleCellTest() {
+	RawDataInput rawInput = generateRawInput_singleCell();
+	std::cout << "finished generation of stab raw inputs" << std::endl;
+	std::cout.flush();
+	SimulationInitData_V2 initData = initInputsV3(rawInput);
+	initData.isStab = true;
+	std::cout << "finished generation of init data" << std::endl;
+	std::cout.flush();
+	return initData;
 }

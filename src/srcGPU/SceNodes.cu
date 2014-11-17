@@ -128,7 +128,7 @@ void SceNodes::readMechPara() {
 			<< "," << mechPara.sceIntraParaCPU[3] << ","
 			<< mechPara.sceIntraParaCPU[4] << std::endl;
 
-	getchar();
+	//getchar();
 
 	static const double U0_Diff =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()

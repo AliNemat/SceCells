@@ -56,6 +56,12 @@ public:
 	void updateData(std::string varName, std::string varValue);
 	ConfigVarValue getConfigValue(std::string varName);
 	void printAll();
+	void updateFromConfig(GlobalConfigVars &otherConfigVar);
+};
+
+class ConfigVarsCollection {
+public:
+	std::vector<GlobalConfigVars> configVarSets;
 };
 
 /**
@@ -71,6 +77,8 @@ public:
 	GlobalConfigVars parseConfigFile(std::string configFileName);
 	void updateConfigFile(GlobalConfigVars &configVar,
 			std::string configFileName);
+
+	ConfigVarsCollection parseConfigCollection(std::string configFileName);
 };
 
 /**

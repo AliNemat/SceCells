@@ -234,3 +234,87 @@ void ConfigParser::updateConfigFile(GlobalConfigVars& configVar,
 		++it;
 	}
 }
+
+ConfigVarsCollection ConfigParser::parseConfigCollection(
+		std::string configFileName) {
+	ConfigVarsCollection result;
+	uint totalConfigCount = 0;
+	uint currentConfigSeq;
+	std::tr1::unordered_map<int, uint> sequenceMap;
+	std::ifstream infile(configFileName.c_str());
+	if (!infile.is_open()) {
+		throw SceException(
+				"Fatal error: Config collection file not found!"
+						+ configFileName, ConfigFileNotFound);
+	}
+	std::string line;
+	std::vector<std::string> tmpReading;
+	while (std::getline(infile, line)) {
+		std::string tmp = removeLeadingAndTrailingSpace(line);
+		if (tmp.length() == 0) {
+			continue;
+		} else if (tmp[0] == '#') {
+			continue;
+		} else if (tmp[0] == '$') {
+			if (tmp.length() < 3) {
+				continue;
+			} else {
+				uint i = 1;
+				while (i < tmp.length() && tmp[i] != '$') {
+					i++;
+				}
+				// need to make sure format of the line is correct.
+				if (i >= tmp.length() - 1) {
+					throw SceException(
+							"Error in Config file: '$' symbol found but line is not complete:"
+									+ line, ConfigValueException);
+				} else {
+					std::string sequenceStr = tmp.substr(1, i - 1);
+					std::istringstream buffer1(sequenceStr);
+					int seq;
+					buffer1 >> seq;
+					std::cout << "sequence is " << seq << std::endl;
+					if (sequenceMap.find(seq) == sequenceMap.end()) {
+						currentConfigSeq = totalConfigCount;
+						sequenceMap.insert(
+								std::pair<int, uint>(seq, currentConfigSeq));
+						totalConfigCount++;
+						result.configVarSets.push_back(GlobalConfigVars());
+					} else {
+						currentConfigSeq = sequenceMap.find(seq)->second;
+					}
+					std::string configPairStr = tmp.substr(i + 1);
+					tmpReading = splitLineByEqualSign(configPairStr);
+					if (tmpReading.size() != 2) {
+						throw SceException(
+								"Error in Config file: More than one equal sign found in one line :"
+										+ line, ConfigValueException);
+					}
+					std::string varName = removeLeadingAndTrailingSpace(
+							tmpReading[0]);
+					std::string varValue = removeLeadingAndTrailingSpace(
+							tmpReading[1]);
+					varValue = removeTrailingSemicolon(varValue);
+					if (varValue.length() == 0) {
+						throw SceException(
+								"empty config value is not allowed in config file",
+								ConfigValueException);
+					}
+					result.configVarSets[currentConfigSeq].insertData(varName,
+							varValue);
+				}
+			}
+		}
+	}
+	infile.close();
+	return result;
+}
+
+void GlobalConfigVars::updateFromConfig(GlobalConfigVars& otherConfigVar) {
+	std::vector<ConfigVar> configVarVector = otherConfigVar.getConfigVars();
+	std::vector<ConfigVar>::iterator it = configVarVector.begin();
+	while (it != configVarVector.end()) {
+		updateData(it->getVarName(), it->getValue().toString());
+		++it;
+	}
+}

@@ -17,86 +17,104 @@
 using namespace std;
 
 GlobalConfigVars globalConfigVars;
+ConfigVarsCollection configCollection;
 
-void generateStringInputs(std::string &loadMeshInput,
-		std::string &animationInput, std::string &animationFolder,
-		std::vector<std::string> &boundaryMeshFileNames) {
-	std::string meshLocation =
-			globalConfigVars.getConfigValue("MeshLocation").toString();
-	std::string meshName =
-			globalConfigVars.getConfigValue("MeshName").toString();
-	std::string meshExtention =
-			globalConfigVars.getConfigValue("MeshExtention").toString();
-	loadMeshInput = meshLocation + meshName + meshExtention;
-
-	animationFolder =
-			globalConfigVars.getConfigValue("AnimationFolder").toString();
-	animationInput = animationFolder
-			+ globalConfigVars.getConfigValue("AnimationName").toString();
-
-	std::string boundaryMeshLocation = globalConfigVars.getConfigValue(
-			"BoundaryMeshLocation").toString();
-	std::string boundaryMeshName = globalConfigVars.getConfigValue(
-			"BoundaryMeshName").toString();
-	std::string boundaryMeshExtention = globalConfigVars.getConfigValue(
-			"BoundaryMeshExtention").toString();
-	std::string boundaryMeshInput = boundaryMeshLocation + boundaryMeshName
-			+ boundaryMeshExtention;
-	boundaryMeshFileNames.push_back(boundaryMeshInput);
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
+		true) {
+	if (code != cudaSuccess) {
+		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+				line);
+		if (abort)
+			exit(code);
+	}
 }
 
-int main() {
-	srand(time(NULL));
+void initModelTestConfigCollection() {
+	// read configuration collection.
 	ConfigParser parser;
-	std::string configFileName = "./resources/modelTest.cfg";
-	globalConfigVars = parser.parseConfigFile(configFileName);
+	std::string configCollectionFile = "./resources/modelTestCollection.cfg";
+	configCollection = parser.parseConfigCollection(configCollectionFile);
 
-	std::string loadMeshInput;
-	std::string animationInput;
-	std::vector<std::string> boundaryMeshFileNames;
-	std::string animationFolder;
-	generateStringInputs(loadMeshInput, animationInput, animationFolder,
-			boundaryMeshFileNames);
+	std::cout << "Now printing all parameter sets for model testing"
+			<< std::endl;
+	std::cout << "Size = " << configCollection.configVarSets.size()
+			<< std::endl;
 
-	double SimulationTotalTime = globalConfigVars.getConfigValue(
-			"SimulationTotalTime").toDouble();
-	double SimulationTimeStep = globalConfigVars.getConfigValue(
-			"SimulationTimeStep").toDouble();
-	int TotalNumOfOutputFrames = globalConfigVars.getConfigValue(
-			"TotalNumOfOutputFrames").toInt();
+	for (uint i = 0; i < configCollection.configVarSets.size(); i++) {
+		configCollection.configVarSets[i].printAll();
+		std::cout << std::endl;
+	}
 
-	const double simulationTime = SimulationTotalTime;
-	const double dt = SimulationTimeStep;
-	const int numOfTimeSteps = simulationTime / dt;
-	const int totalNumOfOutputFrame = TotalNumOfOutputFrames;
-	const int outputAnimationAuxVarible = numOfTimeSteps
-			/ totalNumOfOutputFrame;
+	getchar();
 
-	CellInitHelper initHelper;
+}
 
-	SimulationDomainGPU simuDomain;
+void readModelTestConfig(uint i) {
+	ConfigParser parser;
+	std::string configFileNameDefault = "./resources/modelTest.cfg";
+	globalConfigVars = parser.parseConfigFile(configFileNameDefault);
 
-	SimulationInitData_V2 initData = initHelper.initStabInput();
+	globalConfigVars.updateFromConfig(configCollection.configVarSets[i]);
 
-	std::vector<CVector> stabilizedCenters = simuDomain.stablizeCellCenters(
-			initData);
+	// set GPU device.
+	int myDeviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
+	gpuErrchk(cudaSetDevice(myDeviceID));
 
-	SimulationInitData_V2 simuData2 = initHelper.initSimuInput(
-			stabilizedCenters);
+	//globalConfigVars.printAll();
+	//getchar();
+}
 
-	simuDomain.initialize_v2(simuData2);
+int main(int argc, char* argv[]) {
+	// initialize random seed.
+	srand(time(NULL));
 
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = false;
+	initModelTestConfigCollection();
 
-	for (int i = 0; i <= numOfTimeSteps; i++) {
-		cout << "step number = " << i << endl;
-		if (i % outputAnimationAuxVarible == 0) {
-			simuDomain.outputVtkFilesWithColor(animationInput, i, aniCri);
+	for (uint ii = 0; ii < configCollection.configVarSets.size(); ii++) {
+		readModelTestConfig(ii);
+
+		// initialize simulation control related parameters from config file.
+		SimulationGlobalParameter mainPara;
+		mainPara.initFromConfig();
+
+		// initialize post-processing related parameters from config file.
+		PixelizePara pixelPara;
+		pixelPara.initFromConfigFile();
+
+		// initialize simulation initialization helper.
+		CellInitHelper initHelper;
+		// initialize simulation domain.
+		SimulationDomainGPU simuDomain;
+
+		// Generate initial inputs for simulation domain.
+		SimulationInitData_V2 simuData = initHelper.initSingleCellTest();
+		// initialize domain based on initial inputs.
+		simuDomain.initialize_v2(simuData);
+
+		// delete old data file.
+		std::remove(mainPara.dataOutput.c_str());
+
+		// preparation.
+		uint aniFrame = 0;
+		// main simulation steps.
+		for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
+			cout << "step number = " << i << endl;
+			if (i % mainPara.aniAuxVar == 0) {
+				simuDomain.outputVtkFilesWithColor(mainPara.animationNameBase,
+						aniFrame, mainPara.aniCri);
+				cout << "finished output Animation" << endl;
+				//vector<vector<int> > labelMatrix = simuDomain.outputLabelMatrix(
+				//		mainPara.dataName, aniFrame, pixelPara);
+				//cout << "finished writing label matrix" << endl;
+				//simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame,
+				//		mainPara.imgOutput, mainPara.dataOutput);
+				//cout << "finished output matrix analysis" << endl;
+				aniFrame++;
+			}
+			// for each step, run all logics of the domain.
+			simuDomain.runAllLogic(mainPara.dt);
 		}
-		simuDomain.runAllLogic(SimulationTimeStep);
 	}
 
 	return 0;

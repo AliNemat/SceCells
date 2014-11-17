@@ -60,9 +60,9 @@ public:
 };
 
 class MeshInputReader {
+public:
 	static std::vector<CVector> readPointVec(fstream &fs);
 	static CVector readPoint(fstream &fs);
-public:
 	static GEOMETRY::MeshInput readFile(std::string &fileName);
 };
 

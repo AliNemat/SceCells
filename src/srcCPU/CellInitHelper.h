@@ -130,6 +130,11 @@ class CellInitHelper {
 	RawDataInput generateRawInput_stab();
 
 	/**
+	 * Used for generate RawDataInput for single cell model test purpose.
+	 */
+	RawDataInput generateRawInput_singleCell();
+
+	/**
 	 * Used for generate RawDataInput for actual simulation purpose.
 	 */
 	RawDataInput generateRawInput_simu(std::vector<CVector> &cellCenterPoss);
@@ -150,7 +155,7 @@ public:
 	virtual ~CellInitHelper();
 
 	/**
-	 * generate simulation initialization data _v2 given raw data.
+	 * generate simulation initialization data _v2.
 	 */
 	SimulationInitData_V2 initStabInput();
 
@@ -158,6 +163,11 @@ public:
 	 * generate simulation initialization data _v2 given raw data.
 	 */
 	SimulationInitData_V2 initSimuInput(std::vector<CVector> &cellCenterPoss);
+
+	/**
+	 * generate simulation initialization data _v2 for single cell testing.
+	 */
+	SimulationInitData_V2 initSingleCellTest();
 };
 
 #endif /* CELLINITHELPER_H_ */
