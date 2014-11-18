@@ -15,6 +15,10 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
+__constant__ double* nodeLocXAddress;
+__constant__ double* nodeLocYAddress;
+__constant__ double* nodeLocZAddress;
+
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
 //
@@ -1041,6 +1045,22 @@ __device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 	}
 }
 
+__device__ void handleSceForceNodesBasic(uint& nodeRank1, uint& nodeRank2,
+		double& xPos, double& yPos, double& zPos, double& xPos2, double& yPos2,
+		double& zPos2, double& xRes, double& yRes, double& zRes,
+		double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double* _nodeLocZAddress) {
+	if (isSameCell(nodeRank1, nodeRank2)) {
+		calculateAndAddIntraForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	} else {
+		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	}
+}
+
 __device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
@@ -1068,8 +1088,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
 		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
 		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double* _nodeLocZAddress,
-		uint beginPosOfCells) {
+		double* _nodeLocYAddress, double* _nodeLocZAddress) {
 // this means that both nodes come from cells
 	if (bothCellNodes(type1, type2)) {
 		// this means that nodes come from different type of cell, apply differential adhesion
@@ -1187,6 +1206,54 @@ void SceNodes::extendBuckets2D() {
 			auxVecs.bucketValuesIncludingNeighbor.begin() + numberInsideRange,
 			auxVecs.bucketValuesIncludingNeighbor.end());
 }
+
+void SceNodes::applySceForcesBasic() {
+	uint* valueAddress = thrust::raw_pointer_cast(
+			&auxVecs.bucketValuesIncludingNeighbor[0]);
+	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
+	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
+	uint* nodeRankAddress = thrust::raw_pointer_cast(&infoVecs.nodeCellRank[0]);
+
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.begin()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.begin()),
+							auxVecs.bucketValues.begin(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
+									auxVecs.bucketValues.begin()))),
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.end()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.end()),
+							auxVecs.bucketValues.end(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.end()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.end()),
+							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
+									auxVecs.bucketValues.end()))),
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(infoVecs.nodeVelX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeVelY.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeVelZ.begin(),
+									auxVecs.bucketValues.begin()))),
+			AddSceForceBasic(valueAddress, nodeLocXAddress, nodeLocYAddress,
+					nodeLocZAddress));
+}
+
 void SceNodes::applySceForces() {
 
 // reason for casting these pointers every time is for flexibility.
@@ -1242,9 +1309,7 @@ void SceNodes::applySceForces() {
 									infoVecs.nodeMaxForce.begin(),
 									auxVecs.bucketValues.begin()))),
 			AddSceForce(valueAddress, nodeLocXAddress, nodeLocYAddress,
-					nodeLocZAddress, nodeRankAddress, nodeTypeAddress,
-					allocPara.maxTotalCellNodeCount, allocPara.startPosCells,
-					allocPara.maxNodeOfOneCell, allocPara.maxNodePerECM));
+					nodeLocZAddress, nodeTypeAddress));
 
 //std::cout << "after transformation" << std::endl;
 }
@@ -1336,6 +1401,11 @@ void SceNodes::initControlPara(bool isStab) {
 				ConfigValueException);
 	}
 	controlPara.isStab = isStab;
+}
+
+void SceNodes::sceForcesPerfTesting() {
+	prepareSceForceComputation();
+	applySceForcesBasic();
 }
 
 double SceNodes::getMaxEffectiveRange() {

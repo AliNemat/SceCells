@@ -290,12 +290,18 @@ __device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
 __device__ bool ofSameType(uint cellType1, uint cellType2);
 
 __device__
+void handleSceForceNodesBasic(uint &nodeRank1, uint &nodeRank2, double &xPos,
+		double &yPos, double &zPos, double &xPos2, double &yPos2, double &zPos2,
+		double &xRes, double &yRes, double &zRes, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress);
+
+__device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
 		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
 		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double* _nodeLocZAddress,
-		uint startPosOfCells);
+		double* _nodeLocYAddress, double* _nodeLocZAddress);
+
 __device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
@@ -311,24 +317,15 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 	double* _nodeLocXAddress;
 	double* _nodeLocYAddress;
 	double* _nodeLocZAddress;
-	uint* _nodeRankAddress;
 	SceNodeType* _cellTypesAddress;
-	uint _cellNodesThreshold;
-	uint _cellNodesStartPos;
-	uint _nodeCountPerCell;
-	uint _cellNodesPerECM;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ AddSceForce(uint* valueAddress, double* nodeLocXAddress,
+	__host__ __device__
+	AddSceForce(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, double* nodeLocZAddress,
-			uint* nodeRankAddress, SceNodeType* cellTypesAddress,
-			uint cellNodesThreshold, uint nodeCountPerCell,
-			uint cellNodesStartPos, uint celLNodesPerECM) :
+			SceNodeType* cellTypesAddress) :
 			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
 					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
-					nodeLocZAddress), _nodeRankAddress(nodeRankAddress), _cellTypesAddress(
-					cellTypesAddress), _cellNodesThreshold(cellNodesThreshold), _cellNodesStartPos(
-					cellNodesStartPos), _nodeCountPerCell(nodeCountPerCell), _cellNodesPerECM(
-					celLNodesPerECM) {
+					nodeLocZAddress), _cellTypesAddress(cellTypesAddress) {
 	}
 	__device__ CVec4 operator()(const Tuuuddd &u3d3) const {
 		double xRes = 0.0;
@@ -361,11 +358,58 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 					_nodeLocYAddress[nodeRankOfOtherNode],
 					_nodeLocZAddress[nodeRankOfOtherNode], xRes, yRes, zRes,
 					maxForce, _nodeLocXAddress, _nodeLocYAddress,
-					_nodeLocZAddress, _cellNodesStartPos);
+					_nodeLocZAddress);
 
 		}
 
 		return thrust::make_tuple(xRes, yRes, zRes, maxForce);
+	}
+};
+
+/**
+ * a complicated data structure for adding subcellular element force to cell nodes.
+ * This data structure is designed in an unconventional way because of performance considerations.
+ */
+struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
+	uint* _extendedValuesAddress;
+	double* _nodeLocXAddress;
+	double* _nodeLocYAddress;
+	double* _nodeLocZAddress;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddSceForceBasic(uint* valueAddress, double* nodeLocXAddress,
+			double* nodeLocYAddress, double* nodeLocZAddress) :
+			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
+					nodeLocZAddress) {
+	}
+	__device__ CVec3 operator()(const Tuuuddd &u3d3) const {
+		double xRes = 0.0;
+		double yRes = 0.0;
+		double zRes = 0.0;
+
+		uint begin = thrust::get<0>(u3d3);
+		uint end = thrust::get<1>(u3d3);
+		uint myValue = thrust::get<2>(u3d3);
+		double xPos = thrust::get<3>(u3d3);
+		double yPos = thrust::get<4>(u3d3);
+		double zPos = thrust::get<5>(u3d3);
+
+		for (uint i = begin; i < end; i++) {
+			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
+			if (nodeRankOfOtherNode == myValue) {
+				continue;
+			}
+
+			handleSceForceNodesBasic(myValue, nodeRankOfOtherNode, xPos, yPos,
+					zPos, _nodeLocXAddress[nodeRankOfOtherNode],
+					_nodeLocYAddress[nodeRankOfOtherNode],
+					_nodeLocZAddress[nodeRankOfOtherNode], xRes, yRes, zRes,
+					_nodeLocXAddress, _nodeLocYAddress, _nodeLocZAddress);
+
+		}
+
+		return thrust::make_tuple(xRes, yRes, zRes);
 	}
 };
 
@@ -547,6 +591,11 @@ class SceNodes {
 	void applySceForces();
 
 	/**
+	 * Basic Sce method for performance testing purpose.
+	 */
+	void applySceForcesBasic();
+
+	/**
 	 * This function exerts force on the profile nodes.
 	 * Because cartilage actually pins to the epitheilum layer, I have recently
 	 * added some new constraints in this function.
@@ -622,6 +671,11 @@ public:
 	 * wrap apply forces methods together.
 	 */
 	void calculateAndApplySceForces();
+
+	/**
+	 * wrap apply forces methods together.
+	 */
+	void sceForcesPerfTesting();
 
 	/**
 	 * add maxNodeOfOneCell
