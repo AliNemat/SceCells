@@ -38,14 +38,16 @@ void initModelTestConfigCollection() {
 
 	std::cout << "Now printing all parameter sets for model testing"
 			<< std::endl;
-	std::cout << "Size = " << configCollection.configVarSets.size()
-			<< std::endl;
+	std::cout << "Number of parameter set = "
+			<< configCollection.configVarSets.size() << std::endl;
 
 	for (uint i = 0; i < configCollection.configVarSets.size(); i++) {
 		configCollection.configVarSets[i].printAll();
 		std::cout << std::endl;
 	}
 
+	std::cout << "Finished printing parameter sets. Press any key to continue."
+			<< std::endl;
 	getchar();
 
 }

@@ -46,7 +46,8 @@ void GlobalConfigVars::insertData(std::string varName, std::string varValue) {
 		if (it->getVarName() == varName) {
 			if (it->getValue().toString().length() != 0) {
 				throw SceException(
-						"Multiple definition of config value is not permitted",
+						"Key already exists:" + it->getVarName()
+								+ ", Multiple definition of config value is not permitted: ",
 						ConfigValueException);
 			} else {
 				it->setValue(varValue);
