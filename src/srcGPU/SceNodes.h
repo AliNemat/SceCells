@@ -2,7 +2,6 @@
 #define SCENODES_H_
 
 #include <thrust/device_vector.h>
-#include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
 #include <thrust/reduce.h>
 #include <thrust/copy.h>

@@ -83,9 +83,6 @@ SceCells::SceCells() {
  */
 void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
 		GrowthDistriMap &region2) {
-
-	dt = d_t;
-
 // obtain pointer address for first region
 	growthAuxData.growthFactorMagAddress = thrust::raw_pointer_cast(
 			&(region1.growthFactorMag[0]));
@@ -130,17 +127,13 @@ void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
 }
 
 void SceCells::growAtRandom(double d_t) {
-	dt = d_t;
-
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
 	//std::cout << "totalNodeCount = " << totalNodeCountForActiveCells
 	//		<< std::endl;
 	//std::cout << "before all functions start" << std::endl;
 
-	// for wind disk project, assign random growth pattern
-	// to replace chemical induced growth
-	//copyGrowInfoFromGridToCells(region1, region2);
+	// randomly select growth direction and speed.
 	randomizeGrowth();
 
 	//std::cout << "after copy grow info" << std::endl;
@@ -1135,14 +1128,12 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
-	// for wind disk project, switch from chemical based growth to random growth
 
-	//distributeIsActiveInfo();
 	if (!nodes->getControlPara().isStab) {
 		growAtRandom(dt);
 		//grow2DTwoRegions(dt, region1, region2);
 		//std::cerr << "after grow cells" << std::endl;
-		distributeIsActiveInfo();
+		//distributeIsActiveInfo();
 		//std::cerr << "after distribute is active info." << std::endl;
 		divide2DSimplified();
 		//std::cerr << "after divide 2D simplified." << std::endl;
@@ -1176,6 +1167,12 @@ void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 
 	allComponentsMove();
 	//std::cerr << "after all components move." << std::endl;
+}
+
+void SceCells::growAlongX(double d_t) {
+}
+
+void SceCells::growWithStress(double d_t) {
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {

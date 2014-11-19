@@ -423,6 +423,7 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 		if (isSuccess) {
 			_nodeXPosAddress[cellNodeEndPos] = xCoordNewPt;
 			_nodeYPosAddress[cellNodeEndPos] = yCoordNewPt;
+			_nodeIsActiveAddress[cellNodeEndPos] = true;
 			isScheduledToGrow = false;
 			activeNodeCountOfThisCell = activeNodeCountOfThisCell + 1;
 			lastCheckPoint = lastCheckPoint + _growThreshold;
@@ -753,13 +754,10 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 	}
 	__host__ __device__
 	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
-		//double currentSpeed = thrust::get<0>(inputInfo);
-		//double seed1 = thrust::get<0>(inputInfo) * 1.0e4;
 		uint preSeed = _currentCellCount / _randAux;
 		double currentDirX = thrust::get<1>(inputInfo);
 		double currentDirY = thrust::get<2>(inputInfo);
 		bool isInitBefore = thrust::get<3>(inputInfo);
-		//uint seed = thrust::get<4>(inputInfo) + (int) (seed1) % 10000;
 		uint seed = thrust::get<4>(inputInfo) + preSeed;
 		thrust::default_random_engine rng;
 		thrust::uniform_real_distribution<double> dist(_lowerLimit,
@@ -942,6 +940,10 @@ class SceCells {
 			GrowthDistriMap &region2);
 
 	void growAtRandom(double d_t);
+
+	void growAlongX(double d_t);
+	void growWithStress(double d_t);
+
 	void randomizeGrowth();
 
 	void computeCenterPos();

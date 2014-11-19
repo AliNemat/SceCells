@@ -15,10 +15,6 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
-thrust::device_ptr<double> nodeLocXAddr;
-thrust::device_ptr<double> nodeLocYAddr;
-thrust::device_ptr<double> nodeLocZAddr;
-
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
 //
