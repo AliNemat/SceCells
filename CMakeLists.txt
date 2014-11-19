@@ -50,7 +50,7 @@ SET(CMAKE_UNITTEST_DIR ${CMAKE_SOURCE_DIR}/tst/unitTest)
 #location of perfermance test files
 SET(CMAKE_PERFTEST_DIR ${CMAKE_SOURCE_DIR}/tst/perfTest)
 #SET(CMAKE_MODELTEST_DIR ${CMAKE_SOURCE_DIR}/modelTest)
-
+SET(GOOGLETEST_DIR ${CMAKE_SOURCE_DIR}/tst/googletest)
 
 # make VERBOSE =1
 
@@ -98,7 +98,7 @@ if(BUILD_DOCUMENTATION)
   # then leave out the 'ALL' keyword from the above command.
 endif()
 
-add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
+#add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
 ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/src)
 ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/tst)
 

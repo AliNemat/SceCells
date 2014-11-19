@@ -3,7 +3,7 @@ ENABLE_TESTING()
 set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_unit_test)
 #MESSAGE(${PROJECT_TEST_NAME})
 MESSAGE("Now building unit tests")
-include_directories(${GTEST_INCLUDE_DIRS} ${COMMON_INCLUDES} ${CPU_SOURCE_DIR} ${GPU_SOURCE_DIR})
+include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${CPU_SOURCE_DIR} ${GPU_SOURCE_DIR})
 
 file(GLOB TEST_SRC_FILES ${CMAKE_UNITTEST_DIR}/*.cpp ${CMAKE_UNITTEST_DIR}/*.cu)
 # DEBUGGING: 
@@ -19,8 +19,8 @@ if(NOT WIN32)
         target_link_libraries(${PROJECT_TEST_NAME} SceInit)
         target_link_libraries(${PROJECT_TEST_NAME} SceUtils)
         target_link_libraries(${PROJECT_TEST_NAME}
-                ${GTEST_LIBS_DIR}/libgtest.a
-                ${GTEST_LIBS_DIR}/libgtest_main.a
+                ${GOOGLETEST_DIR}/libgtest.a
+                ${GOOGLETEST_DIR}/libgtest_main.a
         )
 endif()
 

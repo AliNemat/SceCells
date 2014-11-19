@@ -1,0 +1,7 @@
+!*
+/CMakeFiles
+/.svn
+CMakeCache.txt
+/cmake
+*.cmake
+
