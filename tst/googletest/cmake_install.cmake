@@ -1,4 +1,4 @@
-# Install script for directory: /home/wenzhao/cuda-workspace/SceCells/tst/googletest
+# Install script for directory: /home/wenzhao/test/SceCells/tst/googletest
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)

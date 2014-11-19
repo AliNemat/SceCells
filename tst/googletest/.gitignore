@@ -2,4 +2,4 @@
 /CMakeFiles
 /.svn
 CMakeCache.txt
-
+*.a
