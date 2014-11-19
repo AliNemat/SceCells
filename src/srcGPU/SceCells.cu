@@ -1,6 +1,4 @@
 #include "SceCells.h"
-__constant__ uint GridDimension[2];
-__constant__ double gridSpacing;
 
 double epsilon = 1.0e-12;
 

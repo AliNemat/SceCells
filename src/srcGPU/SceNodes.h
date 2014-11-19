@@ -2,6 +2,7 @@
 #define SCENODES_H_
 
 #include <thrust/device_vector.h>
+#include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
 #include <thrust/reduce.h>
 #include <thrust/copy.h>
@@ -344,7 +345,6 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 		SceNodeType myType = _cellTypesAddress[myValue];
 
 		for (uint i = begin; i < end; i++) {
-			//for (uint i = begin; i < begin+1; i++) {
 			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
 			SceNodeType cellTypeOfOtherNode =
 					_cellTypesAddress[nodeRankOfOtherNode];

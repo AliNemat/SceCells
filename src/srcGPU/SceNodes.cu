@@ -15,9 +15,9 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
-__constant__ double* nodeLocXAddressConst;
-__constant__ double* nodeLocYAddressConst;
-__constant__ double* nodeLocZAddressConst;
+thrust::device_ptr<double> nodeLocXAddr;
+thrust::device_ptr<double> nodeLocYAddr;
+thrust::device_ptr<double> nodeLocZAddr;
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
@@ -1046,11 +1046,11 @@ __device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 	}
 }
 
-__device__ void handleSceForceNodesBasic(uint& nodeRank1, uint& nodeRank2,
-		double& xPos, double& yPos, double& zPos, double& xPos2, double& yPos2,
-		double& zPos2, double& xRes, double& yRes, double& zRes,
-		double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double* _nodeLocZAddress) {
+__device__
+void handleSceForceNodesBasic(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
+		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress) {
 	if (isSameCell(nodeRank1, nodeRank2)) {
 		calculateAndAddIntraForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
 				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
@@ -1090,12 +1090,11 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
 		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress) {
-// this means that both nodes come from cells
+	// this means that both nodes are come from cells, not other types
 	if (bothCellNodes(type1, type2)) {
 		// this means that nodes come from different type of cell, apply differential adhesion
 		if (type1 != type2) {
-			// TODO: apply differential adhesion here.
-			// It should be a different type of inter force.
+			// differential adhesion applies here.
 			calculateAndAddDiffInterCellForce(xPos, yPos, zPos,
 					_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
 					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
@@ -1104,7 +1103,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 				calculateAndAddIntraForce(xPos, yPos, zPos,
 						_nodeLocXAddress[nodeRank2],
 						_nodeLocYAddress[nodeRank2],
-						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
+						_nodeLocXAddress[nodeRank2], xRes, yRes, zRes);
 			} else {
 				double xPre = xRes;
 				double yPre = yRes;
@@ -1214,7 +1213,6 @@ void SceNodes::applySceForcesBasic() {
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
 	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
-	uint* nodeRankAddress = thrust::raw_pointer_cast(&infoVecs.nodeCellRank[0]);
 
 	thrust::transform(
 			make_zip_iterator(
@@ -1257,19 +1255,17 @@ void SceNodes::applySceForcesBasic() {
 
 void SceNodes::applySceForces() {
 
-// reason for casting these pointers every time is for flexibility.
-// Because these are thrust vectors, the begin address could possibly change.
-// Therefore, we re-define the begin address of these pointers everytime.
+	// There are two reasons why I use thrust cast every time.
+	// (1) Technically, make a device pointer a global variable seems to be difficult.
+	// (2) Vectors might change the memory address dynamically.
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
 	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
-	uint* nodeRankAddress = thrust::raw_pointer_cast(&infoVecs.nodeCellRank[0]);
+
 	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(
 			&infoVecs.nodeCellType[0]);
-
-//std::cout << "begin transformation" << std::endl;
 
 	thrust::transform(
 			make_zip_iterator(
@@ -1311,8 +1307,6 @@ void SceNodes::applySceForces() {
 									auxVecs.bucketValues.begin()))),
 			AddSceForce(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeLocZAddress, nodeTypeAddress));
-
-//std::cout << "after transformation" << std::endl;
 }
 
 void SceNodes::calculateAndApplySceForces() {
@@ -1449,14 +1443,6 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
-
-	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
-	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
-	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
-
-	cudaMemcpyToSymbol(nodeLocXAddressConst, nodeLocXAddress, sizeof(double*));
-	cudaMemcpyToSymbol(nodeLocYAddressConst, nodeLocYAddress, sizeof(double*));
-	cudaMemcpyToSymbol(nodeLocZAddressConst, nodeLocZAddress, sizeof(double*));
 }
 
 void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
