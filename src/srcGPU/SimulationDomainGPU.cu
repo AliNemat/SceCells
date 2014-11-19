@@ -101,7 +101,10 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	uint mxQuotient = MXNodeCount / maxNodePerCell;
 
 	// remainder must be zero.
-	assert((fnmRemainder == 0) && (mxRemainder == 0) && (ecmRemainder == 0));
+	if ((fnmRemainder != 0) || (mxRemainder != 0) || (ecmRemainder != 0)) {
+		throw SceException("Initialization vector size incorrect!",
+				InputInitException);
+	}
 	// size of cellType array and sum of all cell types must match.
 	assert(fnmQuotient + mxQuotient == cellTypeSize);
 

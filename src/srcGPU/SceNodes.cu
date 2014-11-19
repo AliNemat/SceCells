@@ -1103,7 +1103,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 				calculateAndAddIntraForce(xPos, yPos, zPos,
 						_nodeLocXAddress[nodeRank2],
 						_nodeLocYAddress[nodeRank2],
-						_nodeLocXAddress[nodeRank2], xRes, yRes, zRes);
+						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
 			} else {
 				double xPre = xRes;
 				double yPre = yRes;

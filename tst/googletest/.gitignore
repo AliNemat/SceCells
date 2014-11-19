@@ -3,3 +3,6 @@
 /.svn
 CMakeCache.txt
 *.a
+CTestTestfile.cmake
+cmake_install.cmake
+
