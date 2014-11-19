@@ -15,9 +15,9 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 
-__constant__ double* nodeLocXAddress;
-__constant__ double* nodeLocYAddress;
-__constant__ double* nodeLocZAddress;
+__constant__ double* nodeLocXAddressConst;
+__constant__ double* nodeLocYAddressConst;
+__constant__ double* nodeLocZAddressConst;
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
@@ -301,6 +301,7 @@ void SceNodes::copyParaToGPUConstMem() {
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceECMPara, mechPara.sceECMParaCPU, 5 * sizeof(double));
 	//std::cout << "finished SceNodes:" << std::endl;
+
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
@@ -1448,6 +1449,14 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
+
+	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
+	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
+
+	cudaMemcpyToSymbol(nodeLocXAddressConst, nodeLocXAddress, sizeof(double*));
+	cudaMemcpyToSymbol(nodeLocYAddressConst, nodeLocYAddress, sizeof(double*));
+	cudaMemcpyToSymbol(nodeLocZAddressConst, nodeLocZAddress, sizeof(double*));
 }
 
 void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
