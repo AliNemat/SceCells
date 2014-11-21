@@ -50,6 +50,24 @@ void SceCells::distributeCellIsActiveInfo() {
 			thrust::less<uint>());
 }
 
+void SceCells::distributeCellGrowthProgress() {
+	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
+			* allocPara.maxNodeOfOneCell;
+	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
+
+	thrust::copy(
+			thrust::make_permutation_iterator(
+					cellInfoVecs.growthProgress.begin(),
+					make_transform_iterator(countingBegin,
+							DivideFunctor(allocPara.maxNodeOfOneCell))),
+			thrust::make_permutation_iterator(
+					cellInfoVecs.growthProgress.begin(),
+					make_transform_iterator(countingEnd,
+							DivideFunctor(allocPara.maxNodeOfOneCell))),
+			nodes->getInfoVecs().nodeGrowPro.begin() + allocPara.startPosCells);
+}
+
 SceCells::SceCells() {
 }
 
@@ -1139,6 +1157,7 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 		//std::cerr << "after divide 2D simplified." << std::endl;
 		distributeIsActiveInfo();
 		//std::cerr << "after distribute is active info." << std::endl;
+		distributeCellGrowthProgress();
 	}
 
 	allComponentsMove();

@@ -168,8 +168,14 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 		//cartilage.getCartPara().growthDir.Print();
 	}
 
+	if (memPara.simuType == Beak) {
+		nodes.calculateAndApplySceForces();
+	} else if (memPara.simuType == Disc) {
+		nodes.sceForcesDisc();
+	}
+
 	// This function only calculates velocity.
-	nodes.calculateAndApplySceForces();
+
 	// Only beak simulation need to take care of cartilage.
 	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
 		// cartilage logics must come before cell logics, because node velocities will be modified
@@ -177,6 +183,7 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 		// also responsible for handling interaction between epithelium layer and carilage.
 		cartilage.runAllLogics(dt);
 	}
+
 	// This function applies velocity so nodes actually move inside this function.
 	if (memPara.simuType == Beak) {
 		cells.runAllCellLevelLogicsBeak(dt, growthMap, growthMap2);

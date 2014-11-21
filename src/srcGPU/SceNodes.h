@@ -304,7 +304,8 @@ void handleSceForceNodesBasic(uint &nodeRank1, uint &nodeRank2, double &xPos,
 __device__
 void handleSceForceNodesDisc(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
-		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
+		double& xRes, double& yRes, double& zRes, double& interForceX,
+		double& interForceY, double& interForceZ, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
 		double* _nodeGrowProAddr);
 
@@ -375,6 +376,58 @@ struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
 		}
 
 		return thrust::make_tuple(xRes, yRes, zRes, maxForce);
+	}
+};
+
+/**
+ * A compute functor designed for computing SceForce for Disc project.
+ */
+struct AddSceForceDisc: public thrust::unary_function<Tuuuddd, CVec6> {
+	uint* _extendedValuesAddress;
+	double* _nodeLocXAddress;
+	double* _nodeLocYAddress;
+	double* _nodeLocZAddress;
+	double* _nodeGroProAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddSceForceDisc(uint* valueAddress, double* nodeLocXAddress,
+			double* nodeLocYAddress, double* nodeLocZAddress,
+			double* nodeGrowProAddr) :
+			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
+					nodeLocZAddress), _nodeGroProAddr(nodeGrowProAddr) {
+	}
+	__device__
+	CVec6 operator()(const Tuuuddd &u3d3) const {
+		double xRes = 0.0;
+		double yRes = 0.0;
+		double zRes = 0.0;
+
+		double interForceX = 0.0;
+		double interForceY = 0.0;
+		double interForceZ = 0.0;
+
+		uint begin = thrust::get<0>(u3d3);
+		uint end = thrust::get<1>(u3d3);
+		uint myValue = thrust::get<2>(u3d3);
+		double xPos = thrust::get<3>(u3d3);
+		double yPos = thrust::get<4>(u3d3);
+		double zPos = thrust::get<5>(u3d3);
+
+		for (uint i = begin; i < end; i++) {
+			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
+			if (nodeRankOfOtherNode == myValue) {
+				continue;
+			}
+			handleSceForceNodesDisc(myValue, nodeRankOfOtherNode, xPos, yPos,
+					zPos, _nodeLocXAddress[nodeRankOfOtherNode],
+					_nodeLocYAddress[nodeRankOfOtherNode],
+					_nodeLocZAddress[nodeRankOfOtherNode], xRes, yRes, zRes,
+					interForceX, interForceY, interForceZ, _nodeLocXAddress,
+					_nodeLocYAddress, _nodeLocZAddress, _nodeGroProAddr);
+		}
+		return thrust::make_tuple(xRes, yRes, zRes, interForceX, interForceY,
+				interForceZ);
 	}
 };
 
@@ -506,6 +559,16 @@ public:
 	thrust::device_vector<double> nodeVelZ;
 	// represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
+
+	// growth progress of the cell that the node belongs to.
+	thrust::device_vector<double> nodeGrowPro;
+
+	thrust::device_vector<double> nodeInterForceX;
+
+	thrust::device_vector<double> nodeInterForceY;
+
+	thrust::device_vector<double> nodeInterForceZ;
+
 	// in order to represent differential adhesion, we also need an vector
 	// for each cell node to identify the cell type.
 	thrust::device_vector<SceNodeType> nodeCellType;
@@ -608,6 +671,11 @@ class SceNodes {
 	void applySceForcesBasic();
 
 	/**
+	 * Sce method specifically for wing disc.
+	 */
+	void applySceForcesDisc();
+
+	/**
 	 * This function exerts force on the profile nodes.
 	 * Because cartilage actually pins to the epitheilum layer, I have recently
 	 * added some new constraints in this function.
@@ -686,8 +754,15 @@ public:
 
 	/**
 	 * wrap apply forces methods together.
+	 * This is for performance testing only.
 	 */
 	void sceForcesPerfTesting();
+
+	/**
+	 * wrap apply forces methods together.
+	 * This is for Wing Disc development only.
+	 */
+	void sceForcesDisc();
 
 	/**
 	 * add maxNodeOfOneCell

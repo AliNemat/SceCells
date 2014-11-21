@@ -80,6 +80,7 @@ struct ControlPara {
 struct SceMechPara {
 	double sceInterParaCPU[5];
 	double sceIntraParaCPU[5];
+	double sceIntraParaDivCPU[5];
 	double sceCartParaCPU[5];
 	double sceInterDiffParaCPU[5];
 	double sceProfileParaCPU[7];

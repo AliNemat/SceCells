@@ -933,6 +933,8 @@ class SceCells {
 	void distributeECMIsActiveInfo();
 	void distributeCellIsActiveInfo();
 
+	void distributeCellGrowthProgress();
+
 	void distributeIsCellRank();
 
 	void allComponentsMove();
