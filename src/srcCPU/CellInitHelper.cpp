@@ -734,6 +734,15 @@ vector<CVector> CellInitHelper::generateInitCellNodes() {
 			isSuccess = true;
 		}
 	}
+	// also need to make sure center point is (0,0,0).
+	CVector tmpSum(0, 0, 0);
+	for (uint i = 0; i < attemptedPoss.size(); i++) {
+		tmpSum = tmpSum + attemptedPoss[i];
+	}
+	tmpSum = tmpSum / (double) (attemptedPoss.size());
+	for (uint i = 0; i < attemptedPoss.size(); i++) {
+		attemptedPoss[i] = attemptedPoss[i] - tmpSum;
+	}
 	return attemptedPoss;
 }
 

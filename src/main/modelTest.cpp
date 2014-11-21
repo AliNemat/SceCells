@@ -46,7 +46,7 @@ void initModelTestConfigCollection() {
 		std::cout << std::endl;
 	}
 
-	std::cout << "Finished printing parameter sets. Press any key to continue."
+	std::cout << "Finished printing parameter sets. Press ENter to continue."
 			<< std::endl;
 	getchar();
 

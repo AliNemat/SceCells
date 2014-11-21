@@ -2,6 +2,8 @@
 
 __constant__ double sceInterPara[5];
 __constant__ double sceIntraPara[5];
+// parameter set for cells that are going to divide
+__constant__ double sceIntraParaDiv[4];
 __constant__ double sceCartPara[5];
 __constant__ double sceInterDiffPara[5];
 __constant__ double sceProfilePara[7];
@@ -76,20 +78,20 @@ void SceNodes::readDomainPara() {
 }
 
 void SceNodes::readMechPara() {
-	static const double U0 =
+	double U0 =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_U0_DivFactor").toDouble();
-	static const double V0 =
+	double V0 =
 			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_V0_DivFactor").toDouble();
-	static const double k1 =
+	double k1 =
 			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_k1_DivFactor").toDouble();
-	static const double k2 =
+	double k2 =
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_k2_DivFactor").toDouble();
-	static const double interLinkEffectiveRange =
-			globalConfigVars.getConfigValue("InterCellLinkEffectRange").toDouble();
+	double interLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"InterCellLinkEffectRange").toDouble();
 
 	mechPara.sceInterParaCPU[0] = U0;
 	mechPara.sceInterParaCPU[1] = V0;
@@ -102,20 +104,20 @@ void SceNodes::readMechPara() {
 			<< "," << mechPara.sceInterParaCPU[3] << ","
 			<< mechPara.sceInterParaCPU[4] << std::endl;
 
-	static const double U0_Intra =
+	double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_U0_DivFactor").toDouble();
-	static const double V0_Intra =
+	double V0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_V0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_V0_DivFactor").toDouble();
-	static const double k1_Intra =
+	double k1_Intra =
 			globalConfigVars.getConfigValue("IntraCell_k1_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_k1_DivFactor").toDouble();
-	static const double k2_Intra =
+	double k2_Intra =
 			globalConfigVars.getConfigValue("IntraCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_k2_DivFactor").toDouble();
-	static const double intraLinkEffectiveRange =
-			globalConfigVars.getConfigValue("IntraCellLinkEffectRange").toDouble();
+	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraCellLinkEffectRange").toDouble();
 
 	mechPara.sceIntraParaCPU[0] = U0_Intra;
 	mechPara.sceIntraParaCPU[1] = V0_Intra;
@@ -130,19 +132,19 @@ void SceNodes::readMechPara() {
 
 	//getchar();
 
-	static const double U0_Diff =
+	double U0_Diff =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Diff_U0_DivFactor").toDouble();
-	static const double V0_Diff =
+	double V0_Diff =
 			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Diff_V0_DivFactor").toDouble();
-	static const double k1_Diff =
+	double k1_Diff =
 			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Diff_k1_DivFactor").toDouble();
-	static const double k2_Diff =
+	double k2_Diff =
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Diff_k2_DivFactor").toDouble();
@@ -153,37 +155,37 @@ void SceNodes::readMechPara() {
 	mechPara.sceInterDiffParaCPU[3] = k2_Diff;
 	mechPara.sceInterDiffParaCPU[4] = interLinkEffectiveRange;
 
-	static const double U0_Bdry =
+	double U0_Bdry =
 			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Bdry_U0_DivFactor").toDouble();
-	static const double V0_Bdry =
+	double V0_Bdry =
 			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Bdry_V0_DivFactor").toDouble();
-	static const double k1_Bdry =
+	double k1_Bdry =
 			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Bdry_k1_DivFactor").toDouble();
-	static const double k2_Bdry =
+	double k2_Bdry =
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue(
 							"InterCell_Bdry_k2_DivFactor").toDouble();
 	if (controlPara.simuType == Beak) {
-		static const double U0_Cart =
+		double U0_Cart =
 				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 						/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
-		static const double V0_Cart =
+		double V0_Cart =
 				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
 						/ globalConfigVars.getConfigValue("Cart_V0_DivFactor").toDouble();
-		static const double k1_Cart =
+		double k1_Cart =
 				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
 						/ globalConfigVars.getConfigValue("Cart_k1_DivFactor").toDouble();
-		static const double k2_Cart =
+		double k2_Cart =
 				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 						/ globalConfigVars.getConfigValue("Cart_k2_DivFactor").toDouble();
-		static const double cartProfileEffectiveRange =
-				globalConfigVars.getConfigValue("CartForceEffectiveRange").toDouble();
+		double cartProfileEffectiveRange = globalConfigVars.getConfigValue(
+				"CartForceEffectiveRange").toDouble();
 		mechPara.sceCartParaCPU[0] = U0_Cart;
 		mechPara.sceCartParaCPU[1] = V0_Cart;
 		mechPara.sceCartParaCPU[2] = k1_Cart;
@@ -191,10 +193,10 @@ void SceNodes::readMechPara() {
 		mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
 
 		// 1.8 comes from standard
-		static const double neutralLength = globalConfigVars.getConfigValue(
+		double neutralLength = globalConfigVars.getConfigValue(
 				"Epi_link_neutral_dist").toDouble();
 
-		static const double linearParameter = globalConfigVars.getConfigValue(
+		double linearParameter = globalConfigVars.getConfigValue(
 				"Epi_linear_parameter").toDouble();
 
 		mechPara.sceProfileParaCPU[0] = U0_Bdry;
@@ -205,19 +207,19 @@ void SceNodes::readMechPara() {
 		mechPara.sceProfileParaCPU[5] = linearParameter;
 		mechPara.sceProfileParaCPU[6] = neutralLength;
 
-		static const double U0_ECM =
+		double U0_ECM =
 				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 						/ globalConfigVars.getConfigValue(
 								"InterCell_ECM_U0_DivFactor").toDouble();
-		static const double V0_ECM =
+		double V0_ECM =
 				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
 						/ globalConfigVars.getConfigValue(
 								"InterCell_ECM_V0_DivFactor").toDouble();
-		static const double k1_ECM =
+		double k1_ECM =
 				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
 						/ globalConfigVars.getConfigValue(
 								"InterCell_ECM_k1_DivFactor").toDouble();
-		static const double k2_ECM =
+		double k2_ECM =
 				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 						/ globalConfigVars.getConfigValue(
 								"InterCell_ECM_k2_DivFactor").toDouble();
@@ -866,6 +868,12 @@ void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
 }
 
+__device__ void calAndAddIntraForceDiv(double& xPos, double& yPos, double& zPos,
+		double& xPos2, double& yPos2, double& zPos2, double& growPro,
+		double& xRes, double& yRes, double& zRes) {
+
+}
+
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -1043,22 +1051,6 @@ __device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 }
 
 __device__
-void handleSceForceNodesBasic(uint& nodeRank1, uint& nodeRank2, double& xPos,
-		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
-		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double* _nodeLocZAddress) {
-	if (isSameCell(nodeRank1, nodeRank2)) {
-		calculateAndAddIntraForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
-				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
-				yRes, zRes);
-	} else {
-		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
-				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
-				yRes, zRes);
-	}
-}
-
-__device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
 		double &yLocRight, double &zLocRight, double &xVel, double &yVel,
@@ -1080,6 +1072,40 @@ void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 	zVel = zVel + forceValueRight * (zLocRight - zLoc) / linkLengthRight;
 
 }
+
+__device__
+void handleSceForceNodesBasic(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
+		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress) {
+	if (isSameCell(nodeRank1, nodeRank2)) {
+		calculateAndAddIntraForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	} else {
+		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	}
+}
+
+__device__
+void handleSceForceNodesDisc(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
+		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress,
+		double* _nodeGrowProAddr) {
+	if (isSameCell(nodeRank1, nodeRank2)) {
+		calAndAddIntraForceDiv(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2],
+				_nodeGrowProAddr[nodeRank2], xRes, yRes, zRes);
+	} else {
+		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
+				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
+				yRes, zRes);
+	}
+}
+
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,

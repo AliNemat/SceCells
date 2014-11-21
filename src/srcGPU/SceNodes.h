@@ -278,6 +278,12 @@ __device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
+
+__device__
+void calAndAddIntraForceDiv(double &xPos, double &yPos, double &zPos,
+		double &xPos2, double &yPos2, double &zPos2, double &growPro,
+		double &xRes, double &yRes, double &zRes);
+
 __device__
 void calculateAndAddInterForceDiffType(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -294,6 +300,13 @@ void handleSceForceNodesBasic(uint &nodeRank1, uint &nodeRank2, double &xPos,
 		double &yPos, double &zPos, double &xPos2, double &yPos2, double &zPos2,
 		double &xRes, double &yRes, double &zRes, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress);
+
+__device__
+void handleSceForceNodesDisc(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& zPos, double& xPos2, double& yPos2, double& zPos2,
+		double& xRes, double& yRes, double& zRes, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double* _nodeLocZAddress,
+		double* _nodeGrowProAddr);
 
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
