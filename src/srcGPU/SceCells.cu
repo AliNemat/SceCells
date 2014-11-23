@@ -1205,3 +1205,12 @@ std::vector<CVector> SceCells::getAllCellCenters() {
 	}
 	return result;
 }
+
+std::vector<double> SceCells::getGrowthProgressVec() {
+	thrust::host_vector<double> growthProVec = cellInfoVecs.growthProgress;
+	std::vector<double> result;
+	for (uint i = 0; i < allocPara.currentActiveCellCount; i++) {
+		result.push_back(growthProVec[i]);
+	}
+	return result;
+}

@@ -76,8 +76,18 @@ public:
 	 */
 	void outputImg_formatBMP(std::string fileName,
 			std::vector<std::vector<int> > &labelMatrix);
+
+	/**
+	 * output stat file for polygon counting.
+	 *
+	 * @param growthProVec vector with information of cell's growth progress. optional.
+	 *    supplying growth progress vector indicates statistics will include mitiotic shift effect.
+	 *    by supplying such vector, the method will print out statistics for dividing and non-dividing cells.
+	 */
 	void outputStat_PolygonCounting(std::string fileName, uint step,
-			std::vector<std::vector<int> > &labelMatrix);
+			std::vector<std::vector<int> > &labelMatrix,
+			std::vector<double> growthProVec = std::vector<double>());
+
 	virtual ~ResAnalysisHelper();
 };
 

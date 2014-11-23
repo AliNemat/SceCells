@@ -420,5 +420,7 @@ void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 	std::string imgFileName = imageFileNameBase + imgNameRank + ".bmp";
 
 	resHelper.outputImg_formatBMP(imgFileName, labelMatrix);
-	resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix);
+	std::vector<double> growthProVec = cells.getGrowthProgressVec();
+	resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix,
+			growthProVec);
 }

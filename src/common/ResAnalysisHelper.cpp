@@ -335,7 +335,8 @@ void ResAnalysisHelper::transformToRGB(int& labelValue, int& maxLabelValue,
 }
 
 void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
-		uint step, std::vector<std::vector<int> >& labelMatrix) {
+		uint step, std::vector<std::vector<int> >& labelMatrix,
+		std::vector<double> growthProVec) {
 	// check if input size is valid.
 	if (labelMatrix.size() == 0) {
 		throw SceException("input label matrix must not be empty",
@@ -407,36 +408,86 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 		}
 	}
 
-	std::tr1::unordered_map<int, int> polygonCountingRes;
-	std::tr1::unordered_map<int, int>::iterator it;
-	for (uint i = 0; i < labelSetSize; i++) {
-		it = polygonCountingRes.find(sideCount[i]);
-		if (it == polygonCountingRes.end()) {
-			polygonCountingRes.insert(std::pair<int, int>(sideCount[i], 1));
-		} else {
-			it->second = it->second + 1;
+	// Size =0 means the vector is not supplied and we do not need to consider mitiotic difference
+	if (growthProVec.size() == 0) {
+		std::tr1::unordered_map<int, int> polygonCountingRes;
+		std::tr1::unordered_map<int, int>::iterator it;
+		for (uint i = 0; i < labelSetSize; i++) {
+			it = polygonCountingRes.find(sideCount[i]);
+			if (it == polygonCountingRes.end()) {
+				polygonCountingRes.insert(std::pair<int, int>(sideCount[i], 1));
+			} else {
+				it->second = it->second + 1;
+			}
 		}
+
+		// -1 comes from boundary cells and should be removed.
+		it = polygonCountingRes.find(-1);
+		if (it != polygonCountingRes.end()) {
+			polygonCountingRes.erase(it);
+		}
+
+		ofstream ofs;
+		ofs.open(fileName.c_str(), ios::app);
+		ofs << step << " ";
+		for (it = polygonCountingRes.begin(); it != polygonCountingRes.end();
+				++it) {
+			ofs << it->first << "," << it->second << " ";
+		}
+		ofs << std::endl;
+		ofs.close();
+	} else {
+		assert(growthProVec.size() == labelSetSize);
+		double mitiThreshold = globalConfigVars.getConfigValue(
+				"MitioticThreshold").toDouble();
+		std::tr1::unordered_map<int, int> polyCountResMiti, polyCountResNonMiti;
+		std::tr1::unordered_map<int, int>::iterator it;
+		for (uint i = 0; i < labelSetSize; i++) {
+			if (growthProVec[i] > mitiThreshold) {
+				it = polyCountResMiti.find(sideCount[i]);
+				if (it == polyCountResMiti.end()) {
+					polyCountResMiti.insert(
+							std::pair<int, int>(sideCount[i], 1));
+				} else {
+					it->second = it->second + 1;
+				}
+			} else {
+				it = polyCountResNonMiti.find(sideCount[i]);
+				if (it == polyCountResNonMiti.end()) {
+					polyCountResNonMiti.insert(
+							std::pair<int, int>(sideCount[i], 1));
+				} else {
+					it->second = it->second + 1;
+				}
+			}
+		}
+
+		// -1 comes from boundary cells and should be removed.
+		it = polyCountResMiti.find(-1);
+		if (it != polyCountResMiti.end()) {
+			polyCountResMiti.erase(it);
+		}
+		it = polyCountResNonMiti.find(-1);
+		if (it != polyCountResNonMiti.end()) {
+			polyCountResNonMiti.erase(it);
+		}
+
+		ofstream ofs;
+		ofs.open(fileName.c_str(), ios::app);
+		ofs << step << " ";
+		for (it = polyCountResMiti.begin(); it != polyCountResMiti.end();
+				++it) {
+			ofs << it->first << "," << it->second << " ";
+		}
+		ofs << "# ";
+		for (it = polyCountResNonMiti.begin(); it != polyCountResNonMiti.end();
+				++it) {
+			ofs << it->first << "," << it->second << " ";
+		}
+		ofs << std::endl;
+		ofs.close();
 	}
 
-	// -1 comes from boundary cells and should be removed.
-	it = polygonCountingRes.find(-1);
-	if (it != polygonCountingRes.end()) {
-		polygonCountingRes.erase(it);
-	}
-
-	ofstream ofs;
-	ofs.open(fileName.c_str(), ios::app);
-	ofs << step << " ";
-	for (it = polygonCountingRes.begin(); it != polygonCountingRes.end();
-			++it) {
-		ofs << it->first << "," << it->second << " ";
-	}
-	ofs << std::endl;
-	ofs.close();
-}
-
-ResAnalysisHelper::~ResAnalysisHelper() {
-// TODO Auto-generated destructor stub
 }
 
 void PixelizePara::initFromConfigFile() {
@@ -457,4 +508,7 @@ void PixelizePara::initFromConfigFile() {
 
 	allowedAbsoluteError = globalConfigVars.getConfigValue(
 			"Pixel_Para_Allowed_Error").toDouble();
+}
+
+ResAnalysisHelper::~ResAnalysisHelper() {
 }

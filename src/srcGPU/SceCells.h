@@ -1096,6 +1096,7 @@ public:
 			GrowthDistriMap &region2);
 
 	std::vector<CVector> getAllCellCenters();
+	std::vector<double> getGrowthProgressVec();
 
 	const NodeAllocPara& getAllocPara() const {
 		return allocPara;

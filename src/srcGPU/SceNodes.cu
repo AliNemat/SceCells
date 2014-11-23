@@ -917,7 +917,6 @@ void calAndAddIntraForceDiv(double& xPos, double& yPos, double& zPos,
 			forceValue = -intraPara0 / intraPara2
 					* exp(-linkLength / intraPara2)
 					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
-
 		} else {
 			forceValue = -sceIntraPara[0] / sceIntraPara[2]
 					* exp(-linkLength / sceIntraPara[2])
