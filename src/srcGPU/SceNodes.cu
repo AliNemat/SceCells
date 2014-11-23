@@ -1549,6 +1549,8 @@ void SceNodes::initControlPara(bool isStab) {
 		controlPara.simuType = Beak;
 	} else if (simuTypeConfigValue == 1) {
 		controlPara.simuType = Disc;
+	} else if (simuTypeConfigValue == 2) {
+		controlPara.simuType = SingleCellTest;
 	} else {
 		throw SceException("Simulation Type in config file is not recognized!",
 				ConfigValueException);
@@ -1564,7 +1566,6 @@ void SceNodes::sceForcesPerfTesting() {
 void SceNodes::sceForcesDisc() {
 	prepareSceForceComputation();
 	applySceForcesDisc();
-	//applySceForcesBasic();
 }
 
 double SceNodes::getMaxEffectiveRange() {
@@ -1607,7 +1608,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
-	if (controlPara.simuType == Disc) {
+	if (controlPara.simuType == Disc
+			|| controlPara.simuType == SingleCellTest) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceX.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceY.resize(maxTotalNodeCount);

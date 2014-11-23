@@ -64,7 +64,7 @@ public:
 };
 
 enum SimulationType {
-	Beak, Disc
+	Beak, Disc, SingleCellTest
 };
 
 SimulationType parseTypeFromConfig(int configValue);

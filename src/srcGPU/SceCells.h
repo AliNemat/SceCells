@@ -781,6 +781,19 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 	}
 };
 
+struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
+	double _speed;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AssignFixedGrowth(double fixedSpeed) :
+			_speed(fixedSpeed) {
+	}
+	__host__ __device__
+	CVec3 operator()(const CVec3BoolInt &inputInfo) {
+		return thrust::make_tuple(_speed, 1, 0);
+	}
+};
+
 struct CellInfoVecs {
 	/**
 	 * @param growthProgress is a vector of size maxCellCount.
@@ -837,6 +850,8 @@ struct CellGrowthAuxData {
 	double randomGrowthSpeedMax;
 	// we need help from this parameter to generate better quality pseduo-random numbers.
 	uint randGenAuxPara;
+
+	double fixedGrowthSpeed;
 
 	double* growthFactorMagAddress;
 	double* growthFactorDirXAddress;
@@ -943,10 +958,11 @@ class SceCells {
 
 	void growAtRandom(double d_t);
 
-	void growAlongX(double d_t);
+	void growAlongX(bool isAddPt, double d_t);
 	void growWithStress(double d_t);
 
 	void randomizeGrowth();
+	void setGrowthDirXAxis();
 
 	void computeCenterPos();
 
@@ -1091,6 +1107,8 @@ public:
 			std::vector<SceNodeType> &cellTypes);
 
 	void runAllCellLevelLogicsDisc(double dt);
+
+	void runStretchTest(double dt);
 
 	void runAllCellLevelLogicsBeak(double dt, GrowthDistriMap &region1,
 			GrowthDistriMap &region2);

@@ -198,6 +198,8 @@ SimulationType parseTypeFromConfig(int configValue) {
 		return Beak;
 	} else if (configValue == 1) {
 		return Disc;
+	} else if (configValue == 2) {
+		return SingleCellTest;
 	} else {
 		throw SceException("Simulation type in config file is not defined",
 				ConfigValueException);

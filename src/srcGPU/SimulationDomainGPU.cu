@@ -164,8 +164,6 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 void SimulationDomainGPU::runAllLogic(double dt) {
 	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
 		nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
-		//std::cout << "growth direction is ";
-		//cartilage.getCartPara().growthDir.Print();
 	}
 
 	if (memPara.simuType == Beak) {
@@ -190,6 +188,11 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 	} else if (memPara.simuType == Disc) {
 		cells.runAllCellLevelLogicsDisc(dt);
 	}
+
+	if (memPara.simuType == SingleCellTest) {
+		nodes.sceForcesDisc();
+		cells.runStretchTest(dt);
+	}
 }
 
 void SimulationDomainGPU::readMemPara() {
@@ -199,6 +202,8 @@ void SimulationDomainGPU::readMemPara() {
 		memPara.simuType = Beak;
 	} else if (simuTypeConfigValue == 1) {
 		memPara.simuType = Disc;
+	} else if (simuTypeConfigValue == 2) {
+		memPara.simuType = SingleCellTest;
 	} else {
 		throw SceException("Simulation Type in config file is not recognized!",
 				ConfigValueException);

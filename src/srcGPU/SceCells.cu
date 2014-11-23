@@ -643,6 +643,11 @@ void SceCells::initGrowthAuxData() {
 			"RandomGrowthSpeedMax").toDouble();
 	growthAuxData.randGenAuxPara = globalConfigVars.getConfigValue(
 			"RandomGenerationAuxPara").toDouble();
+
+	if (controlPara.simuType == SingleCellTest) {
+		growthAuxData.fixedGrowthSpeed = globalConfigVars.getConfigValue(
+				"FixedGrowthSpeed").toDouble();
+	}
 }
 
 void SceCells::initialize(SceNodes* nodesInput) {
@@ -1164,6 +1169,13 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	//std::cerr << "after all components move." << std::endl;
 }
 
+void SceCells::runStretchTest(double dt) {
+	this->dt = dt;
+	computeCenterPos();
+	growAlongX(false, dt);
+	moveNodes();
+}
+
 void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 		GrowthDistriMap& region2) {
 	this->dt = dt;
@@ -1188,7 +1200,30 @@ void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 	//std::cerr << "after all components move." << std::endl;
 }
 
-void SceCells::growAlongX(double d_t) {
+void SceCells::growAlongX(bool isAddPt, double d_t) {
+	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
+			* allocPara.maxNodeOfOneCell;
+
+	setGrowthDirXAxis();
+
+	//std::cout << "after copy grow info" << std::endl;
+	updateGrowthProgress();
+	//std::cout << "after update growth progress" << std::endl;
+	decideIsScheduleToGrow();
+	//std::cout << "after decode os schedule to grow" << std::endl;
+	computeCellTargetLength();
+	//std::cout << "after compute cell target length" << std::endl;
+	computeDistToCellCenter();
+	//std::cout << "after compute dist to center" << std::endl;
+	findMinAndMaxDistToCenter();
+	//std::cout << "after find min and max dist" << std::endl;
+	computeLenDiffExpCur();
+	//std::cout << "after compute diff " << std::endl;
+	stretchCellGivenLenDiff();
+
+	if (isAddPt) {
+		addPointIfScheduledToGrow();
+	}
 }
 
 void SceCells::growWithStress(double d_t) {
@@ -1204,6 +1239,18 @@ std::vector<CVector> SceCells::getAllCellCenters() {
 		result.push_back(pos);
 	}
 	return result;
+}
+
+void SceCells::setGrowthDirXAxis() {
+	thrust::fill(cellInfoVecs.growthXDir.begin(),
+			cellInfoVecs.growthXDir.begin() + allocPara.currentActiveCellCount,
+			1.0);
+	thrust::fill(cellInfoVecs.growthYDir.begin(),
+			cellInfoVecs.growthYDir.begin() + allocPara.currentActiveCellCount,
+			0.0);
+	thrust::fill(cellInfoVecs.growthSpeed.begin(),
+			cellInfoVecs.growthSpeed.begin() + allocPara.currentActiveCellCount,
+			growthAuxData.fixedGrowthSpeed);
 }
 
 std::vector<double> SceCells::getGrowthProgressVec() {
