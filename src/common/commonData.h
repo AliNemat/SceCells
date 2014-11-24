@@ -57,8 +57,11 @@ public:
 	~SceException() throw () {
 	}
 	virtual const char* what() const throw () {
-		std::string fullErrorMsg = std::string(
-				_message + ", Exception type: " + toString(_exceptionType));
+		std::string originalMsg = std::string(this->what());
+		std::string fullErrorMsg = originalMsg + ", "
+				+ std::string(
+						_message + ", Exception type: "
+								+ toString(_exceptionType));
 		return fullErrorMsg.c_str();
 	}
 };

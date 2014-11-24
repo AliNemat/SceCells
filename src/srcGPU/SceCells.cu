@@ -661,10 +661,7 @@ void SceCells::initialize(SceNodes* nodesInput) {
 	initCellInfoVecs();
 	initCellNodeInfoVecs();
 	initGrowthAuxData();
-	// reason for adding a small term here is to avoid scenario when checkpoint might add many times
-	// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
-	// this small term we might risk adding one more node.
-	//growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2) + epsilon;
+
 	distributeIsCellRank();
 }
 
@@ -1111,8 +1108,11 @@ void SceCells::readBioPara() {
 			globalConfigVars.getConfigValue("CellFinalLength").toDouble();
 	bioPara.elongationCoefficient = globalConfigVars.getConfigValue(
 			"ElongateCoefficient").toDouble();
-	bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
-			"ChemoCoefficient").toDouble();
+
+	if (controlPara.simuType == Beak) {
+		bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
+				"ChemoCoefficient").toDouble();
+	}
 }
 
 void SceCells::randomizeGrowth() {

@@ -138,12 +138,6 @@ public:
 	std::vector<CVector> stablizeCellCenters(SimulationInitData_V2 &initData);
 
 	/**
-	 * This method will run a variety of tests for a single cell.
-	 * Include but not limited to elongation test and mechanical property test
-	 */
-	void singleCellTest(std::string testConfigFile);
-
-	/**
 	 * Checks if all data fields are valid.
 	 * This methods only loosely checks the data validity.
 	 */
@@ -173,6 +167,11 @@ public:
 	 */
 	vector<vector<int> > outputLabelMatrix(std::string resultNameBase, int rank,
 			PixelizePara &pixelPara);
+
+	/**
+	 * method that prints out the growth progress vector of cells to a file.
+	 */
+	void outputGrowthProgressAuxFile(int step);
 
 	/**
 	 * Post processing for the label matrix.

@@ -27,7 +27,7 @@ if(NOT WIN32)
         )
 endif()
 
-set(DISK_PROJECT_NAME runDiskSimulation)
+set(DISK_PROJECT_NAME runDiscSimulation)
 MESSAGE("Now building " ${DISK_PROJECT_NAME})
 include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
 

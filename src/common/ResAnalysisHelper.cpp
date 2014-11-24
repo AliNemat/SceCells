@@ -18,14 +18,8 @@ std::vector<std::vector<int> > ResAnalysisHelper::outputLabelMatrix(
 		matrixRawData[i].resize(_pixelPara.pixelXDim);
 	}
 
-	//cout << "bb in outputLabelMatrix" << endl;
-	//cout.flush();
-
 	for (uint i = 0; i < nodeLabels.size(); i++) {
-		//std::vector<Index2D> neighborPixels = obtainNeighborPixels(
-		//		nodeLabels[i]);
-		//cout << "bb " << i << "in outputLabelMatrix" << endl;
-		//cout.flush();
+
 		updateRawMatrix(matrixRawData, nodeLabels[i]);
 	}
 	updateLabelMatrix(result, matrixRawData);
@@ -59,18 +53,11 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 			tmpIndex.indexY = j;
 			CVector tmpPos = obtainCenterLoc(tmpIndex);
 			CVector tmpDistVec = nodeLabel.position - tmpPos;
-			//cout << "node pos: ";
-			//nodeLabel.position.Print();
-			//cout << "tmp node pos: ";
-			//tmpPos.Print();
 			double dist = tmpDistVec.getModul();
-			//cout << "distance =  " << dist << endl;
 			if (dist
 					< _pixelPara.effectiveRange
 							+ _pixelPara.allowedAbsoluteError) {
 				result.push_back(tmpIndex);
-				//cout << "pixel X: " << tmpIndex.indexX << "pixel Y:"
-				//		<< tmpIndex.indexY << endl;
 			}
 		}
 	}
@@ -80,14 +67,8 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 void ResAnalysisHelper::updateRawMatrix(
 		std::vector<std::vector<std::vector<LabelWithDist> > >& rawMatrix,
 		NodeWithLabel& nodeLabel) {
-	//cout << "bb 0 in updateRawMatrix" << endl;
-	//cout.flush();
 	std::vector<Index2D> indicies2D = obtainNeighborPixels(nodeLabel);
-	//cout << "bb 1 in updateRawMatrix" << endl;
-	//cout.flush();
 	for (uint i = 0; i < indicies2D.size(); i++) {
-		//cout << "bbb" << i << " in updateRawMatrix" << endl;
-		//cout.flush();
 		LabelWithDist labelDist;
 		labelDist.dist = computeDist(nodeLabel, indicies2D[i]);
 		labelDist.label = nodeLabel.cellRank;

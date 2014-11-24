@@ -415,6 +415,27 @@ vector<vector<int> > SimulationDomainGPU::outputLabelMatrix(
 	return matrix;
 }
 
+void SimulationDomainGPU::outputGrowthProgressAuxFile(int step) {
+	static bool isFirstTime = true;
+	std::string auxDataFileName = globalConfigVars.getConfigValue(
+			"DataOutputFolder").toString()
+			+ globalConfigVars.getConfigValue("GrowthAuxFileName").toString();
+	if (isFirstTime) {
+		std::remove(auxDataFileName.c_str());
+		isFirstTime = false;
+	}
+	ofstream ofs;
+	ofs.open(auxDataFileName.c_str(), ios::app);
+	ofs << step << " ";
+	std::vector<double> growProVec = cells.getGrowthProgressVec();
+	for (std::vector<double>::iterator it = growProVec.begin();
+			it != growProVec.end(); ++it) {
+		ofs << *it << " ";
+	}
+	ofs << std::endl;
+	ofs.close();
+}
+
 void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 		int step, std::string &imageFileNameBase, std::string &statFileName) {
 	ResAnalysisHelper resHelper;
@@ -428,4 +449,5 @@ void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 	std::vector<double> growthProVec = cells.getGrowthProgressVec();
 	resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix,
 			growthProVec);
+	outputGrowthProgressAuxFile(step);
 }

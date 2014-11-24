@@ -43,31 +43,67 @@ struct LabelWithDist {
 	double dist;
 };
 
+/**
+ * Used for analyze result from the simulation.
+ */
 class ResAnalysisHelper {
 	PixelizePara _pixelPara;
 	double _pixelSpacing;
 	/**
-	 * This variable is used for
+	 * This integer indicates how many pixels should be extended.
 	 */
 	uint _integerRadius;
+	/**
+	 * compute distance from node to a pixel.
+	 */
 	double computeDist(NodeWithLabel& nodeLabel, Index2D &index2D);
+	/**
+	 * obtain the center location of a pixel.
+	 */
 	CVector obtainCenterLoc(Index2D &index2D);
+
+	/**
+	 * given current exact position,
+	 */
 	Index2D obtainIndex2D(CVector &pos);
+
+	/**
+	 * given a node label, return all of the neighbor pixels.
+	 */
 	std::vector<Index2D> obtainNeighborPixels(NodeWithLabel &nodeLabel);
+	/**
+	 * updates raw matrix by inserting a data point which contains information of node label and
+	 * distance of the label from pixel.
+	 */
 	void updateRawMatrix(
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix,
 			NodeWithLabel &nodeLabel);
+	/**
+	 * Generate a result label matrix given raw matrix.
+	 * Raw matrix is a matrix which all entries are list of possible labels with their shortest distance.
+	 */
 	void updateLabelMatrix(std::vector<std::vector<int> > &resultMatrix,
 			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix);
+	/**
+	 * Convert the matrix which is labeled by cell rank to three matrices,
+	 * Red, Green, Blue, respectively.
+	 */
 	void generateRGBMatrix(std::vector<std::vector<int> > &labelMatrix,
 			std::vector<std::vector<double> > &red,
 			std::vector<std::vector<double> > &green,
 			std::vector<std::vector<double> > &blue);
+	/**
+	 * Given a label value and maximum possible label value, generate three values,
+	 * representing red, green, blue weight respectively.
+	 */
 	void transformToRGB(int &labelValue, int &maxLabelValue, double &rValue,
 			double &gValue, double &bValue);
 public:
 	ResAnalysisHelper();
 	void setPixelPara(PixelizePara &pixelPara);
+	/**
+	 * outputs label matrix given vector of node labels.
+	 */
 	std::vector<std::vector<int> > outputLabelMatrix(
 			std::vector<NodeWithLabel> &nodeLabels);
 	/**
@@ -83,6 +119,9 @@ public:
 	 * @param growthProVec vector with information of cell's growth progress. optional.
 	 *    supplying growth progress vector indicates statistics will include mitiotic shift effect.
 	 *    by supplying such vector, the method will print out statistics for dividing and non-dividing cells.
+	 * @param fileName name of the polygon counting statistical data file.
+	 * @param step current step.
+	 * @param labelMatrix the label matrix for differentiate cells.
 	 */
 	void outputStat_PolygonCounting(std::string fileName, uint step,
 			std::vector<std::vector<int> > &labelMatrix,

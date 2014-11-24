@@ -131,48 +131,8 @@ void SceNodes::readMechPara() {
 			<< "," << mechPara.sceIntraParaCPU[3] << ","
 			<< mechPara.sceIntraParaCPU[4] << std::endl;
 
-	//getchar();
-
-	double U0_Diff =
-			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Diff_U0_DivFactor").toDouble();
-	double V0_Diff =
-			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Diff_V0_DivFactor").toDouble();
-	double k1_Diff =
-			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Diff_k1_DivFactor").toDouble();
-	double k2_Diff =
-			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Diff_k2_DivFactor").toDouble();
-
-	mechPara.sceInterDiffParaCPU[0] = U0_Diff;
-	mechPara.sceInterDiffParaCPU[1] = V0_Diff;
-	mechPara.sceInterDiffParaCPU[2] = k1_Diff;
-	mechPara.sceInterDiffParaCPU[3] = k2_Diff;
-	mechPara.sceInterDiffParaCPU[4] = interLinkEffectiveRange;
-
-	double U0_Bdry =
-			globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Bdry_U0_DivFactor").toDouble();
-	double V0_Bdry =
-			globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Bdry_V0_DivFactor").toDouble();
-	double k1_Bdry =
-			globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Bdry_k1_DivFactor").toDouble();
-	double k2_Bdry =
-			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-					/ globalConfigVars.getConfigValue(
-							"InterCell_Bdry_k2_DivFactor").toDouble();
 	if (controlPara.simuType == Beak) {
+
 		double U0_Cart =
 				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
 						/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
@@ -199,6 +159,23 @@ void SceNodes::readMechPara() {
 
 		double linearParameter = globalConfigVars.getConfigValue(
 				"Epi_linear_parameter").toDouble();
+
+		double U0_Bdry =
+				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Bdry_U0_DivFactor").toDouble();
+		double V0_Bdry =
+				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Bdry_V0_DivFactor").toDouble();
+		double k1_Bdry =
+				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Bdry_k1_DivFactor").toDouble();
+		double k2_Bdry =
+				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Bdry_k2_DivFactor").toDouble();
 
 		mechPara.sceProfileParaCPU[0] = U0_Bdry;
 		mechPara.sceProfileParaCPU[1] = V0_Bdry;
@@ -229,6 +206,29 @@ void SceNodes::readMechPara() {
 		mechPara.sceECMParaCPU[2] = k1_ECM;
 		mechPara.sceECMParaCPU[3] = k2_ECM;
 		mechPara.sceECMParaCPU[4] = interLinkEffectiveRange;
+		double U0_Diff =
+				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Diff_U0_DivFactor").toDouble();
+		double V0_Diff =
+				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Diff_V0_DivFactor").toDouble();
+		double k1_Diff =
+				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Diff_k1_DivFactor").toDouble();
+		double k2_Diff =
+				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
+						/ globalConfigVars.getConfigValue(
+								"InterCell_Diff_k2_DivFactor").toDouble();
+
+		mechPara.sceInterDiffParaCPU[0] = U0_Diff;
+		mechPara.sceInterDiffParaCPU[1] = V0_Diff;
+		mechPara.sceInterDiffParaCPU[2] = k1_Diff;
+		mechPara.sceInterDiffParaCPU[3] = k2_Diff;
+		mechPara.sceInterDiffParaCPU[4] = interLinkEffectiveRange;
+
 	} else if (controlPara.simuType == Disc) {
 		double U0_Intra_Div =
 				globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
@@ -326,7 +326,6 @@ void SceNodes::copyParaToGPUConstMem() {
 	cudaMemcpyToSymbol(sceInterDiffPara, mechPara.sceInterDiffParaCPU,
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceECMPara, mechPara.sceECMParaCPU, 5 * sizeof(double));
-	//std::cout << "finished SceNodes:" << std::endl;
 
 }
 
