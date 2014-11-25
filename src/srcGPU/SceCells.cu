@@ -1152,7 +1152,7 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	computeCenterPos();
 	//std::cerr << "after compute center position." << std::endl;
 
-	if (!nodes->getControlPara().isStab) {
+	if (nodes->getControlPara().controlSwitchs.stab == OFF) {
 		growAtRandom(dt);
 		//grow2DTwoRegions(dt, region1, region2);
 		//std::cerr << "after grow cells" << std::endl;
@@ -1185,7 +1185,7 @@ void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 	// for wind disk project, switch from chemical based growth to random growth
 	//growAtRandom(dt);
 
-	if (!nodes->getControlPara().isStab) {
+	if (nodes->getControlPara().controlSwitchs.stab == OFF) {
 		grow2DTwoRegions(dt, region1, region2);
 		//std::cerr << "after grow cells" << std::endl;
 		distributeIsActiveInfo();

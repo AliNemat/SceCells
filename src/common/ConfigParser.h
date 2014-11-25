@@ -55,6 +55,10 @@ public:
 	void insertData(std::string varName, std::string varValue);
 	void updateData(std::string varName, std::string varValue);
 	ConfigVarValue getConfigValue(std::string varName);
+	/**
+	 * If key name is not found, the switch state would be on by default.
+	 */
+	SwitchState getSwitchState(std::string varName);
 	void printAll();
 	void updateFromConfig(GlobalConfigVars &otherConfigVar);
 };

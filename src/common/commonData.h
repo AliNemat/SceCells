@@ -43,6 +43,14 @@ double nodeTypeToScale(SceNodeType type);
 
 bool valueToType(int value);
 
+/**
+ * There are only two possible states of switch:
+ * On and Off
+ */
+enum SwitchState {
+	ON, OFF
+};
+
 class SceException: public std::exception {
 private:
 	std::string _message;
@@ -72,9 +80,17 @@ enum SimulationType {
 
 SimulationType parseTypeFromConfig(int configValue);
 
+struct ControlSwitchs {
+	SwitchState stab;
+	SwitchState outputLabelMatrix;
+	SwitchState outputBmpImg;
+	SwitchState outputVtkFile;
+	SwitchState outputStat;
+};
+
 struct ControlPara {
 	SimulationType simuType;
-	bool isStab;
+	ControlSwitchs controlSwitchs;
 };
 
 /**

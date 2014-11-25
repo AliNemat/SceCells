@@ -1554,7 +1554,20 @@ void SceNodes::initControlPara(bool isStab) {
 		throw SceException("Simulation Type in config file is not recognized!",
 				ConfigValueException);
 	}
-	controlPara.isStab = isStab;
+	controlPara.controlSwitchs.outputBmpImg = globalConfigVars.getSwitchState(
+			"Switch_OutputBMP");
+	controlPara.controlSwitchs.outputLabelMatrix =
+			globalConfigVars.getSwitchState("Switch_OutputLabelMatrix");
+	controlPara.controlSwitchs.outputStat = globalConfigVars.getSwitchState(
+			"Switch_OutputStat");
+	controlPara.controlSwitchs.outputVtkFile = globalConfigVars.getSwitchState(
+			"Switch_OutputVtk");
+	if (isStab) {
+		controlPara.controlSwitchs.stab = ON;
+	} else {
+		controlPara.controlSwitchs.stab = OFF;
+	}
+
 }
 
 void SceNodes::sceForcesPerfTesting() {

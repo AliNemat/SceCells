@@ -311,6 +311,19 @@ ConfigVarsCollection ConfigParser::parseConfigCollection(
 	return result;
 }
 
+SwitchState GlobalConfigVars::getSwitchState(std::string varName) {
+	SwitchState swiState = ON;
+	try {
+		ConfigVarValue configVal = getConfigValue(varName);
+		if (configVal.toInt() == 0) {
+			swiState = OFF;
+		}
+		return swiState;
+	} catch (std::exception &e) {
+		return swiState;
+	}
+}
+
 void GlobalConfigVars::updateFromConfig(GlobalConfigVars& otherConfigVar) {
 	std::vector<ConfigVar> configVarVector = otherConfigVar.getConfigVars();
 	std::vector<ConfigVar>::iterator it = configVarVector.begin();
