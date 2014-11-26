@@ -84,11 +84,12 @@ double TimedObject::countSceMove(uint size) {
 	double gridSpacing =
 			globalConfigVars.getConfigValue("DOMAIN_GRID_SPACING").toDouble();
 
-	std::vector<double> emptyVector;
-	std::vector<double> nodeXVector(size * 20);
-	std::vector<double> nodeYVector(size * 20);
+	std::vector<CVector> emptyVector;
+	// pay attention that the size here is fixed.
+	std::vector<CVector> nodePoss;
+	nodePoss.resize(size * 20);
 
-	utils.transformVals(nodeXVector, nodeYVector, nodeInitPos, centerInitPos);
+	utils.transformVals(nodePoss, nodeInitPos, centerInitPos);
 
 	SceNodes nodes = SceNodes(0, 0, 0, 0, 0, size, 20, false);
 	nodes.initDimension(minX, maxX, minY, maxY, gridSpacing);
@@ -97,9 +98,9 @@ double TimedObject::countSceMove(uint size) {
 	para.currentActiveCellCount = size;
 	nodes.setAllocPara(para);
 
-	nodes.initValues(emptyVector, emptyVector, emptyVector, emptyVector,
-			emptyVector, emptyVector, emptyVector, emptyVector, nodeXVector,
-			nodeYVector);
+	nodes.initValues_v2(emptyVector, emptyVector, emptyVector, emptyVector,
+			emptyVector, nodePoss);
+
 	thrust::fill(nodes.getInfoVecs().nodeIsActive.begin(),
 			nodes.getInfoVecs().nodeIsActive.end(), true);
 
