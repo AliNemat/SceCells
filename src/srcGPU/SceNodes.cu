@@ -100,11 +100,6 @@ void SceNodes::readMechPara() {
 	mechPara.sceInterParaCPU[3] = k2;
 	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
 
-	std::cout << "inter parameters:" << mechPara.sceInterParaCPU[0] << ","
-			<< mechPara.sceInterParaCPU[1] << "," << mechPara.sceInterParaCPU[2]
-			<< "," << mechPara.sceInterParaCPU[3] << ","
-			<< mechPara.sceInterParaCPU[4] << std::endl;
-
 	double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_U0_DivFactor").toDouble();
@@ -125,11 +120,6 @@ void SceNodes::readMechPara() {
 	mechPara.sceIntraParaCPU[2] = k1_Intra;
 	mechPara.sceIntraParaCPU[3] = k2_Intra;
 	mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
-
-	std::cout << "intra parameters:" << mechPara.sceIntraParaCPU[0] << ","
-			<< mechPara.sceIntraParaCPU[1] << "," << mechPara.sceIntraParaCPU[2]
-			<< "," << mechPara.sceIntraParaCPU[3] << ","
-			<< mechPara.sceIntraParaCPU[4] << std::endl;
 
 	if (controlPara.simuType == Beak) {
 
@@ -262,9 +252,8 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxTotalCellCount, uint maxNodeInCell, bool isStab) {
 	initControlPara(isStab);
 	readDomainPara();
-	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount,
-			maxCartNodeCount, maxTotalECMCount, maxNodeInECM, maxTotalCellCount,
-			maxNodeInCell);
+	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount, maxCartNodeCount,
+			maxTotalECMCount, maxNodeInECM, maxTotalCellCount, maxNodeInCell);
 	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
 			+ maxCartNodeCount + allocPara.maxTotalECMNodeCount
 			+ allocPara.maxTotalCellNodeCount;
@@ -373,7 +362,7 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 	return result;
 }
 
-void SceNodes::initValues_v2(std::vector<CVector>& initBdryCellNodePos,
+void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 		std::vector<CVector>& initProfileNodePos,
 		std::vector<CVector>& initCartNodePos,
 		std::vector<CVector>& initECMNodePos,
@@ -392,7 +381,6 @@ void SceNodes::initValues_v2(std::vector<CVector>& initBdryCellNodePos,
 	// find the begining position of MX cells.
 	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCount;
 
-	//std::cerr << "before copying arrays" << endl;
 	std::vector<double> initBdryCellNodePosX = getArrayXComp(
 			initBdryCellNodePos);
 	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
@@ -427,8 +415,6 @@ void SceNodes::initValues_v2(std::vector<CVector>& initBdryCellNodePos,
 			infoVecs.nodeLocY.begin() + beginAddressOfECM);
 
 	for (int i = 0; i < initECMNodePosX.size(); i++) {
-		//std::cout << "i + beginAddressOfECM = " << (i + beginAddressOfECM)
-		//		<< "nodeLocX =" << infoVecs.nodeLocX[i + beginAddressOfECM]
 		assert(infoVecs.nodeLocX[i + beginAddressOfECM] == initECMNodePosX[i]);
 		assert(!isnan(initECMNodePosX[i]));
 	}
@@ -1191,7 +1177,7 @@ void SceNodes::extendBuckets2D() {
 
 	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
 			auxVecs.bucketKeysExpanded.end(), UINT_MAX);
-//std::cout << "number out of range = " << numberOfOutOfRange << std::endl;
+
 	int sizeBeforeShrink = auxVecs.bucketKeysExpanded.size();
 	int numberInsideRange = sizeBeforeShrink - numberOfOutOfRange;
 	thrust::sort_by_key(auxVecs.bucketKeysExpanded.begin(),

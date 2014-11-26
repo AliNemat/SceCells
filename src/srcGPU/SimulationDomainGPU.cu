@@ -127,7 +127,7 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 
 	assert(nodes.getAllocPara().startPosProfile == bdryNodeCount);
 
-	nodes.initValues_v2(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
+	nodes.initValues(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
 			initECMNodeVec, initFNMNodeVec, initMXNodeVec);
 
 	/**

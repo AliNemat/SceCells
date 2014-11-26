@@ -24,8 +24,7 @@ CVector CellInitHelper::getPointGivenAngle(double currentAngle, double r,
 
 RawDataInput CellInitHelper::generateRawInputWithProfile(
 		std::vector<CVector> &cellCenterPoss, bool isInnerBdryIncluded) {
-	cout << "begining of generateRawInputWithProfile" << endl;
-	cout.flush();
+
 	RawDataInput rawData;
 	vector<CVector> outsideBdryNodePos;
 	vector<CVector> outsideProfileNodePos;
@@ -37,35 +36,25 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 	double genBdryRatio =
 			globalConfigVars.getConfigValue("GenBdrySpacingRatio").toDouble();
 
-	cout << "before calling generateMesh2DWithProfile" << endl;
-	cout.flush();
-
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DWithProfile(
 			bdryInputFileName, genBdryRatio, isInnerBdryIncluded);
 
-	cout << "after calling generateMesh2DWithProfile" << endl;
-	cout.flush();
-
 	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getFinalBdryPts();
-	cout << "breakpoint 1" << endl;
-	cout.flush();
+
 	std::vector<GEOMETRY::Point2D> profilePoints = mesh.getFinalProfilePts();
-	cout << "breakpoint 2" << endl;
-	cout.flush();
+
 	for (uint i = 0; i < bdryPoints.size(); i++) {
 		outsideBdryNodePos.push_back(
 				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	}
-	cout << "breakpoint 3" << endl;
-	cout.flush();
+
 	rawData.bdryNodes = outsideBdryNodePos;
 
 	for (uint i = 0; i < profilePoints.size(); i++) {
 		outsideProfileNodePos.push_back(
 				CVector(profilePoints[i].getX(), profilePoints[i].getY(), 0));
 	}
-	cout << "breakpoint 4" << endl;
-	cout.flush();
+
 	rawData.profileNodes = outsideProfileNodePos;
 
 	// calculate average length of profile links
@@ -75,10 +64,6 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 				- outsideProfileNodePos[i + 1];
 		sumLength += tmpVec.getModul();
 	}
-	double aveLen = sumLength / (profilePoints.size() - 1);
-	cout << "average length = " << aveLen << endl;
-	//int jj;
-	//cin >> jj;
 
 	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
 		CVector centerPos = cellCenterPoss[i];
@@ -90,11 +75,9 @@ RawDataInput CellInitHelper::generateRawInputWithProfile(
 		}
 
 	}
-	cout << "breakpoint 5" << endl;
-	cout.flush();
+
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
-	cout << "end of generateRawInputWithProfile" << endl;
-	cout.flush();
+
 	return rawData;
 }
 
@@ -114,28 +97,6 @@ RawDataInput CellInitHelper::generateRawInput_simu(
 		GEOMETRY::MeshInput input = meshGen.obtainMeshInput();
 		baseRawInput.cartilageData = meshGen.obtainCartilageData(mesh, input);
 
-		std::cout << "non tip verticies size = "
-				<< baseRawInput.cartilageData.nonTipVerticies.size()
-				<< std::endl;
-		std::cout << " tip verticies size = "
-				<< baseRawInput.cartilageData.tipVerticies.size() << std::endl;
-
-		std::cout << " grow node 1 index = "
-				<< baseRawInput.cartilageData.growNode1Index_on_tip
-				<< std::endl;
-		std::cout << " grow node 2 index = "
-				<< baseRawInput.cartilageData.growNode2Index_on_tip
-				<< std::endl;
-
-		std::cout << " grow behind node 1 index = "
-				<< baseRawInput.cartilageData.growNodeBehind1Index << std::endl;
-		std::cout << " grow behind node 2 index = "
-				<< baseRawInput.cartilageData.growNodeBehind2Index << std::endl;
-
-		std::cout << " grow povit node 1 index = "
-				<< baseRawInput.cartilageData.pivotNode1Index << std::endl;
-		std::cout << " grow povit node 2 index = "
-				<< baseRawInput.cartilageData.pivotNode2Index << std::endl;
 		baseRawInput.isStab = false;
 		baseRawInput.simuType = simuType;
 		return baseRawInput;
@@ -161,9 +122,6 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartRawData.tipVerticies[cartRawData.growNode1Index_on_tip] = tmpPos;
 	cartPara.growNode1Index = 0;
 
-	std::cout << "finished step 1 " << std::endl;
-	std::cout.flush();
-
 	// step 2, switch tip node 2 to pos 1
 	tmpPos = cartRawData.tipVerticies[1];
 	cartRawData.tipVerticies[1] =
@@ -172,9 +130,6 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartPara.growNode2Index = 1;
 	cartPara.tipNodeStartPos = 2;
 	cartPara.tipNodeIndexEnd = cartRawData.tipVerticies.size();
-
-	std::cout << "finished step 2 " << std::endl;
-	std::cout.flush();
 
 	// step 3, calculate size for tip nodes
 	double tipMaxExpansionRatio = globalConfigVars.getConfigValue(
@@ -192,9 +147,6 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 	cartPara.growNodeBehind2Index = cartPara.nonTipNodeStartPos
 			+ cartRawData.growNodeBehind2Index;
 
-	std::cout << "finished step 3 " << std::endl;
-	std::cout.flush();
-
 	// step 4, calculate size for all nodes
 	double cartmaxExpRatio = globalConfigVars.getConfigValue(
 			"CartMaxExpansionRatio").toDouble();
@@ -202,17 +154,11 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 			+ cartRawData.nonTipVerticies.size()) * cartmaxExpRatio;
 	cartPara.nodeIndexTotal = maxCartNodeSize;
 
-	std::cout << "finished step 4 " << std::endl;
-	std::cout.flush();
-
 	// step 5, initialize the first part of initNodePos
 	initNodePos.resize(cartPara.nodeIndexTotal);
 	for (uint i = 0; i < cartRawData.tipVerticies.size(); i++) {
 		initNodePos[i] = cartRawData.tipVerticies[i];
 	}
-
-	std::cout << "finished step 5 " << std::endl;
-	std::cout.flush();
 
 	// step 6, initialize the second part of initNodePos
 	for (uint i = 0; i < cartRawData.nonTipVerticies.size(); i++) {
@@ -220,34 +166,10 @@ void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 				cartRawData.nonTipVerticies[i];
 	}
 
-	std::cout << "finished step 6 " << std::endl;
-	std::cout.flush();
-
 	for (uint i = 0; i < initNodePos.size(); i++) {
 		initNodePos[i].Print();
 	}
 
-	std::cout << "In cart para, grow node 1 index = " << cartPara.growNode1Index
-			<< std::endl;
-	std::cout << "In cart para, grow node 2 index = " << cartPara.growNode2Index
-			<< std::endl;
-	std::cout << "In cart para, tip node index end = "
-			<< cartPara.tipNodeIndexEnd << std::endl;
-	std::cout << "In cart para, grow node 1 behind index = "
-			<< cartPara.growNodeBehind1Index << std::endl;
-	std::cout << "In cart para, grow node 2 behind index = "
-			<< cartPara.growNodeBehind2Index << std::endl;
-	std::cout << "In cart para, node index end = " << cartPara.nodeIndexEnd
-			<< std::endl;
-	std::cout << "In cart para, node index total = " << cartPara.nodeIndexTotal
-			<< std::endl;
-	std::cout << "In cart para, pivot node 1 index = "
-			<< cartPara.pivotNode1Index << std::endl;
-	std::cout << "In cart para, pivot node 2 index = "
-			<< cartPara.pivotNode2Index << std::endl;
-
-	//int jj;
-	//cin >> jj;
 }
 
 void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
@@ -286,7 +208,6 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 	}
 
 	uint initTotalCellCount = rawData.initCellNodePoss.size();
-//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryCellNodePosX.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initBdryCellNodePosY.resize(rawData.bdryNodes.size(), 0.0);
 	initData.initProfileNodePosX.resize(rawData.profileNodes.size());
@@ -303,51 +224,22 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
 	}
 
-	cout << "after fnm calculation, size of cellType is now "
-			<< initData.cellTypes.size() << endl;
-
 	for (uint i = 0; i < MxCellCount; i++) {
 		initData.cellTypes.push_back(MX);
 		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
 	}
 
-	cout << "after mx calculation, size of cellType is now "
-			<< initData.cellTypes.size() << endl;
-
-	cout << "begin init bdry pos:" << endl;
-
-	cout << "size of bdryNodes is " << rawData.bdryNodes.size() << endl;
-	cout << "size of initBdryCellNodePos = "
-			<< initData.initBdryCellNodePosX.size() << endl;
-
-	cout << "size of profileNodes is " << rawData.profileNodes.size() << endl;
-	cout << "size of initBdryCellNodePos = "
-			<< initData.initProfileNodePosX.size() << endl;
-//int jj;
-//cin>>jj;
-
 	for (uint i = 0; i < rawData.bdryNodes.size(); i++) {
 		initData.initBdryCellNodePosX[i] = rawData.bdryNodes[i].x;
 		initData.initBdryCellNodePosY[i] = rawData.bdryNodes[i].y;
-		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
-		//		<< ")" << endl;
 	}
 
 	for (uint i = 0; i < rawData.profileNodes.size(); i++) {
 		initData.initProfileNodePosX[i] = rawData.profileNodes[i].x;
 		initData.initProfileNodePosY[i] = rawData.profileNodes[i].y;
-		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
-		//		<< ")" << endl;
 	}
 
 	uint index;
-	cout << "begin init fnm pos:" << endl;
-	cout << "current size is" << initData.initFNMCellNodePosX.size() << endl;
-	cout << "try to resize to: " << maxNodePerCell * FnmCellCount << endl;
-
-	cout << "size of fnm pos: " << initData.initFNMCellNodePosX.size() << endl;
-
-	cout.flush();
 
 	uint ECMInitNodeCount = rawData.initECMNodePoss.size();
 	for (uint i = 0; i < ECMCount; i++) {
@@ -369,8 +261,6 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 					+ rawData.initCellNodePoss[j].x;
 			initData.initFNMCellNodePosY[index] = rawData.FNMCellCenters[i].y
 					+ rawData.initCellNodePoss[j].y;
-			//cout << "(" << initData.initFNMCellNodePosX[index] << ","
-			//		<< initData.initFNMCellNodePosY[index] << ")" << endl;
 		}
 	}
 
@@ -381,11 +271,8 @@ SimulationInitData CellInitHelper::initInputsV2(RawDataInput &rawData) {
 					+ rawData.initCellNodePoss[j].x;
 			initData.initMXCellNodePosY[index] = rawData.MXCellCenters[i].y
 					+ rawData.initCellNodePoss[j].y;
-			//cout << "(" << initData.initMXCellNodePosX[index] << ","
-			//		<< initData.initMXCellNodePosY[index] << ")" << endl;
 		}
 	}
-//cout << "finished init inputs, press any key to continue" << endl;
 
 	return initData;
 }
@@ -411,14 +298,12 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	//uint initTotalECMCount = rawData.ECMCenters.size();
 	initData.initBdryNodeVec.resize(rawData.bdryNodes.size());
 	initData.initProfileNodeVec.resize(rawData.profileNodes.size());
-	std::cout << "before beak node init" << std::endl;
-	std::cout.flush();
+
 	if (simuType == Beak && !initData.isStab) {
 		transformRawCartData(rawData.cartilageData, initData.cartPara,
 				initData.initCartNodeVec);
 	}
-	std::cout << "after beak node init" << std::endl;
-	std::cout.flush();
+
 	initData.initECMNodeVec.resize(maxNodePerECM * ECMCount);
 	initData.initFNMNodeVec.resize(maxNodePerCell * FnmCellCount);
 	initData.initMXNodeVec.resize(maxNodePerCell * MxCellCount);
@@ -428,49 +313,20 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
 	}
 
-	cout << "after fnm calculation, size of cellType is now "
-			<< initData.cellTypes.size() << endl;
-
 	for (uint i = 0; i < MxCellCount; i++) {
 		initData.cellTypes.push_back(MX);
 		initData.numOfInitActiveNodesOfCells.push_back(initTotalCellCount);
 	}
 
-	cout << "after mx calculation, size of cellType is now "
-			<< initData.cellTypes.size() << endl;
-
-	cout << "begin init bdry pos:" << endl;
-
-	cout << "size of bdryNodes is " << rawData.bdryNodes.size() << endl;
-	cout << "size of initBdryCellNodePos = " << initData.initBdryNodeVec.size()
-			<< endl;
-
-	cout << "size of profileNodes is " << rawData.profileNodes.size() << endl;
-	cout << "size of initBdryCellNodePos = "
-			<< initData.initProfileNodeVec.size() << endl;
-	//int jj;
-	//cin>>jj;
-
 	for (uint i = 0; i < rawData.bdryNodes.size(); i++) {
 		initData.initBdryNodeVec[i] = rawData.bdryNodes[i];
-		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
-		//		<< ")" << endl;
 	}
 
 	for (uint i = 0; i < rawData.profileNodes.size(); i++) {
 		initData.initProfileNodeVec[i] = rawData.profileNodes[i];
-		//cout << "(" << initBdryCellNodePosX[i] << "," << initBdryCellNodePosY[i]
-		//		<< ")" << endl;
 	}
 
 	uint index;
-	cout << "begin init fnm pos:" << endl;
-	cout << "current size is" << initData.initFNMNodeVec.size() << endl;
-	cout << "try to resize to: " << maxNodePerCell * FnmCellCount << endl;
-
-	cout << "size of fnm pos: " << initData.initFNMNodeVec.size() << endl;
-
-	cout.flush();
 
 	uint ECMInitNodeCount = rawData.initECMNodePoss.size();
 	for (uint i = 0; i < ECMCount; i++) {
@@ -488,8 +344,6 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 			index = i * maxNodePerCell + j;
 			initData.initFNMNodeVec[index] = rawData.FNMCellCenters[i]
 					+ rawData.initCellNodePoss[j];
-			//cout << "(" << initData.initFNMCellNodePosX[index] << ","
-			//		<< initData.initFNMCellNodePosY[index] << ")" << endl;
 		}
 	}
 
@@ -498,11 +352,8 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 			index = i * maxNodePerCell + j;
 			initData.initMXNodeVec[index] = rawData.MXCellCenters[i]
 					+ rawData.initCellNodePoss[j];
-			//cout << "(" << initData.initMXCellNodePosX[index] << ","
-			//		<< initData.initMXCellNodePosY[index] << ")" << endl;
 		}
 	}
-	//cout << "finished init inputs, press any key to continue" << endl;
 
 	return initData;
 }
@@ -557,7 +408,6 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 
 	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
 
-//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getAllBdryPoints();
 	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
 
 	for (uint i = 0; i < bdryPoints.size(); i++) {
@@ -565,8 +415,6 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	}
 
-//cout << "INSIDE CELLS: " << insideCellCenters.size() << endl;
-	cout << "MX cell centers: " << insideCellCenters.size() << endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
 		rawData.MXCellCenters.push_back(centerPos);
@@ -578,10 +426,7 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	}
 
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
-	cout << "random cell nodes: " << rawData.initCellNodePoss.size() << endl;
-	for (uint i = 0; i < rawData.initCellNodePoss.size(); i++) {
-		rawData.initCellNodePoss[i].Print();
-	}
+
 	rawData.isStab = true;
 	return rawData;
 }
@@ -648,8 +493,6 @@ void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 		CVector vec(sin(i * unitAngle), cos(i * unitAngle), 0);
 		vec = vec * distFromCellCenter;
 		vecs.push_back(vec);
-		//cout << "vec = (" << vec.GetX() << "," << vec.GetY() << ","
-		//		<< vec.GetZ() << ")" << endl;
 	}
 	for (uint i = 0; i < CellCenters.size(); i++) {
 		for (int j = 0; j < numberOfECMAroundCellCenter; j++) {
@@ -667,8 +510,6 @@ void CellInitHelper::generateECMCenters(vector<CVector> &ECMCenters,
 			if (std::isnan(pos.GetX())) {
 				throw SceException("number is NAN!", InputInitException);
 			}
-			//cout << "pos = (" << pos.GetX() << "," << pos.GetY() << ","
-			//		<< pos.GetZ() << ")" << endl;
 		}
 	}
 }
@@ -816,12 +657,8 @@ void CellInitHelper::initInternalBdry() {
 
 SimulationInitData_V2 CellInitHelper::initStabInput() {
 	RawDataInput rawInput = generateRawInput_stab();
-	std::cout << "finished generation of stab raw inputs" << std::endl;
-	std::cout.flush();
 	SimulationInitData_V2 initData = initInputsV3(rawInput);
 	initData.isStab = true;
-	std::cout << "finished generation of init data" << std::endl;
-	std::cout.flush();
 	return initData;
 }
 
@@ -885,7 +722,6 @@ RawDataInput CellInitHelper::generateRawInput_singleCell() {
 			fs);
 	fs.close();
 
-	cout << "cell centers: " << insideCellCenters.size() << endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
 		rawData.MXCellCenters.push_back(centerPos);
@@ -898,11 +734,7 @@ RawDataInput CellInitHelper::generateRawInput_singleCell() {
 
 SimulationInitData_V2 CellInitHelper::initSingleCellTest() {
 	RawDataInput rawInput = generateRawInput_singleCell();
-	std::cout << "finished generation of stab raw inputs" << std::endl;
-	std::cout.flush();
 	SimulationInitData_V2 initData = initInputsV3(rawInput);
 	initData.isStab = true;
-	std::cout << "finished generation of init data" << std::endl;
-	std::cout.flush();
 	return initData;
 }

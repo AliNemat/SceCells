@@ -34,9 +34,7 @@ void SceCells::distributeCellIsActiveInfo() {
 			* allocPara.maxNodeOfOneCell;
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
-	//std::cout << "started distri cell active" << std::endl;
-	//std::cout << "active node count = " << totalNodeCountForActiveCells
-	//		<< std::endl;
+
 	thrust::transform(
 			thrust::make_transform_iterator(countingBegin,
 					ModuloFunctor(allocPara.maxNodeOfOneCell)),
@@ -147,9 +145,6 @@ void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
 void SceCells::growAtRandom(double d_t) {
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
-	//std::cout << "totalNodeCount = " << totalNodeCountForActiveCells
-	//		<< std::endl;
-	//std::cout << "before all functions start" << std::endl;
 
 	// randomly select growth direction and speed.
 	randomizeGrowth();
@@ -177,8 +172,6 @@ void SceCells::growAtRandom(double d_t) {
 
 /**
  * we need to copy the growth information from grid for chemical to cell nodes.
- *
- * checked.
  */
 void SceCells::copyGrowInfoFromGridToCells(GrowthDistriMap &region1,
 		GrowthDistriMap &region2) {
@@ -318,24 +311,6 @@ void SceCells::computeDistToCellCenter() {
  * using max and min distance to the center.
  */
 void SceCells::findMinAndMaxDistToCenter() {
-	//cout << "total active cell nodes" << totalNodeCountForActiveCells << endl;
-	//cout << "maxNodeOfOneCell" << allocPara.maxNodeOfOneCell << endl;
-	//cout << "maxTotalCellNodeCount" << allocPara.maxTotalCellNodeCount << endl;
-
-	//cout << "cell node array size = "
-	//		<< cellNodeInfoVecs.distToCenterAlongGrowDir.size() << endl;
-
-	//cout << "cell array 1 size = " << cellInfoVecs.cellRanksTmpStorage.size()
-	//<< endl;
-
-	//cout << "cell array 2 size = " << cellInfoVecs.smallestDistance.size()
-	//		<< endl;
-
-	//thrust::counting_iterator<uint> countingStart(0);
-
-	//thrust::counting_iterator<uint> countingEnd(
-	//		countingStart + totalNodeCountForActiveCells);
-
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell)),
@@ -350,7 +325,6 @@ void SceCells::findMinAndMaxDistToCenter() {
 	// for nodes of each cell, find the maximum distance from the node to the corresponding
 	// cell center along the pre-defined growth direction.
 
-	//cout << "half way" << endl;
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell)),
@@ -585,18 +559,13 @@ SceCells::SceCells(SceNodes* nodesInput,
 				nodesInput->getAllocPara().maxNodeOfOneCell / 2), initGrowthProgress(
 				0.0) {
 	initialize(nodesInput);
-	std::cout << "in SceCells constructor, finished initialize nodes pointer"
-			<< std::endl;
+
 	copyInitActiveNodeCount(numOfInitActiveNodesOfCells);
-	std::cout << "in SceCells constructor, finished copying init active"
-			<< std::endl;
+
 	thrust::device_vector<SceNodeType> cellTypesToPass = cellTypes;
 	setCellTypes(cellTypesToPass);
-	std::cout << "in SceCells constructor, finished setting cell types"
-			<< std::endl;
+
 	distributeIsActiveInfo();
-	std::cout << "in SceCells constructor, finished distributing is active info"
-			<< std::endl;
 }
 
 void SceCells::initCellInfoVecs() {

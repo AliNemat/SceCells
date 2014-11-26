@@ -98,7 +98,7 @@ double TimedObject::countSceMove(uint size) {
 	para.currentActiveCellCount = size;
 	nodes.setAllocPara(para);
 
-	nodes.initValues_v2(emptyVector, emptyVector, emptyVector, emptyVector,
+	nodes.initValues(emptyVector, emptyVector, emptyVector, emptyVector,
 			emptyVector, nodePoss);
 
 	thrust::fill(nodes.getInfoVecs().nodeIsActive.begin(),

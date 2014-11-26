@@ -715,21 +715,7 @@ public:
 	/**
 	 * initialize data fields.
 	 */
-	void initValues(std::vector<double> &initBdryCellNodePosX,
-			std::vector<double> &initBdryCellNodePosY,
-			std::vector<double> &initProfileNodePosX,
-			std::vector<double> &initProfileNodePosY,
-			std::vector<double> &initECMNodePosX,
-			std::vector<double> &initECMNodePosY,
-			std::vector<double> &initFNMCellNodePosX,
-			std::vector<double> &initFNMCellNodePosY,
-			std::vector<double> &initMXCellNodePosX,
-			std::vector<double> &initMXCellNodePosY);
-
-	/**
-	 * initialize data fields.
-	 */
-	void initValues_v2(std::vector<CVector> &initBdryCellNodePos,
+	void initValues(std::vector<CVector> &initBdryCellNodePos,
 			std::vector<CVector> &initProfileNodePos,
 			std::vector<CVector> &initCartNodePos,
 			std::vector<CVector> &initECMNodePos,
