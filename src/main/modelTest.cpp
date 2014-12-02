@@ -106,12 +106,12 @@ int main(int argc, char* argv[]) {
 				simuDomain.outputVtkFilesWithColor(mainPara.animationNameBase,
 						aniFrame, mainPara.aniCri);
 				cout << "finished output Animation" << endl;
-				//vector<vector<int> > labelMatrix = simuDomain.outputLabelMatrix(
-				//		mainPara.dataName, aniFrame, pixelPara);
-				//cout << "finished writing label matrix" << endl;
-				//simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame,
-				//		mainPara.imgOutput, mainPara.dataOutput);
-				//cout << "finished output matrix analysis" << endl;
+				vector<vector<int> > labelMatrix = simuDomain.outputLabelMatrix(
+						mainPara.dataName, aniFrame, pixelPara);
+				cout << "finished writing label matrix" << endl;
+				simuDomain.analyzeLabelMatrix(labelMatrix, aniFrame,
+						mainPara.imgOutput, mainPara.dataOutput);
+				cout << "finished output matrix analysis" << endl;
 				aniFrame++;
 			}
 			// for each step, run all logics of the domain.

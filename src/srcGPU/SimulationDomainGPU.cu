@@ -424,6 +424,7 @@ void SimulationDomainGPU::outputGrowthProgressAuxFile(int step) {
 		std::remove(auxDataFileName.c_str());
 		isFirstTime = false;
 	}
+	std::cout << "Updating growth progress file" << std::endl;
 	ofstream ofs;
 	ofs.open(auxDataFileName.c_str(), ios::app);
 	ofs << step << " ";
@@ -447,7 +448,11 @@ void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 
 	resHelper.outputImg_formatBMP(imgFileName, labelMatrix);
 	std::vector<double> growthProVec = cells.getGrowthProgressVec();
-	resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix,
-			growthProVec);
-	outputGrowthProgressAuxFile(step);
+	if (memPara.simuType == Disc) {
+		resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix,
+				growthProVec);
+		outputGrowthProgressAuxFile(step);
+	} else {
+		resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix);
+	}
 }

@@ -458,6 +458,8 @@ void printMatrixToFile(vector<vector<T> >& matrix, std::string &fileName) {
 	if (ofs.fail()) {
 		throw SceException("unable to open file for writing", FileIOException);
 	}
+	std::cout << "Now printing matrix to file " << fileName.c_str()
+			<< std::endl;
 	for (uint i = 0; i < matrix.size(); i++) {
 		for (uint j = 0; j < matrix[i].size(); j++) {
 			ofs << matrix[i][j] << " ";

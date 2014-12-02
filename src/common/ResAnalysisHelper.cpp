@@ -103,15 +103,19 @@ void ResAnalysisHelper::updateLabelMatrix(
 
 					}
 				}
-				if (!allSameLabel) {
-					resultMatrix[i][j] = label;
-				} else {
-					if (minDist < _pixelPara.effectiveRange_single) {
-						resultMatrix[i][j] = label;
-					} else {
-						resultMatrix[i][j] = -1;
-					}
-				}
+				/*
+				 if (!allSameLabel) {
+				 resultMatrix[i][j] = label;
+				 } else {
+				 if (minDist < _pixelPara.effectiveRange_single) {
+				 resultMatrix[i][j] = label;
+				 } else {
+				 resultMatrix[i][j] = -1;
+				 }
+				 }
+				 */
+				// changed logic
+				resultMatrix[i][j] = label;
 			}
 		}
 	}
@@ -166,8 +170,7 @@ void ResAnalysisHelper::setPixelPara(PixelizePara& pixelPara) {
 void ResAnalysisHelper::outputImg_formatBMP(std::string fileName,
 		std::vector<std::vector<int> >& labelMatrix) {
 	if (labelMatrix.size() == 0) {
-		throw SceException("input label matrix must not be empty",
-				OutputAnalysisDataException);
+		return;
 	}
 
 	int imgWidth = labelMatrix[0].size();
@@ -338,8 +341,8 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 		}
 	}
 	uint labelSetSize = cellLabelSet.size() - 1;
-	std::cout << "max label = " << maxLabel << ", labelSetsize = "
-			<< labelSetSize << std::endl;
+	std::cout << "Updating polygon stat file " << fileName << ", max label = "
+			<< maxLabel << ", labelSetsize = " << labelSetSize << std::endl;
 	assert(maxLabel == (int )labelSetSize - 1);
 
 	std::tr1::unordered_set<int> neighborCellSet[labelSetSize];
@@ -484,8 +487,8 @@ void PixelizePara::initFromConfigFile() {
 	effectiveRange = globalConfigVars.getConfigValue(
 			"Pixel_Para_Effective_Range").toDouble();
 
-	effectiveRange_single = globalConfigVars.getConfigValue(
-			"Pixel_Para_Effective_Range_Single").toDouble();
+	//effectiveRange_single = globalConfigVars.getConfigValue(
+	//		"Pixel_Para_Effective_Range_Single").toDouble();
 
 	allowedAbsoluteError = globalConfigVars.getConfigValue(
 			"Pixel_Para_Allowed_Error").toDouble();

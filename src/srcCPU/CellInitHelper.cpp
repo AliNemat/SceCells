@@ -859,7 +859,7 @@ void SimulationGlobalParameter::initFromConfig() {
 	aniCri.isStressMap = valueToType(
 			globalConfigVars.getConfigValue("AnimationType").toInt());
 
-	if (simuType == Disc) {
+	if (simuType != Beak) {
 		dataOutput =
 				globalConfigVars.getConfigValue("PolygonStatFileName").toString();
 		imgOutput =
