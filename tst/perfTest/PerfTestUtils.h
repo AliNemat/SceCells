@@ -26,6 +26,9 @@ public:
 	void transformVals(std::vector<double> &nodeXVector,
 			std::vector<double> &nodeYVector, std::vector<CVector> &nodeInitPos,
 			std::vector<CVector> &centerInitPos);
+	void transformVals(std::vector<CVector> &nodePosVector,
+			std::vector<CVector> &nodeInitPos,
+			std::vector<CVector> &centerInitPos);
 	virtual ~PerfTestUtils();
 };
 

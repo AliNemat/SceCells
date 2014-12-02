@@ -626,10 +626,6 @@ class SceNodes {
 	void readMechPara();
 
 	void initNodeAllocPara(uint totalBdryNodeCount, uint maxProfileNodeCount,
-			uint maxTotalECMCount, uint maxNodeInECM, uint maxTotalCellCount,
-			uint maxNodeInCell);
-
-	void initNodeAllocPara_v2(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
 			uint maxTotalCellCount, uint maxNodeInCell);
 	/**
@@ -686,7 +682,7 @@ class SceNodes {
 	 * This method outputs a vector of possible neighbor pairs.
 	 * Reason why this method exist is that outputting animation frame
 	 * is really slow using previous version of animation function.
-	 * Hopefully this new method could improve speed of producing
+	 * This new method significantly improves the speed of producing each
 	 * animation frame.
 	 */
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
@@ -719,21 +715,7 @@ public:
 	/**
 	 * initialize data fields.
 	 */
-	void initValues(std::vector<double> &initBdryCellNodePosX,
-			std::vector<double> &initBdryCellNodePosY,
-			std::vector<double> &initProfileNodePosX,
-			std::vector<double> &initProfileNodePosY,
-			std::vector<double> &initECMNodePosX,
-			std::vector<double> &initECMNodePosY,
-			std::vector<double> &initFNMCellNodePosX,
-			std::vector<double> &initFNMCellNodePosY,
-			std::vector<double> &initMXCellNodePosX,
-			std::vector<double> &initMXCellNodePosY);
-
-	/**
-	 * initialize data fields.
-	 */
-	void initValues_v2(std::vector<CVector> &initBdryCellNodePos,
+	void initValues(std::vector<CVector> &initBdryCellNodePos,
 			std::vector<CVector> &initProfileNodePos,
 			std::vector<CVector> &initCartNodePos,
 			std::vector<CVector> &initECMNodePos,

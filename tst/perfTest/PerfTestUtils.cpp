@@ -100,10 +100,6 @@ std::vector<CVector> PerfTestUtils::obtainCellInitCentersForTesting(
 void PerfTestUtils::transformVals(std::vector<double> &nodeXVector,
 		std::vector<double> &nodeYVector, std::vector<CVector>& nodeInitPos,
 		std::vector<CVector>& centerInitPos) {
-	//assert(nodeXVector.size() == nodeYVector.size());
-	cout << "node total size = " << nodeXVector.size() << endl;
-	cout << "single cell init pos size =" << nodeInitPos.size() << endl;
-	cout << "all cell centers pos size= " << centerInitPos.size() << endl;
 	uint maxIndex = nodeXVector.size();
 	uint cellCount = centerInitPos.size();
 	uint nodeInCellCount = nodeInitPos.size();
@@ -116,6 +112,29 @@ void PerfTestUtils::transformVals(std::vector<double> &nodeXVector,
 			if (index >= maxIndex) {
 				break;
 			}
+		}
+		if (index >= maxIndex) {
+			break;
+		}
+	}
+}
+
+void PerfTestUtils::transformVals(std::vector<CVector>& nodePosVector,
+		std::vector<CVector>& nodeInitPos,
+		std::vector<CVector>& centerInitPos) {
+	uint maxIndex = nodePosVector.size();
+	uint cellCount = centerInitPos.size();
+	uint nodeInCellCount = nodeInitPos.size();
+	uint index = 0;
+	for (uint i = 0; i < cellCount; i++) {
+		for (uint j = 0; j < nodeInCellCount; j++) {
+			index = i * nodeInCellCount + j;
+			if (index >= maxIndex) {
+				break;
+			}
+			nodePosVector[index].x = centerInitPos[i].x + nodeInitPos[j].x;
+			nodePosVector[index].y = centerInitPos[i].y + nodeInitPos[j].y;
+			nodePosVector[index].z = 0;
 		}
 		if (index >= maxIndex) {
 			break;
