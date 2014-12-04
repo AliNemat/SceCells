@@ -10,7 +10,7 @@
 std::vector<std::vector<int> > ResAnalysisHelper::outputLabelMatrix(
 		std::vector<NodeWithLabel>& nodeLabels) {
 	std::vector<std::vector<int> > result;
-	std::vector<std::vector<std::vector<LabelWithDist> > > matrixRawData;
+	std::vector<std::vector<std::vector<LabelWithForce> > > matrixRawData;
 	result.resize(_pixelPara.pixelYDim);
 	matrixRawData.resize(_pixelPara.pixelYDim);
 	for (uint i = 0; i < _pixelPara.pixelYDim; i++) {
@@ -65,12 +65,12 @@ std::vector<Index2D> ResAnalysisHelper::obtainNeighborPixels(
 }
 
 void ResAnalysisHelper::updateRawMatrix(
-		std::vector<std::vector<std::vector<LabelWithDist> > >& rawMatrix,
+		std::vector<std::vector<std::vector<LabelWithForce> > >& rawMatrix,
 		NodeWithLabel& nodeLabel) {
 	std::vector<Index2D> indicies2D = obtainNeighborPixels(nodeLabel);
 	for (uint i = 0; i < indicies2D.size(); i++) {
-		LabelWithDist labelDist;
-		labelDist.dist = computeDist(nodeLabel, indicies2D[i]);
+		LabelWithForce labelDist;
+		labelDist.force = computeForce(nodeLabel, indicies2D[i]);
 		labelDist.label = nodeLabel.cellRank;
 		rawMatrix[indicies2D[i].indexY][indicies2D[i].indexX].push_back(
 				labelDist);
@@ -79,42 +79,35 @@ void ResAnalysisHelper::updateRawMatrix(
 
 void ResAnalysisHelper::updateLabelMatrix(
 		std::vector<std::vector<int> >& resultMatrix,
-		std::vector<std::vector<std::vector<LabelWithDist> > >& rawMatrix) {
+		std::vector<std::vector<std::vector<LabelWithForce> > >& rawMatrix) {
 	for (uint i = 0; i < rawMatrix.size(); i++) {
 		for (uint j = 0; j < rawMatrix[i].size(); j++) {
 			if (rawMatrix[i][j].size() == 0) {
 				resultMatrix[i][j] = -1;
 			} else {
-				double minDist = rawMatrix[i][j][0].dist;
-				uint label = rawMatrix[i][j][0].label;
-
-				uint originalLabel = label;
-				bool allSameLabel = true;
-
-				for (uint k = 1; k < rawMatrix[i][j].size(); k++) {
-
-					if (rawMatrix[i][j][k].label != originalLabel) {
-						allSameLabel = false;
-					}
-
-					if (rawMatrix[i][j][k].dist < minDist) {
-						minDist = rawMatrix[i][j][k].dist;
-						label = rawMatrix[i][j][k].label;
-
+				std::tr1::unordered_map<uint, double> labelForceMap;
+				std::tr1::unordered_map<uint, double>::iterator it;
+				for (uint k = 0; k < rawMatrix[i][j].size(); k++) {
+					it = labelForceMap.find(rawMatrix[i][j][k].label);
+					if (it == labelForceMap.end()) {
+						labelForceMap.insert(
+								std::pair<uint, double>(
+										rawMatrix[i][j][k].label,
+										rawMatrix[i][j][k].force));
+					} else {
+						it->second = it->second + rawMatrix[i][j][k].force;
 					}
 				}
-				/*
-				 if (!allSameLabel) {
-				 resultMatrix[i][j] = label;
-				 } else {
-				 if (minDist < _pixelPara.effectiveRange_single) {
-				 resultMatrix[i][j] = label;
-				 } else {
-				 resultMatrix[i][j] = -1;
-				 }
-				 }
-				 */
-				// changed logic
+				double maxForce = 0;
+				uint label = 0;
+				for (it = labelForceMap.begin(); it != labelForceMap.end();
+						++it) {
+					double fVal = it->second;
+					if (fVal > maxForce) {
+						maxForce = fVal;
+						label = it->first;
+					}
+				}
 				resultMatrix[i][j] = label;
 			}
 		}
@@ -132,11 +125,21 @@ Index2D ResAnalysisHelper::obtainIndex2D(CVector &pos) {
 	return result;
 }
 
-double ResAnalysisHelper::computeDist(NodeWithLabel& nodeLabel,
+double ResAnalysisHelper::compuForceVal(double dist) {
+	double forceValue = -_sceIntraPara[0] / _sceIntraPara[2]
+			* exp(-dist / _sceIntraPara[2])
+			+ _sceIntraPara[1] / _sceIntraPara[3]
+					* exp(-dist / _sceIntraPara[3]);
+	return forceValue;
+}
+
+double ResAnalysisHelper::computeForce(NodeWithLabel& nodeLabel,
 		Index2D& index2D) {
 	CVector posForIndex = obtainCenterLoc(index2D);
 	CVector tmpDist = nodeLabel.position - posForIndex;
-	return tmpDist.getModul();
+	double dist = tmpDist.getModul();
+	double fVal = fabs(compuForceVal(dist));
+	return fVal;
 }
 
 ResAnalysisHelper::ResAnalysisHelper() {
@@ -151,6 +154,24 @@ ResAnalysisHelper::ResAnalysisHelper() {
 	}
 	_pixelSpacing = pixelSpacingX;
 	_integerRadius = _pixelPara.effectiveRange / _pixelSpacing + 1;
+
+	double U0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
+					/ globalConfigVars.getConfigValue("IntraCell_U0_DivFactor").toDouble();
+	double V0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_V0_Original").toDouble()
+					/ globalConfigVars.getConfigValue("IntraCell_V0_DivFactor").toDouble();
+	double k1_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k1_Original").toDouble()
+					/ globalConfigVars.getConfigValue("IntraCell_k1_DivFactor").toDouble();
+	double k2_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k2_Original").toDouble()
+					/ globalConfigVars.getConfigValue("IntraCell_k2_DivFactor").toDouble();
+
+	_sceIntraPara[0] = U0_Intra;
+	_sceIntraPara[1] = V0_Intra;
+	_sceIntraPara[2] = k1_Intra;
+	_sceIntraPara[3] = k2_Intra;
 }
 
 void ResAnalysisHelper::setPixelPara(PixelizePara& pixelPara) {
@@ -244,7 +265,7 @@ void ResAnalysisHelper::generateRGBMatrix(
 		std::vector<std::vector<double> >& red,
 		std::vector<std::vector<double> >& green,
 		std::vector<std::vector<double> >& blue) {
-	// check if input size is valid.
+// check if input size is valid.
 	if (labelMatrix.size() == 0) {
 		throw SceException("input label matrix must not be empty",
 				OutputAnalysisDataException);
@@ -282,26 +303,26 @@ void ResAnalysisHelper::generateRGBMatrix(
 void ResAnalysisHelper::transformToRGB(int& labelValue, int& maxLabelValue,
 		double& rValue, double& gValue, double& bValue) {
 	double relPos = (double) labelValue / (double) maxLabelValue;
-	// set as between Red and Green
+// set as between Red and Green
 	if (relPos >= 0 && relPos < 1.0 / 3) {
 		rValue = 1.0 - relPos * 3;
 		gValue = relPos * 3;
 		bValue = 0;
 	}
-	// set as between Green and Blue
+// set as between Green and Blue
 	else if (relPos >= 1.0 / 3 && relPos < 2.0 / 3) {
 		rValue = 0.0;
 		gValue = (relPos - 1.0 / 3) * 3 * 3;
 		bValue = 1.0 - (relPos - 1.0 / 3) * 3;
 	}
-	// set as between Blue and Red
-	// slightly bigger than 1.0 to prevent possible numerical error.
+// set as between Blue and Red
+// slightly bigger than 1.0 to prevent possible numerical error.
 	else if (relPos >= 2.0 / 3 && relPos <= 1.000000001) {
 		rValue = 1.0 - (relPos - 2.0 / 3) * 3;
 		gValue = 0.0;
 		bValue = (relPos - 2.0 / 3) * 3;
 	}
-	// set as white
+// set as white
 	else {
 		rValue = 1.0;
 		gValue = 1.0;
@@ -321,7 +342,7 @@ void ResAnalysisHelper::transformToRGB(int& labelValue, int& maxLabelValue,
 void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 		uint step, std::vector<std::vector<int> >& labelMatrix,
 		std::vector<double> growthProVec) {
-	// check if input size is valid.
+// check if input size is valid.
 	if (labelMatrix.size() == 0) {
 		throw SceException("input label matrix must not be empty",
 				OutputAnalysisDataException);
@@ -392,7 +413,7 @@ void ResAnalysisHelper::outputStat_PolygonCounting(std::string fileName,
 		}
 	}
 
-	// Size =0 means the vector is not supplied and we do not need to consider mitiotic difference
+// Size =0 means the vector is not supplied and we do not need to consider mitiotic difference
 	if (growthProVec.size() == 0) {
 		std::tr1::unordered_map<int, int> polygonCountingRes;
 		std::tr1::unordered_map<int, int>::iterator it;
@@ -486,9 +507,6 @@ void PixelizePara::initFromConfigFile() {
 
 	effectiveRange = globalConfigVars.getConfigValue(
 			"Pixel_Para_Effective_Range").toDouble();
-
-	//effectiveRange_single = globalConfigVars.getConfigValue(
-	//		"Pixel_Para_Effective_Range_Single").toDouble();
 
 	allowedAbsoluteError = globalConfigVars.getConfigValue(
 			"Pixel_Para_Allowed_Error").toDouble();

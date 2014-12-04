@@ -38,9 +38,9 @@ struct NodeWithLabel {
 	uint cellRank;
 };
 
-struct LabelWithDist {
+struct LabelWithForce {
 	uint label;
-	double dist;
+	double force;
 };
 
 /**
@@ -53,10 +53,14 @@ class ResAnalysisHelper {
 	 * This integer indicates how many pixels should be extended.
 	 */
 	uint _integerRadius;
+
+	double _sceIntraPara[4];
+
+	double compuForceVal(double dist);
 	/**
-	 * compute distance from node to a pixel.
+	 * compute force from node to a pixel.
 	 */
-	double computeDist(NodeWithLabel& nodeLabel, Index2D &index2D);
+	double computeForce(NodeWithLabel& nodeLabel, Index2D &index2D);
 	/**
 	 * obtain the center location of a pixel.
 	 */
@@ -76,14 +80,14 @@ class ResAnalysisHelper {
 	 * distance of the label from pixel.
 	 */
 	void updateRawMatrix(
-			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix,
+			std::vector<std::vector<std::vector<LabelWithForce> > > &rawMatrix,
 			NodeWithLabel &nodeLabel);
 	/**
 	 * Generate a result label matrix given raw matrix.
 	 * Raw matrix is a matrix which all entries are list of possible labels with their shortest distance.
 	 */
 	void updateLabelMatrix(std::vector<std::vector<int> > &resultMatrix,
-			std::vector<std::vector<std::vector<LabelWithDist> > > &rawMatrix);
+			std::vector<std::vector<std::vector<LabelWithForce> > > &rawMatrix);
 	/**
 	 * Convert the matrix which is labeled by cell rank to three matrices,
 	 * Red, Green, Blue, respectively.
