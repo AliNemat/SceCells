@@ -14,7 +14,7 @@ add_dependencies(${PROJECT_TEST_NAME} gtest_main)
 add_dependencies(${PROJECT_TEST_NAME} SceGPU)
 
 if(NOT WIN32)
-        target_link_libraries(${PROJECT_TEST_NAME} pthread)
+        #target_link_libraries(${PROJECT_TEST_NAME} pthread)
         target_link_libraries(${PROJECT_TEST_NAME} SceGPU)
         target_link_libraries(${PROJECT_TEST_NAME} SceInit)
         target_link_libraries(${PROJECT_TEST_NAME} SceUtils)
