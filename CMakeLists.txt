@@ -6,7 +6,7 @@ project(${PROJECT_NAME_STR})
 find_package(CUDA REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-        add_definitions(-Wall -ansi -Wno-deprecated -pthread -fpermissive -frounding-math)
+        add_definitions(-Wall -ansi -Wno-deprecated -fpermissive -frounding-math)
 endif()
 
 #set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
