@@ -185,19 +185,19 @@ TEST_F(SceNodeTest, SceNodeInitTest) {
 }
 
 TEST_F(SceNodeTest, ParameterInitTest) {
-	cout << " point 1 , before everything starts" << endl;
+	//cout << " point 1 , before everything starts" << endl;
 	int deviceID = globalConfigVars.getConfigValue("GPUDeviceNumber").toInt();
 	int totalDeviceCount;
 	cudaGetDeviceCount(&totalDeviceCount);
 	EXPECT_TRUE(deviceID >= 0 && deviceID < totalDeviceCount);
 	cudaSetDevice(globalConfigVars.getConfigValue("GPUDeviceNumber").toInt());
-	cout << " point 1.1 " << endl;
+	//cout << " point 1.1 " << endl;
 
 	SceNodes nodes = SceNodes(Test_totalBdryNodeCount, Test_maxProfileNodeCount,
 			0, Test_maxTotalECMCount, Test_maxNodeInECM, Test_maxTotalCellCount,
 			Test_maxNodeInCell, false);
 
-	cout << " point 1.2 " << endl;
+	//cout << " point 1.2 " << endl;
 	nodes.initDimension(Test_minX, Test_maxX, Test_minY, Test_maxY,
 			Test_bucketSize);
 
@@ -208,7 +208,7 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	EXPECT_EQ(Expected_BucketXDim, nodes.getDomainPara().numOfBucketsInXDim);
 	EXPECT_EQ(Expected_BucketYDim, nodes.getDomainPara().numOfBucketsInYDim);
 	EXPECT_EQ(Expected_TotalBucket, nodes.getDomainPara().totalBucketCount);
-	cout << " point 2, middle of no where" << endl;
+	//cout << " point 2, middle of no where" << endl;
 
 	// following part tests initial parameters for node location info
 	int startPosOfProfile = Test_totalBdryNodeCount;
@@ -226,7 +226,7 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	EXPECT_EQ(Test_maxNodeInCell, nodes.getAllocPara().maxNodeOfOneCell);
 	EXPECT_EQ(Test_maxNodeInECM, nodes.getAllocPara().maxNodePerECM);
 
-	cout << " point 3, everything has finished" << endl;
+	//cout << " point 3, everything has finished" << endl;
 }
 
 TEST_F(SceNodeTest, MemSizeTest) {

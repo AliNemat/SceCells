@@ -3,12 +3,6 @@ set(PROJECT_NAME_STR SceCellsGPU)
 #project(${PROJECT_NAME_STR} C CXX CUDA)
 project(${PROJECT_NAME_STR})
 
-# This manual CXX FLAGS setting is required, because the some version of CMAKE would use an unsupported CMAKE_CXX_FLAGS and result in compliation failure.
-# more specifically, -fstack-protector-strong option is not supported by g++ until g++-4.9, but it is enabled by default in CMake 2.8.12
-# however g++-4.9 is not supported by nvcc 5.5
-set(CMAKE_CXX_FLAGS "-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security  -frounding-math")
-MESSAGE("manually resetting g++ flags to : " ${CMAKE_CXX_FLAGS})
-
 find_package(CUDA REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
@@ -97,6 +91,12 @@ if(BUILD_DOCUMENTATION)
   # IF you do NOT want the documentation to be generated EVERY time you build the project
   # then leave out the 'ALL' keyword from the above command.
 endif()
+
+# This manual CXX FLAGS setting is required, because the some version of CMAKE would use an unsupported CMAKE_CXX_FLAGS and result in compliation failure.
+# more specifically, -fstack-protector-strong option is not supported by g++ until g++-4.9, but it is enabled by default in CMake 2.8.12
+# however g++-4.9 is not supported by nvcc 5.5
+set(CMAKE_CXX_FLAGS "-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security  -frounding-math")
+MESSAGE("manually resetting g++ flags to : " ${CMAKE_CXX_FLAGS})
 
 #add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
 ADD_SUBDIRECTORY(${CMAKE_SOURCE_DIR}/src)

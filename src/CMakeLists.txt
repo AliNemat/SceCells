@@ -1,3 +1,4 @@
+MESSAGE("Enter src, CXXFLAGS = " ${CMAKE_CXX_FLAGS})
 add_subdirectory(common)
 add_subdirectory(srcCPU)
 add_subdirectory(srcGPU)
