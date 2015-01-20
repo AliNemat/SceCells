@@ -1,0 +1,4 @@
+PolygonStatFileName = polyStatN02G00.txt
+ImgFileNameBase = discN02G00_
+AnimationName = WingDiscN02G00_
+DataName = labelMatrixN02G00_
