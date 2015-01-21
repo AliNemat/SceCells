@@ -46,7 +46,7 @@ int main() {
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % mainPara.aniAuxVar == 0) {
-			simuDomain.outputVtkFilesWithColor(mainPara.animationNameBase,
+			simuDomain.outputVtkFilesWithCri(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			aniFrame++;
 		}

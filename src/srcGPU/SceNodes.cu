@@ -488,12 +488,43 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
 	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
 	thrust::host_vector<double> hostTmpVectorLocZ = infoVecs.nodeLocZ;
+
+	thrust::host_vector<double> hostTmpVectorForceX;
+	thrust::host_vector<double> hostTmpVectorForceY;
+	thrust::host_vector<double> hostTmpVectorForceZ;
+	thrust::host_vector<double> hostTmpVectorVelVal;
+
+	assert(hostTmpVectorLocX.size() == hostTmpVectorLocY.size());
+	assert(hostTmpVectorLocY.size() == hostTmpVectorLocZ.size());
+
 	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
 			infoVecs.nodeCellType;
 	thrust::host_vector<uint> hostTmpVectorNodeRank = infoVecs.nodeCellRank;
 	thrust::host_vector<double> hostTmpVectorNodeStress;
-	if (aniCri.isStressMap) {
-		hostTmpVectorNodeStress = infoVecs.nodeMaxForce;
+
+	if (aniCri.animationType != CellType) {
+		hostTmpVectorForceX = infoVecs.nodeInterForceX;
+		hostTmpVectorForceY = infoVecs.nodeInterForceY;
+		hostTmpVectorForceZ = infoVecs.nodeInterForceZ;
+
+		assert(hostTmpVectorForceX.size() == hostTmpVectorLocX.size());
+		assert(hostTmpVectorForceX.size() == hostTmpVectorForceY.size());
+		assert(hostTmpVectorForceX.size() == hostTmpVectorForceZ.size());
+
+		uint vecSize = hostTmpVectorForceX.size();
+		hostTmpVectorVelVal.resize(vecSize);
+		for (uint i = 0; i < vecSize; i++) {
+			hostTmpVectorVelVal[i] = sqrt(
+					hostTmpVectorForceX[i] * hostTmpVectorForceX[i]
+							+ hostTmpVectorForceY[i] * hostTmpVectorForceY[i]
+							+ hostTmpVectorForceZ[i] * hostTmpVectorForceZ[i]);
+		}
+
+	}
+	if (aniCri.animationType == Force) {
+		vtkData.isArrowIncluded = true;
+	} else {
+		vtkData.isArrowIncluded = false;
 	}
 
 	uint curIndex = 0;
@@ -520,8 +551,25 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].first, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				if (aniCri.isStressMap) {
-					ptAniData.colorScale = hostTmpVectorNodeStress[node1Index];
+				if (aniCri.animationType == ForceAbsVal) {
+					ptAniData.colorScale = hostTmpVectorVelVal[node1Index];
+				} else if (aniCri.animationType == Force) {
+					ptAniData.colorScale = hostTmpVectorVelVal[node1Index];
+					if (hostTmpVectorVelVal[node1Index] > aniCri.threshold) {
+						ptAniData.dir.x = hostTmpVectorForceX[node1Index]
+								/ hostTmpVectorVelVal[node1Index]
+								* aniCri.arrowLength;
+						ptAniData.dir.y = hostTmpVectorForceY[node1Index]
+								/ hostTmpVectorVelVal[node1Index]
+								* aniCri.arrowLength;
+						ptAniData.dir.z = hostTmpVectorForceZ[node1Index]
+								/ hostTmpVectorVelVal[node1Index]
+								* aniCri.arrowLength;
+					} else {
+						ptAniData.dir.x = 0;
+						ptAniData.dir.y = 0;
+						ptAniData.dir.z = 0;
+					}
 				} else {
 					ptAniData.colorScale = nodeTypeToScale(node1T);
 				}
@@ -534,8 +582,25 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].second, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				if (aniCri.isStressMap) {
-					ptAniData.colorScale = hostTmpVectorNodeStress[node2Index];
+				if (aniCri.animationType == ForceAbsVal) {
+					ptAniData.colorScale = hostTmpVectorVelVal[node2Index];
+				} else if (aniCri.animationType == Force) {
+					ptAniData.colorScale = hostTmpVectorVelVal[node2Index];
+					if (hostTmpVectorVelVal[node2Index] > aniCri.threshold) {
+						ptAniData.dir.x = hostTmpVectorForceX[node2Index]
+								/ hostTmpVectorVelVal[node2Index]
+								* aniCri.arrowLength;
+						ptAniData.dir.y = hostTmpVectorForceY[node2Index]
+								/ hostTmpVectorVelVal[node2Index]
+								* aniCri.arrowLength;
+						ptAniData.dir.z = hostTmpVectorForceZ[node2Index]
+								/ hostTmpVectorVelVal[node2Index]
+								* aniCri.arrowLength;
+					} else {
+						ptAniData.dir.x = 0;
+						ptAniData.dir.y = 0;
+						ptAniData.dir.z = 0;
+					}
 				} else {
 					ptAniData.colorScale = nodeTypeToScale(node2T);
 				}
@@ -563,8 +628,19 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 		PointAniData ptAniData;
 		ptAniData.pos = CVector(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
 				hostTmpVectorLocZ[i]);
-		if (aniCri.isStressMap) {
-			ptAniData.colorScale = hostTmpVectorNodeStress[i];
+
+		if (aniCri.animationType == ForceAbsVal) {
+			ptAniData.colorScale = hostTmpVectorVelVal[i];
+		} else if (aniCri.animationType == Force) {
+			ptAniData.colorScale = hostTmpVectorVelVal[i];
+			if (hostTmpVectorVelVal[i] > aniCri.threshold) {
+				ptAniData.dir.x = hostTmpVectorForceX[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+				ptAniData.dir.y = hostTmpVectorForceY[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+				ptAniData.dir.z = hostTmpVectorForceZ[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+			}
 		} else {
 			ptAniData.colorScale = nodeTypeToScale(hostTmpVectorNodeType[i]);
 		}
@@ -589,8 +665,18 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 		PointAniData ptAniData;
 		ptAniData.pos = CVector(hostTmpVectorLocX[i], hostTmpVectorLocY[i],
 				hostTmpVectorLocZ[i]);
-		if (aniCri.isStressMap) {
-			ptAniData.colorScale = hostTmpVectorNodeStress[i];
+		if (aniCri.animationType == ForceAbsVal) {
+			ptAniData.colorScale = hostTmpVectorVelVal[i];
+		} else if (aniCri.animationType == Force) {
+			ptAniData.colorScale = hostTmpVectorVelVal[i];
+			if (hostTmpVectorVelVal[i] > aniCri.threshold) {
+				ptAniData.dir.x = hostTmpVectorForceX[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+				ptAniData.dir.y = hostTmpVectorForceY[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+				ptAniData.dir.z = hostTmpVectorForceZ[i]
+						/ hostTmpVectorVelVal[i] * aniCri.arrowLength;
+			}
 		} else {
 			ptAniData.colorScale = nodeTypeToScale(hostTmpVectorNodeType[i]);
 		}
@@ -638,12 +724,12 @@ void SceNodes::addNewlyDividedCells(
 		thrust::device_vector<bool> &nodeIsActiveNewCell,
 		thrust::device_vector<SceNodeType> &nodeCellTypeNewCell) {
 
-	// data validation
+// data validation
 	uint nodesSize = nodeLocXNewCell.size();
 	assert(nodesSize % allocPara.maxNodeOfOneCell == 0);
 	uint addCellCount = nodesSize / allocPara.maxNodeOfOneCell;
 
-	// position that we will add newly divided cells.
+// position that we will add newly divided cells.
 	uint shiftStartPosNewCell = allocPara.startPosCells
 			+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
 
@@ -666,7 +752,7 @@ void SceNodes::addNewlyDividedCells(
 							infoVecs.nodeCellType.begin()))
 					+ shiftStartPosNewCell);
 
-	// total number of cells has increased.
+// total number of cells has increased.
 	allocPara.currentActiveCellCount = allocPara.currentActiveCellCount
 			+ addCellCount;
 }
@@ -680,9 +766,9 @@ void SceNodes::buildBuckets2D() {
 	thrust::counting_iterator<uint> countingIterBegin(0);
 	thrust::counting_iterator<uint> countingIterEnd(totalActiveNodes);
 
-	// takes counting iterator and coordinates
-	// return tuple of keys and values
-	// transform the points to their bucket indices
+// takes counting iterator and coordinates
+// return tuple of keys and values
+// transform the points to their bucket indices
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(infoVecs.nodeLocX.begin(),
@@ -701,11 +787,11 @@ void SceNodes::buildBuckets2D() {
 			pointToBucketIndex2D(domainPara.minX, domainPara.maxX,
 					domainPara.minY, domainPara.maxY, domainPara.gridSpacing));
 
-	// sort the points by their bucket index
+// sort the points by their bucket index
 	thrust::sort_by_key(auxVecs.bucketKeys.begin(), auxVecs.bucketKeys.end(),
 			auxVecs.bucketValues.begin());
-	// for those nodes that are inactive, key value of UINT_MAX will be returned.
-	// we need to removed those keys along with their values.
+// for those nodes that are inactive, key value of UINT_MAX will be returned.
+// we need to removed those keys along with their values.
 	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeys.begin(),
 			auxVecs.bucketKeys.end(), UINT_MAX);
 
@@ -846,12 +932,15 @@ void calAndAddInterForceDisc(double &xPos, double &yPos, double &zPos,
 				+ sceInterPara[1] / sceInterPara[3]
 						* exp(-linkLength / sceInterPara[3]);
 	}
-	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
-	interForceX = interForceX + xRes;
-	interForceY = interForceY + yRes;
-	interForceZ = interForceZ + zRes;
+	double fX = forceValue * (xPos2 - xPos) / linkLength;
+	double fY = forceValue * (yPos2 - yPos) / linkLength;
+	double fZ = forceValue * (zPos2 - zPos) / linkLength;
+	xRes = xRes + fX;
+	yRes = yRes + fY;
+	zRes = zRes + fZ;
+	interForceX = interForceX + fX;
+	interForceY = interForceY + fY;
+	interForceZ = interForceZ + fZ;
 }
 
 __device__
@@ -1074,7 +1163,7 @@ void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
 		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
 		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress) {
-	// this means that both nodes are come from cells, not other types
+// this means that both nodes are come from cells, not other types
 	if (bothCellNodes(type1, type2)) {
 		// this means that nodes come from different type of cell, apply differential adhesion
 		if (type1 != type2) {
@@ -1296,9 +1385,9 @@ void SceNodes::applySceForcesDisc() {
 
 void SceNodes::applySceForces() {
 
-	// There are two reasons why I use thrust cast every time.
-	// (1) Technically, make a device pointer a global variable seems to be difficult.
-	// (2) Vectors might change the memory address dynamically.
+// There are two reasons why I use thrust cast every time.
+// (1) Technically, make a device pointer a global variable seems to be difficult.
+// (2) Vectors might change the memory address dynamically.
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
@@ -1476,7 +1565,7 @@ double SceNodes::getMaxEffectiveRange() {
 	}
 
 	double cartEffectiveRange = 0;
-	// cartilage effective range does not apply for other types of simulation.
+// cartilage effective range does not apply for other types of simulation.
 	try {
 		cartEffectiveRange = globalConfigVars.getConfigValue(
 				"CartForceEffectiveRange").toDouble();

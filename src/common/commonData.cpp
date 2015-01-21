@@ -166,6 +166,15 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 		fs << pointsAniData[i].colorScale << endl;
 	}
 
+	fs << std::endl;
+	if (isArrowIncluded) {
+		fs << "VECTORS vectors float" << endl;
+	}
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].dir.x << " " << pointsAniData[i].dir.y << " "
+				<< pointsAniData[i].dir.z << endl;
+	}
+
 	fs.close();
 }
 
@@ -211,6 +220,19 @@ bool valueToType(int value) {
 		return true;
 	} else {
 		return false;
+	}
+}
+
+AniType parseAniTpFromConfig(int configValue) {
+	if (configValue == 0) {
+		return CellType;
+	} else if (configValue == 1) {
+		return ForceAbsVal;
+	} else if (configValue == 2) {
+		return Force;
+	} else {
+		throw SceException("Animation type in config file is not defined",
+				ConfigValueException);
 	}
 }
 

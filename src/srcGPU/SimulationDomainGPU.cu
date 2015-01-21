@@ -333,13 +333,15 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	AnimationCriteria aniCri;
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
-	aniCri.isStressMap = false;
+	int configAniType =
+			globalConfigVars.getConfigValue("AnimationType").toInt();
+	aniCri.animationType = CellType;
 
 	uint index = 0;
 	for (int i = 0; i < stabPara.totalIterCount; i++) {
 		//std::cout << "in stablizing, before run all logics" << std::endl;
 		if (i % aniAuxPara == 0) {
-			outputVtkFilesWithColor(stabPara.outputAniName, index, aniCri);
+			outputVtkFilesWithCri(stabPara.outputAniName, index, aniCri);
 			index++;
 		}
 		runAllLogic(stabPara.dt);
@@ -352,7 +354,7 @@ std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
 	return result;
 }
 
-void SimulationDomainGPU::outputVtkFilesWithColor(std::string scriptNameBase,
+void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
 	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);

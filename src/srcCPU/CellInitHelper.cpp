@@ -693,8 +693,12 @@ void SimulationGlobalParameter::initFromConfig() {
 	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
 
-	aniCri.isStressMap = valueToType(
+	aniCri.animationType = parseAniTpFromConfig(
 			globalConfigVars.getConfigValue("AnimationType").toInt());
+
+	aniCri.threshold = globalConfigVars.getConfigValue("DeltaValue").toDouble();
+	aniCri.arrowLength =
+			globalConfigVars.getConfigValue("DisplayArrowLength").toDouble();
 
 	if (simuType != Beak) {
 		dataOutput =

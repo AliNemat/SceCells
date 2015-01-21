@@ -156,7 +156,7 @@ public:
 	 * @param rank frame sequence in the vtk animation series.
 	 * @param aniCri criteria for outputing animation.
 	 */
-	void outputVtkFilesWithColor(std::string scriptNameBase, int rank,
+	void outputVtkFilesWithCri(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 
 	/**

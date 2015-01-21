@@ -80,6 +80,12 @@ enum SimulationType {
 
 SimulationType parseTypeFromConfig(int configValue);
 
+enum AniType {
+	CellType, ForceAbsVal, Force
+};
+
+AniType parseAniTpFromConfig(int configValue);
+
 struct ControlSwitchs {
 	SwitchState stab;
 	SwitchState outputLabelMatrix;
@@ -415,9 +421,12 @@ struct inputInitialData {
 struct AnimationCriteria {
 	// If this varible is set to be true, output stress map;
 	// otherwise, output normal animation.
-	bool isStressMap;
+	AniType animationType;
 	// We will only animate links that are close enough.
 	double defaultEffectiveDistance;
+
+	double threshold;
+	double arrowLength;
 	// determines if a potential pair is qualified for animation.
 	bool isPairQualify(uint seq1, uint seq2, double x1, double y1, double z1,
 			SceNodeType t1, uint r1, double x2, double y2, double z2,
@@ -433,6 +442,7 @@ struct PointAniData {
 	CVector pos;
 	// In VTK animation software, color scale represents the relative distance to red and blue;
 	// bigger value means close to red. smaller value means close to blue.
+	CVector dir;
 	double colorScale;
 };
 
@@ -447,6 +457,7 @@ struct LinkAniData {
  * contains all information need to be
  */
 struct VtkAnimationData {
+	bool isArrowIncluded;
 	std::vector<PointAniData> pointsAniData;
 	std::vector<LinkAniData> linksAniData;
 	void outputVtkAni(std::string scriptNameBase, int rank);

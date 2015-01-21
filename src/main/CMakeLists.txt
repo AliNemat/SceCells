@@ -31,7 +31,7 @@ set(DISK_PROJECT_NAME runDiscSimulation)
 MESSAGE("Now building " ${DISK_PROJECT_NAME})
 include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
 
-file(GLOB SRC_FILES ./diskMain.cpp)
+file(GLOB SRC_FILES ./discMain.cpp)
 #MESSAGE("Compiling these files: "${SRC_FILES})
 cuda_add_executable(${DISK_PROJECT_NAME} ${SRC_FILES})
 add_dependencies(${BEAK_PROJECT_NAME} gtest)
