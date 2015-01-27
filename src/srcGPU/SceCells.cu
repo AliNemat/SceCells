@@ -1230,3 +1230,14 @@ std::vector<double> SceCells::getGrowthProgressVec() {
 	}
 	return result;
 }
+
+void SceCells::runAblationTest(AblationEvent& ablEvent) {
+	for (uint i = 0; i < ablEvent.ablationCells.size(); i++) {
+		int cellRank = ablEvent.ablationCells[i].cellNum;
+		std::vector<uint> removeSeq = ablEvent.ablationCells[i].nodeNums;
+		cellInfoVecs.activeNodeCountOfThisCell[cellRank] =
+				cellInfoVecs.activeNodeCountOfThisCell[cellRank]
+						- removeSeq.size();
+		nodes->removeNodes(cellRank, removeSeq);
+	}
+}

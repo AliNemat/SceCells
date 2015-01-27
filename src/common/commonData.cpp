@@ -256,3 +256,75 @@ uint findClosestArrIndexGivenPos(std::vector<CVector>& vecArr, CVector& pos) {
 		return index;
 	}
 }
+
+void AblationEvent::printInfo() {
+	std::cout << "ablation experiment is scheduled on timestep " << timeStep
+			<< ", " << ablationCells.size() << " cells will be cut" << endl;
+	std::cout << "Detailed info: " << std::endl;
+	for (uint i = 0; i < ablationCells.size(); i++) {
+		std::cout << "cell rank: " << ablationCells[i].cellNum
+				<< ", node ranks: [ ";
+		for (uint j = 0; j < ablationCells[i].nodeNums.size(); j++) {
+			std::cout << ablationCells[i].nodeNums[j] << " ";
+		}
+		std::cout << "]" << std::endl;
+	}
+}
+
+AblationEvent readAblationEvent(std::string inputName) {
+	AblationEvent ablaEvent;
+	fstream fs(inputName.c_str());
+	char specialChar;
+	fs >> specialChar;
+	assert(specialChar == '#');
+
+	int timestep;
+	fs >> timestep;
+	ablaEvent.timeStep = timestep;
+
+	fs >> specialChar;
+	assert(specialChar == '{');
+
+	fs >> specialChar;
+	assert(specialChar == '$');
+
+	int numOfCells;
+	fs >> numOfCells;
+	assert(numOfCells > 0);
+
+	fs >> specialChar;
+	assert(specialChar == '{');
+
+	for (int i = 0; i < numOfCells; i++) {
+		AblaInfo info;
+		fs >> specialChar;
+		assert(specialChar == '%');
+		int cellRank;
+		fs >> cellRank;
+		info.cellNum = cellRank;
+		fs >> specialChar;
+		assert(specialChar == '{');
+		int nodeCount;
+		fs >> nodeCount;
+		fs >> specialChar;
+		assert(specialChar == '[');
+		for (int j = 0; j < nodeCount; j++) {
+			int nodeRank;
+			fs >> nodeRank;
+			info.nodeNums.push_back(nodeRank);
+		}
+		fs >> specialChar;
+		assert(specialChar == ']');
+		fs >> specialChar;
+		assert(specialChar == '}');
+		ablaEvent.ablationCells.push_back(info);
+	}
+
+	fs >> specialChar;
+	assert(specialChar == '}');
+	fs >> specialChar;
+	assert(specialChar == '}');
+
+	ablaEvent.printInfo();
+	return ablaEvent;
+}

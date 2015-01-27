@@ -1116,6 +1116,8 @@ public:
 	std::vector<CVector> getAllCellCenters();
 	std::vector<double> getGrowthProgressVec();
 
+	void runAblationTest(AblationEvent &ablEvent);
+
 	const NodeAllocPara& getAllocPara() const {
 		return allocPara;
 	}

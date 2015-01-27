@@ -1631,3 +1631,59 @@ void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
 			+ allocPara.maxTotalECMNodeCount;
 }
 
+void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
+	uint cellBeginIndex = allocPara.startPosCells
+			+ cellRank * allocPara.maxNodeOfOneCell;
+	uint cellEndIndex = cellBeginIndex + allocPara.maxNodeOfOneCell;
+	thrust::host_vector<double> cellXCoords(allocPara.maxNodeOfOneCell);
+	thrust::host_vector<double> cellYCoords(allocPara.maxNodeOfOneCell);
+	thrust::copy(infoVecs.nodeLocX.begin() + cellBeginIndex,
+			infoVecs.nodeLocX.begin() + cellEndIndex, cellXCoords.begin());
+	thrust::copy(infoVecs.nodeLocY.begin() + cellBeginIndex,
+			infoVecs.nodeLocY.begin() + cellEndIndex, cellYCoords.begin());
+	vector<bool> isRemove(allocPara.maxNodeOfOneCell, false);
+
+	/*
+	std::cout << "before, X: [";
+	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+		std::cout << cellXCoords[i] << " ";
+	}
+	std::cout << "]" << endl;
+	std::cout << "before, Y: [";
+	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+		std::cout << cellYCoords[i] << " ";
+	}
+	std::cout << "]" << endl;
+	*/
+
+	for (uint i = 0; i < removeSeq.size(); i++) {
+		isRemove[removeSeq[i]] = true;
+	}
+	thrust::host_vector<double> cellXRemoved(allocPara.maxNodeOfOneCell);
+	thrust::host_vector<double> cellYRemoved(allocPara.maxNodeOfOneCell);
+	uint curIndex = 0;
+	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+		if (isRemove[i] == false) {
+			cellXRemoved[curIndex] = cellXCoords[i];
+			cellYRemoved[curIndex] = cellYCoords[i];
+			curIndex++;
+		}
+	}
+
+	/*
+	std::cout << "after, X: [";
+	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+		std::cout << cellXRemoved[i] << " ";
+	}
+	std::cout << "]" << endl;
+	std::cout << "after, Y: [";
+	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+		std::cout << cellYRemoved[i] << " ";
+	}
+	std::cout << "]" << endl;
+	*/
+	thrust::copy(cellXRemoved.begin(), cellXRemoved.end(),
+			infoVecs.nodeLocX.begin() + cellBeginIndex);
+	thrust::copy(cellYRemoved.begin(), cellYRemoved.end(),
+			infoVecs.nodeLocY.begin() + cellBeginIndex);
+}

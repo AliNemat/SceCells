@@ -765,6 +765,8 @@ public:
 	 */
 	std::vector<std::vector<int> > obtainLabelMatrix(PixelizePara &pixelPara);
 
+	void removeNodes(int cellRank, vector<uint> &removeSeq);
+
 	const SceDomainPara&getDomainPara() const;
 	void setDomainPara(const SceDomainPara& domainPara);
 

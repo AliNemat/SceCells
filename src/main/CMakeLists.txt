@@ -34,8 +34,8 @@ include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_
 file(GLOB SRC_FILES ./discMain.cpp)
 #MESSAGE("Compiling these files: "${SRC_FILES})
 cuda_add_executable(${DISK_PROJECT_NAME} ${SRC_FILES})
-add_dependencies(${BEAK_PROJECT_NAME} gtest)
-add_dependencies(${BEAK_PROJECT_NAME} gtest_main)
+add_dependencies(${DISK_PROJECT_NAME} gtest)
+add_dependencies(${DISK_PROJECT_NAME} gtest_main)
 add_dependencies(${DISK_PROJECT_NAME} SceGPU)
 
 if(NOT WIN32)
@@ -61,8 +61,8 @@ include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_
 file(GLOB SRC_FILES ./modelTest.cpp)
 #MESSAGE("Compiling these files: "${SRC_FILES})
 cuda_add_executable(${MODEL_TEST_NAME} ${SRC_FILES})
-add_dependencies(${BEAK_PROJECT_NAME} gtest)
-add_dependencies(${BEAK_PROJECT_NAME} gtest_main)
+add_dependencies(${MODEL_TEST_NAME} gtest)
+add_dependencies(${MODEL_TEST_NAME} gtest_main)
 add_dependencies(${MODEL_TEST_NAME} SceGPU)
 
 if(NOT WIN32)
@@ -81,4 +81,28 @@ if(NOT WIN32)
                         ${CGAL_3RD_PARTY_LIBRARIES} )
 endif()
 
+set(LASER_PROJECT_NAME LaserAblationTest)
+MESSAGE("Now building " ${LASER_PROJECT_NAME})
+include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
+
+file(GLOB SRC_FILES ./laserAblationTest.cpp)
+#MESSAGE("Compiling these files: "${SRC_FILES})
+cuda_add_executable(${LASER_PROJECT_NAME} ${SRC_FILES})
+add_dependencies(${LASER_PROJECT_NAME} gtest)
+add_dependencies(${LASER_PROJECT_NAME} gtest_main)
+add_dependencies(${LASER_PROJECT_NAME} SceGPU)
+
+if(NOT WIN32)
+        target_link_libraries(${LASER_PROJECT_NAME} SceGPU)
+        target_link_libraries(${LASER_PROJECT_NAME} SceInit)
+        target_link_libraries(${LASER_PROJECT_NAME} SceUtils)
+
+        target_link_libraries(${LASER_PROJECT_NAME}
+                ${GOOGLETEST_DIR}/libgtest.a
+                ${GOOGLETEST_DIR}/libgtest_main.a
+        )
+        target_link_libraries(${LASER_PROJECT_NAME}
+                        ${CGAL_LIBRARY}
+                        ${CGAL_3RD_PARTY_LIBRARIES} )
+endif()
 

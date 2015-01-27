@@ -178,6 +178,8 @@ public:
 	 */
 	void analyzeLabelMatrix(vector<vector<int> > &labelMatrix, int step,
 			std::string &imageFileNameBase, std::string &statFileName);
+
+	void performAblation(AblationEvent &ablEvent);
 };
 
 #endif

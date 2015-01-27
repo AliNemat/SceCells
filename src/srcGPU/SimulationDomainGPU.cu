@@ -458,3 +458,41 @@ void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 		resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix);
 	}
 }
+
+void SimulationDomainGPU::performAblation(AblationEvent& ablEvent) {
+	thrust::host_vector<double> xCoord = nodes.getInfoVecs().nodeLocX;
+	thrust::host_vector<double> yCoord = nodes.getInfoVecs().nodeLocY;
+
+	AblationEvent aa;
+
+	for (uint i = 0; i < xCoord.size(); i++) {
+		double xDiff = xCoord[i] - 25.3;
+		double yDiff = yCoord[i] - 25.2;
+		if (xDiff * xDiff + yDiff * yDiff < 0.04) {
+			uint cellRank = i / 90;
+			uint nodeRank = i % 90;
+			std::cout << "cell : " << cellRank << ", node: " << nodeRank
+					<< "pos: (" << xCoord[i] << "," << yCoord[i] << ")"
+					<< std::endl;
+			bool found = false;
+			for (uint j = 0; j < aa.ablationCells.size(); j++) {
+				if (aa.ablationCells[j].cellNum == cellRank) {
+					found = true;
+					aa.ablationCells[j].nodeNums.push_back(nodeRank);
+				}
+			}
+			if (!found) {
+				AblaInfo cellNew;
+				cellNew.cellNum = cellRank;
+				cellNew.nodeNums.push_back(nodeRank);
+				aa.ablationCells.push_back(cellNew);
+			}
+		}
+	}
+
+	aa.printInfo();
+	int jj;
+	cin >> jj;
+
+	cells.runAblationTest(aa);
+}

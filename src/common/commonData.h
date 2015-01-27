@@ -481,4 +481,19 @@ void printMatrixToFile(vector<vector<T> >& matrix, std::string &fileName) {
 }
 
 uint findClosestArrIndexGivenPos(std::vector<CVector> &vecArr, CVector &pos);
+
+struct AblaInfo {
+	uint cellNum;
+	std::vector<uint> nodeNums;
+};
+
+class AblationEvent {
+public:
+	uint timeStep;
+	std::vector<AblaInfo> ablationCells;
+	void printInfo();
+};
+
+AblationEvent readAblationEvent(std::string inputName);
+
 #endif /* COMMONDATA_H_ */
