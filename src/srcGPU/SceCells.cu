@@ -568,6 +568,12 @@ SceCells::SceCells(SceNodes* nodesInput,
 	distributeIsActiveInfo();
 }
 
+SceCells::SceCells(SceNodes* nodesInput,
+		std::vector<uint>& numOfInitActiveEpiNodeCounts,
+		std::vector<uint>& numOfInitActiveInternalNodeCounts) {
+
+}
+
 void SceCells::initCellInfoVecs() {
 	cellInfoVecs.growthProgress.resize(allocPara.maxCellCount, 0.0);
 	cellInfoVecs.expectedLength.resize(allocPara.maxCellCount,

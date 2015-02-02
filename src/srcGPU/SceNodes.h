@@ -615,6 +615,9 @@ class SceNodes {
 	NodeInfoVecs infoVecs;
 	NodeAuxVecs auxVecs;
 	ControlPara controlPara;
+
+	NodeAllocPara_M allocPara_M;
+
 	/**
 	 * reads domain related parameters.
 	 */
@@ -628,6 +631,10 @@ class SceNodes {
 	void initNodeAllocPara(uint totalBdryNodeCount, uint maxProfileNodeCount,
 			uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
 			uint maxTotalCellCount, uint maxNodeInCell);
+
+	void initNodeAllocPara_M(uint totalBdryNodeCount, uint maxTotalCellCount,
+			uint maxEpiNodePerCell, uint maxInternalNodePerCell);
+
 	/**
 	 * This function copies parameters to GPU constant memory.
 	 */
@@ -722,6 +729,13 @@ public:
 			std::vector<CVector> &initFNMCellNodePos,
 			std::vector<CVector> &initMXCellNodePos);
 
+	/**
+	 * initialize data fields.
+	 */
+	void initValues_M(std::vector<CVector> &initBdryNodePos,
+			std::vector<CVector> &initCellNodePos,
+			std::vector<SceNodeType>& nodeTypes);
+
 	void processCartGrowthDir(CVector dir);
 
 	/**
@@ -796,6 +810,14 @@ public:
 	}
 
 	double getMaxEffectiveRange();
+
+	const NodeAllocPara_M& getAllocParaM() const {
+		return allocPara_M;
+	}
+
+	void setAllocParaM(const NodeAllocPara_M& allocParaM) {
+		allocPara_M = allocParaM;
+	}
 };
 
 #endif /* SCENODES_H_ */

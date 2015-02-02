@@ -141,6 +141,41 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
+void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType>& nodeTypes,
+		std::vector<uint>& numOfInitActiveEpiNodeCounts,
+		std::vector<uint>& numOfInitActiveInternalNodeCounts,
+		std::vector<CVector>& initNodesVec) {
+	/*
+	 * Initialize SceNodes by constructor. first two parameters come from input parameters
+	 * while the last four parameters come from Config file.
+	 */
+	nodes = SceNodes(0, 0, 0, 0, 0, memPara.maxCellInDomain,
+			memPara.maxAllNodePerCell, memPara.isStab);
+
+	// array size of cell type array
+	uint nodeTypeSize = nodeTypes.size();
+	// array size of initial active node count of cells array.
+	uint initEpiNodeCountSize = numOfInitActiveEpiNodeCounts.size();
+	uint initInternalNodeCountSize = numOfInitActiveInternalNodeCounts.size();
+	// two sizes must match.
+	assert(initEpiNodeCountSize == initInternalNodeCountSize);
+	assert(initNodesVec.size() == nodeTypes.size());
+
+	/*
+	 * second part: actual initialization
+	 * copy data from main system memory to GPU memory
+	 */
+	NodeAllocPara_M para = nodes.getAllocParaM();
+	para.currentActiveCellCount = initNodesVec.size() / para.maxAllNodePerCell;
+	nodes.setAllocParaM(para);
+
+	std::vector<CVector> dummyEmptyPos;
+	nodes.initValues_M(dummyEmptyPos, initNodesVec, nodeTypes);
+
+	cells = SceCells(&nodes, numOfInitActiveEpiNodeCounts,
+			numOfInitActiveInternalNodeCounts);
+}
+
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 	std::cout << "begin initialization process" << std::endl;
 	memPara.isStab = initData.isStab;
@@ -149,6 +184,20 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 			initData.initProfileNodeVec, initData.initCartNodeVec,
 			initData.initECMNodeVec, initData.initFNMNodeVec,
 			initData.initMXNodeVec);
+	std::cout << "finished init simulation domain nodes" << std::endl;
+	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
+			domainPara.maxY, domainPara.gridSpacing);
+	std::cout << "finished init nodes dimension" << std::endl;
+	// The domain task is not stabilization unless specified in the next steps.
+	stabPara.isProcessStab = false;
+}
+
+void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
+	std::cout << "begin initialization process" << std::endl;
+	memPara.isStab = initData.isStab;
+	CartPara dummyCart;
+	initializeNodes_M(initData.nodeTypes, initData.InitActiveEpiNodePerCellArr,
+			initData.InitActiveInternalNodePerCellArr, initData.initNodeVec);
 	std::cout << "finished init simulation domain nodes" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
@@ -198,16 +247,8 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 void SimulationDomainGPU::readMemPara() {
 	int simuTypeConfigValue =
 			globalConfigVars.getConfigValue("SimulationType").toInt();
-	if (simuTypeConfigValue == 0) {
-		memPara.simuType = Beak;
-	} else if (simuTypeConfigValue == 1) {
-		memPara.simuType = Disc;
-	} else if (simuTypeConfigValue == 2) {
-		memPara.simuType = SingleCellTest;
-	} else {
-		throw SceException("Simulation Type in config file is not recognized!",
-				ConfigValueException);
-	}
+
+	memPara.simuType = parseTypeFromConfig(simuTypeConfigValue);
 
 	memPara.maxCellInDomain =
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
@@ -227,6 +268,15 @@ void SimulationDomainGPU::readMemPara() {
 		memPara.maxECMInDomain = 0;
 		memPara.maxNodePerECM = 0;
 		memPara.FinalToInitProfileNodeCountRatio = 0;
+	}
+
+	if (memPara.simuType == Disc_M) {
+		memPara.maxEpiNodePerCell = globalConfigVars.getConfigValue(
+				"MaxEpiNodePerCell").toInt();
+		memPara.maxInternalNodePerCell = globalConfigVars.getConfigValue(
+				"MaxInternalNodePerCell").toInt();
+		memPara.maxAllNodePerCell = memPara.maxEpiNodePerCell
+				+ memPara.maxInternalNodePerCell;
 	}
 }
 

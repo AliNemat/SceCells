@@ -1106,6 +1106,10 @@ public:
 			std::vector<uint> &numOfInitActiveNodesOfCells,
 			std::vector<SceNodeType> &cellTypes);
 
+	SceCells(SceNodes* nodesInput,
+			std::vector<uint> &numOfInitActiveEpiNodeCounts,
+			std::vector<uint> &numOfInitActiveInternalNodeCounts);
+
 	void runAllCellLevelLogicsDisc(double dt);
 
 	void runStretchTest(double dt);

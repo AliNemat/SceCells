@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 	// preparation.
 	uint aniFrame = 0;
 	// main simulation steps.
-	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
+	for (uint i = 0; i <= (uint) mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % mainPara.aniAuxVar == 0) {
 			simuDomain.outputVtkFilesWithCri(mainPara.animationNameBase,

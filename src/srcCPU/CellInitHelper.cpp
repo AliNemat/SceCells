@@ -113,6 +113,15 @@ RawDataInput CellInitHelper::generateRawInput_simu(
 	}
 }
 
+RawDataInput_M CellInitHelper::generateRawInput_simu_M(
+		std::vector<CVector>& cellCenterPoss) {
+	RawDataInput_M rawInput;
+	initializeRawInput_M(rawInput, cellCenterPoss);
+	rawInput.isStab = false;
+	rawInput.simuType = simuType;
+	return rawInput;
+}
+
 void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 		CartPara& cartPara, std::vector<CVector>& initNodePos) {
 	// step 1, switch tip node1 to pos 0
@@ -186,6 +195,16 @@ void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
 
 	generateCellInitNodeInfo_v2(rawInput.initCellNodePoss);
 
+}
+
+void CellInitHelper::initializeRawInput_M(RawDataInput_M& rawInput_m,
+		std::vector<CVector>& cellCenterPoss) {
+	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
+		CVector centerPos = cellCenterPoss[i];
+		rawInput_m.initCellCenters.push_back(centerPos);
+	}
+	generateCellInitNodeInfo_v3(rawInput_m.initBdryNodePoss,
+			rawInput_m.initInternalNodePoss);
 }
 
 /**
@@ -358,6 +377,59 @@ SimulationInitData_V2 CellInitHelper::initInputsV3(RawDataInput& rawData) {
 	return initData;
 }
 
+SimulationInitData_V2_M CellInitHelper::initInputsV3_M(
+		RawDataInput_M& rawData_m) {
+
+	if (rawData_m.simuType != Disc_M) {
+		throw SceException("V2_M data can be used for Disc_M simulation only!",
+				ConfigValueException);
+	}
+
+	uint initEpiNodeCount = globalConfigVars.getConfigValue(
+			"InitActiveEpiNodePerCell").toInt();
+	uint initInternalNodeCount = globalConfigVars.getConfigValue(
+			"InitActiveInternalNodePerCell").toInt();
+	uint maxEpiNodeCountPerCell = globalConfigVars.getConfigValue(
+			"MaxEpiNodeCountPerCell").toInt();
+	uint maxAllNodeCountPerCell = globalConfigVars.getConfigValue(
+			"MaxAllNodeCountPerCell").toInt();
+	uint initCellCount = rawData_m.initCellCenters.size();
+
+	uint initNodeCount = initCellCount * maxAllNodeCountPerCell;
+
+	SimulationInitData_V2_M initData;
+	initData.isStab = rawData_m.isStab;
+	initData.simuType = rawData_m.simuType;
+
+	initData.nodeTypes.resize(initNodeCount);
+	initData.initNodeVec.resize(initNodeCount);
+
+	for (uint i = 0; i < rawData_m.initCellCenters.size(); i++) {
+		initData.InitActiveEpiNodePerCellArr.push_back(initEpiNodeCount);
+		initData.InitActiveInternalNodePerCellArr.push_back(
+				initInternalNodeCount);
+	}
+
+	uint index;
+
+	for (uint i = 0; i < rawData_m.initCellCenters.size(); i++) {
+		for (uint j = 0; j < rawData_m.initBdryNodePoss.size(); j++) {
+			index = i * maxAllNodeCountPerCell + j;
+			initData.initNodeVec[index] = rawData_m.initCellCenters[i]
+					+ rawData_m.initBdryNodePoss[j];
+			initData.nodeTypes[index] = EpiBdry;
+		}
+		for (uint j = 0; j < rawData_m.initInternalNodePoss.size(); j++) {
+			index = i * maxAllNodeCountPerCell + maxEpiNodeCountPerCell + j;
+			initData.initNodeVec[index] = rawData_m.initCellCenters[i]
+					+ rawData_m.initInternalNodePoss[j];
+			initData.nodeTypes[index] = EpiInternal;
+		}
+	}
+
+	return initData;
+}
+
 vector<CVector> CellInitHelper::rotate2D(vector<CVector> &initECMNodePoss,
 		double angle) {
 	uint inputVectorSize = initECMNodePoss.size();
@@ -426,6 +498,57 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	}
 
 	generateCellInitNodeInfo_v2(rawData.initCellNodePoss);
+
+	rawData.isStab = true;
+	return rawData;
+}
+
+RawDataInput_M CellInitHelper::generateRawInput_stab_M() {
+	RawDataInput_M rawData;
+	rawData.simuType = simuType;
+	vector<CVector> insideCellCenters;
+	vector<CVector> outsideBdryNodePos;
+	std::string bdryInputFileName = globalConfigVars.getConfigValue(
+			"Bdry_InputFileName").toString();
+
+	GEOMETRY::MeshGen meshGen;
+
+	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
+			bdryInputFileName);
+
+	std::vector<GEOMETRY::Point2D> insideCenterPoints =
+			mesh.getAllInsidePoints();
+
+	double fine_Ratio =
+			globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
+
+	for (uint i = 0; i < insideCenterPoints.size(); i++) {
+		insideCellCenters.push_back(
+				CVector(insideCenterPoints[i].getX(),
+						insideCenterPoints[i].getY(), 0));
+	}
+
+	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
+
+	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
+
+	for (uint i = 0; i < bdryPoints.size(); i++) {
+		outsideBdryNodePos.push_back(
+				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
+	}
+
+	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
+		CVector centerPos = insideCellCenters[i];
+		rawData.initCellCenters.push_back(centerPos);
+		centerPos.Print();
+	}
+
+	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
+		rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
+	}
+
+	generateCellInitNodeInfo_v3(rawData.initBdryNodePoss,
+			rawData.initInternalNodePoss);
 
 	rawData.isStab = true;
 	return rawData;
@@ -560,6 +683,12 @@ void CellInitHelper::generateCellInitNodeInfo_v2(vector<CVector>& initPos) {
 	initPos = generateInitCellNodes();
 }
 
+void CellInitHelper::generateCellInitNodeInfo_v3(vector<CVector>& initBdryPos,
+		vector<CVector>& initInternalPos) {
+	initBdryPos = generateInitEpiNodes();
+	initInternalPos = generateInitCellNodes();
+}
+
 double CellInitHelper::getRandomNum(double min, double max) {
 	double rand01 = rand() / ((double) RAND_MAX + 1);
 	double randNum = min + (rand01 * (max - min));
@@ -585,6 +714,22 @@ vector<CVector> CellInitHelper::generateInitCellNodes() {
 		attemptedPoss[i] = attemptedPoss[i] - tmpSum;
 	}
 	return attemptedPoss;
+}
+
+vector<CVector> CellInitHelper::generateInitEpiNodes() {
+	double initRadius =
+			globalConfigVars.getConfigValue("InitEpiBdryRadius").toDouble();
+	uint initEpiNodeCount =
+			globalConfigVars.getConfigValue("InitEpiNodeCount").toInt();
+	vector<CVector> initEpiNodes;
+	double unitAngle = 2 * acos(-1.0) / (double) (initEpiNodeCount);
+	for (uint i = 0; i < initEpiNodeCount; i++) {
+		CVector node;
+		node.x = initRadius * cos(unitAngle * i);
+		node.y = initRadius * sin(unitAngle * i);
+		initEpiNodes.push_back(node);
+	}
+	return initEpiNodes;
 }
 
 vector<CVector> CellInitHelper::attemptGeenerateInitCellNodes() {
@@ -662,10 +807,26 @@ SimulationInitData_V2 CellInitHelper::initStabInput() {
 	return initData;
 }
 
+//RawDataInput rawInput = generateRawInput_stab();
+SimulationInitData_V2_M CellInitHelper::initStabInput_M() {
+	RawDataInput_M rawInput_m = generateRawInput_stab_M();
+	SimulationInitData_V2_M initData = initInputsV3_M(rawInput_m);
+	initData.isStab = true;
+	return initData;
+}
+
 SimulationInitData_V2 CellInitHelper::initSimuInput(
 		std::vector<CVector> &cellCenterPoss) {
 	RawDataInput rawInput = generateRawInput_simu(cellCenterPoss);
 	SimulationInitData_V2 simuInitData = initInputsV3(rawInput);
+	simuInitData.isStab = false;
+	return simuInitData;
+}
+
+SimulationInitData_V2_M CellInitHelper::initSimuInput_M(
+		std::vector<CVector>& cellCenterPoss) {
+	RawDataInput_M rawInput_m = generateRawInput_simu_M(cellCenterPoss);
+	SimulationInitData_V2_M simuInitData = initInputsV3_M(rawInput_m);
 	simuInitData.isStab = false;
 	return simuInitData;
 }

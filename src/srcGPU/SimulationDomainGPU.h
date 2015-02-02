@@ -42,7 +42,7 @@ class SimulationDomainGPU {
 	SceCells cells;
 
 	/**
-	 * Cartilage is another important components in the model.
+	 * Cartilage is another important components in the beak model.
 	 */
 	Cartilage cartilage;
 
@@ -115,6 +115,15 @@ class SimulationDomainGPU {
 			std::vector<CVector> &initFNMNodeVec,
 			std::vector<CVector> &initMXNodeVec);
 
+	/**
+	 * Initializes data vectors by given vectors.
+	 * improved from the previous version.
+	 */
+	void initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
+			std::vector<uint> &numOfInitActiveEpiNodeCounts,
+			std::vector<uint> &numOfInitActiveInternalNodeCounts,
+			std::vector<CVector> &initNodesVec);
+
 public:
 	/**
 	 * Default constructor.
@@ -128,6 +137,13 @@ public:
 	 * @param initData initial data set for simulation domain
 	 */
 	void initialize_v2(SimulationInitData_V2 &initData);
+
+	/**
+	 * Domain initialization.
+	 * Assigns values to the data fields in simulation domain.
+	 * @param initData initial data set for simulation domain
+	 */
+	void initialize_v2_M(SimulationInitData_V2_M &initData);
 
 	/**
 	 * This method is used for producing more or less evenly distributed cell center positions.

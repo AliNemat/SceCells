@@ -252,40 +252,77 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxTotalCellCount, uint maxNodeInCell, bool isStab) {
 	initControlPara(isStab);
 	readDomainPara();
-	initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount, maxCartNodeCount,
-			maxTotalECMCount, maxNodeInECM, maxTotalCellCount, maxNodeInCell);
-	uint maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
-			+ maxCartNodeCount + allocPara.maxTotalECMNodeCount
-			+ allocPara.maxTotalCellNodeCount;
+	uint maxTotalNodeCount;
+	if (controlPara.simuType != Disc_M) {
+		initNodeAllocPara(totalBdryNodeCount, maxProfileNodeCount,
+				maxCartNodeCount, maxTotalECMCount, maxNodeInECM,
+				maxTotalCellCount, maxNodeInCell);
+		maxTotalNodeCount = totalBdryNodeCount + maxProfileNodeCount
+				+ maxCartNodeCount + allocPara.maxTotalECMNodeCount
+				+ allocPara.maxTotalCellNodeCount;
+	} else {
+		uint maxEpiNodeCount = globalConfigVars.getConfigValue(
+				"MaxEpiNodeCountPerCell").toInt();
+		uint maxInternalNodeCount = globalConfigVars.getConfigValue(
+				"MaxAllNodeCountPerCell").toInt() - maxEpiNodeCount;
+
+		initNodeAllocPara_M(totalBdryNodeCount, maxTotalCellCount,
+				maxEpiNodeCount, maxInternalNodeCount);
+		maxTotalNodeCount = allocPara_M.maxTotalNodeCount;
+	}
 	allocSpaceForNodes(maxTotalNodeCount);
 	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
 	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
 	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
-	for (int i = 0; i < maxTotalNodeCount; i++) {
-		if (i < allocPara.startPosProfile) {
-			hostTmpVector[i] = Boundary;
-			hostTmpVector3[i] = 0;
-		} else if (i < allocPara.startPosCart) {
-			hostTmpVector[i] = Profile;
-			hostTmpVector3[i] = 0;
-		} else if (i < allocPara.startPosECM) {
-			hostTmpVector[i] = Cart;
-			hostTmpVector3[i] = 0;
-		} else if (i < allocPara.startPosCells) {
-			hostTmpVector[i] = ECM;
-			hostTmpVector3[i] = (i - allocPara.startPosECM)
-					/ allocPara.maxNodePerECM;
-		} else {
-			// all initialized as FNM
-			hostTmpVector[i] = FNM;
-			hostTmpVector3[i] = (i - allocPara.startPosCells)
-					/ allocPara.maxNodeOfOneCell;
+
+	if (controlPara.simuType != Disc_M) {
+
+		for (int i = 0; i < maxTotalNodeCount; i++) {
+			if (i < allocPara.startPosProfile) {
+				hostTmpVector[i] = Boundary;
+				hostTmpVector3[i] = 0;
+			} else if (i < allocPara.startPosCart) {
+				hostTmpVector[i] = Profile;
+				hostTmpVector3[i] = 0;
+			} else if (i < allocPara.startPosECM) {
+				hostTmpVector[i] = Cart;
+				hostTmpVector3[i] = 0;
+			} else if (i < allocPara.startPosCells) {
+				hostTmpVector[i] = ECM;
+				hostTmpVector3[i] = (i - allocPara.startPosECM)
+						/ allocPara.maxNodePerECM;
+			} else {
+				// all initialized as FNM
+				hostTmpVector[i] = FNM;
+				hostTmpVector3[i] = (i - allocPara.startPosCells)
+						/ allocPara.maxNodeOfOneCell;
+			}
+			hostTmpVector2[i] = false;
 		}
-		hostTmpVector2[i] = false;
+
+	} else {
+		for (uint i = 0; i < maxTotalNodeCount; i++) {
+			if (i < allocPara_M.bdryNodeCount) {
+				hostTmpVector[i] = Boundary;
+				hostTmpVector3[i] = 0;
+			} else {
+				uint tmp = i - allocPara_M.bdryNodeCount;
+				uint cellRank = tmp / allocPara_M.bdryNodeCount;
+				uint nodeRank = tmp % allocPara_M.bdryNodeCount;
+				if (nodeRank < allocPara_M.maxEpiNodePerCell) {
+					hostTmpVector[i] = EpiBdry;
+				} else {
+					hostTmpVector[i] = EpiInternal;
+				}
+				hostTmpVector3[i] = cellRank;
+			}
+			hostTmpVector2[i] = false;
+		}
 	}
 	infoVecs.nodeCellType = hostTmpVector;
 	infoVecs.nodeIsActive = hostTmpVector2;
 	infoVecs.nodeCellRank = hostTmpVector3;
+
 	copyParaToGPUConstMem();
 }
 
@@ -374,11 +411,11 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 
 	uint beginAddressOfProfile = allocPara.startPosProfile;
 	uint beginAddressOfCart = allocPara.startPosCart;
-	// find the begining position of ECM.
+// find the begining position of ECM.
 	uint beginAddressOfECM = allocPara.startPosECM;
-	// find the begining position of FNM cells.
+// find the begining position of FNM cells.
 	uint beginAddressOfFNM = allocPara.startPosCells;
-	// find the begining position of MX cells.
+// find the begining position of MX cells.
 	uint beginAddressOfMX = beginAddressOfFNM + FNMNodeCount;
 
 	std::vector<double> initBdryCellNodePosX = getArrayXComp(
@@ -390,7 +427,7 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
 			infoVecs.nodeLocY.begin());
 
-	// copy x and y position of nodes of Profile to actual node position.
+// copy x and y position of nodes of Profile to actual node position.
 	std::vector<double> initProfileNodePosX = getArrayXComp(initProfileNodePos);
 	thrust::copy(initProfileNodePosX.begin(), initProfileNodePosX.end(),
 			infoVecs.nodeLocX.begin() + beginAddressOfProfile);
@@ -398,7 +435,7 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 	thrust::copy(initProfileNodePosY.begin(), initProfileNodePosY.end(),
 			infoVecs.nodeLocY.begin() + beginAddressOfProfile);
 
-	// copy x and y position of nodes of Profile to actual node position.
+// copy x and y position of nodes of Profile to actual node position.
 	std::vector<double> initCartNodePosX = getArrayXComp(initCartNodePos);
 	thrust::copy(initCartNodePosX.begin(), initCartNodePosX.end(),
 			infoVecs.nodeLocX.begin() + beginAddressOfCart);
@@ -406,7 +443,7 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 	thrust::copy(initCartNodePosY.begin(), initCartNodePosY.end(),
 			infoVecs.nodeLocY.begin() + beginAddressOfCart);
 
-	// copy x and y position of nodes of ECM to actual node position.
+// copy x and y position of nodes of ECM to actual node position.
 	std::vector<double> initECMNodePosX = getArrayXComp(initECMNodePos);
 	thrust::copy(initECMNodePosX.begin(), initECMNodePosX.end(),
 			infoVecs.nodeLocX.begin() + beginAddressOfECM);
@@ -419,7 +456,7 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 		assert(!isnan(initECMNodePosX[i]));
 	}
 
-	// copy x and y position of nodes of FNM cells to actual node position.
+// copy x and y position of nodes of FNM cells to actual node position.
 	std::vector<double> initFNMCellNodePosX = getArrayXComp(initFNMCellNodePos);
 	thrust::copy(initFNMCellNodePosX.begin(), initFNMCellNodePosX.end(),
 			infoVecs.nodeLocX.begin() + beginAddressOfFNM);
@@ -430,7 +467,7 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfFNM,
 			infoVecs.nodeCellType.begin() + beginAddressOfMX, FNM);
 
-	// copy x and y position of nodes of MX cells to actual node position.
+// copy x and y position of nodes of MX cells to actual node position.
 	std::vector<double> initMXCellNodePosX = getArrayXComp(initMXCellNodePos);
 	thrust::copy(initMXCellNodePosX.begin(), initMXCellNodePosX.end(),
 			infoVecs.nodeLocX.begin() + beginAddressOfMX);
@@ -440,6 +477,31 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 
 	thrust::fill(infoVecs.nodeCellType.begin() + beginAddressOfMX,
 			infoVecs.nodeCellType.begin() + beginAddressOfMX + MXNodeCount, MX);
+}
+
+void SceNodes::initValues_M(std::vector<CVector>& initBdryNodePos,
+		std::vector<CVector>& initCellNodePos,
+		std::vector<SceNodeType>& nodeTypes) {
+
+	uint beginAddressOfCell = initBdryNodePos.size();
+
+	std::vector<double> initBdryCellNodePosX = getArrayXComp(initBdryNodePos);
+	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
+			infoVecs.nodeLocX.begin());
+	std::vector<double> initBdryCellNodePosY = getArrayYComp(initBdryNodePos);
+	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
+			infoVecs.nodeLocY.begin());
+
+	std::vector<double> initCellNodePosX = getArrayXComp(initCellNodePos);
+	thrust::copy(initCellNodePosX.begin(), initCellNodePosX.end(),
+			infoVecs.nodeLocX.begin() + beginAddressOfCell);
+	std::vector<double> initCellNodePosY = getArrayYComp(initCellNodePos);
+	thrust::copy(initCellNodePosY.begin(), initCellNodePosY.end(),
+			infoVecs.nodeLocY.begin() + beginAddressOfCell);
+
+	thrust::copy(nodeTypes.begin(), nodeTypes.end(),
+			infoVecs.nodeCellType.begin());
+
 }
 
 void SceNodes::applyProfileForces() {
@@ -479,12 +541,12 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	cout << "size of potential pairs = " << pairs.size() << endl;
 	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
 
-	// unordered_map is more efficient than map, but it is a c++ 11 feature
-	// and c++ 11 seems to be incompatible with Thrust.
+// unordered_map is more efficient than map, but it is a c++ 11 feature
+// and c++ 11 seems to be incompatible with Thrust.
 	IndexMap locIndexToAniIndexMap;
 
-	// Doesn't have to copy the entire nodeLocX array.
-	// Only copy the first half will be sufficient
+// Doesn't have to copy the entire nodeLocX array.
+// Only copy the first half will be sufficient
 	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
 	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
 	thrust::host_vector<double> hostTmpVectorLocZ = infoVecs.nodeLocZ;
@@ -1517,16 +1579,7 @@ void SceNodes::processCartGrowthDir(CVector dir) {
 void SceNodes::initControlPara(bool isStab) {
 	int simuTypeConfigValue =
 			globalConfigVars.getConfigValue("SimulationType").toInt();
-	if (simuTypeConfigValue == 0) {
-		controlPara.simuType = Beak;
-	} else if (simuTypeConfigValue == 1) {
-		controlPara.simuType = Disc;
-	} else if (simuTypeConfigValue == 2) {
-		controlPara.simuType = SingleCellTest;
-	} else {
-		throw SceException("Simulation Type in config file is not recognized!",
-				ConfigValueException);
-	}
+	controlPara.simuType = parseTypeFromConfig(simuTypeConfigValue);
 	controlPara.controlSwitchs.outputBmpImg = globalConfigVars.getSwitchState(
 			"Switch_OutputBMP");
 	controlPara.controlSwitchs.outputLabelMatrix =
@@ -1631,6 +1684,19 @@ void SceNodes::initNodeAllocPara(uint totalBdryNodeCount,
 			+ allocPara.maxTotalECMNodeCount;
 }
 
+void SceNodes::initNodeAllocPara_M(uint totalBdryNodeCount,
+		uint maxTotalCellCount, uint maxEpiNodePerCell,
+		uint maxInternalNodePerCell) {
+	allocPara_M.bdryNodeCount = totalBdryNodeCount;
+	allocPara_M.currentActiveCellCount = 0;
+	allocPara_M.maxCellCount = maxTotalCellCount;
+	allocPara_M.maxAllNodePerCell = maxEpiNodePerCell + maxInternalNodePerCell;
+	allocPara_M.maxEpiNodePerCell = maxEpiNodePerCell;
+	allocPara_M.maxInternalNodePerCell = maxInternalNodePerCell;
+	allocPara_M.maxTotalNodeCount = allocPara_M.maxCellCount
+			* allocPara_M.maxCellCount;
+}
+
 void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 	uint cellBeginIndex = allocPara.startPosCells
 			+ cellRank * allocPara.maxNodeOfOneCell;
@@ -1644,17 +1710,17 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 	vector<bool> isRemove(allocPara.maxNodeOfOneCell, false);
 
 	/*
-	std::cout << "before, X: [";
-	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
-		std::cout << cellXCoords[i] << " ";
-	}
-	std::cout << "]" << endl;
-	std::cout << "before, Y: [";
-	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
-		std::cout << cellYCoords[i] << " ";
-	}
-	std::cout << "]" << endl;
-	*/
+	 std::cout << "before, X: [";
+	 for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+	 std::cout << cellXCoords[i] << " ";
+	 }
+	 std::cout << "]" << endl;
+	 std::cout << "before, Y: [";
+	 for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+	 std::cout << cellYCoords[i] << " ";
+	 }
+	 std::cout << "]" << endl;
+	 */
 
 	for (uint i = 0; i < removeSeq.size(); i++) {
 		isRemove[removeSeq[i]] = true;
@@ -1671,17 +1737,17 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 	}
 
 	/*
-	std::cout << "after, X: [";
-	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
-		std::cout << cellXRemoved[i] << " ";
-	}
-	std::cout << "]" << endl;
-	std::cout << "after, Y: [";
-	for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
-		std::cout << cellYRemoved[i] << " ";
-	}
-	std::cout << "]" << endl;
-	*/
+	 std::cout << "after, X: [";
+	 for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+	 std::cout << cellXRemoved[i] << " ";
+	 }
+	 std::cout << "]" << endl;
+	 std::cout << "after, Y: [";
+	 for (uint i = 0; i < allocPara.maxNodeOfOneCell; i++) {
+	 std::cout << cellYRemoved[i] << " ";
+	 }
+	 std::cout << "]" << endl;
+	 */
 	thrust::copy(cellXRemoved.begin(), cellXRemoved.end(),
 			infoVecs.nodeLocX.begin() + cellBeginIndex);
 	thrust::copy(cellYRemoved.begin(), cellYRemoved.end(),

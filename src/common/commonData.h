@@ -35,7 +35,7 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
 
 enum SceNodeType {
-	Boundary, Profile, ECM, FNM, MX, Cart, Base
+	Boundary, Profile, ECM, FNM, MX, Cart, Base, EpiInternal, EpiBdry
 };
 std::string toString(SceNodeType type);
 
@@ -75,13 +75,13 @@ public:
 };
 
 enum SimulationType {
-	Beak, Disc, SingleCellTest
+	Beak, Disc, SingleCellTest, Disc_M
 };
 
 SimulationType parseTypeFromConfig(int configValue);
 
 enum AniType {
-	CellType, ForceAbsVal, Force
+	CellType, ForceAbsVal, Force, Tension
 };
 
 AniType parseAniTpFromConfig(int configValue);
@@ -103,11 +103,29 @@ struct ControlPara {
  * This data structure contains mechanical parameters of the model.
  */
 struct SceMechPara {
-	double sceInterParaCPU[5];
+
+	/*
+	 * These parameters are useful in all versions.
+	 */
 	double sceIntraParaCPU[5];
 	double sceIntraParaDivCPU[5];
-	double sceCartParaCPU[5];
+
+	/*
+	 * This parameter is useful in original sce model.
+	 */
+	double sceInterParaCPU[5];
+
+	/*
+	 * There parameters are useful modified disc model
+	 */
+	double sceBdryBdryParaCPU[5];
+	double sceBdryInterParaCPU[5];
+
+	/*
+	 * These parameters are for beak project only
+	 */
 	double sceInterDiffParaCPU[5];
+	double sceCartParaCPU[5];
 	double sceProfileParaCPU[7];
 	double sceECMParaCPU[5];
 	double sceDiffParaCPU[5];
@@ -115,6 +133,7 @@ struct SceMechPara {
 
 /**
  * This data structure contains chemical parameters of the model.
+ * used only in beak project.
  */
 struct SceChemPara {
 	uint growthGridXDim;
@@ -140,11 +159,15 @@ struct SceChemPara {
 
 /**
  * This data structure contains biology parameters of the model.
+ * These parameters controls cell polarity.
  */
 struct SceBioPara {
 	double cellInitLength;
 	double cellFinalLength;
 	double elongationCoefficient;
+	/*
+	 * chemical related parameter is
+	 */
 	double chemoCoefficient;
 };
 
@@ -155,6 +178,9 @@ struct SceMiscPara {
 	double growThreshold;
 	double isDivideCriticalRatio;
 	double addNodeDistance;
+	/*
+	 * prevents numerical instability.
+	 */
 	double minDistanceToOtherNode;
 };
 
@@ -166,10 +192,16 @@ struct SceMemPara {
 	SimulationType simuType;
 	uint maxCellInDomain;
 	uint maxNodePerCell;
+
+	// these parameters are useful in Disc_M
+	uint maxEpiNodePerCell;
+	uint maxInternalNodePerCell;
+	uint maxAllNodePerCell;
+
+	// these parameters are useful in Beak project
 	uint maxECMInDomain;
 	uint maxNodePerECM;
 	double FinalToInitProfileNodeCountRatio;
-	//double FinalToInitCartNodeCountRatio;
 };
 
 /**
@@ -180,6 +212,16 @@ struct CellsMemPara {
 	uint currentActiveCellCount; // the number of active cells would keep changing
 	uint currentActiveECMCount;     // the number of active ECM might change.
 	uint currectActiveProfileNode; // the number of epithilum nodes might change.
+};
+
+/**
+ * This data structure contains parameters about the memory layout of the cells
+ */
+struct CellsMemPara_M {
+	uint maxEpiNodeCount; // max possible node count for epithilium nodes
+	uint maxInternalNodeCount; //max possible node count for internal nodes
+	uint maxTotalCellNodeCount; // max possible node count for epithilium and internal node combined
+	uint currentActiveCellCount; // the number of active cells would keep changing
 };
 
 /**
@@ -237,6 +279,24 @@ struct NodeAllocPara {
 	uint startPosCart;
 	uint startPosECM;
 	uint startPosCells;
+};
+
+/**
+ * This data structure contains parameters about the memory allocation in SceNodes_M.
+ */
+struct NodeAllocPara_M {
+	uint bdryNodeCount;
+	// @maxNodeOfOneCell represents maximum number of nodes per cell
+	uint maxAllNodePerCell;
+	uint maxEpiNodePerCell;
+	uint maxInternalNodePerCell;
+	// @maxCellCount represents maximum number of cells in the system
+	uint maxCellCount;
+	// @maxTotalNodeCount represents maximum total number of nodes of all cells
+	// maxTotalCellNodeCount = maxNodeOfOneCell * maxCellCount;
+	uint maxTotalNodeCount;
+	// @currentActiveCellCount represents number of cells that are currently active.
+	uint currentActiveCellCount;
 };
 
 /**
@@ -351,6 +411,18 @@ struct RawDataInput {
 };
 
 /**
+ * Generated Raw data that needs reformatting in order to be used for domain initialization.
+ */
+struct RawDataInput_M {
+	bool isStab;
+	SimulationType simuType;
+	std::vector<CVector> bdryNodes;
+	std::vector<CVector> initCellCenters;
+	std::vector<CVector> initInternalNodePoss;
+	std::vector<CVector> initBdryNodePoss;
+};
+
+/**
  * a data structure that was specifically designed for Beak project.
  */
 struct SimulationInitData {
@@ -369,7 +441,7 @@ struct SimulationInitData {
 };
 
 /**
- * a data structure that was specifically designed for Beak project.
+ *
  */
 struct SimulationInitData_V2 {
 	bool isStab;
@@ -389,6 +461,18 @@ struct SimulationInitData_V2 {
 	std::vector<CVector> initMXNodeVec;
 };
 
+/**
+ * a data structure that was specifically designed for Disc project (modified).
+ */
+struct SimulationInitData_V2_M {
+	bool isStab;
+	SimulationType simuType;
+	std::vector<SceNodeType> nodeTypes;
+	std::vector<uint> InitActiveEpiNodePerCellArr;
+	std::vector<uint> InitActiveInternalNodePerCellArr;
+	std::vector<CVector> initNodeVec;
+};
+
 std::vector<double> getArrayXComp(std::vector<CVector> &nodePosVec);
 std::vector<double> getArrayYComp(std::vector<CVector> &nodePosVec);
 std::vector<double> getArrayZComp(std::vector<CVector> &nodePosVec);
@@ -406,7 +490,7 @@ struct SceInputPoint {
 };
 
 /**
- * This class is not used for nwo but might be useful in the future
+ * This class is not used for now but might be useful in the future
  */
 struct inputInitialData {
 	SceMemPara memParas;

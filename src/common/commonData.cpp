@@ -60,6 +60,12 @@ std::string toString(SceNodeType type) {
 	case Base:
 		result = "Base";
 		break;
+	case EpiInternal:
+		result = "Base";
+		break;
+	case EpiBdry:
+		result = "Base";
+		break;
 	}
 	return result;
 }
@@ -87,6 +93,12 @@ double nodeTypeToScale(SceNodeType type) {
 		break;
 	case Base:
 		result = 6;
+		break;
+	case EpiInternal:
+		result = 7;
+		break;
+	case EpiBdry:
+		result = 8;
 		break;
 	}
 	return result;
@@ -209,6 +221,8 @@ SimulationType parseTypeFromConfig(int configValue) {
 		return Disc;
 	} else if (configValue == 2) {
 		return SingleCellTest;
+	} else if (configValue == 3) {
+		return Disc_M;
 	} else {
 		throw SceException("Simulation type in config file is not defined",
 				ConfigValueException);
@@ -230,6 +244,8 @@ AniType parseAniTpFromConfig(int configValue) {
 		return ForceAbsVal;
 	} else if (configValue == 2) {
 		return Force;
+	} else if (configValue == 3) {
+		return Tension;
 	} else {
 		throw SceException("Animation type in config file is not defined",
 				ConfigValueException);
