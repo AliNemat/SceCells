@@ -29,6 +29,19 @@ struct DivideFunctor: public thrust::unary_function<uint, uint> {
 	}
 };
 
+struct PlusNum: public thrust::unary_function<uint, uint> {
+	uint _addNum;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	PlusNum(uint num) :
+			_addNum(num) {
+	}
+	__host__ __device__
+	double operator()(const uint &num1) {
+		return num1 + _addNum;
+	}
+};
+
 /**
  * Functor for modulo operation.
  * @param dividend divisor for modulo operator.
@@ -546,6 +559,40 @@ struct ApplyStretchForce: thrust::unary_function<CVec6, CVec2> {
 	}
 };
 
+struct ApplyStretchForce_M: thrust::unary_function<CVec6UI, CVec2> {
+	double _elongationCoefficient;
+	double _typeThreshold;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	ApplyStretchForce_M(double elongationCoefficient, uint threshold) :
+			_elongationCoefficient(elongationCoefficient), _typeThreshold(
+					threshold) {
+	}
+	__host__ __device__
+	CVec2 operator()(const CVec6UI &vec6ui) {
+		double distToCenterAlongGrowDir = thrust::get<0>(vec6ui);
+		// minimum distance of node to its corresponding center along growth direction
+		double lengthDifference = thrust::get<1>(vec6ui);
+		double growthXDir = thrust::get<2>(vec6ui);
+		double growthYDir = thrust::get<3>(vec6ui);
+		double originalVelX = thrust::get<4>(vec6ui);
+		double originalVelY = thrust::get<5>(vec6ui);
+		uint nodeRank = thrust::get<6>(vec6ui);
+		if (nodeRank < _typeThreshold) {
+			return thrust::make_tuple(originalVelX, originalVelY);
+		} else {
+			double xRes = lengthDifference * _elongationCoefficient
+					* distToCenterAlongGrowDir * growthXDir;
+			xRes = xRes + originalVelX;
+			double yRes = lengthDifference * _elongationCoefficient
+					* distToCenterAlongGrowDir * growthYDir;
+			yRes = yRes + originalVelY;
+			return thrust::make_tuple(xRes, yRes);
+		}
+
+	}
+};
+
 struct ApplyChemoVel: thrust::unary_function<CVec5, CVec2> {
 	double _chemoCoefficient;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -802,9 +849,7 @@ struct CellInfoVecs {
 	 * progress == 1 means ready to divide
 	 */
 	thrust::device_vector<double> growthProgress;
-	/**
-	 *
-	 */
+
 	thrust::device_vector<double> expectedLength;
 	//thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;
@@ -832,6 +877,8 @@ struct CellInfoVecs {
 
 	// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
+	thrust::device_vector<uint> activeEpiNodeCountOfCells;
+	thrust::device_vector<uint> activeInternalNodeCountOfCells;
 };
 
 struct CellNodeInfoVecs {
@@ -921,6 +968,8 @@ class SceCells {
 	CellGrowthAuxData growthAuxData;
 	CellDivAuxData divAuxData;
 	ControlPara controlPara;
+
+	NodeAllocPara_M allocPara_m;
 
 	// in this class, there are a lot of arrays that store information for each cell
 	// this counting iterator is used for all these arrays indicating the begining.
@@ -1110,6 +1159,23 @@ class SceCells {
 
 	void allComponentsMove_M();
 
+	void randomizeGrowth_M();
+
+	void updateGrowthProgress_M();
+
+	void decideIsScheduleToGrow_M();
+
+	void computeCellTargetLength_M();
+
+	void computeDistToCellCenter_M();
+
+	void findMinAndMaxDistToCenter_M();
+
+	void computeLenDiffExpCur_M();
+
+	void stretchCellGivenLenDiff_M();
+
+	void addPointIfScheduledToGrow_M();
 public:
 
 	SceCells();

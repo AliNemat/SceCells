@@ -1265,9 +1265,102 @@ void SceCells::runAblationTest(AblationEvent& ablEvent) {
 }
 
 void SceCells::computeCenterPos_M() {
+	uint totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
+	uint totalInternalActiveNodeCount = thrust::reduce(
+			cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+			cellInfoVecs.activeInternalNodeCountOfCells.begin()
+					+ allocPara_m.currentActiveCellCount);
+
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeCellType.begin()))
+					+ allocPara_m.bdryNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.cellRanks.begin(),
+							cellNodeInfoVecs.activeXPoss.begin(),
+							cellNodeInfoVecs.activeYPoss.begin())),
+			ActiveAndInternal());
+
+	// TODO: double check if cell type is initialized properly.
+
+	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
+			cellNodeInfoVecs.cellRanks.begin() + totalInternalActiveNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.activeXPoss.begin(),
+							cellNodeInfoVecs.activeYPoss.begin(),
+							cellNodeInfoVecs.activeZPoss.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())),
+			thrust::equal_to<uint>(), CVec3Add());
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.centerCoordZ.begin())), CVec3Divide());
 }
 
 void SceCells::growAtRandom_M(double dt) {
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+	// randomly select growth direction and speed.
+	randomizeGrowth_M();
+
+	//std::cout << "after copy grow info" << std::endl;
+	updateGrowthProgress_M();
+	//std::cout << "after update growth progress" << std::endl;
+	decideIsScheduleToGrow_M();
+	//std::cout << "after decode os schedule to grow" << std::endl;
+	computeCellTargetLength_M();
+	//std::cout << "after compute cell target length" << std::endl;
+	computeDistToCellCenter_M();
+	//std::cout << "after compute dist to center" << std::endl;
+	findMinAndMaxDistToCenter_M();
+	//std::cout << "after find min and max dist" << std::endl;
+	computeLenDiffExpCur_M();
+	//std::cout << "after compute diff " << std::endl;
+	stretchCellGivenLenDiff_M();
+
+	//std::cout << "after apply cell chemotaxis" << std::endl;
+	addPointIfScheduledToGrow_M();
+	//std::cout << "after adding node" << std::endl;
 }
 
 void SceCells::divide2D_M() {
@@ -1280,4 +1373,259 @@ void SceCells::distributeCellGrowthProgress_M() {
 }
 
 void SceCells::allComponentsMove_M() {
+}
+
+void SceCells::randomizeGrowth_M() {
+	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin))
+					+ allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin())),
+			AssignRandIfNotInit(growthAuxData.randomGrowthSpeedMin,
+					growthAuxData.randomGrowthSpeedMax,
+					allocPara_m.currentActiveCellCount,
+					growthAuxData.randGenAuxPara));
+}
+
+void SceCells::updateGrowthProgress_M() {
+	thrust::transform(cellInfoVecs.growthSpeed.begin(),
+			cellInfoVecs.growthSpeed.begin()
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.growthProgress.begin(),
+			cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
+}
+
+void SceCells::decideIsScheduleToGrow_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin()))
+					+ allocPara.currentActiveCellCount,
+			cellInfoVecs.isScheduledToGrow.begin(),
+			PtCondiOp(miscPara.growThreshold));
+}
+
+void SceCells::computeCellTargetLength_M() {
+	thrust::transform(cellInfoVecs.growthProgress.begin(),
+			cellInfoVecs.growthProgress.begin()
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.expectedLength.begin(),
+			CompuTarLen(bioPara.cellInitLength, bioPara.cellFinalLength));
+}
+
+void SceCells::computeDistToCellCenter_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeIsActive.begin()
+									+ allocPara_m.bdryNodeCount)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeIsActive.begin()
+									+ allocPara_m.bdryNodeCount))
+					+ totalNodeCountForActiveCells,
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(), CompuDist());
+}
+
+void SceCells::findMinAndMaxDistToCenter_M() {
+	thrust::reduce_by_key(
+			make_transform_iterator(countingBegin,
+					DivideFunctor(allocPara_m.maxAllNodePerCell)),
+			make_transform_iterator(countingBegin,
+					DivideFunctor(allocPara_m.maxAllNodePerCell))
+					+ totalNodeCountForActiveCells,
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.smallestDistance.begin(), thrust::equal_to<uint>(),
+			thrust::minimum<double>());
+
+	// for nodes of each cell, find the maximum distance from the node to the corresponding
+	// cell center along the pre-defined growth direction.
+
+	thrust::reduce_by_key(
+			make_transform_iterator(countingBegin,
+					DivideFunctor(allocPara_m.maxAllNodePerCell)),
+			make_transform_iterator(countingBegin,
+					DivideFunctor(allocPara_m.maxAllNodePerCell))
+					+ totalNodeCountForActiveCells,
+			cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.biggestDistance.begin(), thrust::equal_to<uint>(),
+			thrust::maximum<double>());
+}
+
+void SceCells::computeLenDiffExpCur_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.smallestDistance.begin(),
+							cellInfoVecs.biggestDistance.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.expectedLength.begin(),
+							cellInfoVecs.smallestDistance.begin(),
+							cellInfoVecs.biggestDistance.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.lengthDifference.begin(), CompuDiff());
+}
+
+void SceCells::stretchCellGivenLenDiff_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.lengthDifference.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ allocPara_m.bdryNodeCount,
+							make_transform_iterator(countingBegin,
+									ModuloFunctor(
+											allocPara_m.maxAllNodePerCell)))),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+							make_permutation_iterator(
+									cellInfoVecs.lengthDifference.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthXDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							make_permutation_iterator(
+									cellInfoVecs.growthYDir.begin(),
+									make_transform_iterator(countingBegin,
+											DivideFunctor(
+													allocPara_m.maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ allocPara_m.bdryNodeCount,
+							make_transform_iterator(countingBegin,
+									ModuloFunctor(
+											allocPara_m.maxAllNodePerCell))))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ allocPara_m.bdryNodeCount)),
+			ApplyStretchForce_M(bioPara.elongationCoefficient,
+					allocPara_m.maxEpiNodePerCell));
+}
+
+void SceCells::addPointIfScheduledToGrow_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							make_transform_iterator(
+									cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+									PlusNum(allocPara_m.maxEpiNodePerCell)),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(), countingBegin,
+							cellInfoVecs.lastCheckPoint.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							make_transform_iterator(
+									cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+									PlusNum(allocPara_m.maxEpiNodePerCell)),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(), countingBegin,
+							cellInfoVecs.lastCheckPoint.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
+							make_transform_iterator(
+									cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+									PlusNum(allocPara_m.maxEpiNodePerCell)),
+							cellInfoVecs.lastCheckPoint.begin())),
+			AddPtOp(allocPara_m.maxAllNodePerCell, miscPara.addNodeDistance,
+					miscPara.minDistanceToOtherNode,
+					growthAuxData.nodeIsActiveAddress,
+					growthAuxData.nodeXPosAddress,
+					growthAuxData.nodeYPosAddress, time(NULL),
+					miscPara.growThreshold));
 }

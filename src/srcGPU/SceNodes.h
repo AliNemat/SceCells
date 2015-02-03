@@ -76,6 +76,7 @@ typedef thrust::tuple<double, double, double, double, bool> CVec4Bool;
 typedef thrust::tuple<double, double, double, double, double> CVec5;
 typedef thrust::tuple<double, double, double, double, double, double> CVec6;
 typedef thrust::tuple<double, double, double, double, double, double, bool> CVec6Bool;
+typedef thrust::tuple<double, double, double, double, double, double, uint> CVec6UI;
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
@@ -90,6 +91,7 @@ bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
 __device__
 bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2);
+
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -97,6 +99,22 @@ struct isTrue {
 	__host__ __device__
 	bool operator()(bool b) {
 		if (b == true) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
+/**
+ * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
+ */
+struct ActiveAndInternal {
+	__device__
+	bool operator()(const thrust::tuple<bool, SceNodeType> &bt) {
+		bool isActive = thrust::get<0>(bt);
+		SceNodeType type = thrust::get<1>(bt);
+		if (isActive == true && type == EpiInternal) {
 			return true;
 		} else {
 			return false;
