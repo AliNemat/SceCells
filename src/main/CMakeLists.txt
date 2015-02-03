@@ -106,3 +106,30 @@ if(NOT WIN32)
                         ${CGAL_3RD_PARTY_LIBRARIES} )
 endif()
 
+set(DISK_M_PROJECT_NAME runDiscSimulation_M)
+MESSAGE("Now building " ${DISK_M_PROJECT_NAME})
+include_directories(${GOOGLETEST_DIR}/include/ ${COMMON_INCLUDES} ${COMMON_CUDA_INCLUDES})
+
+file(GLOB SRC_FILES ./discMain_M.cpp)
+#MESSAGE("Compiling these files: "${SRC_FILES})
+cuda_add_executable(${DISK_M_PROJECT_NAME} ${SRC_FILES})
+add_dependencies(${DISK_M_PROJECT_NAME} gtest)
+add_dependencies(${DISK_M_PROJECT_NAME} gtest_main)
+add_dependencies(${DISK_M_PROJECT_NAME} SceGPU)
+
+if(NOT WIN32)
+        #target_link_libraries(${DISK_M_PROJECT_NAME} pthread)
+        target_link_libraries(${DISK_M_PROJECT_NAME} SceGPU)
+        target_link_libraries(${DISK_M_PROJECT_NAME} SceInit)
+        target_link_libraries(${DISK_M_PROJECT_NAME} SceUtils)
+        #target_link_libraries(${DISK_M_PROJECT_NAME} SceUtilsGPU)
+
+        target_link_libraries(${DISK_M_PROJECT_NAME}
+                ${GOOGLETEST_DIR}/libgtest.a
+                ${GOOGLETEST_DIR}/libgtest_main.a
+        )
+        target_link_libraries(${DISK_M_PROJECT_NAME}
+                        ${CGAL_LIBRARY}
+                        ${CGAL_3RD_PARTY_LIBRARIES} )
+endif()
+

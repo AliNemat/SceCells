@@ -79,11 +79,17 @@ typedef thrust::tuple<double, double, double, double, double, double, bool> CVec
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
+typedef thrust::tuple<uint, uint, uint, double, double> Tuuudd;
 
 // special datatype required for Thrust minmax element function.
 typedef thrust::pair<thrust::device_vector<int>::iterator,
 		thrust::device_vector<int>::iterator> MinMaxRes;
 
+__device__
+bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2);
+
+__device__
+bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2);
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -262,6 +268,22 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
+
+__device__
+double computeDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
+
+__device__
+void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes);
+
+__device__
+void calAndAddIntraB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes);
+
+__device__
+void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
+		double& yPos2, double& growPro, double& xRes, double& yRes);
+
 __device__
 void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -270,6 +292,7 @@ __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
+
 __device__
 void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -308,6 +331,17 @@ void handleSceForceNodesDisc(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		double& interForceY, double& interForceZ, double* _nodeLocXAddress,
 		double* _nodeLocYAddress, double* _nodeLocZAddress,
 		double* _nodeGrowProAddr);
+
+__device__
+void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& xPos2, double& yPos2, double& xRes, double& yRes,
+		double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double* _nodeGrowProAddr);
+
+__device__
+void handleAdhesionForce_M(uint& nodeRank1, uint& nodeRank2, int& adhereIndex,
+		double& xPos, double& yPos, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double &xRes, double &yRes);
 
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
@@ -428,6 +462,54 @@ struct AddSceForceDisc: public thrust::unary_function<Tuuuddd, CVec6> {
 		}
 		return thrust::make_tuple(xRes, yRes, zRes, interForceX, interForceY,
 				interForceZ);
+	}
+};
+
+/**
+ * A compute functor designed for computing SceForce for Disc project.
+ */
+struct AddSceForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
+	uint* _extendedValuesAddress;
+	double* _nodeLocXAddress;
+	double* _nodeLocYAddress;
+	int* _nodeAdhereIndex;
+	double* _nodeGroProAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddSceForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
+			double* nodeLocYAddress, int* nodeAdhereIndex,
+			double* nodeGrowProAddr) :
+			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeAdhereIndex(
+					nodeAdhereIndex), _nodeGroProAddr(nodeGrowProAddr) {
+	}
+	__device__
+	CVec2 operator()(const Tuuudd &u3d2) const {
+		double xRes = 0.0;
+		double yRes = 0.0;
+
+		uint begin = thrust::get<0>(u3d2);
+		uint end = thrust::get<1>(u3d2);
+		uint myValue = thrust::get<2>(u3d2);
+		double xPos = thrust::get<3>(u3d2);
+		double yPos = thrust::get<4>(u3d2);
+
+		for (uint i = begin; i < end; i++) {
+			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
+			if (nodeRankOfOtherNode == myValue) {
+				continue;
+			}
+			handleSceForceNodesDisc_M(myValue, nodeRankOfOtherNode, xPos, yPos,
+					_nodeLocXAddress[nodeRankOfOtherNode],
+					_nodeLocYAddress[nodeRankOfOtherNode], xRes, yRes,
+					_nodeLocXAddress, _nodeLocYAddress, _nodeGroProAddr);
+			if (bothEpi(myValue, nodeRankOfOtherNode)) {
+				handleAdhesionForce_M(myValue, nodeRankOfOtherNode,
+						_nodeAdhereIndex[myValue], xPos, yPos, _nodeLocXAddress,
+						_nodeLocYAddress, xRes, yRes);
+			}
+		}
+		return thrust::make_tuple(xRes, yRes);
 	}
 };
 
@@ -574,6 +656,9 @@ public:
 	thrust::device_vector<SceNodeType> nodeCellType;
 	// for each node, we need to identify which cell it belongs to.
 	thrust::device_vector<uint> nodeCellRank;
+
+	// only for modified version
+	thrust::device_vector<int> nodeAdhereIndex;
 };
 
 /**
@@ -678,6 +763,8 @@ class SceNodes {
 	 */
 	void applySceForcesDisc();
 
+	void applySceForcesDisc_M();
+
 	/**
 	 * This function exerts force on the profile nodes.
 	 * Because cartilage actually pins to the epitheilum layer, I have recently
@@ -760,6 +847,8 @@ public:
 	 */
 	void sceForcesDisc();
 
+	void sceForcesDisc_M();
+
 	/**
 	 * add maxNodeOfOneCell
 	 */
@@ -773,6 +862,8 @@ public:
 	 * This method outputs a data structure for animation.
 	 */
 	VtkAnimationData obtainAnimationData(AnimationCriteria aniCri);
+
+	VtkAnimationData obtainAnimationData_M(AnimationCriteria aniCri);
 
 	/**
 	 * method that outputs label matrix.

@@ -1144,6 +1144,22 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	//std::cerr << "after all components move." << std::endl;
 }
 
+void SceCells::runAllCellLogicsDisc_M(double dt) {
+	this->dt = dt;
+
+	computeCenterPos_M();
+
+	growAtRandom_M(dt);
+
+	divide2D_M();
+
+	distributeIsActiveInfo_M();
+
+	distributeCellGrowthProgress_M();
+
+	allComponentsMove_M();
+}
+
 void SceCells::runStretchTest(double dt) {
 	this->dt = dt;
 	computeCenterPos();
@@ -1246,4 +1262,22 @@ void SceCells::runAblationTest(AblationEvent& ablEvent) {
 						- removeSeq.size();
 		nodes->removeNodes(cellRank, removeSeq);
 	}
+}
+
+void SceCells::computeCenterPos_M() {
+}
+
+void SceCells::growAtRandom_M(double dt) {
+}
+
+void SceCells::divide2D_M() {
+}
+
+void SceCells::distributeIsActiveInfo_M() {
+}
+
+void SceCells::distributeCellGrowthProgress_M() {
+}
+
+void SceCells::allComponentsMove_M() {
 }

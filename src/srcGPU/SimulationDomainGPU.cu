@@ -244,6 +244,16 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 	}
 }
 
+void SimulationDomainGPU::runAllLogic_M(double dt) {
+	if (memPara.simuType == Disc_M) {
+		nodes.sceForcesDisc_M();
+		cells.runAllCellLogicsDisc_M(dt);
+	} else {
+		throw SceException("this version can only handle Disc_M type",
+				ConfigValueException);
+	}
+}
+
 void SimulationDomainGPU::readMemPara() {
 	int simuTypeConfigValue =
 			globalConfigVars.getConfigValue("SimulationType").toInt();
@@ -408,6 +418,14 @@ void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
 	VtkAnimationData aniData = nodes.obtainAnimationData(aniCri);
+	aniData.outputVtkAni(scriptNameBase, rank);
+}
+
+// TODO
+void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
+		int rank, AnimationCriteria aniCri) {
+	nodes.prepareSceForceComputation();
+	VtkAnimationData aniData = nodes.obtainAnimationData_M(aniCri);
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
 

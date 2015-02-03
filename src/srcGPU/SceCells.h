@@ -1098,6 +1098,18 @@ class SceCells {
 
 	void distributeIsActiveInfo();
 
+	void computeCenterPos_M();
+
+	void growAtRandom_M(double dt);
+
+	void divide2D_M();
+
+	void distributeIsActiveInfo_M();
+
+	void distributeCellGrowthProgress_M();
+
+	void allComponentsMove_M();
+
 public:
 
 	SceCells();
@@ -1111,6 +1123,8 @@ public:
 			std::vector<uint> &numOfInitActiveInternalNodeCounts);
 
 	void runAllCellLevelLogicsDisc(double dt);
+
+	void runAllCellLogicsDisc_M(double dt);
 
 	void runStretchTest(double dt);
 

@@ -17,6 +17,17 @@ __constant__ uint ECMbeginPos;
 __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
+//
+//
+__constant__ uint cellNodeBeginPos_M;
+__constant__ uint allNodeCountPerCell_M;
+__constant__ uint bdryThreshold_M;
+__constant__ double sceInterPara_M[5];
+__constant__ double sceIntraBPara_M[5];
+__constant__ double maxAdhBondLength;
+__constant__ double bondStiff;
+__constant__ double bondAdhThreshold;
+__constant__ double minAdhBondLength;
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
@@ -762,6 +773,12 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	return vtkData;
 }
 
+// TODO
+VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
+	VtkAnimationData result;
+	return result;
+}
+
 void SceNodes::findBucketBounds() {
 	thrust::counting_iterator<unsigned int> search_begin(0);
 	thrust::lower_bound(auxVecs.bucketKeysExpanded.begin(),
@@ -820,17 +837,24 @@ void SceNodes::addNewlyDividedCells(
 }
 
 void SceNodes::buildBuckets2D() {
-	int totalActiveNodes = allocPara.startPosCells
-			+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
+	int totalActiveNodes;
+	if (controlPara.simuType != Disc_M) {
+		totalActiveNodes = allocPara.startPosCells
+				+ allocPara.currentActiveCellCount * allocPara.maxNodeOfOneCell;
+	} else {
+		totalActiveNodes = allocPara_M.bdryNodeCount
+				+ allocPara_M.currentActiveCellCount
+						* allocPara_M.maxAllNodePerCell;
+	}
 
 	auxVecs.bucketKeys.resize(totalActiveNodes);
 	auxVecs.bucketValues.resize(totalActiveNodes);
 	thrust::counting_iterator<uint> countingIterBegin(0);
 	thrust::counting_iterator<uint> countingIterEnd(totalActiveNodes);
 
-// takes counting iterator and coordinates
-// return tuple of keys and values
-// transform the points to their bucket indices
+	// takes counting iterator and coordinates
+	// return tuple of keys and values
+	// transform the points to their bucket indices
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(infoVecs.nodeLocX.begin(),
@@ -849,7 +873,7 @@ void SceNodes::buildBuckets2D() {
 			pointToBucketIndex2D(domainPara.minX, domainPara.maxX,
 					domainPara.minY, domainPara.maxY, domainPara.gridSpacing));
 
-// sort the points by their bucket index
+	// sort the points by their bucket index
 	thrust::sort_by_key(auxVecs.bucketKeys.begin(), auxVecs.bucketKeys.end(),
 			auxVecs.bucketValues.begin());
 // for those nodes that are inactive, key value of UINT_MAX will be returned.
@@ -868,6 +892,12 @@ double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 	return sqrt(
 			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2)
 					+ (zPos - zPos2) * (zPos - zPos2));
+}
+
+__device__
+double computeDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2) {
+	return sqrt(
+			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2));
 }
 
 __device__
@@ -958,6 +988,77 @@ void calAndAddIntraForceDiv(double& xPos, double& yPos, double& zPos,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 	zRes = zRes + forceValue * (zPos2 - zPos) / linkLength;
+}
+
+__device__
+void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
+		double& yPos2, double& growPro, double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double forceValue;
+	if (linkLength > sceIntraPara[4]) {
+		forceValue = 0;
+	} else {
+		if (growPro > sceIntraParaDiv[4]) {
+			double intraPara0 = growPro * (sceIntraParaDiv[0])
+					+ (1.0 - growPro) * sceIntraPara[0];
+			double intraPara1 = growPro * (sceIntraParaDiv[1])
+					+ (1.0 - growPro) * sceIntraPara[1];
+			double intraPara2 = growPro * (sceIntraParaDiv[2])
+					+ (1.0 - growPro) * sceIntraPara[2];
+			double intraPara3 = growPro * (sceIntraParaDiv[3])
+					+ (1.0 - growPro) * sceIntraPara[3];
+			forceValue = -intraPara0 / intraPara2
+					* exp(-linkLength / intraPara2)
+					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		} else {
+			forceValue = -sceIntraPara[0] / sceIntraPara[2]
+					* exp(-linkLength / sceIntraPara[2])
+					+ sceIntraPara[1] / sceIntraPara[3]
+							* exp(-linkLength / sceIntraPara[3]);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}
+
+__device__
+void calAndAddIntraB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double forceValue;
+	if (linkLength > sceIntraBPara_M[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceIntraBPara_M[0] / sceIntraBPara_M[2]
+				* exp(-linkLength / sceIntraBPara_M[2])
+				+ sceIntraBPara_M[1] / sceIntraBPara_M[3]
+						* exp(-linkLength / sceIntraBPara_M[3]);
+	}
+	if (forceValue > 0) {
+		forceValue = 0;
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}
+
+__device__
+void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double forceValue;
+	if (linkLength > sceInterPara_M[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceInterPara_M[0] / sceInterPara_M[2]
+				* exp(-linkLength / sceInterPara_M[2])
+				+ sceInterPara_M[1] / sceInterPara_M[3]
+						* exp(-linkLength / sceInterPara_M[3]);
+		if (forceValue > 0) {
+			forceValue = 0;
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
 
 __device__
@@ -1110,6 +1211,54 @@ __device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+__device__
+bool isSameCell_m(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+	if (nodeGlobalRank1 < cellNodeBeginPos_M
+			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
+		return false;
+	}
+	if ((nodeGlobalRank1 - cellNodeBeginPos_M) / allNodeCountPerCell_M
+			== (nodeGlobalRank2 - cellNodeBeginPos_M) / allNodeCountPerCell_M) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+__device__
+bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+	if (nodeGlobalRank1 < cellNodeBeginPos_M
+			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
+		return false;
+	}
+	uint nodeRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	if (nodeRank1 >= bdryThreshold_M && nodeRank2 >= bdryThreshold_M) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+__device__
+bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+	if (nodeGlobalRank1 < cellNodeBeginPos_M
+			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
+		return false;
+	}
+	uint nodeRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	if (nodeRank1 < bdryThreshold_M && nodeRank2 < bdryThreshold_M) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 __device__ bool isSameECM(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if ((nodeGlobalRank1 - ECMbeginPos) / nodeCountPerECM
 			== (nodeGlobalRank2 - ECMbeginPos) / nodeCountPerECM) {
@@ -1159,6 +1308,42 @@ __device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 		return true;
 	} else {
 		return false;
+	}
+}
+
+__device__
+void handleAdhesionForce_M(uint& nodeRank1, uint& nodeRank2, int& adhereIndex,
+		double& xPos, double& yPos, double* _nodeLocXAddress,
+		double* _nodeLocYAddress, double& xRes, double& yRes) {
+
+	// should old one break?
+	if (adhereIndex != -1) {
+		// means adhesion has been established
+		double curAdherePosX = _nodeLocXAddress[adhereIndex];
+		double curAdherePosY = _nodeLocYAddress[adhereIndex];
+		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+		if (curLen > maxAdhBondLength) {
+			adhereIndex = -1;
+		}
+	}
+	// do nothing if no adhesion bond
+
+	double otherXPos = _nodeLocXAddress[nodeRank2];
+	double otherYPos = _nodeLocYAddress[nodeRank2];
+	double length = computeDist2D(xPos, yPos, otherXPos, otherYPos);
+
+	// should new one form?
+	if (length < bondAdhThreshold && adhereIndex == -1) {
+		adhereIndex = nodeRank2;
+	}
+
+	// apply adhesion if bond exist
+	if (adhereIndex != -1) {
+		if (length > minAdhBondLength) {
+			double forceValue = (length - minAdhBondLength) * bondStiff;
+			xRes = xRes + forceValue * (otherXPos - xPos) / length;
+			yRes = yRes + forceValue * (otherYPos - yPos) / length;
+		}
 	}
 }
 
@@ -1216,6 +1401,33 @@ void handleSceForceNodesDisc(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		calAndAddInterForceDisc(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
 				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
 				yRes, zRes, interForceX, interForceY, interForceZ);
+	}
+}
+
+__device__
+void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
+		double& yPos, double& xPos2, double& yPos2, double& xRes, double& yRes,
+		double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double* _nodeGrowProAddr) {
+	if (isSameCell_m(nodeRank1, nodeRank2)) {
+		if (bothInternal(nodeRank1, nodeRank2)) {
+			// both nodes are internal type.
+			calAndAddIntraDiv_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
+					_nodeLocYAddress[nodeRank2], _nodeGrowProAddr[nodeRank2],
+					xRes, yRes);
+		} else if (bothEpi(nodeRank1, nodeRank2)) {
+			// both nodes epithilium type. no sce force applied.
+			// nothing to do here.
+		} else {
+			// one node is epithilium type the other is internal type.
+			calAndAddIntraB_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
+					_nodeLocYAddress[nodeRank2], xRes, yRes);
+		}
+	} else {
+		if (bothEpi(nodeRank1, nodeRank2)) {
+			calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
+					_nodeLocYAddress[nodeRank2], xRes, yRes);
+		}
 	}
 }
 
@@ -1445,6 +1657,49 @@ void SceNodes::applySceForcesDisc() {
 					nodeLocZAddress, nodeGrowProAddr));
 }
 
+void SceNodes::applySceForcesDisc_M() {
+	uint* valueAddress = thrust::raw_pointer_cast(
+			&auxVecs.bucketValuesIncludingNeighbor[0]);
+	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
+	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	int* nodeAdhIdxAddress = thrust::raw_pointer_cast(
+			&infoVecs.nodeAdhereIndex[0]);
+	double* nodeGrowProAddr = thrust::raw_pointer_cast(
+			&infoVecs.nodeGrowPro[0]);
+
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.begin()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.begin()),
+							auxVecs.bucketValues.begin(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.begin()))),
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(auxVecs.keyBegin.begin(),
+									auxVecs.bucketKeys.end()),
+							make_permutation_iterator(auxVecs.keyEnd.begin(),
+									auxVecs.bucketKeys.end()),
+							auxVecs.bucketValues.end(),
+							make_permutation_iterator(infoVecs.nodeLocX.begin(),
+									auxVecs.bucketValues.end()),
+							make_permutation_iterator(infoVecs.nodeLocY.begin(),
+									auxVecs.bucketValues.end()))),
+			make_zip_iterator(
+					make_tuple(
+							make_permutation_iterator(infoVecs.nodeVelX.begin(),
+									auxVecs.bucketValues.begin()),
+							make_permutation_iterator(infoVecs.nodeVelY.begin(),
+									auxVecs.bucketValues.begin()))),
+			AddSceForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
+					nodeAdhIdxAddress, nodeGrowProAddr));
+}
+
 void SceNodes::applySceForces() {
 
 // There are two reasons why I use thrust cast every time.
@@ -1604,6 +1859,11 @@ void SceNodes::sceForcesPerfTesting() {
 void SceNodes::sceForcesDisc() {
 	prepareSceForceComputation();
 	applySceForcesDisc();
+}
+
+void SceNodes::sceForcesDisc_M() {
+	prepareSceForceComputation();
+	applySceForcesDisc_M();
 }
 
 double SceNodes::getMaxEffectiveRange() {

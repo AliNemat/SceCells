@@ -167,12 +167,28 @@ public:
 	void runAllLogic(double dt);
 
 	/**
+	 * Run one step of simulation in the domain.
+	 * Contains cell level logics and node level logics.
+	 * @param dt timestep
+	 */
+	void runAllLogic_M(double dt);
+
+	/**
 	 * Method that animates the domain to VTK format.
 	 * @param scriptNameBase name of the vtk animation series.
 	 * @param rank frame sequence in the vtk animation series.
 	 * @param aniCri criteria for outputing animation.
 	 */
 	void outputVtkFilesWithCri(std::string scriptNameBase, int rank,
+			AnimationCriteria aniCri);
+
+	/**
+	 * Method that animates the domain to VTK format.
+	 * @param scriptNameBase name of the vtk animation series.
+	 * @param rank frame sequence in the vtk animation series.
+	 * @param aniCri criteria for outputing animation.
+	 */
+	void outputVtkFilesWithCri_M(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 
 	/**
