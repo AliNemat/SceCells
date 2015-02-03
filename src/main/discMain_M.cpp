@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
 			aniFrame++;
 		}
 		// for each step, run all logics of the domain.
-		simuDomain.runAllLogic(mainPara.dt);
+		simuDomain.runAllLogic_M(mainPara.dt);
 	}
 
 	return 0;

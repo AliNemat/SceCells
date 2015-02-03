@@ -937,6 +937,24 @@ struct CellDivAuxData {
 
 	thrust::device_vector<SceNodeType> tmpCellTypes;
 	// ************************ these parameters are used for cell division *************************
+
+	thrust::device_vector<uint> tmpCellRank_M;
+	thrust::device_vector<double> tmpDivDirX_M;
+	thrust::device_vector<double> tmpDivDirY_M;
+	thrust::device_vector<double> tmpCenterPosX_M;
+	thrust::device_vector<double> tmpCenterPosY_M;
+
+	thrust::device_vector<bool> tmpIsActive_M;
+	thrust::device_vector<double> tmpNodePosX_M;
+	thrust::device_vector<double> tmpNodePosY_M;
+
+	thrust::device_vector<bool> tmpIsActive1_M;
+	thrust::device_vector<double> tmpXPos1_M;
+	thrust::device_vector<double> tmpYPos1_M;
+
+	thrust::device_vector<bool> tmpIsActive2_M;
+	thrust::device_vector<double> tmpXPos2_M;
+	thrust::device_vector<double> tmpYPos2_M;
 };
 
 /**
@@ -980,6 +998,9 @@ class SceCells {
 	uint totalNodeCountForActiveCells;
 
 	double dt;
+
+	double centerShiftRatio;
+
 	void readMiscPara();
 	void readBioPara();
 
@@ -1176,6 +1197,15 @@ class SceCells {
 	void stretchCellGivenLenDiff_M();
 
 	void addPointIfScheduledToGrow_M();
+
+	bool decideIfGoingToDivide_M();
+
+	void copyCellsPreDivision_M();
+	void createTwoNewCellArr_M();
+	void copyFirstCellArr_M();
+	void copySecondCellArr_M();
+	void updateActiveCellCount_M();
+	void markIsDivideFalse_M();
 public:
 
 	SceCells();
