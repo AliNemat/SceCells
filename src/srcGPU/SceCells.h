@@ -1000,6 +1000,8 @@ class SceCells {
 	double dt;
 
 	double centerShiftRatio;
+	double shrinkRatio;
+	double memNewSpacing;
 
 	void readMiscPara();
 	void readBioPara();

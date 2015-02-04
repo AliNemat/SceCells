@@ -1346,6 +1346,7 @@ void SceCells::createTwoNewCellArr_M() {
 	uint membThreshold = allocPara_m.maxEpiNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint index;
+
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		uint cellRank = divAuxData.tmpCellRank_M[i];
 		double curLen = cellInfoVecs.biggestDistance[cellRank]
@@ -1362,17 +1363,170 @@ void SceCells::createTwoNewCellArr_M() {
 		double cell1CenterY = oldCenterY + divDirY / tmpSqrt * lenChange;
 		double cell2CenterX = oldCenterX - divDirX / tmpSqrt * lenChange;
 		double cell2CenterY = oldCenterY - divDirY / tmpSqrt * lenChange;
+		CVector cell1Center(cell1CenterX, cell1CenterY, 0);
+		CVector cell2Center(cell2CenterX, cell2CenterY, 0);
+
+		double curMin1Val = 1.0e4, curMin2Val = 1.0e4;
+		uint curMin1Indx, curMin2Indx;
+
+		uint activeMemThreshold =
+				cellInfoVecs.activeEpiNodeCountOfCells[cellRank];
+
+		std::vector<CVector> tmp1Vec, tmp2Vec;
 
 		for (uint j = 0; j < maxAllNodePerCell; j++) {
-			index = i * maxAllNodePerCell + j;
+			index = i * maxAllNodePerCell + j + membThreshold;
 			if (j < membThreshold) {
 				// means node type is membrane
 				if (divAuxData.tmpIsActive1_M[index] == true) {
+					CVector memPos(divAuxData.tmpNodePosX_M[index],
+							divAuxData.tmpNodePosX_M[index], 0);
+					CVector centerToPosDir = memPos - centerPos;
+					CVector crossProduct = Cross(centerToPosDir, divDir);
+					double dotProduct = centerToPosDir * divDir;
+					if (crossProduct.z >= 0) {
+						// less than pi, clock-wise
+						if (fabs(dotProduct) < curMin1Val) {
+							curMin1Val = fabs(dotProduct);
+							curMin1Indx = j;
+						}
+					} else {
+						// more than pi, clock-wise
+						if (fabs(dotProduct) < curMin2Val) {
+							curMin2Val = fabs(dotProduct);
+							curMin2Indx = j;
+						}
+					}
 				}
 			} else {
-
+				if (divAuxData.tmpIsActive1_M[index] == true) {
+					CVector internalPos(divAuxData.tmpNodePosX_M[index],
+							divAuxData.tmpNodePosX_M[index], 0);
+					CVector centerToPosDir = internalPos - centerPos;
+					CVector shrinkedPos = centerToPosDir * shrinkRatio
+							+ centerPos;
+					double dotProduct = centerToPosDir * divDir;
+					if (dotProduct > 0) {
+						tmp1Vec.push_back(shrinkedPos);
+					} else {
+						tmp2Vec.push_back(shrinkedPos);
+					}
+				}
 			}
+		}
 
+		////////////////////////////////
+		//// copy membrane nodes ///////
+		////////////////////////////////
+
+		CVector memOne(divAuxData.tmpNodePosX_M[curMin1Indx],
+				divAuxData.tmpNodePosY_M[curMin1Indx], 0);
+		CVector memTwo(divAuxData.tmpNodePosX_M[curMin2Indx],
+				divAuxData.tmpNodePosY_M[curMin2Indx], 0);
+		std::vector<CVector> tmp1VecMem, tmp2VecMem;
+		uint oneToTwoCounter = 0, twoToOneCounter = 0;
+		uint nextIndx = curMin1Indx;
+		while (nextIndx != curMin2Indx) {
+			CVector memPos(divAuxData.tmpNodePosX_M[nextIndx],
+					divAuxData.tmpNodePosY_M[nextIndx], 0);
+			tmp1VecMem.push_back(memPos);
+			oneToTwoCounter++;
+			nextIndx = nextIndx + 1;
+			if (nextIndx == activeMemThreshold) {
+				nextIndx = 0;
+			}
+		}
+		CVector twoToOne = memOne - memTwo;
+		CVector twoToOneUnit = twoToOne.getUnitVector();
+		double edgeLength = twoToOne.getModul();
+		uint numNewMemNodes = edgeLength / memNewSpacing;
+		CVector nodeOld = memTwo, nodeNew;
+		for (uint j = 0; j < numNewMemNodes; j++) {
+			tmp1VecMem.push_back(nodeOld);
+			nodeNew = nodeOld + memNewSpacing * twoToOneUnit;
+			nodeOld = nodeNew;
+		}
+		for (uint j = 0; j < membThreshold; j++) {
+			index = i * maxAllNodePerCell + j;
+			if (j < tmp1VecMem.size()) {
+				divAuxData.tmpXPos1_M[index] = tmp1VecMem[j].x;
+				divAuxData.tmpYPos1_M[index] = tmp1VecMem[j].y;
+				divAuxData.tmpIsActive1_M[index] = true;
+			} else {
+				divAuxData.tmpIsActive1_M[index] = false;
+			}
+		}
+
+		nextIndx = curMin2Indx;
+		while (nextIndx != curMin1Indx) {
+			CVector memPos(divAuxData.tmpNodePosX_M[nextIndx],
+					divAuxData.tmpNodePosY_M[nextIndx], 0);
+			tmp2VecMem.push_back(memPos);
+			twoToOneCounter++;
+			nextIndx = nextIndx + 1;
+			if (nextIndx == activeMemThreshold) {
+				nextIndx = 0;
+			}
+		}
+
+		CVector oneToTwoUnit = CVector(0, 0, 0) - twoToOneUnit;
+		nodeOld = memOne;
+		for (uint j = 0; j < numNewMemNodes; j++) {
+			tmp2VecMem.push_back(nodeOld);
+			nodeNew = nodeOld + memNewSpacing * twoToOneUnit;
+			nodeOld = nodeNew;
+		}
+		for (uint j = 0; j < membThreshold; j++) {
+			index = i * maxAllNodePerCell + j;
+			if (j < tmp2VecMem.size()) {
+				divAuxData.tmpXPos2_M[index] = tmp2VecMem[j].x;
+				divAuxData.tmpYPos2_M[index] = tmp2VecMem[j].y;
+				divAuxData.tmpIsActive2_M[index] = true;
+			} else {
+				divAuxData.tmpIsActive2_M[index] = false;
+			}
+		}
+
+		////////////////////////////////
+		//// copy internal nodes ///////
+		////////////////////////////////
+		CVector tmpCell1Center(0, 0, 0);
+		for (uint j = 0; j < tmp1Vec.size(); j++) {
+			tmpCell1Center = tmpCell1Center + tmp1Vec[j];
+		}
+		tmpCell1Center = tmpCell1Center / tmp1Vec.size();
+		CVector shiftVec1 = cell1Center - tmpCell1Center;
+		for (uint j = 0; j < tmp1Vec.size(); j++) {
+			tmp1Vec[j] = tmp1Vec[j] + shiftVec1;
+		}
+
+		CVector tmpCell2Center(0, 0, 0);
+		for (uint j = 0; j < tmp2Vec.size(); j++) {
+			tmpCell2Center = tmpCell2Center + tmp2Vec[j];
+		}
+		tmpCell2Center = tmpCell2Center / tmp2Vec.size();
+		CVector shiftVec2 = cell2Center - tmpCell2Center;
+		for (uint j = 0; j < tmp2Vec.size(); j++) {
+			tmp2Vec[j] = tmp2Vec[j] + shiftVec2;
+		}
+
+		for (uint j = membThreshold; j < maxAllNodePerCell; j++) {
+			index = i * maxAllNodePerCell + j;
+			uint shift_j = j - membThreshold;
+			if (shift_j < tmp1Vec.size()) {
+				divAuxData.tmpXPos1_M[index] = tmp1Vec[shift_j].x;
+				divAuxData.tmpYPos1_M[index] = tmp1Vec[shift_j].y;
+				divAuxData.tmpIsActive1_M[index] = true;
+			} else {
+				divAuxData.tmpIsActive1_M[index] = false;
+			}
+			if (shift_j < tmp2Vec.size()) {
+				divAuxData.tmpXPos2_M[index] = tmp2Vec[shift_j].x;
+				divAuxData.tmpYPos2_M[index] = tmp2Vec[shift_j].y;
+				divAuxData.tmpIsActive2_M[index] = true;
+			} else {
+				divAuxData.tmpIsActive2_M[index] = false;
+			}
 		}
 	}
 }
@@ -1451,7 +1605,7 @@ void SceCells::computeCenterPos_M() {
 							cellNodeInfoVecs.activeYPoss.begin())),
 			ActiveAndInternal());
 
-	// TODO: double check if cell type is initialized properly.
+// TODO: double check if cell type is initialized properly.
 
 	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
 			cellNodeInfoVecs.cellRanks.begin() + totalInternalActiveNodeCount,
@@ -1486,26 +1640,26 @@ void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 
-	// randomly select growth direction and speed.
+// randomly select growth direction and speed.
 	randomizeGrowth_M();
 
-	//std::cout << "after copy grow info" << std::endl;
+//std::cout << "after copy grow info" << std::endl;
 	updateGrowthProgress_M();
-	//std::cout << "after update growth progress" << std::endl;
+//std::cout << "after update growth progress" << std::endl;
 	decideIsScheduleToGrow_M();
-	//std::cout << "after decode os schedule to grow" << std::endl;
+//std::cout << "after decode os schedule to grow" << std::endl;
 	computeCellTargetLength_M();
-	//std::cout << "after compute cell target length" << std::endl;
+//std::cout << "after compute cell target length" << std::endl;
 	computeDistToCellCenter_M();
-	//std::cout << "after compute dist to center" << std::endl;
+//std::cout << "after compute dist to center" << std::endl;
 	findMinAndMaxDistToCenter_M();
-	//std::cout << "after find min and max dist" << std::endl;
+//std::cout << "after find min and max dist" << std::endl;
 	computeLenDiffExpCur_M();
-	//std::cout << "after compute diff " << std::endl;
+//std::cout << "after compute diff " << std::endl;
 	stretchCellGivenLenDiff_M();
 
 	addPointIfScheduledToGrow_M();
-	//std::cout << "after adding node" << std::endl;
+//std::cout << "after adding node" << std::endl;
 }
 
 void SceCells::divide2D_M() {
@@ -1661,8 +1815,8 @@ void SceCells::findMinAndMaxDistToCenter_M() {
 			cellInfoVecs.smallestDistance.begin(), thrust::equal_to<uint>(),
 			thrust::minimum<double>());
 
-	// for nodes of each cell, find the maximum distance from the node to the corresponding
-	// cell center along the pre-defined growth direction.
+// for nodes of each cell, find the maximum distance from the node to the corresponding
+// cell center along the pre-defined growth direction.
 
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
@@ -1804,8 +1958,8 @@ bool SceCells::decideIfGoingToDivide_M() {
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara_m.maxAllNodePerCell));
-	// sum all bool values which indicate whether the cell is going to divide.
-	// toBeDivideCount is the total number of cells going to divide.
+// sum all bool values which indicate whether the cell is going to divide.
+// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
 			cellInfoVecs.isDivided.begin() + allocPara_m.currentActiveCellCount,
 			(uint) (0));
