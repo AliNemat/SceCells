@@ -53,8 +53,9 @@ class CellInitHelper {
 			int initProfileNodeSize);
 
 	void generateCellInitNodeInfo_v2(vector<CVector> &initPos);
-	void generateCellInitNodeInfo_v3(vector<CVector> &initBdryPos,
-			vector<CVector> &initInternalPos);
+	void generateCellInitNodeInfo_v3(vector<CVector>& initCenters,
+			vector<vector<CVector> >& initBdryPos,
+			vector<vector<CVector> >& initInternalPos);
 	void generateECMInitNodeInfo(vector<CVector> &initECMNodePoss,
 			int initNodeCountPerECM);
 	void generateECMCenters(vector<CVector> &ECMCenters,
@@ -73,8 +74,9 @@ class CellInitHelper {
 	 * generates an array that could qualify for initial position of nodes in a cell.
 	 */
 	vector<CVector> generateInitCellNodes();
+	vector<CVector> generateInitCellNodes(CVector& center);
 
-	vector<CVector> generateInitEpiNodes();
+	vector<CVector> generateInitEpiNodes(CVector& center);
 
 	/**
 	 * Attempt to generate an array that represents relative position of nodes in a cell.
@@ -191,7 +193,7 @@ public:
 	/**
 	 * generate simulation initialization data _v2 (modified).
 	 */
-	SimulationInitData_V2_M initStabInput_M();
+	SimulationInitData_V2_M initInput_M();
 
 	/**
 	 * generate simulation initialization data _v2 given raw data.

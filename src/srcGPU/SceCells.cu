@@ -569,9 +569,11 @@ SceCells::SceCells(SceNodes* nodesInput,
 }
 
 SceCells::SceCells(SceNodes* nodesInput,
-		std::vector<uint>& numOfInitActiveEpiNodeCounts,
-		std::vector<uint>& numOfInitActiveInternalNodeCounts) {
-
+		std::vector<uint>& initActiveMembrNodeCounts,
+		std::vector<uint>& initActiveIntnlNodeCounts) {
+	initialize(nodesInput);
+	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
+			initActiveIntnlNodeCounts);
 }
 
 void SceCells::initCellInfoVecs() {
@@ -596,6 +598,28 @@ void SceCells::initCellInfoVecs() {
 	cellInfoVecs.isRandGrowInited.resize(allocPara.maxCellCount, false);
 }
 
+void SceCells::initCellInfoVecs_M() {
+	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0);
+	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
+			bioPara.cellInitLength);
+	cellInfoVecs.lengthDifference.resize(allocPara_m.maxCellCount, 0.0);
+	cellInfoVecs.smallestDistance.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.biggestDistance.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.activeMembrNodeCounts.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
+	cellInfoVecs.isDivided.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.cellTypes.resize(allocPara_m.maxCellCount, MX);
+	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
+	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.cellRanksTmpStorage.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.growthSpeed.resize(allocPara_m.maxCellCount, 0.0);
+	cellInfoVecs.growthXDir.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.growthYDir.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.isRandGrowInited.resize(allocPara_m.maxCellCount, false);
+}
+
 void SceCells::initCellNodeInfoVecs() {
 	cellNodeInfoVecs.cellRanks.resize(allocPara.maxTotalCellNodeCount);
 	cellNodeInfoVecs.activeXPoss.resize(allocPara.maxTotalCellNodeCount);
@@ -603,6 +627,15 @@ void SceCells::initCellNodeInfoVecs() {
 	cellNodeInfoVecs.activeZPoss.resize(allocPara.maxTotalCellNodeCount);
 	cellNodeInfoVecs.distToCenterAlongGrowDir.resize(
 			allocPara.maxTotalCellNodeCount);
+}
+
+void SceCells::initCellNodeInfoVecs_M() {
+	cellNodeInfoVecs.cellRanks.resize(allocPara_m.maxTotalNodeCount);
+	cellNodeInfoVecs.activeXPoss.resize(allocPara_m.maxTotalNodeCount);
+	cellNodeInfoVecs.activeYPoss.resize(allocPara_m.maxTotalNodeCount);
+	cellNodeInfoVecs.activeZPoss.resize(allocPara_m.maxTotalNodeCount);
+	cellNodeInfoVecs.distToCenterAlongGrowDir.resize(
+			allocPara_m.maxTotalNodeCount);
 }
 
 void SceCells::initGrowthAuxData() {
@@ -638,6 +671,19 @@ void SceCells::initialize(SceNodes* nodesInput) {
 	initGrowthAuxData();
 
 	distributeIsCellRank();
+}
+
+void SceCells::initialize_M(SceNodes* nodesInput) {
+	nodes = nodesInput;
+	controlPara = nodes->getControlPara();
+	readMiscPara_M();
+	readBioPara();
+
+	allocPara_m = nodesInput->getAllocParaM();
+
+	initCellInfoVecs_M();
+	initCellNodeInfoVecs_M();
+	initGrowthAuxData();
 }
 
 void SceCells::copyInitActiveNodeCount(
@@ -1076,6 +1122,22 @@ void SceCells::readMiscPara() {
 			+ epsilon;
 }
 
+void SceCells::readMiscPara_M() {
+	miscPara.addNodeDistance = globalConfigVars.getConfigValue(
+			"DistanceForAddingNode").toDouble();
+	miscPara.minDistanceToOtherNode = globalConfigVars.getConfigValue(
+			"MinDistanceToOtherNode").toDouble();
+	miscPara.isDivideCriticalRatio = globalConfigVars.getConfigValue(
+			"IsDivideCrticalRatio").toDouble();
+	// reason for adding a small term here is to avoid scenario when checkpoint might add many times
+	// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
+	// this small term we might risk adding one more node.
+	int maxNodeOfOneCell = globalConfigVars.getConfigValue(
+			"MaxIntnlNodeCountPerCell").toInt();
+	miscPara.growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2)
+			+ epsilon;
+}
+
 void SceCells::readBioPara() {
 	bioPara.cellInitLength =
 			globalConfigVars.getConfigValue("CellInitLength").toDouble();
@@ -1147,13 +1209,13 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-	applyMemTension_M();
+	//applyMemTension_M();
 
 	computeCenterPos_M();
 
-	growAtRandom_M(dt);
+	//growAtRandom_M(dt);
 
-	divide2D_M();
+	//divide2D_M();
 
 	distributeCellGrowthProgress_M();
 
@@ -1348,7 +1410,7 @@ void SceCells::createTwoNewCellArr_M() {
 	divAuxData.tmp2MemActiveCounts.clear();
 	divAuxData.tmp2InternalActiveCounts.clear();
 
-	uint membThreshold = allocPara_m.maxEpiNodePerCell;
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint index;
 
@@ -1378,8 +1440,7 @@ void SceCells::createTwoNewCellArr_M() {
 		double curMin1Val = 1.0e4, curMin2Val = 1.0e4;
 		uint curMin1Indx, curMin2Indx;
 
-		uint activeMemThreshold =
-				cellInfoVecs.activeEpiNodeCountOfCells[cellRank];
+		uint activeMemThreshold = cellInfoVecs.activeMembrNodeCounts[cellRank];
 
 		for (uint j = 0; j < maxAllNodePerCell; j++) {
 			index = i * maxAllNodePerCell + j + membThreshold;
@@ -1659,7 +1720,7 @@ void SceCells::applyMemTension_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
-									cellInfoVecs.activeEpiNodeCountOfCells.begin(),
+									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
 							make_transform_iterator(iBegin,
@@ -1677,7 +1738,7 @@ void SceCells::applyMemTension_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
-									cellInfoVecs.activeEpiNodeCountOfCells.begin(),
+									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
 							make_transform_iterator(iBegin,
@@ -1718,8 +1779,8 @@ void SceCells::computeCenterPos_M() {
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 	uint totalInternalActiveNodeCount = thrust::reduce(
-			cellInfoVecs.activeInternalNodeCountOfCells.begin(),
-			cellInfoVecs.activeInternalNodeCountOfCells.begin()
+			cellInfoVecs.activeIntnlNodeCounts.begin(),
+			cellInfoVecs.activeIntnlNodeCounts.begin()
 					+ allocPara_m.currentActiveCellCount);
 
 	thrust::copy_if(
@@ -1777,7 +1838,7 @@ void SceCells::computeCenterPos_M() {
 							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.centerCoordZ.begin()))
 					+ allocPara_m.currentActiveCellCount,
-			cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+			cellInfoVecs.activeIntnlNodeCounts.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(),
@@ -2066,27 +2127,27 @@ void SceCells::stretchCellGivenLenDiff_M() {
 							nodes->getInfoVecs().nodeVelY.begin()
 									+ allocPara_m.bdryNodeCount)),
 			ApplyStretchForce_M(bioPara.elongationCoefficient,
-					allocPara_m.maxEpiNodePerCell));
+					allocPara_m.maxMembrNodePerCell));
 }
 
 void SceCells::addPointIfScheduledToGrow_M() {
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
-							cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(), countingBegin,
 							cellInfoVecs.lastCheckPoint.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
-							cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(), countingBegin,
 							cellInfoVecs.lastCheckPoint.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
-							cellInfoVecs.activeInternalNodeCountOfCells.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin(),
 							cellInfoVecs.lastCheckPoint.begin())),
 			AddPtOp(allocPara_m.maxAllNodePerCell, miscPara.addNodeDistance,
 					miscPara.minDistanceToOtherNode,
@@ -2102,12 +2163,12 @@ bool SceCells::decideIfGoingToDivide_M() {
 					thrust::make_tuple(cellInfoVecs.lengthDifference.begin(),
 							cellInfoVecs.expectedLength.begin(),
 							cellInfoVecs.growthProgress.begin(),
-							cellInfoVecs.activeInternalNodeCountOfCells.begin())),
+							cellInfoVecs.activeIntnlNodeCounts.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.lengthDifference.begin(),
 							cellInfoVecs.expectedLength.begin(),
 							cellInfoVecs.growthProgress.begin(),
-							cellInfoVecs.activeInternalNodeCountOfCells.begin()))
+							cellInfoVecs.activeIntnlNodeCounts.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isDivided.begin(),
@@ -2126,3 +2187,189 @@ bool SceCells::decideIfGoingToDivide_M() {
 	}
 }
 
+AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
+	AniRawData rawAniData;
+
+	std::vector<std::pair<uint, uint> > pairs =
+			nodes->obtainPossibleNeighborPairs_M();
+	cout << "size of potential pairs = " << pairs.size() << endl;
+
+	// unordered_map is more efficient than map, but it is a c++ 11 feature
+	// and c++ 11 seems to be incompatible with Thrust.
+	IndexMap locIndexToAniIndexMap;
+
+	// Doesn't have to copy the entire nodeLocX array.
+	// Only copy the first half will be sufficient
+	thrust::host_vector<double> hostTmpVectorLocX =
+			nodes->getInfoVecs().nodeLocX;
+	thrust::host_vector<double> hostTmpVectorLocY =
+			nodes->getInfoVecs().nodeLocY;
+	thrust::host_vector<bool> hostIsActiveVec =
+			nodes->getInfoVecs().nodeIsActive;
+	thrust::host_vector<int> hostBondVec = nodes->getInfoVecs().nodeAdhereIndex;
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
+			nodes->getInfoVecs().nodeCellType;
+
+	thrust::host_vector<uint> curActiveMemNodeCounts =
+			cellInfoVecs.activeMembrNodeCounts;
+
+	uint activeCellCount = allocPara_m.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	uint beginIndx = allocPara_m.bdryNodeCount;
+	//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
+
+	//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
+	CVector tmpPos;
+	uint index1;
+	int index2;
+	std::vector<BondInfo> bondInfoVec;
+
+	double node1X, node1Y;
+	double node2X, node2Y;
+	double aniVal;
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < maxMemNodePerCell; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (hostIsActiveVec[index1] == true) {
+				index2 = hostBondVec[index1];
+				if (index2 > index1 && index2 != -1) {
+					BondInfo bond;
+					bond.cellRank1 = i;
+					bond.pos1 = CVector(hostTmpVectorLocX[index1],
+							hostTmpVectorLocY[index1], 0);
+					bond.cellRank2 = (index2 - beginIndx) / maxNodePerCell;
+					bond.pos2 = CVector(hostTmpVectorLocX[index2],
+							hostTmpVectorLocY[index2], 0);
+					bondInfoVec.push_back(bond);
+				}
+			}
+		}
+	}
+
+	rawAniData.bondsArr = bondInfoVec;
+
+	uint curIndex = 0;
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (j == curActiveMemNodeCounts[i] - 1) {
+				index2 = beginIndx + i * maxNodePerCell;
+			} else {
+				index2 = beginIndx + i * maxNodePerCell + j + 1;
+			}
+
+			if (hostIsActiveVec[index1] == true
+					&& hostIsActiveVec[index2] == true) {
+				node1X = hostTmpVectorLocX[index1];
+				node1Y = hostTmpVectorLocY[index1];
+				node2X = hostTmpVectorLocX[index2];
+				node2Y = hostTmpVectorLocY[index2];
+				IndexMap::iterator it = locIndexToAniIndexMap.find(index1);
+				if (it == locIndexToAniIndexMap.end()) {
+					locIndexToAniIndexMap.insert(
+							std::pair<uint, uint>(index1, curIndex));
+					curIndex++;
+					tmpPos = CVector(node1X, node1Y, 0);
+					aniVal = hostTmpVectorNodeType[index1];
+					rawAniData.aniNodePosArr.push_back(tmpPos);
+					rawAniData.aniNodeVal.push_back(aniVal);
+				}
+				it = locIndexToAniIndexMap.find(index2);
+				if (it == locIndexToAniIndexMap.end()) {
+					locIndexToAniIndexMap.insert(
+							std::pair<uint, uint>(index2, curIndex));
+					curIndex++;
+					tmpPos = CVector(node2X, node2Y, 0);
+					aniVal = hostTmpVectorNodeType[index2];
+					rawAniData.aniNodePosArr.push_back(tmpPos);
+					rawAniData.aniNodeVal.push_back(aniVal);
+				}
+
+				it = locIndexToAniIndexMap.find(index1);
+				uint aniIndex1 = it->second;
+				it = locIndexToAniIndexMap.find(index2);
+				uint aniIndex2 = it->second;
+
+				LinkAniData linkData;
+				linkData.node1Index = aniIndex1;
+				linkData.node2Index = aniIndex2;
+				rawAniData.memLinks.push_back(linkData);
+			}
+		}
+	}
+
+	for (uint i = 0; i < pairs.size(); i++) {
+		uint node1Index = pairs[i].first;
+		uint node2Index = pairs[i].second;
+		node1X = hostTmpVectorLocX[node1Index];
+		node1Y = hostTmpVectorLocY[node1Index];
+
+		node2X = hostTmpVectorLocX[node2Index];
+		node2Y = hostTmpVectorLocY[node2Index];
+
+		if (aniCri.isPairQualify_M(node1X, node1Y, node2X, node2Y)) {
+			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].first, curIndex));
+				curIndex++;
+				tmpPos = CVector(node1X, node1Y, 0);
+				aniVal = hostTmpVectorNodeType[index1];
+				rawAniData.aniNodePosArr.push_back(tmpPos);
+				rawAniData.aniNodeVal.push_back(aniVal);
+			}
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].second, curIndex));
+				curIndex++;
+				tmpPos = CVector(node2X, node2Y, 0);
+				aniVal = hostTmpVectorNodeType[index1];
+				rawAniData.aniNodePosArr.push_back(tmpPos);
+				rawAniData.aniNodeVal.push_back(aniVal);
+			}
+
+			it = locIndexToAniIndexMap.find(pairs[i].first);
+			uint aniIndex1 = it->second;
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			uint aniIndex2 = it->second;
+
+			LinkAniData linkData;
+			linkData.node1Index = aniIndex1;
+			linkData.node2Index = aniIndex2;
+			rawAniData.internalLinks.push_back(linkData);
+		}
+	}
+	return rawAniData;
+}
+
+void SceCells::copyInitActiveNodeCount_M(
+		std::vector<uint>& initMembrActiveNodeCounts,
+		std::vector<uint>& initIntnlActiveNodeCounts) {
+	thrust::copy(initMembrActiveNodeCounts.begin(),
+			initMembrActiveNodeCounts.end(),
+			cellInfoVecs.activeMembrNodeCounts.begin());
+}
+
+VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
+		AnimationCriteria& aniCri) {
+	VtkAnimationData vtkData;
+	for (uint i = 0; i < rawAniData.aniNodePosArr.size(); i++) {
+		PointAniData ptAniData;
+		ptAniData.pos = rawAniData.aniNodePosArr[i];
+		ptAniData.colorScale = rawAniData.aniNodeVal[i];
+		vtkData.pointsAniData.push_back(ptAniData);
+	}
+	for (uint i = 0; i < rawAniData.internalLinks.size(); i++) {
+		LinkAniData linkData = rawAniData.internalLinks[i];
+		vtkData.linksAniData.push_back(linkData);
+	}
+	for (uint i = 0; i < rawAniData.memLinks.size(); i++) {
+		LinkAniData linkData = rawAniData.memLinks[i];
+		vtkData.linksAniData.push_back(linkData);
+	}
+	return vtkData;
+}

@@ -120,9 +120,9 @@ class SimulationDomainGPU {
 	 * improved from the previous version.
 	 */
 	void initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
+			std::vector<bool> &nodeIsActive, std::vector<CVector> &initNodesVec,
 			std::vector<uint> &numOfInitActiveEpiNodeCounts,
-			std::vector<uint> &numOfInitActiveInternalNodeCounts,
-			std::vector<CVector> &initNodesVec);
+			std::vector<uint> &numOfInitActiveInternalNodeCounts);
 
 public:
 	/**

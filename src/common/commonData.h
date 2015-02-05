@@ -35,7 +35,7 @@ double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
 
 enum SceNodeType {
-	Boundary, Profile, ECM, FNM, MX, Cart, Base, EpiInternal, EpiBdry
+	Boundary, Profile, ECM, FNM, MX, Cart, Base, CellIntnl, CellMembr
 };
 std::string toString(SceNodeType type);
 
@@ -88,6 +88,7 @@ class BondInfo {
 public:
 	CVector pos1, pos2;
 	uint cellRank1, cellRank2;
+	double val1, val2;
 };
 
 AniType parseAniTpFromConfig(int configValue);
@@ -200,8 +201,8 @@ struct SceMemPara {
 	uint maxNodePerCell;
 
 	// these parameters are useful in Disc_M
-	uint maxEpiNodePerCell;
-	uint maxInternalNodePerCell;
+	uint maxMembrNodePerCell;
+	uint maxIntnlNodePerCell;
 	uint maxAllNodePerCell;
 
 	// these parameters are useful in Beak project
@@ -294,8 +295,8 @@ struct NodeAllocPara_M {
 	uint bdryNodeCount;
 	// @maxNodeOfOneCell represents maximum number of nodes per cell
 	uint maxAllNodePerCell;
-	uint maxEpiNodePerCell;
-	uint maxInternalNodePerCell;
+	uint maxMembrNodePerCell;
+	uint maxIntnlNodePerCell;
 	// @maxCellCount represents maximum number of cells in the system
 	uint maxCellCount;
 	// @maxTotalNodeCount represents maximum total number of nodes of all cells
@@ -424,8 +425,8 @@ struct RawDataInput_M {
 	SimulationType simuType;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> initCellCenters;
-	std::vector<CVector> initInternalNodePoss;
-	std::vector<CVector> initBdryNodePoss;
+	std::vector<std::vector<CVector> > initInternalNodePoss;
+	std::vector<std::vector<CVector> > initBdryNodePoss;
 };
 
 /**
@@ -473,10 +474,11 @@ struct SimulationInitData_V2 {
 struct SimulationInitData_V2_M {
 	bool isStab;
 	SimulationType simuType;
+	std::vector<uint> initActiveMembrNodeCounts;
+	std::vector<uint> initActiveIntnlNodeCounts;
 	std::vector<SceNodeType> nodeTypes;
-	std::vector<uint> InitActiveEpiNodePerCellArr;
-	std::vector<uint> InitActiveInternalNodePerCellArr;
 	std::vector<CVector> initNodeVec;
+	std::vector<bool> initIsActive;
 };
 
 std::vector<double> getArrayXComp(std::vector<CVector> &nodePosVec);
@@ -588,5 +590,13 @@ public:
 };
 
 AblationEvent readAblationEvent(std::string inputName);
+
+struct AniRawData {
+	std::vector<CVector> aniNodePosArr;
+	std::vector<double> aniNodeVal;
+	std::vector<LinkAniData> memLinks;
+	std::vector<LinkAniData> internalLinks;
+	std::vector<BondInfo> bondsArr;
+};
 
 #endif /* COMMONDATA_H_ */

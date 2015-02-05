@@ -117,7 +117,7 @@ struct ActiveAndInternal {
 	bool operator()(const thrust::tuple<bool, SceNodeType> &bt) {
 		bool isActive = thrust::get<0>(bt);
 		SceNodeType type = thrust::get<1>(bt);
-		if (isActive == true && type == EpiInternal) {
+		if (isActive == true && type == CellIntnl) {
 			return true;
 		} else {
 			return false;
@@ -825,8 +825,6 @@ class SceNodes {
 	 */
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
-	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs_M();
-
 	void initControlPara(bool isStab);
 
 	// friend unit test so these it can test private functions
@@ -838,6 +836,11 @@ public:
 	 * Default constructor -- explicit usage is discouraged.
 	 */
 	SceNodes();
+
+	/**
+	 * recommended constructor for beak project.
+	 */
+	SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell);
 
 	/**
 	 * recommended constructor for beak project.
@@ -865,7 +868,7 @@ public:
 	/**
 	 * initialize data fields.
 	 */
-	void initValues_M(std::vector<CVector> &initBdryNodePos,
+	void initValues_M(std::vector<bool>& initIsActive,
 			std::vector<CVector> &initCellNodePos,
 			std::vector<SceNodeType>& nodeTypes);
 
@@ -955,6 +958,8 @@ public:
 	void setAllocParaM(const NodeAllocPara_M& allocParaM) {
 		allocPara_M = allocParaM;
 	}
+
+	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs_M();
 };
 
 #endif /* SCENODES_H_ */

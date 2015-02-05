@@ -141,39 +141,47 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
-void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType>& nodeTypes,
-		std::vector<uint>& numOfInitActiveEpiNodeCounts,
-		std::vector<uint>& numOfInitActiveInternalNodeCounts,
-		std::vector<CVector>& initNodesVec) {
+void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
+		std::vector<bool> &nodeIsActive, std::vector<CVector> &initNodesVec,
+		std::vector<uint> &initActiveMembrNodeCounts,
+		std::vector<uint> &initActiveIntnlNodeCounts) {
 	/*
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
 	 * while the last four parameters come from Config file.
 	 */
-	nodes = SceNodes(0, 0, 0, 0, 0, memPara.maxCellInDomain,
-			memPara.maxAllNodePerCell, memPara.isStab);
+	std::cout << "break point 0 " << std::endl;
+	nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell);
 
+	std::cout << "break point 1 " << std::endl;
 	// array size of cell type array
 	uint nodeTypeSize = nodeTypes.size();
 	// array size of initial active node count of cells array.
-	uint initEpiNodeCountSize = numOfInitActiveEpiNodeCounts.size();
-	uint initInternalNodeCountSize = numOfInitActiveInternalNodeCounts.size();
+	uint initMembrNodeCountSize = initActiveMembrNodeCounts.size();
+	uint initIntnlNodeCountSize = initActiveIntnlNodeCounts.size();
 	// two sizes must match.
-	assert(initEpiNodeCountSize == initInternalNodeCountSize);
+	assert(initMembrNodeCountSize == initIntnlNodeCountSize);
 	assert(initNodesVec.size() == nodeTypes.size());
 
+	std::cout << "break point 2 " << std::endl;
 	/*
 	 * second part: actual initialization
 	 * copy data from main system memory to GPU memory
 	 */
 	NodeAllocPara_M para = nodes.getAllocParaM();
-	para.currentActiveCellCount = initNodesVec.size() / para.maxAllNodePerCell;
+	para.currentActiveCellCount = initMembrNodeCountSize;
+	assert(
+			initNodesVec.size() / para.maxAllNodePerCell
+					== initMembrNodeCountSize);
 	nodes.setAllocParaM(para);
 
-	std::vector<CVector> dummyEmptyPos;
-	nodes.initValues_M(dummyEmptyPos, initNodesVec, nodeTypes);
+	std::cout << "break point 3 " << std::endl;
 
-	cells = SceCells(&nodes, numOfInitActiveEpiNodeCounts,
-			numOfInitActiveInternalNodeCounts);
+	nodes.initValues_M(nodeIsActive, initNodesVec, nodeTypes);
+
+	cells = SceCells(&nodes, initActiveMembrNodeCounts,
+			initActiveIntnlNodeCounts);
+
+	std::cout << "break point 4 " << std::endl;
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
@@ -195,9 +203,9 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
 	std::cout << "begin initialization process" << std::endl;
 	memPara.isStab = initData.isStab;
-	CartPara dummyCart;
-	initializeNodes_M(initData.nodeTypes, initData.InitActiveEpiNodePerCellArr,
-			initData.InitActiveInternalNodePerCellArr, initData.initNodeVec);
+	initializeNodes_M(initData.nodeTypes, initData.initIsActive,
+			initData.initNodeVec, initData.initActiveMembrNodeCounts,
+			initData.initActiveIntnlNodeCounts);
 	std::cout << "finished init simulation domain nodes" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
@@ -281,12 +289,15 @@ void SimulationDomainGPU::readMemPara() {
 	}
 
 	if (memPara.simuType == Disc_M) {
-		memPara.maxEpiNodePerCell = globalConfigVars.getConfigValue(
-				"MaxEpiNodePerCell").toInt();
-		memPara.maxInternalNodePerCell = globalConfigVars.getConfigValue(
-				"MaxInternalNodePerCell").toInt();
-		memPara.maxAllNodePerCell = memPara.maxEpiNodePerCell
-				+ memPara.maxInternalNodePerCell;
+		memPara.maxMembrNodePerCell = globalConfigVars.getConfigValue(
+				"MaxMembrNodeCountPerCell").toInt();
+		memPara.maxIntnlNodePerCell = globalConfigVars.getConfigValue(
+				"MaxIntnlNodeCountPerCell").toInt();
+		memPara.maxAllNodePerCell = globalConfigVars.getConfigValue(
+				"MaxAllNodeCountPerCell").toInt();
+		assert(
+				memPara.maxMembrNodePerCell + memPara.maxIntnlNodePerCell
+						== memPara.maxAllNodePerCell);
 	}
 }
 
@@ -425,7 +436,8 @@ void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
-	VtkAnimationData aniData = nodes.obtainAnimationData_M(aniCri);
+	AniRawData rawAni = cells.obtainAniRawData(aniCri);
+	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
 

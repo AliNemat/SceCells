@@ -961,8 +961,8 @@ struct CellInfoVecs {
 
 	// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
-	thrust::device_vector<uint> activeEpiNodeCountOfCells;
-	thrust::device_vector<uint> activeInternalNodeCountOfCells;
+	thrust::device_vector<uint> activeMembrNodeCounts;
+	thrust::device_vector<uint> activeIntnlNodeCounts;
 };
 
 struct CellNodeInfoVecs {
@@ -1097,12 +1097,15 @@ class SceCells {
 
 	void copyInitActiveNodeCount(
 			std::vector<uint>& numOfInitActiveNodesOfCells);
+	void copyInitActiveNodeCount_M(std::vector<uint>& initMembrActiveNodeCounts,
+			std::vector<uint>& initIntnlActiveNodeCounts);
 
 	void initCellInfoVecs();
 	void initCellNodeInfoVecs();
 	void initGrowthAuxData();
 
 	void initialize(SceNodes* nodesInput);
+	void initialize_M(SceNodes* nodesInput);
 
 	void distributeBdryIsActiveInfo();
 	void distributeProfileIsActiveInfo();
@@ -1301,6 +1304,10 @@ class SceCells {
 	void adjustNodeVel_M();
 	void moveNodes_M();
 
+	void readMiscPara_M();
+	void initCellInfoVecs_M();
+	void initCellNodeInfoVecs_M();
+
 public:
 
 	SceCells();
@@ -1334,6 +1341,11 @@ public:
 	void setAllocPara(const NodeAllocPara& allocPara) {
 		this->allocPara = allocPara;
 	}
+
+	AniRawData obtainAniRawData(AnimationCriteria& aniCri);
+
+	VtkAnimationData outputVtkData(AniRawData& rawAniData,
+			AnimationCriteria& aniCri);
 };
 
 #endif /* SCECELLS_H_ */

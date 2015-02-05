@@ -32,7 +32,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 void initializeModelTestConfig(int argc, char* argv[]) {
 	// read configuration.
 	ConfigParser parser;
-	std::string configFileNameDefault = "./resources/disc_master.cfg";
+	std::string configFileNameDefault = "./resources/disc_M.cfg";
 	globalConfigVars = parser.parseConfigFile(configFileNameDefault);
 	std::string configFileNameBaseL = "./resources/disc_";
 	std::string configFileNameBaseR = ".cfg";
@@ -79,16 +79,13 @@ int main(int argc, char* argv[]) {
 	SimulationGlobalParameter mainPara;
 	mainPara.initFromConfig();
 
-	// initialize post-processing related parameters from config file.
-	PixelizePara pixelPara;
-	pixelPara.initFromConfigFile();
-
 	// initialize simulation initialization helper.
 	CellInitHelper initHelper;
+
 	// initialize simulation domain.
 	SimulationDomainGPU simuDomain;
 
-	SimulationInitData_V2_M initData = initHelper.initStabInput_M();
+	SimulationInitData_V2_M initData = initHelper.initInput_M();
 	simuDomain.initialize_v2_M(initData);
 
 	// delete old data file.
@@ -106,7 +103,7 @@ int main(int argc, char* argv[]) {
 			aniFrame++;
 		}
 		// for each step, run all logics of the domain.
-		simuDomain.runAllLogic_M(mainPara.dt);
+		//simuDomain.runAllLogic_M(mainPara.dt);
 	}
 
 	return 0;

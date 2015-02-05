@@ -60,10 +60,10 @@ std::string toString(SceNodeType type) {
 	case Base:
 		result = "Base";
 		break;
-	case EpiInternal:
+	case CellIntnl:
 		result = "Base";
 		break;
-	case EpiBdry:
+	case CellMembr:
 		result = "Base";
 		break;
 	}
@@ -94,10 +94,10 @@ double nodeTypeToScale(SceNodeType type) {
 	case Base:
 		result = 6;
 		break;
-	case EpiInternal:
+	case CellIntnl:
 		result = 7;
 		break;
-	case EpiBdry:
+	case CellMembr:
 		result = 8;
 		break;
 	}

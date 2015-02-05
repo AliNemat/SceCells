@@ -320,10 +320,10 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 				uint tmp = i - allocPara_M.bdryNodeCount;
 				uint cellRank = tmp / allocPara_M.bdryNodeCount;
 				uint nodeRank = tmp % allocPara_M.bdryNodeCount;
-				if (nodeRank < allocPara_M.maxEpiNodePerCell) {
-					hostTmpVector[i] = EpiBdry;
+				if (nodeRank < allocPara_M.maxMembrNodePerCell) {
+					hostTmpVector[i] = CellMembr;
 				} else {
-					hostTmpVector[i] = EpiInternal;
+					hostTmpVector[i] = CellIntnl;
 				}
 				hostTmpVector3[i] = cellRank;
 			}
@@ -333,6 +333,43 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	infoVecs.nodeCellType = hostTmpVector;
 	infoVecs.nodeIsActive = hostTmpVector2;
 	infoVecs.nodeCellRank = hostTmpVector3;
+
+	copyParaToGPUConstMem();
+}
+
+SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
+	//initControlPara (isStab);
+	readDomainPara();
+	uint maxTotalNodeCount = maxTotalCellCount * maxAllNodePerCell;
+
+	uint maxMembrNodeCountPerCell = globalConfigVars.getConfigValue(
+			"MaxMembrNodeCountPerCell").toInt();
+	uint maxIntnlNodeCountPerCell = globalConfigVars.getConfigValue(
+			"MaxIntnlNodeCountPerCell").toInt();
+
+	initNodeAllocPara_M(0, maxTotalCellCount, maxMembrNodeCountPerCell,
+			maxIntnlNodeCountPerCell);
+
+	allocSpaceForNodes(maxTotalNodeCount);
+	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
+	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
+
+	for (uint i = 0; i < maxTotalNodeCount; i++) {
+		if (i < allocPara_M.bdryNodeCount) {
+			hostTmpVector[i] = Boundary;
+		} else {
+			uint tmp = i - allocPara_M.bdryNodeCount;
+			uint nodeRank = tmp % allocPara_M.maxAllNodePerCell;
+			if (nodeRank < allocPara_M.maxMembrNodePerCell) {
+				hostTmpVector[i] = CellMembr;
+			} else {
+				hostTmpVector[i] = CellIntnl;
+			}
+		}
+		hostTmpVector2[i] = false;
+	}
+	infoVecs.nodeCellType = hostTmpVector;
+	infoVecs.nodeIsActive = hostTmpVector2;
 
 	copyParaToGPUConstMem();
 }
@@ -422,7 +459,7 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs_M() {
 
 	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
 	uint offSet = allocPara_M.bdryNodeCount;
-	uint memThreshold = allocPara_M.maxEpiNodePerCell;
+	uint memThreshold = allocPara_M.maxMembrNodePerCell;
 	int size = bucketKeysCPU.size();
 
 	int node1, node2, cellRank1, cellRank2, nodeRank1, nodeRank2;
@@ -529,28 +566,22 @@ void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 			infoVecs.nodeCellType.begin() + beginAddressOfMX + MXNodeCount, MX);
 }
 
-void SceNodes::initValues_M(std::vector<CVector>& initBdryNodePos,
+void SceNodes::initValues_M(std::vector<bool>& initIsActive,
 		std::vector<CVector>& initCellNodePos,
 		std::vector<SceNodeType>& nodeTypes) {
 
-	uint beginAddressOfCell = initBdryNodePos.size();
-
-	std::vector<double> initBdryCellNodePosX = getArrayXComp(initBdryNodePos);
-	thrust::copy(initBdryCellNodePosX.begin(), initBdryCellNodePosX.end(),
-			infoVecs.nodeLocX.begin());
-	std::vector<double> initBdryCellNodePosY = getArrayYComp(initBdryNodePos);
-	thrust::copy(initBdryCellNodePosY.begin(), initBdryCellNodePosY.end(),
-			infoVecs.nodeLocY.begin());
-
 	std::vector<double> initCellNodePosX = getArrayXComp(initCellNodePos);
 	thrust::copy(initCellNodePosX.begin(), initCellNodePosX.end(),
-			infoVecs.nodeLocX.begin() + beginAddressOfCell);
+			infoVecs.nodeLocX.begin() + allocPara_M.bdryNodeCount);
 	std::vector<double> initCellNodePosY = getArrayYComp(initCellNodePos);
 	thrust::copy(initCellNodePosY.begin(), initCellNodePosY.end(),
-			infoVecs.nodeLocY.begin() + beginAddressOfCell);
+			infoVecs.nodeLocY.begin() + allocPara_M.bdryNodeCount);
 
 	thrust::copy(nodeTypes.begin(), nodeTypes.end(),
-			infoVecs.nodeCellType.begin());
+			infoVecs.nodeCellType.begin() + allocPara_M.bdryNodeCount);
+
+	thrust::copy(initIsActive.begin(), initIsActive.end(),
+			infoVecs.nodeIsActive.begin() + allocPara_M.bdryNodeCount);
 
 }
 
@@ -589,7 +620,6 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 	VtkAnimationData vtkData;
 	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs();
 	cout << "size of potential pairs = " << pairs.size() << endl;
-	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
 
 // unordered_map is more efficient than map, but it is a c++ 11 feature
 // and c++ 11 seems to be incompatible with Thrust.
@@ -656,7 +686,6 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 
 		if (aniCri.isPairQualify(node1Index, node2Index, node1X, node1Y, node1Z,
 				node1T, node1R, node2X, node2Y, node2Z, node2T, node2R)) {
-			pairsTobeAnimated.push_back(pairs[i]);
 			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
 			if (it == locIndexToAniIndexMap.end()) {
 				locIndexToAniIndexMap.insert(
@@ -817,7 +846,6 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 	VtkAnimationData vtkData;
 	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs_M();
 	cout << "size of potential pairs = " << pairs.size() << endl;
-	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
 
 	// unordered_map is more efficient than map, but it is a c++ 11 feature
 	// and c++ 11 seems to be incompatible with Thrust.
@@ -832,7 +860,7 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 
 	uint activeCellCount = allocPara_M.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
-	uint maxMemNodePerCell = allocPara_M.maxEpiNodePerCell;
+	uint maxMemNodePerCell = allocPara_M.maxMembrNodePerCell;
 	uint beginIndx = allocPara_M.bdryNodeCount;
 	//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
 
@@ -875,7 +903,6 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 		double node2Y = hostTmpVectorLocY[node2Index];
 
 		if (aniCri.isPairQualify_M(node1X, node1Y, node2X, node2Y)) {
-			pairsTobeAnimated.push_back(pairs[i]);
 			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
 			if (it == locIndexToAniIndexMap.end()) {
 				locIndexToAniIndexMap.insert(
@@ -2025,7 +2052,7 @@ void SceNodes::sceForcesDisc() {
 
 void SceNodes::sceForcesDisc_M() {
 	prepareSceForceComputation();
-	applySceForcesDisc_M();
+	//applySceForcesDisc_M();
 }
 
 double SceNodes::getMaxEffectiveRange() {
@@ -2113,8 +2140,8 @@ void SceNodes::initNodeAllocPara_M(uint totalBdryNodeCount,
 	allocPara_M.currentActiveCellCount = 0;
 	allocPara_M.maxCellCount = maxTotalCellCount;
 	allocPara_M.maxAllNodePerCell = maxEpiNodePerCell + maxInternalNodePerCell;
-	allocPara_M.maxEpiNodePerCell = maxEpiNodePerCell;
-	allocPara_M.maxInternalNodePerCell = maxInternalNodePerCell;
+	allocPara_M.maxMembrNodePerCell = maxEpiNodePerCell;
+	allocPara_M.maxIntnlNodePerCell = maxInternalNodePerCell;
 	allocPara_M.maxTotalNodeCount = allocPara_M.maxCellCount
 			* allocPara_M.maxCellCount;
 }
