@@ -161,7 +161,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 			}
 
 			int index_right = nodeRank + 1;
-			if (index_right == maxMemThres) {
+			if (index_right == (int) maxMemThres) {
 				index_right = 0;
 			}
 			index_right = index_right + _bdryCount + cellRank * _maxNodePerCell;

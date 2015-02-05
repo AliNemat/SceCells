@@ -132,6 +132,17 @@ bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 	return condi1 && condi2;
 }
 
+bool AnimationCriteria::isPairQualify_M(double x1, double y1, double x2,
+		double y2) {
+	double dummy = 0;
+	double dist = compuDistHost(x1, y1, dummy, x2, y2, dummy);
+	if (dist < defaultEffectiveDistance) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2) {
 	return sqrt(
@@ -344,3 +355,4 @@ AblationEvent readAblationEvent(std::string inputName) {
 	ablaEvent.printInfo();
 	return ablaEvent;
 }
+

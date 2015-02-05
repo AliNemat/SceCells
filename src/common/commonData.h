@@ -84,6 +84,12 @@ enum AniType {
 	CellType, ForceAbsVal, Force, Tension
 };
 
+class BondInfo {
+public:
+	CVector pos1, pos2;
+	uint cellRank1, cellRank2;
+};
+
 AniType parseAniTpFromConfig(int configValue);
 
 struct ControlSwitchs {
@@ -516,6 +522,8 @@ struct AnimationCriteria {
 			SceNodeType t1, uint r1, double x2, double y2, double z2,
 			SceNodeType t2, uint r2);
 
+	bool isPairQualify_M(double x1, double y1, double x2, double y2);
+
 };
 
 /**
@@ -542,6 +550,7 @@ struct LinkAniData {
  */
 struct VtkAnimationData {
 	bool isArrowIncluded;
+	std::vector<BondInfo> bondsInfo;
 	std::vector<PointAniData> pointsAniData;
 	std::vector<LinkAniData> linksAniData;
 	void outputVtkAni(std::string scriptNameBase, int rank);

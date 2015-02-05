@@ -410,6 +410,45 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 	return result;
 }
 
+std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs_M() {
+	std::vector<std::pair<uint, uint> > result;
+	thrust::host_vector<uint> keyBeginCPU = auxVecs.keyBegin;
+	thrust::host_vector<uint> keyEndCPU = auxVecs.keyEnd;
+	thrust::host_vector<uint> bucketKeysCPU = auxVecs.bucketKeys;
+	thrust::host_vector<uint> bucketValuesCPU = auxVecs.bucketValues;
+	thrust::host_vector<uint> bucketValuesExtendedCPU =
+			auxVecs.bucketValuesIncludingNeighbor;
+	uint iterationCounter = 0;
+
+	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
+	uint offSet = allocPara_M.bdryNodeCount;
+	uint memThreshold = allocPara_M.maxEpiNodePerCell;
+	int size = bucketKeysCPU.size();
+
+	int node1, node2, cellRank1, cellRank2, nodeRank1, nodeRank2;
+	for (int i = 0; i < size; i++) {
+		for (int j = keyBeginCPU[bucketKeysCPU[i]];
+				j < keyEndCPU[bucketKeysCPU[i]]; j++) {
+			node1 = bucketValuesCPU[i];
+			node2 = bucketValuesExtendedCPU[j];
+			if (node1 >= node2) {
+				continue;
+			} else {
+				cellRank1 = (node1 - offSet) / maxNodePerCell;
+				nodeRank1 = (node1 - offSet) % maxNodePerCell;
+				cellRank2 = (node2 - offSet) / maxNodePerCell;
+				nodeRank2 = (node2 - offSet) % maxNodePerCell;
+				if (nodeRank1 >= memThreshold && nodeRank2 >= memThreshold
+						&& cellRank1 == cellRank2) {
+					result.push_back(std::make_pair<uint, uint>(node1, node2));
+				}
+			}
+			iterationCounter++;
+		}
+	}
+	return result;
+}
+
 void SceNodes::initValues(std::vector<CVector>& initBdryCellNodePos,
 		std::vector<CVector>& initProfileNodePos,
 		std::vector<CVector>& initCartNodePos,
@@ -775,8 +814,104 @@ VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
 
 // TODO
 VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
-	VtkAnimationData result;
-	return result;
+	VtkAnimationData vtkData;
+	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs_M();
+	cout << "size of potential pairs = " << pairs.size() << endl;
+	std::vector<std::pair<uint, uint> > pairsTobeAnimated;
+
+	// unordered_map is more efficient than map, but it is a c++ 11 feature
+	// and c++ 11 seems to be incompatible with Thrust.
+	IndexMap locIndexToAniIndexMap;
+
+	// Doesn't have to copy the entire nodeLocX array.
+	// Only copy the first half will be sufficient
+	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
+	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
+	thrust::host_vector<bool> hostIsActiveVec = infoVecs.nodeIsActive;
+	thrust::host_vector<int> hostBondVec = infoVecs.nodeAdhereIndex;
+
+	uint activeCellCount = allocPara_M.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_M.maxEpiNodePerCell;
+	uint beginIndx = allocPara_M.bdryNodeCount;
+	//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
+
+	//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
+	uint index1;
+	int index2;
+	std::vector<BondInfo> bondInfoVec;
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < maxMemNodePerCell; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (hostIsActiveVec[index1] == true) {
+				index2 = hostBondVec[index1];
+				if (index2 > index1 && index2 != -1) {
+					BondInfo bond;
+					bond.cellRank1 = i;
+					bond.pos1 = CVector(hostTmpVectorLocX[index1],
+							hostTmpVectorLocY[index1], 0);
+					bond.cellRank2 = (index2 - beginIndx) / maxNodePerCell;
+					bond.pos2 = CVector(hostTmpVectorLocX[index2],
+							hostTmpVectorLocY[index2], 0);
+					bondInfoVec.push_back(bond);
+				}
+			}
+		}
+	}
+	vtkData.bondsInfo = bondInfoVec;
+
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
+			infoVecs.nodeCellType;
+
+	uint curIndex = 0;
+	for (uint i = 0; i < pairs.size(); i++) {
+		uint node1Index = pairs[i].first;
+		uint node2Index = pairs[i].second;
+		double node1X = hostTmpVectorLocX[node1Index];
+		double node1Y = hostTmpVectorLocY[node1Index];
+
+		double node2X = hostTmpVectorLocX[node2Index];
+		double node2Y = hostTmpVectorLocY[node2Index];
+
+		if (aniCri.isPairQualify_M(node1X, node1Y, node2X, node2Y)) {
+			pairsTobeAnimated.push_back(pairs[i]);
+			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].first, curIndex));
+				curIndex++;
+				PointAniData ptAniData;
+				ptAniData.colorScale = nodeTypeToScale(
+						hostTmpVectorNodeType[node1Index]);
+				ptAniData.pos = CVector(node1X, node1Y, 0);
+				vtkData.pointsAniData.push_back(ptAniData);
+			}
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			if (it == locIndexToAniIndexMap.end()) {
+				locIndexToAniIndexMap.insert(
+						std::pair<uint, uint>(pairs[i].second, curIndex));
+				curIndex++;
+				PointAniData ptAniData;
+				ptAniData.colorScale = nodeTypeToScale(
+						hostTmpVectorNodeType[node1Index]);
+				ptAniData.pos = CVector(node2X, node2Y, 0);
+				vtkData.pointsAniData.push_back(ptAniData);
+			}
+
+			it = locIndexToAniIndexMap.find(pairs[i].first);
+			uint aniIndex1 = it->second;
+			it = locIndexToAniIndexMap.find(pairs[i].second);
+			uint aniIndex2 = it->second;
+
+			LinkAniData linkData;
+			linkData.node1Index = aniIndex1;
+			linkData.node2Index = aniIndex2;
+			vtkData.linksAniData.push_back(linkData);
+		}
+	}
+
+	return vtkData;
 }
 
 void SceNodes::findBucketBounds() {
@@ -852,9 +987,9 @@ void SceNodes::buildBuckets2D() {
 	thrust::counting_iterator<uint> countingIterBegin(0);
 	thrust::counting_iterator<uint> countingIterEnd(totalActiveNodes);
 
-	// takes counting iterator and coordinates
-	// return tuple of keys and values
-	// transform the points to their bucket indices
+// takes counting iterator and coordinates
+// return tuple of keys and values
+// transform the points to their bucket indices
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(infoVecs.nodeLocX.begin(),
@@ -873,7 +1008,7 @@ void SceNodes::buildBuckets2D() {
 			pointToBucketIndex2D(domainPara.minX, domainPara.maxX,
 					domainPara.minY, domainPara.maxY, domainPara.gridSpacing));
 
-	// sort the points by their bucket index
+// sort the points by their bucket index
 	thrust::sort_by_key(auxVecs.bucketKeys.begin(), auxVecs.bucketKeys.end(),
 			auxVecs.bucketValues.begin());
 // for those nodes that are inactive, key value of UINT_MAX will be returned.
@@ -1355,7 +1490,7 @@ void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
 		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
 		double& xRes, double& yRes) {
 
-	// should old one break?
+// should old one break?
 	if (adhereIndex != -1) {
 		// means adhesion has been established
 		double curAdherePosX = _nodeLocXAddress[adhereIndex];

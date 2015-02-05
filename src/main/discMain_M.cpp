@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		cout << "step number = " << i << endl;
 		if (i % mainPara.aniAuxVar == 0) {
-			simuDomain.outputVtkFilesWithCri(mainPara.animationNameBase,
+			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			cout << "finished output Animation" << endl;
 			aniFrame++;

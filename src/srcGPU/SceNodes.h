@@ -825,6 +825,8 @@ class SceNodes {
 	 */
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
+	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs_M();
+
 	void initControlPara(bool isStab);
 
 	// friend unit test so these it can test private functions
