@@ -1259,6 +1259,26 @@ bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+__device__
+bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+	if (nodeGlobalRank1 < cellNodeBeginPos_M
+			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
+		return false;
+	}
+	uint nodeRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	if (nodeRank1 == nodeRank2) {
+		return false;
+	}
+	if (nodeRank1 < bdryThreshold_M && nodeRank2 < bdryThreshold_M) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 __device__ bool isSameECM(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if ((nodeGlobalRank1 - ECMbeginPos) / nodeCountPerECM
 			== (nodeGlobalRank2 - ECMbeginPos) / nodeCountPerECM) {
@@ -1312,9 +1332,28 @@ __device__ bool bothCellNodes(SceNodeType &type1, SceNodeType &type2) {
 }
 
 __device__
-void handleAdhesionForce_M(uint& nodeRank1, uint& nodeRank2, int& adhereIndex,
-		double& xPos, double& yPos, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double& xRes, double& yRes) {
+void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
+		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2) {
+	double length = computeDist2D(xPos1, yPos1, xPos2, yPos2);
+	if (length <= bondAdhThreshold) {
+		if (isSuccess) {
+			if (length < dist) {
+				dist = length;
+				index = nodeRank2;
+			}
+		} else {
+			isSuccess = true;
+			index = nodeRank2;
+			dist = length;
+		}
+	}
+}
+
+__device__
+void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
+		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double& xRes, double& yRes) {
 
 	// should old one break?
 	if (adhereIndex != -1) {
@@ -1324,25 +1363,13 @@ void handleAdhesionForce_M(uint& nodeRank1, uint& nodeRank2, int& adhereIndex,
 		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
 		if (curLen > maxAdhBondLength) {
 			adhereIndex = -1;
-		}
-	}
-	// do nothing if no adhesion bond
-
-	double otherXPos = _nodeLocXAddress[nodeRank2];
-	double otherYPos = _nodeLocYAddress[nodeRank2];
-	double length = computeDist2D(xPos, yPos, otherXPos, otherYPos);
-
-	// should new one form?
-	if (length < bondAdhThreshold && adhereIndex == -1) {
-		adhereIndex = nodeRank2;
-	}
-
-	// apply adhesion if bond exist
-	if (adhereIndex != -1) {
-		if (length > minAdhBondLength) {
-			double forceValue = (length - minAdhBondLength) * bondStiff;
-			xRes = xRes + forceValue * (otherXPos - xPos) / length;
-			yRes = yRes + forceValue * (otherYPos - yPos) / length;
+			return;
+		} else {
+			if (curLen > minAdhBondLength) {
+				double forceValue = (curLen - minAdhBondLength) * bondStiff;
+				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
+				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
+			}
 		}
 	}
 }
@@ -1696,7 +1723,7 @@ void SceNodes::applySceForcesDisc_M() {
 									auxVecs.bucketValues.begin()),
 							make_permutation_iterator(infoVecs.nodeVelY.begin(),
 									auxVecs.bucketValues.begin()))),
-			AddSceForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
+			AddForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeAdhIdxAddress, nodeGrowProAddr));
 }
 

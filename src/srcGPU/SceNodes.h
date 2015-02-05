@@ -92,6 +92,9 @@ bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2);
 __device__
 bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
+__device__
+bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
+
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -357,9 +360,14 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		double* _nodeGrowProAddr);
 
 __device__
-void handleAdhesionForce_M(uint& nodeRank1, uint& nodeRank2, int& adhereIndex,
-		double& xPos, double& yPos, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double &xRes, double &yRes);
+void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
+		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double& xRes, double& yRes);
+
+__device__
+void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
+		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2);
 
 __device__
 void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
@@ -486,7 +494,7 @@ struct AddSceForceDisc: public thrust::unary_function<Tuuuddd, CVec6> {
 /**
  * A compute functor designed for computing SceForce for Disc project.
  */
-struct AddSceForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
+struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	uint* _extendedValuesAddress;
 	double* _nodeLocXAddress;
 	double* _nodeLocYAddress;
@@ -494,7 +502,7 @@ struct AddSceForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	double* _nodeGroProAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
-	AddSceForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
+	AddForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, int* nodeAdhereIndex,
 			double* nodeGrowProAddr) :
 			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
@@ -512,6 +520,16 @@ struct AddSceForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		double xPos = thrust::get<3>(u3d2);
 		double yPos = thrust::get<4>(u3d2);
 
+		bool notBonded;
+		if (_nodeAdhereIndex[myValue] == -1) {
+			notBonded = true;
+		} else {
+			notBonded = false;
+		}
+		bool isSuccess = false;
+		uint index;
+		double dist;
+
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
 			if (nodeRankOfOtherNode == myValue) {
@@ -521,12 +539,20 @@ struct AddSceForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 					_nodeLocXAddress[nodeRankOfOtherNode],
 					_nodeLocYAddress[nodeRankOfOtherNode], xRes, yRes,
 					_nodeLocXAddress, _nodeLocYAddress, _nodeGroProAddr);
-			if (bothEpi(myValue, nodeRankOfOtherNode)) {
-				handleAdhesionForce_M(myValue, nodeRankOfOtherNode,
-						_nodeAdhereIndex[myValue], xPos, yPos, _nodeLocXAddress,
-						_nodeLocYAddress, xRes, yRes);
+			if (bothEpiDiffCell(myValue, nodeRankOfOtherNode)) {
+				if (notBonded) {
+					attemptToAdhere(isSuccess, index, dist, nodeRankOfOtherNode,
+							xPos, yPos, _nodeLocXAddress[nodeRankOfOtherNode],
+							_nodeLocYAddress[nodeRankOfOtherNode]);
+				}
+
 			}
 		}
+		if (isSuccess) {
+			_nodeAdhereIndex[myValue] = index;
+		}
+		handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
+				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
 		return thrust::make_tuple(xRes, yRes);
 	}
 };

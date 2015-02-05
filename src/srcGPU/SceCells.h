@@ -9,6 +9,8 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
+typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
+// maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
 /**
  * Functor for divide operation.
@@ -103,6 +105,81 @@ struct CVec3Divide: public thrust::binary_function<CVec3, double, CVec3> {
 	CVec3 operator()(const CVec3 &vec1, const double &divisor) {
 		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
 				thrust::get<1>(vec1) / divisor, thrust::get<2>(vec1) / divisor);
+	}
+};
+
+// maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
+
+struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
+	uint _bdryCount;
+	uint _maxNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	double _equLen;
+	double _memStiff;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddTensionForce(uint bdryCount, uint maxNodePerCell, double* locXAddr,
+			double* locYAddr, bool* isActiveAddr, double equLen,
+			double memStiff) :
+			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr), _equLen(
+					equLen), _memStiff(memStiff) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__
+	CVec2 operator()(const TensionData &tData) const {
+		uint maxMemThres = thrust::get<0>(tData);
+		uint cellRank = thrust::get<1>(tData);
+		uint nodeRank = thrust::get<2>(tData);
+		double locX = thrust::get<3>(tData);
+		double locY = thrust::get<4>(tData);
+		double velX = thrust::get<5>(tData);
+		double velY = thrust::get<6>(tData);
+
+		uint index = _bdryCount + cellRank * _maxNodePerCell + nodeRank;
+
+		if (_isActiveAddr[index] == false || nodeRank >= maxMemThres) {
+			return thrust::make_tuple(velX, velY);
+		} else {
+			int index_left = nodeRank - 1;
+			if (index_left == -1) {
+				index_left = maxMemThres - 1;
+			}
+			index_left = index_left + _bdryCount + cellRank * _maxNodePerCell;
+			if (_isActiveAddr[index_left] == true) {
+				double leftPosX = _locXAddr[index_left];
+				double leftPosY = _locYAddr[index_left];
+				double leftDiffX = leftPosX - locX;
+				double leftDiffY = leftPosY - locY;
+				double length = sqrt(
+						leftDiffX * leftDiffX + leftDiffY * leftDiffY);
+				double forceVal = (length - _equLen) * _memStiff;
+				velX = velX + forceVal * leftDiffX / length;
+				velY = velY + forceVal * leftDiffY / length;
+			}
+
+			int index_right = nodeRank + 1;
+			if (index_right == maxMemThres) {
+				index_right = 0;
+			}
+			index_right = index_right + _bdryCount + cellRank * _maxNodePerCell;
+			if (_isActiveAddr[index_right] == true) {
+				double rightPosX = _locXAddr[index_right];
+				double rightPosY = _locYAddr[index_right];
+				double rightDiffX = rightPosX - locX;
+				double rightDiffY = rightPosY - locY;
+				double length = sqrt(
+						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
+				double forceVal = (length - _equLen) * _memStiff;
+				velX = velX + forceVal * rightDiffX / length;
+				velY = velY + forceVal * rightDiffY / length;
+			}
+
+			return thrust::make_tuple(velX, velY);
+		}
+
 	}
 };
 
@@ -788,6 +865,13 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 	}
 };
 
+struct ForceZero: public thrust::unary_function<CVec2, CVec2> {
+	__host__ __device__
+	CVec2 operator()(const CVec2 &oriData) {
+		return thrust::make_tuple(0.0, 0.0);
+	}
+};
+
 struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 		CVec3Bool> {
 	double _lowerLimit, _upperLimit;
@@ -955,6 +1039,11 @@ struct CellDivAuxData {
 	thrust::device_vector<bool> tmpIsActive2_M;
 	thrust::device_vector<double> tmpXPos2_M;
 	thrust::device_vector<double> tmpYPos2_M;
+
+	std::vector<CVector> tmp1Vec, tmp2Vec;
+	std::vector<CVector> tmp1VecMem, tmp2VecMem;
+	std::vector<uint> tmp1MemActiveCounts, tmp1InternalActiveCounts;
+	std::vector<uint> tmp2MemActiveCounts, tmp2InternalActiveCounts;
 };
 
 /**
@@ -1170,13 +1259,13 @@ class SceCells {
 
 	void distributeIsActiveInfo();
 
+	void applyMemTension_M();
+
 	void computeCenterPos_M();
 
 	void growAtRandom_M(double dt);
 
 	void divide2D_M();
-
-	void distributeIsActiveInfo_M();
 
 	void distributeCellGrowthProgress_M();
 
@@ -1208,6 +1297,10 @@ class SceCells {
 	void copySecondCellArr_M();
 	void updateActiveCellCount_M();
 	void markIsDivideFalse_M();
+
+	void adjustNodeVel_M();
+	void moveNodes_M();
+
 public:
 
 	SceCells();
