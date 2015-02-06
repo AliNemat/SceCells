@@ -12,6 +12,9 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
+__device__
+double calMembrForce(double& length);
+
 /**
  * Functor for divide operation.
  * @param dividend divisor for divide operator.
@@ -116,16 +119,12 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 	double* _locXAddr;
 	double* _locYAddr;
 	bool* _isActiveAddr;
-	double _equLen;
-	double _memStiff;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddTensionForce(uint bdryCount, uint maxNodePerCell, double* locXAddr,
-			double* locYAddr, bool* isActiveAddr, double equLen,
-			double memStiff) :
+			double* locYAddr, bool* isActiveAddr) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
-					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr), _equLen(
-					equLen), _memStiff(memStiff) {
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
@@ -155,7 +154,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 				double leftDiffY = leftPosY - locY;
 				double length = sqrt(
 						leftDiffX * leftDiffX + leftDiffY * leftDiffY);
-				double forceVal = (length - _equLen) * _memStiff;
+				double forceVal = calMembrForce(length);
 				velX = velX + forceVal * leftDiffX / length;
 				velY = velY + forceVal * leftDiffY / length;
 			}
@@ -172,7 +171,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 				double rightDiffY = rightPosY - locY;
 				double length = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = (length - _equLen) * _memStiff;
+				double forceVal = calMembrForce(length);
 				velX = velX + forceVal * rightDiffX / length;
 				velY = velY + forceVal * rightDiffY / length;
 			}
@@ -1308,6 +1307,8 @@ class SceCells {
 	void readMiscPara_M();
 	void initCellInfoVecs_M();
 	void initCellNodeInfoVecs_M();
+
+	void copyToGPUConstMem();
 
 public:
 

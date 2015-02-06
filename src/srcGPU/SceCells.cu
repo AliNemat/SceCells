@@ -2,6 +2,14 @@
 
 double epsilon = 1.0e-12;
 
+__constant__ double membrEquLen;
+__constant__ double membrStiff;
+
+__device__
+double calMembrForce(double& length) {
+	return (length - membrEquLen) * membrStiff;
+}
+
 void SceCells::distributeBdryIsActiveInfo() {
 	thrust::fill(nodes->getInfoVecs().nodeIsActive.begin(),
 			nodes->getInfoVecs().nodeIsActive.begin()
@@ -571,7 +579,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts) {
-
+	copyToGPUConstMem();
 	initialize_M(nodesInput);
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts);
@@ -1254,15 +1262,15 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-//applyMemTension_M();
+	applyMemTension_M();
 
-	computeCenterPos_M();
+	//computeCenterPos_M();
 
 //growAtRandom_M(dt);
 
 //divide2D_M();
 
-	distributeCellGrowthProgress_M();
+	//distributeCellGrowthProgress_M();
 
 	allComponentsMove_M();
 }
@@ -1705,9 +1713,6 @@ void SceCells::markIsDivideFalse_M() {
 }
 
 void SceCells::adjustNodeVel_M() {
-	thrust::counting_iterator<uint> countingIterBegin(0);
-	thrust::counting_iterator<uint> countingIterEnd(allocPara_m.bdryNodeCount);
-
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
@@ -1715,7 +1720,7 @@ void SceCells::adjustNodeVel_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
 							nodes->getInfoVecs().nodeVelY.begin()))
-					+ allocPara_m.bdryNodeCount,
+					+ allocPara_m.bdryNodeCount + totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
 							nodes->getInfoVecs().nodeVelY.begin())),
@@ -1741,7 +1746,7 @@ void SceCells::moveNodes_M() {
 }
 
 void SceCells::applyMemTension_M() {
-	uint totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0);
@@ -1751,15 +1756,8 @@ void SceCells::applyMemTension_M() {
 			&(nodes->getInfoVecs().nodeLocX[0]));
 	double* nodeLocYAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocY[0]));
-//double* nodeVelXAddr = thrust::raw_pointer_cast(
-//		&(nodes->getInfoVecs().nodeVelX[0]));
-//double* nodeVelYAddr = thrust::raw_pointer_cast(
-//		&(nodes->getInfoVecs().nodeVelY[0]));
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
-
-//TODO: fix this
-	double tmp1 = 0, tmp2 = 0;
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -1804,7 +1802,7 @@ void SceCells::applyMemTension_M() {
 							nodes->getInfoVecs().nodeVelY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddTensionForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, tmp1, tmp2));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
 }
 
 void SceCells::runAblationTest(AblationEvent& ablEvent) {
@@ -1949,8 +1947,10 @@ void SceCells::distributeCellGrowthProgress_M() {
 }
 
 void SceCells::allComponentsMove_M() {
-	adjustNodeVel_M();
+	//
 	moveNodes_M();
+	//TODO: remove this temperary solution.
+	adjustNodeVel_M();
 }
 
 void SceCells::randomizeGrowth_M() {
@@ -2429,4 +2429,13 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		vtkData.linksAniData.push_back(linkData);
 	}
 	return vtkData;
+}
+
+void SceCells::copyToGPUConstMem() {
+	double membrEquLenCPU =
+			globalConfigVars.getConfigValue("MembrEquLen").toDouble();
+	double membrStiffCPU =
+			globalConfigVars.getConfigValue("MembrStiff").toDouble();
+	cudaMemcpyToSymbol(membrEquLen, &membrEquLenCPU, sizeof(double));
+	cudaMemcpyToSymbol(membrStiff, &membrStiffCPU, sizeof(double));
 }

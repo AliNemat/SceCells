@@ -701,7 +701,7 @@ void CellInitHelper::generateCellInitNodeInfo_v3(vector<CVector>& initCenters,
 	vector<CVector> initMemPosTmp;
 	vector<CVector> initInternalPosTmp;
 	for (uint i = 0; i < initCenters.size(); i++) {
-		initMemPosTmp = generateInitEpiNodes(initCenters[i]);
+		initMemPosTmp = generateInitMembrNodes(initCenters[i]);
 		initInternalPosTmp = generateInitCellNodes(initCenters[i]);
 		initBdryPos.push_back(initMemPosTmp);
 		initInternalPos.push_back(initInternalPosTmp);
@@ -735,7 +735,7 @@ vector<CVector> CellInitHelper::generateInitCellNodes() {
 	return attemptedPoss;
 }
 
-vector<CVector> CellInitHelper::generateInitCellNodes(CVector & center) {
+vector<CVector> CellInitHelper::generateInitCellNodes(CVector& center) {
 	bool isSuccess = false;
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {
@@ -744,6 +744,7 @@ vector<CVector> CellInitHelper::generateInitCellNodes(CVector & center) {
 			isSuccess = true;
 		}
 	}
+	/*
 	// also need to make sure center point is (0,0,0).
 	CVector tmpSum(0, 0, 0);
 	for (uint i = 0; i < attemptedPoss.size(); i++) {
@@ -753,13 +754,14 @@ vector<CVector> CellInitHelper::generateInitCellNodes(CVector & center) {
 	for (uint i = 0; i < attemptedPoss.size(); i++) {
 		attemptedPoss[i] = attemptedPoss[i] - tmpSum;
 	}
+	*/
 	for (uint i = 0; i < attemptedPoss.size(); i++) {
 		attemptedPoss[i] = attemptedPoss[i] + center;
 	}
 	return attemptedPoss;
 }
 
-vector<CVector> CellInitHelper::generateInitEpiNodes(CVector & center) {
+vector<CVector> CellInitHelper::generateInitMembrNodes(CVector& center) {
 	double initRadius =
 			globalConfigVars.getConfigValue("InitMembrRadius").toDouble();
 	uint initEpiNodeCount = globalConfigVars.getConfigValue(

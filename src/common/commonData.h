@@ -139,6 +139,21 @@ struct SceMechPara {
 };
 
 /**
+ * This data structure contains mechanical parameters of the model.
+ */
+struct SceMechPara_M {
+	double sceInterBParaCPU_M[5];
+	double sceIntnlBParaCPU_M[5];
+	double sceIntraParaCPU_M[5];
+	double sceIntraParaDivCPU_M[5];
+	double growthPrgrCriValCPU_M;
+	double maxAdhBondLenCPU_M;
+	double minAdhBondLenCPU_M;
+	double bondStiffCPU_M;
+	double bondAdhCriLenCPU_M;
+};
+
+/**
  * This data structure contains chemical parameters of the model.
  * used only in beak project.
  */

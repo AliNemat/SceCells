@@ -18,16 +18,18 @@ __constant__ uint cellNodeBeginPos;
 __constant__ uint nodeCountPerECM;
 __constant__ uint nodeCountPerCell;
 //
-//
 __constant__ uint cellNodeBeginPos_M;
 __constant__ uint allNodeCountPerCell_M;
-__constant__ uint bdryThreshold_M;
-__constant__ double sceInterPara_M[5];
-__constant__ double sceIntraBPara_M[5];
-__constant__ double maxAdhBondLength;
-__constant__ double bondStiff;
-__constant__ double bondAdhThreshold;
-__constant__ double minAdhBondLength;
+__constant__ uint membrThreshold_M;
+__constant__ double sceInterBPara_M[5];
+__constant__ double sceIntnlBPara_M[5];
+__constant__ double sceIntraPara_M[5];
+__constant__ double sceIntraParaDiv_M[5];
+__constant__ double growthPrgrCriVal_M;
+__constant__ double maxAdhBondLen_M;
+__constant__ double minAdhBondLen_M;
+__constant__ double bondStiff_M;
+__constant__ double bondAdhCriLen_M;
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
@@ -398,7 +400,7 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	infoVecs.nodeAdhereIndex = bondVec;
 	//std::cout << "copy finished!" << std::endl;
 	//std::cout.flush();
-	//copyParaToGPUConstMem();
+	copyParaToGPUConstMem_M();
 	//std::cout << "at the end" << std::endl;
 	//std::cout.flush();
 }
@@ -429,7 +431,33 @@ void SceNodes::copyParaToGPUConstMem() {
 	cudaMemcpyToSymbol(sceInterDiffPara, mechPara.sceInterDiffParaCPU,
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceECMPara, mechPara.sceECMParaCPU, 5 * sizeof(double));
+}
 
+void SceNodes::copyParaToGPUConstMem_M() {
+	readParas_M();
+	cudaMemcpyToSymbol(cellNodeBeginPos_M, &allocPara_M.bdryNodeCount,
+			sizeof(uint));
+	cudaMemcpyToSymbol(allNodeCountPerCell_M, &allocPara_M.maxAllNodePerCell,
+			sizeof(uint));
+	cudaMemcpyToSymbol(membrThreshold_M, &allocPara_M.maxMembrNodePerCell,
+			sizeof(uint));
+	cudaMemcpyToSymbol(bondAdhCriLen_M, &mechPara_M.bondAdhCriLenCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(bondStiff_M, &mechPara_M.bondStiffCPU_M, sizeof(double));
+	cudaMemcpyToSymbol(growthPrgrCriVal_M, &mechPara_M.growthPrgrCriValCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(maxAdhBondLen_M, &mechPara_M.maxAdhBondLenCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(minAdhBondLen_M, &mechPara_M.minAdhBondLenCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(sceInterBPara_M, mechPara_M.sceInterBParaCPU_M,
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIntnlBPara_M, mechPara_M.sceIntnlBParaCPU_M,
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIntraPara_M, mechPara_M.sceIntraParaCPU_M,
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIntraParaDiv_M, mechPara_M.sceIntraParaDivCPU_M,
+			5 * sizeof(double));
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
@@ -474,6 +502,102 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 		}
 	}
 	return result;
+}
+
+void SceNodes::readParas_M() {
+	//////////////////////
+	//// Block 1 /////////
+	//////////////////////
+	double U0_InterB =
+			globalConfigVars.getConfigValue("SceInterB_U0").toDouble();
+	double V0_InterB =
+			globalConfigVars.getConfigValue("SceInterB_V0").toDouble();
+	double k1_InterB =
+			globalConfigVars.getConfigValue("SceInterB_k1").toDouble();
+	double k2_InterB =
+			globalConfigVars.getConfigValue("SceInterB_k2").toDouble();
+	double interBEffectiveRange = globalConfigVars.getConfigValue(
+			"InterBEffectiveRange").toDouble();
+	mechPara_M.sceInterBParaCPU_M[0] = U0_InterB;
+	mechPara_M.sceInterBParaCPU_M[1] = V0_InterB;
+	mechPara_M.sceInterBParaCPU_M[2] = k1_InterB;
+	mechPara_M.sceInterBParaCPU_M[3] = k2_InterB;
+	mechPara_M.sceInterBParaCPU_M[4] = interBEffectiveRange;
+
+	//////////////////////
+	//// Block 2 /////////
+	//////////////////////
+	double U0_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_U0").toDouble();
+	double V0_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_V0").toDouble();
+	double k1_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_k1").toDouble();
+	double k2_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_k2").toDouble();
+	double intnlBEffectiveRange = globalConfigVars.getConfigValue(
+			"IntnlBEffectRange").toDouble();
+	mechPara_M.sceIntnlBParaCPU_M[0] = U0_IntnlB;
+	mechPara_M.sceIntnlBParaCPU_M[1] = V0_IntnlB;
+	mechPara_M.sceIntnlBParaCPU_M[2] = k1_IntnlB;
+	mechPara_M.sceIntnlBParaCPU_M[3] = k2_IntnlB;
+	mechPara_M.sceIntnlBParaCPU_M[4] = intnlBEffectiveRange;
+
+	//////////////////////
+	//// Block 3 /////////
+	//////////////////////
+	double U0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_U0").toDouble();
+	double V0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_V0").toDouble();
+	double k1_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k1").toDouble();
+	double k2_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k2").toDouble();
+	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraEffectRange").toDouble();
+	mechPara_M.sceIntraParaCPU_M[0] = U0_Intra;
+	mechPara_M.sceIntraParaCPU_M[1] = V0_Intra;
+	mechPara_M.sceIntraParaCPU_M[2] = k1_Intra;
+	mechPara_M.sceIntraParaCPU_M[3] = k2_Intra;
+	mechPara_M.sceIntraParaCPU_M[4] = intraLinkEffectiveRange;
+
+	//////////////////////
+	//// Block 4 /////////
+	//////////////////////
+	double U0_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_U0_Div").toDouble();
+	double V0_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_V0_Div").toDouble();
+	double k1_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_k1_Div").toDouble();
+	double k2_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_k2_Div").toDouble();
+	double intraDivEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraDivEffectRange").toDouble();
+	mechPara_M.sceIntraParaDivCPU_M[0] = U0_Intra_Div;
+	mechPara_M.sceIntraParaDivCPU_M[1] = V0_Intra_Div;
+	mechPara_M.sceIntraParaDivCPU_M[2] = k1_Intra_Div;
+	mechPara_M.sceIntraParaDivCPU_M[3] = k2_Intra_Div;
+	mechPara_M.sceIntraParaDivCPU_M[4] = intraDivEffectiveRange;
+
+	//////////////////////
+	//// Block 5 /////////
+	//////////////////////
+	double bondAdhCriLen =
+			globalConfigVars.getConfigValue("BondAdhCriLen").toDouble();
+	mechPara_M.bondAdhCriLenCPU_M = bondAdhCriLen;
+	double bondStiff = globalConfigVars.getConfigValue("BondStiff").toDouble();
+	mechPara_M.bondStiffCPU_M = bondStiff;
+	double growthPrgrCriVal = globalConfigVars.getConfigValue(
+			"GrowthPrgrCriVal").toDouble();
+	mechPara_M.growthPrgrCriValCPU_M = growthPrgrCriVal;
+	double maxAdhBondLen =
+			globalConfigVars.getConfigValue("MaxAdhBondLen").toDouble();
+	mechPara_M.maxAdhBondLenCPU_M = maxAdhBondLen;
+	double minAdhBondLen =
+			globalConfigVars.getConfigValue("MinAdhBondLen").toDouble();
+	mechPara_M.minAdhBondLenCPU_M = minAdhBondLen;
 }
 
 std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs_M() {
@@ -1186,23 +1310,27 @@ void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
 		double& yPos2, double& growPro, double& xRes, double& yRes) {
 	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
 	double forceValue;
-	if (linkLength > sceIntraPara[4]) {
-		forceValue = 0;
-	} else {
-		if (growPro > sceIntraParaDiv[4]) {
-			double intraPara0 = growPro * (sceIntraParaDiv[0])
-					+ (1.0 - growPro) * sceIntraPara[0];
-			double intraPara1 = growPro * (sceIntraParaDiv[1])
-					+ (1.0 - growPro) * sceIntraPara[1];
-			double intraPara2 = growPro * (sceIntraParaDiv[2])
-					+ (1.0 - growPro) * sceIntraPara[2];
-			double intraPara3 = growPro * (sceIntraParaDiv[3])
-					+ (1.0 - growPro) * sceIntraPara[3];
+	if (growPro > growthPrgrCriVal_M) {
+		if (linkLength > sceIntraParaDiv_M[4]) {
+			forceValue = 0;
+		} else {
+			double intraPara0 = growPro * (sceIntraParaDiv_M[0])
+					+ (1.0 - growPro) * sceIntraPara_M[0];
+			double intraPara1 = growPro * (sceIntraParaDiv_M[1])
+					+ (1.0 - growPro) * sceIntraPara_M[1];
+			double intraPara2 = growPro * (sceIntraParaDiv_M[2])
+					+ (1.0 - growPro) * sceIntraPara_M[2];
+			double intraPara3 = growPro * (sceIntraParaDiv_M[3])
+					+ (1.0 - growPro) * sceIntraPara_M[3];
 			forceValue = -intraPara0 / intraPara2
 					* exp(-linkLength / intraPara2)
 					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		}
+	} else {
+		if (linkLength > sceIntraPara_M[4]) {
+			forceValue = 0;
 		} else {
-			forceValue = -sceIntraPara[0] / sceIntraPara[2]
+			forceValue = -sceIntraPara_M[0] / sceIntraPara_M[2]
 					* exp(-linkLength / sceIntraPara[2])
 					+ sceIntraPara[1] / sceIntraPara[3]
 							* exp(-linkLength / sceIntraPara[3]);
@@ -1217,13 +1345,13 @@ void calAndAddIntraB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& xRes, double& yRes) {
 	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
 	double forceValue;
-	if (linkLength > sceIntraBPara_M[4]) {
+	if (linkLength > sceIntnlBPara_M[4]) {
 		forceValue = 0;
 	} else {
-		forceValue = -sceIntraBPara_M[0] / sceIntraBPara_M[2]
-				* exp(-linkLength / sceIntraBPara_M[2])
-				+ sceIntraBPara_M[1] / sceIntraBPara_M[3]
-						* exp(-linkLength / sceIntraBPara_M[3]);
+		forceValue = -sceIntnlBPara_M[0] / sceIntnlBPara_M[2]
+				* exp(-linkLength / sceIntnlBPara_M[2])
+				+ sceIntnlBPara_M[1] / sceIntnlBPara_M[3]
+						* exp(-linkLength / sceIntnlBPara_M[3]);
 	}
 	if (forceValue > 0) {
 		forceValue = 0;
@@ -1237,13 +1365,13 @@ void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& xRes, double& yRes) {
 	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
 	double forceValue;
-	if (linkLength > sceInterPara_M[4]) {
+	if (linkLength > sceInterBPara_M[4]) {
 		forceValue = 0;
 	} else {
-		forceValue = -sceInterPara_M[0] / sceInterPara_M[2]
-				* exp(-linkLength / sceInterPara_M[2])
-				+ sceInterPara_M[1] / sceInterPara_M[3]
-						* exp(-linkLength / sceInterPara_M[3]);
+		forceValue = -sceInterBPara_M[0] / sceInterBPara_M[2]
+				* exp(-linkLength / sceInterBPara_M[2])
+				+ sceInterBPara_M[1] / sceInterBPara_M[3]
+						* exp(-linkLength / sceInterBPara_M[3]);
 		if (forceValue > 0) {
 			forceValue = 0;
 		}
@@ -1426,7 +1554,7 @@ bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 			% allNodeCountPerCell_M;
 	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
 			% allNodeCountPerCell_M;
-	if (nodeRank1 >= bdryThreshold_M && nodeRank2 >= bdryThreshold_M) {
+	if (nodeRank1 >= membrThreshold_M && nodeRank2 >= membrThreshold_M) {
 		return true;
 	} else {
 		return false;
@@ -1434,7 +1562,7 @@ bool bothInternal(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 }
 
 __device__
-bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+bool bothMembr(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeGlobalRank1 < cellNodeBeginPos_M
 			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
 		return false;
@@ -1443,7 +1571,7 @@ bool bothEpi(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 			% allNodeCountPerCell_M;
 	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
 			% allNodeCountPerCell_M;
-	if (nodeRank1 < bdryThreshold_M && nodeRank2 < bdryThreshold_M) {
+	if (nodeRank1 < membrThreshold_M && nodeRank2 < membrThreshold_M) {
 		return true;
 	} else {
 		return false;
@@ -1463,7 +1591,7 @@ bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeRank1 == nodeRank2) {
 		return false;
 	}
-	if (nodeRank1 < bdryThreshold_M && nodeRank2 < bdryThreshold_M) {
+	if (nodeRank1 < membrThreshold_M && nodeRank2 < membrThreshold_M) {
 		return true;
 	} else {
 		return false;
@@ -1527,7 +1655,7 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
 		double& yPos2) {
 	double length = computeDist2D(xPos1, yPos1, xPos2, yPos2);
-	if (length <= bondAdhThreshold) {
+	if (length <= bondAdhCriLen_M) {
 		if (isSuccess) {
 			if (length < dist) {
 				dist = length;
@@ -1552,12 +1680,12 @@ void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
 		double curAdherePosX = _nodeLocXAddress[adhereIndex];
 		double curAdherePosY = _nodeLocYAddress[adhereIndex];
 		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
-		if (curLen > maxAdhBondLength) {
+		if (curLen > maxAdhBondLen_M) {
 			adhereIndex = -1;
 			return;
 		} else {
-			if (curLen > minAdhBondLength) {
-				double forceValue = (curLen - minAdhBondLength) * bondStiff;
+			if (curLen > minAdhBondLen_M) {
+				double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
 				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 			}
@@ -1633,7 +1761,7 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 			calAndAddIntraDiv_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
 					_nodeLocYAddress[nodeRank2], _nodeGrowProAddr[nodeRank2],
 					xRes, yRes);
-		} else if (bothEpi(nodeRank1, nodeRank2)) {
+		} else if (bothMembr(nodeRank1, nodeRank2)) {
 			// both nodes epithilium type. no sce force applied.
 			// nothing to do here.
 		} else {
@@ -1642,7 +1770,7 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 					_nodeLocYAddress[nodeRank2], xRes, yRes);
 		}
 	} else {
-		if (bothEpi(nodeRank1, nodeRank2)) {
+		if (bothMembr(nodeRank1, nodeRank2)) {
 			calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
 					_nodeLocYAddress[nodeRank2], xRes, yRes);
 		}
@@ -2081,7 +2209,7 @@ void SceNodes::sceForcesDisc() {
 
 void SceNodes::sceForcesDisc_M() {
 	prepareSceForceComputation();
-	//applySceForcesDisc_M();
+	applySceForcesDisc_M();
 }
 
 double SceNodes::getMaxEffectiveRange() {
@@ -2124,8 +2252,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
-	if (controlPara.simuType == Disc
-			|| controlPara.simuType == SingleCellTest) {
+	if (controlPara.simuType == Disc || controlPara.simuType == SingleCellTest
+			|| controlPara.simuType == Disc_M) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceX.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceY.resize(maxTotalNodeCount);

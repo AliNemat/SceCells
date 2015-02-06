@@ -76,7 +76,7 @@ class CellInitHelper {
 	vector<CVector> generateInitCellNodes();
 	vector<CVector> generateInitCellNodes(CVector& center);
 
-	vector<CVector> generateInitEpiNodes(CVector& center);
+	vector<CVector> generateInitMembrNodes(CVector& center);
 
 	/**
 	 * Attempt to generate an array that represents relative position of nodes in a cell.
