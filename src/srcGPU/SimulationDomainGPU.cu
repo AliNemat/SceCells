@@ -153,6 +153,7 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell);
 
 	std::cout << "break point 1 " << std::endl;
+	std::cout.flush();
 	// array size of cell type array
 	uint nodeTypeSize = nodeTypes.size();
 	// array size of initial active node count of cells array.
@@ -163,6 +164,7 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	assert(initNodesVec.size() == nodeTypes.size());
 
 	std::cout << "break point 2 " << std::endl;
+	std::cout.flush();
 	/*
 	 * second part: actual initialization
 	 * copy data from main system memory to GPU memory
@@ -175,13 +177,18 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	nodes.setAllocParaM(para);
 
 	std::cout << "break point 3 " << std::endl;
+	std::cout.flush();
 
 	nodes.initValues_M(nodeIsActive, initNodesVec, nodeTypes);
+
+	std::cout << "break point 4 " << std::endl;
+	std::cout.flush();
 
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts);
 
-	std::cout << "break point 4 " << std::endl;
+	std::cout << "break point 5 " << std::endl;
+	std::cout.flush();
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
@@ -436,9 +443,13 @@ void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
+	std::cout << "started generate raw data" << std::endl;
 	AniRawData rawAni = cells.obtainAniRawData(aniCri);
+	std::cout << "finished generate raw data" << std::endl;
 	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
+	std::cout << "finished generate vtk data" << std::endl;
 	aniData.outputVtkAni(scriptNameBase, rank);
+	std::cout << "finished generate vtk file" << std::endl;
 }
 
 void SimulationDomainGPU::printDomainInformation() {

@@ -339,6 +339,9 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 
 SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	//initControlPara (isStab);
+	int simuTypeConfigValue =
+			globalConfigVars.getConfigValue("SimulationType").toInt();
+	controlPara.simuType = parseTypeFromConfig(simuTypeConfigValue);
 	readDomainPara();
 	uint maxTotalNodeCount = maxTotalCellCount * maxAllNodePerCell;
 
@@ -350,28 +353,54 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	initNodeAllocPara_M(0, maxTotalCellCount, maxMembrNodeCountPerCell,
 			maxIntnlNodeCountPerCell);
 
+	std::cout << "bdry node count = " << allocPara_M.bdryNodeCount << std::endl;
+	std::cout << "max cell count = " << allocPara_M.maxCellCount << std::endl;
+	std::cout << "max node per cell = " << allocPara_M.maxAllNodePerCell
+			<< std::endl;
+	std::cout << "max membr node per cell= " << allocPara_M.maxMembrNodePerCell
+			<< std::endl;
+	std::cout << "max intnl node per cell= " << allocPara_M.maxIntnlNodePerCell
+			<< std::endl;
+	std::cout << "max total node count= " << allocPara_M.maxTotalNodeCount
+			<< std::endl;
+
 	allocSpaceForNodes(maxTotalNodeCount);
 	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
 	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
 
+	uint nodeRank;
 	for (uint i = 0; i < maxTotalNodeCount; i++) {
 		if (i < allocPara_M.bdryNodeCount) {
 			hostTmpVector[i] = Boundary;
 		} else {
 			uint tmp = i - allocPara_M.bdryNodeCount;
-			uint nodeRank = tmp % allocPara_M.maxAllNodePerCell;
+			nodeRank = tmp % allocPara_M.maxAllNodePerCell;
 			if (nodeRank < allocPara_M.maxMembrNodePerCell) {
 				hostTmpVector[i] = CellMembr;
+				//std::cout << "0";
 			} else {
 				hostTmpVector[i] = CellIntnl;
+				//std::cout << "1";
 			}
+
 		}
 		hostTmpVector2[i] = false;
+		if (nodeRank == 0) {
+			//std::cout << std::endl;
+		}
 	}
+	//std::cout << "finished" << std::endl;
+	//std::cout.flush();
 	infoVecs.nodeCellType = hostTmpVector;
 	infoVecs.nodeIsActive = hostTmpVector2;
 
-	copyParaToGPUConstMem();
+	thrust::host_vector<int> bondVec(maxTotalNodeCount, -1);
+	infoVecs.nodeAdhereIndex = bondVec;
+	//std::cout << "copy finished!" << std::endl;
+	//std::cout.flush();
+	//copyParaToGPUConstMem();
+	//std::cout << "at the end" << std::endl;
+	//std::cout.flush();
 }
 
 void SceNodes::copyParaToGPUConstMem() {
@@ -2142,7 +2171,7 @@ void SceNodes::initNodeAllocPara_M(uint totalBdryNodeCount,
 	allocPara_M.maxAllNodePerCell = maxEpiNodePerCell + maxInternalNodePerCell;
 	allocPara_M.maxMembrNodePerCell = maxEpiNodePerCell;
 	allocPara_M.maxIntnlNodePerCell = maxInternalNodePerCell;
-	allocPara_M.maxTotalNodeCount = allocPara_M.maxCellCount
+	allocPara_M.maxTotalNodeCount = allocPara_M.maxAllNodePerCell
 			* allocPara_M.maxCellCount;
 }
 

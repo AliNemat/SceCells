@@ -571,7 +571,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts) {
-	initialize(nodesInput);
+
+	initialize_M(nodesInput);
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts);
 }
@@ -599,6 +600,7 @@ void SceCells::initCellInfoVecs() {
 }
 
 void SceCells::initCellInfoVecs_M() {
+	std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
 			bioPara.cellInitLength);
@@ -609,7 +611,6 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.isDivided.resize(allocPara_m.maxCellCount);
-	cellInfoVecs.cellTypes.resize(allocPara_m.maxCellCount, MX);
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
@@ -618,6 +619,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.growthXDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.growthYDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.isRandGrowInited.resize(allocPara_m.maxCellCount, false);
+	std::cout << "finished " << std::endl;
 }
 
 void SceCells::initCellNodeInfoVecs() {
@@ -630,6 +632,8 @@ void SceCells::initCellNodeInfoVecs() {
 }
 
 void SceCells::initCellNodeInfoVecs_M() {
+	std::cout << "max total node count = " << allocPara_m.maxTotalNodeCount
+			<< std::endl;
 	cellNodeInfoVecs.cellRanks.resize(allocPara_m.maxTotalNodeCount);
 	cellNodeInfoVecs.activeXPoss.resize(allocPara_m.maxTotalNodeCount);
 	cellNodeInfoVecs.activeYPoss.resize(allocPara_m.maxTotalNodeCount);
@@ -658,6 +662,21 @@ void SceCells::initGrowthAuxData() {
 	}
 }
 
+void SceCells::initGrowthAuxData_M() {
+	growthAuxData.nodeIsActiveAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[allocPara_m.bdryNodeCount]));
+	growthAuxData.nodeXPosAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[allocPara_m.bdryNodeCount]));
+	growthAuxData.nodeYPosAddress = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[allocPara_m.bdryNodeCount]));
+	growthAuxData.randomGrowthSpeedMin = globalConfigVars.getConfigValue(
+			"RandomGrowthSpeedMin").toDouble();
+	growthAuxData.randomGrowthSpeedMax = globalConfigVars.getConfigValue(
+			"RandomGrowthSpeedMax").toDouble();
+	growthAuxData.randGenAuxPara = globalConfigVars.getConfigValue(
+			"RandomGenerationAuxPara").toDouble();
+}
+
 void SceCells::initialize(SceNodes* nodesInput) {
 	nodes = nodesInput;
 	controlPara = nodes->getControlPara();
@@ -674,16 +693,35 @@ void SceCells::initialize(SceNodes* nodesInput) {
 }
 
 void SceCells::initialize_M(SceNodes* nodesInput) {
+	std::cout << "break point 0 " << std::endl;
+	std::cout.flush();
 	nodes = nodesInput;
-	controlPara = nodes->getControlPara();
-	readMiscPara_M();
-	readBioPara();
-
 	allocPara_m = nodesInput->getAllocParaM();
-
+	std::cout << "break point 1 " << std::endl;
+	std::cout.flush();
+	controlPara = nodes->getControlPara();
+	std::cout << "break point 2 " << std::endl;
+	std::cout.flush();
+	readMiscPara_M();
+	std::cout << "break point 3 " << std::endl;
+	std::cout.flush();
 	initCellInfoVecs_M();
+
+	std::cout << "break point 4 " << std::endl;
+	std::cout.flush();
+	readBioPara();
+	std::cout << "break point 5 " << std::endl;
+	std::cout.flush();
+
+	std::cout << "break point 6 " << std::endl;
+	std::cout.flush();
 	initCellNodeInfoVecs_M();
-	initGrowthAuxData();
+	std::cout << "break point 7 " << std::endl;
+	std::cout.flush();
+	initGrowthAuxData_M();
+	std::cout << "break point 8 " << std::endl;
+	std::cout.flush();
+
 }
 
 void SceCells::copyInitActiveNodeCount(
@@ -705,13 +743,13 @@ void SceCells::allComponentsMove() {
  * e.g. activeNodeCountOfThisCell = {2,3} and  maxNodeOfOneCell = 5
  */
 void SceCells::distributeIsActiveInfo() {
-	//std::cout << "before distribute bdry isActive" << std::endl;
+//std::cout << "before distribute bdry isActive" << std::endl;
 	distributeBdryIsActiveInfo();
-	//std::cout << "before distribute profile isActive" << std::endl;
+//std::cout << "before distribute profile isActive" << std::endl;
 	distributeProfileIsActiveInfo();
-	//std::cout << "before distribute ecm isActive" << std::endl;
+//std::cout << "before distribute ecm isActive" << std::endl;
 	distributeECMIsActiveInfo();
-	//std::cout << "before distribute cells isActive" << std::endl;
+//std::cout << "before distribute cells isActive" << std::endl;
 	distributeCellIsActiveInfo();
 }
 
@@ -870,8 +908,8 @@ bool SceCells::decideIfGoingToDivide() {
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara.maxNodeOfOneCell));
-	// sum all bool values which indicate whether the cell is going to divide.
-	// toBeDivideCount is the total number of cells going to divide.
+// sum all bool values which indicate whether the cell is going to divide.
+// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
 			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
 			(uint) (0));
@@ -1081,7 +1119,7 @@ void SceCells::copyFirstArrayToPreviousPos() {
 							cellInfoVecs.growthProgress.begin(),
 							cellInfoVecs.lastCheckPoint.begin())), isTrue());
 
-	// TODO: combine this one with the previous scatter_if to improve efficiency.
+// TODO: combine this one with the previous scatter_if to improve efficiency.
 	thrust::fill(
 			cellInfoVecs.activeNodeCountOfThisCell.begin()
 					+ allocPara.currentActiveCellCount,
@@ -1113,9 +1151,9 @@ void SceCells::readMiscPara() {
 			"MinDistanceToOtherNode").toDouble();
 	miscPara.isDivideCriticalRatio = globalConfigVars.getConfigValue(
 			"IsDivideCrticalRatio").toDouble();
-	// reason for adding a small term here is to avoid scenario when checkpoint might add many times
-	// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
-	// this small term we might risk adding one more node.
+// reason for adding a small term here is to avoid scenario when checkpoint might add many times
+// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
+// this small term we might risk adding one more node.
 	int maxNodeOfOneCell =
 			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
 	miscPara.growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2)
@@ -1129,9 +1167,9 @@ void SceCells::readMiscPara_M() {
 			"MinDistanceToOtherNode").toDouble();
 	miscPara.isDivideCriticalRatio = globalConfigVars.getConfigValue(
 			"IsDivideCrticalRatio").toDouble();
-	// reason for adding a small term here is to avoid scenario when checkpoint might add many times
-	// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
-	// this small term we might risk adding one more node.
+// reason for adding a small term here is to avoid scenario when checkpoint might add many times
+// up to 0.99999999 which is theoretically 1.0 but not in computer memory. If we don't include
+// this small term we might risk adding one more node.
 	int maxNodeOfOneCell = globalConfigVars.getConfigValue(
 			"MaxIntnlNodeCountPerCell").toInt();
 	miscPara.growThreshold = 1.0 / (maxNodeOfOneCell - maxNodeOfOneCell / 2)
@@ -1141,12 +1179,19 @@ void SceCells::readMiscPara_M() {
 void SceCells::readBioPara() {
 	bioPara.cellInitLength =
 			globalConfigVars.getConfigValue("CellInitLength").toDouble();
+	std::cout << "break point 1 " << bioPara.cellInitLength << std::endl;
+	std::cout.flush();
 	bioPara.cellFinalLength =
 			globalConfigVars.getConfigValue("CellFinalLength").toDouble();
+	std::cout << "break point 2 " << bioPara.cellFinalLength << std::endl;
+	std::cout.flush();
 	bioPara.elongationCoefficient = globalConfigVars.getConfigValue(
 			"ElongateCoefficient").toDouble();
-
+	std::cout << "break point 3 " << bioPara.elongationCoefficient << std::endl;
+	std::cout.flush();
 	if (controlPara.simuType == Beak) {
+		std::cout << "break point 4 " << std::endl;
+		std::cout.flush();
 		bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
 				"ChemoCoefficient").toDouble();
 	}
@@ -1185,9 +1230,9 @@ void SceCells::randomizeGrowth() {
  */
 void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	this->dt = dt;
-	//std::cerr << "enter run all cell level logics" << std::endl;
+//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
-	//std::cerr << "after compute center position." << std::endl;
+//std::cerr << "after compute center position." << std::endl;
 
 	if (nodes->getControlPara().controlSwitchs.stab == OFF) {
 		growAtRandom(dt);
@@ -1203,19 +1248,19 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	}
 
 	allComponentsMove();
-	//std::cerr << "after all components move." << std::endl;
+//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-	//applyMemTension_M();
+//applyMemTension_M();
 
 	computeCenterPos_M();
 
-	//growAtRandom_M(dt);
+//growAtRandom_M(dt);
 
-	//divide2D_M();
+//divide2D_M();
 
 	distributeCellGrowthProgress_M();
 
@@ -1232,11 +1277,11 @@ void SceCells::runStretchTest(double dt) {
 void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 		GrowthDistriMap& region2) {
 	this->dt = dt;
-	//std::cerr << "enter run all cell level logics" << std::endl;
+//std::cerr << "enter run all cell level logics" << std::endl;
 	computeCenterPos();
-	//std::cerr << "after compute center position." << std::endl;
-	// for wind disk project, switch from chemical based growth to random growth
-	//growAtRandom(dt);
+//std::cerr << "after compute center position." << std::endl;
+// for wind disk project, switch from chemical based growth to random growth
+//growAtRandom(dt);
 
 	if (nodes->getControlPara().controlSwitchs.stab == OFF) {
 		grow2DTwoRegions(dt, region1, region2);
@@ -1250,7 +1295,7 @@ void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
 	}
 
 	allComponentsMove();
-	//std::cerr << "after all components move." << std::endl;
+//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::growAlongX(bool isAddPt, double d_t) {
@@ -1259,19 +1304,19 @@ void SceCells::growAlongX(bool isAddPt, double d_t) {
 
 	setGrowthDirXAxis();
 
-	//std::cout << "after copy grow info" << std::endl;
+//std::cout << "after copy grow info" << std::endl;
 	updateGrowthProgress();
-	//std::cout << "after update growth progress" << std::endl;
+//std::cout << "after update growth progress" << std::endl;
 	decideIsScheduleToGrow();
-	//std::cout << "after decode os schedule to grow" << std::endl;
+//std::cout << "after decode os schedule to grow" << std::endl;
 	computeCellTargetLength();
-	//std::cout << "after compute cell target length" << std::endl;
+//std::cout << "after compute cell target length" << std::endl;
 	computeDistToCellCenter();
-	//std::cout << "after compute dist to center" << std::endl;
+//std::cout << "after compute dist to center" << std::endl;
 	findMinAndMaxDistToCenter();
-	//std::cout << "after find min and max dist" << std::endl;
+//std::cout << "after find min and max dist" << std::endl;
 	computeLenDiffExpCur();
-	//std::cout << "after compute diff " << std::endl;
+//std::cout << "after compute diff " << std::endl;
 	stretchCellGivenLenDiff();
 
 	if (isAddPt) {
@@ -1354,7 +1399,7 @@ void SceCells::copyCellsPreDivision_M() {
 	divAuxData.tmpYPos2_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
 
-	// step 2 , continued
+// step 2 , continued
 	thrust::copy_if(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1380,7 +1425,7 @@ void SceCells::copyCellsPreDivision_M() {
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
 							divAuxData.tmpNodePosY_M.begin())), isTrue());
-	// step 2 , continued
+// step 2 , continued
 	thrust::copy_if(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(countingBegin,
@@ -1706,14 +1751,14 @@ void SceCells::applyMemTension_M() {
 			&(nodes->getInfoVecs().nodeLocX[0]));
 	double* nodeLocYAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocY[0]));
-	//double* nodeVelXAddr = thrust::raw_pointer_cast(
-	//		&(nodes->getInfoVecs().nodeVelX[0]));
-	//double* nodeVelYAddr = thrust::raw_pointer_cast(
-	//		&(nodes->getInfoVecs().nodeVelY[0]));
+//double* nodeVelXAddr = thrust::raw_pointer_cast(
+//		&(nodes->getInfoVecs().nodeVelX[0]));
+//double* nodeVelYAddr = thrust::raw_pointer_cast(
+//		&(nodes->getInfoVecs().nodeVelY[0]));
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 
-	//TODO: fix this
+//TODO: fix this
 	double tmp1 = 0, tmp2 = 0;
 
 	thrust::transform(
@@ -2194,12 +2239,12 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 			nodes->obtainPossibleNeighborPairs_M();
 	cout << "size of potential pairs = " << pairs.size() << endl;
 
-	// unordered_map is more efficient than map, but it is a c++ 11 feature
-	// and c++ 11 seems to be incompatible with Thrust.
+// unordered_map is more efficient than map, but it is a c++ 11 feature
+// and c++ 11 seems to be incompatible with Thrust.
 	IndexMap locIndexToAniIndexMap;
 
-	// Doesn't have to copy the entire nodeLocX array.
-	// Only copy the first half will be sufficient
+// Doesn't have to copy the entire nodeLocX array.
+// Only copy the first half will be sufficient
 	thrust::host_vector<double> hostTmpVectorLocX =
 			nodes->getInfoVecs().nodeLocX;
 	thrust::host_vector<double> hostTmpVectorLocY =
@@ -2217,9 +2262,9 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
 	uint beginIndx = allocPara_m.bdryNodeCount;
-	//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
+//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
 
-	//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
+//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
 	CVector tmpPos;
 	uint index1;
 	int index2;
@@ -2343,15 +2388,27 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 			rawAniData.internalLinks.push_back(linkData);
 		}
 	}
+
 	return rawAniData;
 }
 
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
 		std::vector<uint>& initIntnlActiveNodeCounts) {
+	std::cout << "size 1 = " << initMembrActiveNodeCounts.size() << std::endl;
+	std::cout << "size 2 = " << cellInfoVecs.activeMembrNodeCounts.size()
+			<< std::endl;
+	std::cout << "size 3 = " << initIntnlActiveNodeCounts.size() << std::endl;
+	std::cout << "size 4 = " << cellInfoVecs.activeIntnlNodeCounts.size()
+			<< std::endl;
+	std::cout.flush();
+
 	thrust::copy(initMembrActiveNodeCounts.begin(),
 			initMembrActiveNodeCounts.end(),
 			cellInfoVecs.activeMembrNodeCounts.begin());
+	thrust::copy(initIntnlActiveNodeCounts.begin(),
+			initIntnlActiveNodeCounts.end(),
+			cellInfoVecs.activeIntnlNodeCounts.begin());
 }
 
 VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,

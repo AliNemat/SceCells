@@ -1103,6 +1103,7 @@ class SceCells {
 	void initCellInfoVecs();
 	void initCellNodeInfoVecs();
 	void initGrowthAuxData();
+	void initGrowthAuxData_M();
 
 	void initialize(SceNodes* nodesInput);
 	void initialize_M(SceNodes* nodesInput);
