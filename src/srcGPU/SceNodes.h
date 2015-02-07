@@ -533,25 +533,24 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 					_nodeLocXAddress[nodeRankOfOtherNode],
 					_nodeLocYAddress[nodeRankOfOtherNode], xRes, yRes,
 					_nodeLocXAddress, _nodeLocYAddress, _nodeGroProAddr);
-			/*
-			 if (bothEpiDiffCell(myValue, nodeRankOfOtherNode)) {
-			 if (_nodeAdhereIndex[myValue] == -1) {
-			 attemptToAdhere(isSuccess, index, dist, nodeRankOfOtherNode,
-			 xPos, yPos, _nodeLocXAddress[nodeRankOfOtherNode],
-			 _nodeLocYAddress[nodeRankOfOtherNode]);
-			 }
 
-			 }
-			 */
+			if (bothEpiDiffCell(myValue, nodeRankOfOtherNode)) {
+				if (_nodeAdhereIndex[myValue] == -1) {
+					attemptToAdhere(isSuccess, index, dist, nodeRankOfOtherNode,
+							xPos, yPos, _nodeLocXAddress[nodeRankOfOtherNode],
+							_nodeLocYAddress[nodeRankOfOtherNode]);
+				}
+
+			}
 
 		}
-		/*
-		 if (isSuccess) {
-		 _nodeAdhereIndex[myValue] = index;
-		 }
-		 handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
-		 _nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
-		 */
+
+		if (isSuccess) {
+			_nodeAdhereIndex[myValue] = index;
+		}
+		handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
+				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
+
 		return thrust::make_tuple(xRes, yRes);
 	}
 };

@@ -192,12 +192,11 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	fs << std::endl;
 	if (isArrowIncluded) {
 		fs << "VECTORS vectors float" << endl;
+		for (uint i = 0; i < pointsAniData.size(); i++) {
+			fs << pointsAniData[i].dir.x << " " << pointsAniData[i].dir.y << " "
+					<< pointsAniData[i].dir.z << endl;
+		}
 	}
-	for (uint i = 0; i < pointsAniData.size(); i++) {
-		fs << pointsAniData[i].dir.x << " " << pointsAniData[i].dir.y << " "
-				<< pointsAniData[i].dir.z << endl;
-	}
-
 	fs.close();
 }
 

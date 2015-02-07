@@ -1331,9 +1331,9 @@ void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
 			forceValue = 0;
 		} else {
 			forceValue = -sceIntraPara_M[0] / sceIntraPara_M[2]
-					* exp(-linkLength / sceIntraPara[2])
-					+ sceIntraPara[1] / sceIntraPara[3]
-							* exp(-linkLength / sceIntraPara[3]);
+					* exp(-linkLength / sceIntraPara_M[2])
+					+ sceIntraPara_M[1] / sceIntraPara_M[3]
+							* exp(-linkLength / sceIntraPara_M[3]);
 		}
 	}
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
@@ -1755,6 +1755,7 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		double& yPos, double& xPos2, double& yPos2, double& xRes, double& yRes,
 		double* _nodeLocXAddress, double* _nodeLocYAddress,
 		double* _nodeGrowProAddr) {
+
 	if (isSameCell_m(nodeRank1, nodeRank2)) {
 		if (bothInternal(nodeRank1, nodeRank2)) {
 			// both nodes are internal type.

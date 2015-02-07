@@ -1950,7 +1950,7 @@ void SceCells::allComponentsMove_M() {
 	//
 	moveNodes_M();
 	//TODO: remove this temperary solution.
-	adjustNodeVel_M();
+	//adjustNodeVel_M();
 }
 
 void SceCells::randomizeGrowth_M() {
@@ -2428,6 +2428,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		LinkAniData linkData = rawAniData.memLinks[i];
 		vtkData.linksAniData.push_back(linkData);
 	}
+	vtkData.isArrowIncluded = false;
 	return vtkData;
 }
 
