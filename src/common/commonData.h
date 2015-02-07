@@ -440,8 +440,8 @@ struct RawDataInput_M {
 	SimulationType simuType;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> initCellCenters;
-	std::vector<std::vector<CVector> > initInternalNodePoss;
-	std::vector<std::vector<CVector> > initBdryNodePoss;
+	std::vector<std::vector<CVector> > initIntnlNodePoss;
+	std::vector<std::vector<CVector> > initMembrNodePoss;
 };
 
 /**

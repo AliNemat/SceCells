@@ -161,7 +161,9 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	uint initIntnlNodeCountSize = initActiveIntnlNodeCounts.size();
 	// two sizes must match.
 	assert(initMembrNodeCountSize == initIntnlNodeCountSize);
-	assert(initNodesVec.size() == nodeTypes.size());
+	assert(
+			memPara.maxCellInDomain * memPara.maxAllNodePerCell
+					== nodeTypes.size());
 
 	std::cout << "break point 2 " << std::endl;
 	std::cout.flush();
@@ -184,6 +186,11 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	std::cout << "break point 4 " << std::endl;
 	std::cout.flush();
 
+	for (uint i = 0; i < initActiveMembrNodeCounts.size(); i++) {
+		std::cout << " (" << initActiveMembrNodeCounts[i] << ", "
+				<< initActiveIntnlNodeCounts[i] << ") ";
+	}
+	std::cout << std::endl;
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts);
 

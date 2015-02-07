@@ -12,8 +12,24 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
+/*
+ __device__
+ SceNodeType indxToType(uint& indx);
+
+ SceNodeType indxToType(uint& indx);
+ */
+
 __device__
 double calMembrForce(double& length);
+
+__device__
+double obtainRandAngle(uint& cellRank, uint& seed);
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+__device__
+uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+__device__
+bool isAllIntnlFilled(uint& currentIntnlCount);
 
 /**
  * Functor for divide operation.
@@ -526,6 +542,62 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 
 };
 
+struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, BoolUID> {
+	uint _seed;
+	double _addNodeDistance;
+	double _growThreshold;
+	double* _nodeXPosAddress;
+	double* _nodeYPosAddress;
+	bool* _nodeIsActiveAddress;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddPtOp_M(uint seed, double addNodeDistance, double growThreshold,
+			double* nodeXPosAddress, double* nodeYPosAddress,
+			bool* nodeIsActiveAddress) :
+			_seed(seed), _addNodeDistance(addNodeDistance), _growThreshold(
+					growThreshold), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
+					nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__
+	BoolUID operator()(const BoolUIDDUID &biddi) {
+		bool isScheduledToGrow = thrust::get<0>(biddi);
+		uint activeMembrNodeThis = thrust::get<1>(biddi);
+		double lastCheckPoint = thrust::get<5>(biddi);
+
+		bool isFull = isAllIntnlFilled(activeMembrNodeThis);
+		if (!isScheduledToGrow || isFull) {
+			return thrust::make_tuple(isScheduledToGrow, activeMembrNodeThis,
+					lastCheckPoint);
+		}
+
+		double cellCenterXCoord = thrust::get<2>(biddi);
+		double cellCenterYCoord = thrust::get<3>(biddi);
+		uint cellRank = thrust::get<4>(biddi);
+		double randomAngle = obtainRandAngle(cellRank, _seed);
+		double xOffset = _addNodeDistance * cos(randomAngle);
+		double yOffset = _addNodeDistance * sin(randomAngle);
+		double xCoordNewPt = cellCenterXCoord + xOffset;
+		double yCoordNewPt = cellCenterYCoord + yOffset;
+
+		uint cellNodeEndPos = obtainNewIntnlNodeIndex(cellRank,
+				activeMembrNodeThis);
+		_nodeXPosAddress[cellNodeEndPos] = xCoordNewPt;
+		_nodeYPosAddress[cellNodeEndPos] = yCoordNewPt;
+		_nodeIsActiveAddress[cellNodeEndPos] = true;
+		isScheduledToGrow = false;
+		activeMembrNodeThis = activeMembrNodeThis + 1;
+		lastCheckPoint = lastCheckPoint + _growThreshold;
+		if (lastCheckPoint > 1.0) {
+			lastCheckPoint = 1.0;
+		}
+		return thrust::make_tuple(isScheduledToGrow, activeMembrNodeThis,
+				lastCheckPoint);
+	}
+
+};
+
 /**
  * Compute the target length of a cell given growth progress.
  * @param _cellInitLength initial length of a cell. (when growth progress = 0)
@@ -567,15 +639,15 @@ struct CompuDist: thrust::unary_function<CVec6Bool, double> {
 		double nodeXPos = thrust::get<4>(vec6b);
 		double nodeYPos = thrust::get<5>(vec6b);
 		bool nodeIsActive = thrust::get<6>(vec6b);
-		if (nodeIsActive == false) {
+		if (!nodeIsActive) {
 			// All nodes that are inactive will be omitted.
 			// I choose 0 because 0 will not be either maximum or minimum
 			return 0;
 		} else {
 			double dirModule = sqrt(
 					growthXDir * growthXDir + growthYDir * growthYDir);
-			return ((nodeXPos - centerXPos) * (growthXDir)
-					+ (nodeYPos - centerYPos) * growthYDir) / dirModule;
+			return ((nodeXPos - centerXPos) * (growthXDir) / dirModule
+					+ (nodeYPos - centerYPos) * growthYDir / dirModule);
 		}
 	}
 };
@@ -1080,7 +1152,7 @@ class SceCells {
 	// in this class, there are a lot of arrays that store information for each cell
 	// this counting iterator is used for all these arrays indicating the begining.
 	thrust::counting_iterator<uint> countingBegin;
-	thrust::constant_iterator<uint> initCellCount;
+	thrust::constant_iterator<uint> initIntnlNodeCount;
 	thrust::constant_iterator<double> initGrowthProgress;
 
 	uint totalNodeCountForActiveCells;
@@ -1309,6 +1381,8 @@ class SceCells {
 	void initCellNodeInfoVecs_M();
 
 	void copyToGPUConstMem();
+
+	void myDebugFunction();
 
 public:
 

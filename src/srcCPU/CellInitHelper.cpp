@@ -204,7 +204,7 @@ void CellInitHelper::initializeRawInput_M(RawDataInput_M& rawInput_m,
 		rawInput_m.initCellCenters.push_back(centerPos);
 	}
 	generateCellInitNodeInfo_v3(rawInput_m.initCellCenters,
-			rawInput_m.initBdryNodePoss, rawInput_m.initInternalNodePoss);
+			rawInput_m.initMembrNodePoss, rawInput_m.initIntnlNodePoss);
 }
 
 /**
@@ -385,57 +385,68 @@ SimulationInitData_V2_M CellInitHelper::initInputsV3_M(
 				ConfigValueException);
 	}
 
-	uint maxEpiNodeCountPerCell = globalConfigVars.getConfigValue(
+	uint maxMembrNodePerCell = globalConfigVars.getConfigValue(
 			"MaxMembrNodeCountPerCell").toInt();
 	uint maxAllNodeCountPerCell = globalConfigVars.getConfigValue(
 			"MaxAllNodeCountPerCell").toInt();
+	uint maxCellInDomain =
+			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
+	uint maxNodeInDomain = maxCellInDomain * maxAllNodeCountPerCell;
 	uint initCellCount = rawData_m.initCellCenters.size();
 
 	uint initMaxNodeCount = initCellCount * maxAllNodeCountPerCell;
 
-	uint cellRank, nodeRank, maxMembrNodeCountThisCell,
-			maxIntnlNodeCountThisCell;
+	uint cellRank, nodeRank, activeMembrNodeCountThisCell,
+			activeIntnlNodeCountThisCell;
 
 	SimulationInitData_V2_M initData;
 	initData.isStab = rawData_m.isStab;
 	initData.simuType = rawData_m.simuType;
 
-	initData.nodeTypes.resize(initMaxNodeCount, CellMembr);
+	initData.nodeTypes.resize(maxNodeInDomain);
 	initData.initNodeVec.resize(initMaxNodeCount);
 	initData.initIsActive.resize(initMaxNodeCount, false);
 
 	for (uint i = 0; i < initCellCount; i++) {
 		initData.initActiveMembrNodeCounts.push_back(
-				rawData_m.initBdryNodePoss[i].size());
+				rawData_m.initMembrNodePoss[i].size());
 		initData.initActiveIntnlNodeCounts.push_back(
-				rawData_m.initInternalNodePoss.size());
+				rawData_m.initIntnlNodePoss[i].size());
+	}
+
+	for (uint i = 0; i < maxNodeInDomain; i++) {
+		nodeRank = i % maxAllNodeCountPerCell;
+		if (nodeRank < maxMembrNodePerCell) {
+			initData.nodeTypes[i] = CellMembr;
+		} else {
+			initData.nodeTypes[i] = CellIntnl;
+		}
 	}
 
 	for (uint i = 0; i < initMaxNodeCount; i++) {
 		cellRank = i / maxAllNodeCountPerCell;
 		nodeRank = i % maxAllNodeCountPerCell;
-		maxMembrNodeCountThisCell = rawData_m.initBdryNodePoss[cellRank].size();
-		maxIntnlNodeCountThisCell =
-				rawData_m.initInternalNodePoss[cellRank].size();
-		if (nodeRank < maxEpiNodeCountPerCell) {
-			if (nodeRank < maxMembrNodeCountThisCell) {
+		activeMembrNodeCountThisCell =
+				rawData_m.initMembrNodePoss[cellRank].size();
+		activeIntnlNodeCountThisCell =
+				rawData_m.initIntnlNodePoss[cellRank].size();
+		if (nodeRank < maxMembrNodePerCell) {
+			if (nodeRank < activeMembrNodeCountThisCell) {
 				initData.initNodeVec[i] =
-						rawData_m.initBdryNodePoss[cellRank][nodeRank];
+						rawData_m.initMembrNodePoss[cellRank][nodeRank];
 				initData.initIsActive[i] = true;
 			} else {
 				initData.initIsActive[i] = false;
 			}
-			initData.nodeTypes[i] = CellMembr;
 		} else {
-			uint intnlIndex = nodeRank - maxEpiNodeCountPerCell;
-			if (intnlIndex < maxIntnlNodeCountThisCell) {
+			uint intnlIndex = nodeRank - maxMembrNodePerCell;
+			if (intnlIndex < activeIntnlNodeCountThisCell) {
 				initData.initNodeVec[i] =
-						rawData_m.initInternalNodePoss[cellRank][intnlIndex];
+						rawData_m.initIntnlNodePoss[cellRank][intnlIndex];
 				initData.initIsActive[i] = true;
 			} else {
 				initData.initIsActive[i] = false;
 			}
-			initData.nodeTypes[i] = CellIntnl;
 		}
 	}
 
@@ -515,7 +526,7 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	return rawData;
 }
 
-RawDataInput_M CellInitHelper::generateRawInput_stab_M() {
+RawDataInput_M CellInitHelper::generateRawInput__M() {
 	RawDataInput_M rawData;
 	rawData.simuType = simuType;
 	vector<CVector> insideCellCenters;
@@ -560,7 +571,7 @@ RawDataInput_M CellInitHelper::generateRawInput_stab_M() {
 	}
 
 	generateCellInitNodeInfo_v3(rawData.initCellCenters,
-			rawData.initBdryNodePoss, rawData.initInternalNodePoss);
+			rawData.initMembrNodePoss, rawData.initIntnlNodePoss);
 
 	rawData.isStab = true;
 	return rawData;
@@ -696,15 +707,15 @@ void CellInitHelper::generateCellInitNodeInfo_v2(vector<CVector>& initPos) {
 }
 
 void CellInitHelper::generateCellInitNodeInfo_v3(vector<CVector>& initCenters,
-		vector<vector<CVector> >& initBdryPos,
-		vector<vector<CVector> >& initInternalPos) {
-	vector<CVector> initMemPosTmp;
-	vector<CVector> initInternalPosTmp;
+		vector<vector<CVector> >& initMembrPos,
+		vector<vector<CVector> >& initIntnlPos) {
+	vector<CVector> initMembrPosTmp;
+	vector<CVector> initIntnlPosTmp;
 	for (uint i = 0; i < initCenters.size(); i++) {
-		initMemPosTmp = generateInitMembrNodes(initCenters[i]);
-		initInternalPosTmp = generateInitCellNodes(initCenters[i]);
-		initBdryPos.push_back(initMemPosTmp);
-		initInternalPos.push_back(initInternalPosTmp);
+		initMembrPosTmp = generateInitMembrNodes(initCenters[i]);
+		initIntnlPosTmp = generateInitCellNodes(initCenters[i]);
+		initMembrPos.push_back(initMembrPosTmp);
+		initIntnlPos.push_back(initIntnlPosTmp);
 	}
 }
 
@@ -745,16 +756,16 @@ vector<CVector> CellInitHelper::generateInitCellNodes(CVector& center) {
 		}
 	}
 	/*
-	// also need to make sure center point is (0,0,0).
-	CVector tmpSum(0, 0, 0);
-	for (uint i = 0; i < attemptedPoss.size(); i++) {
-		tmpSum = tmpSum + attemptedPoss[i];
-	}
-	tmpSum = tmpSum / (double) (attemptedPoss.size());
-	for (uint i = 0; i < attemptedPoss.size(); i++) {
-		attemptedPoss[i] = attemptedPoss[i] - tmpSum;
-	}
-	*/
+	 // also need to make sure center point is (0,0,0).
+	 CVector tmpSum(0, 0, 0);
+	 for (uint i = 0; i < attemptedPoss.size(); i++) {
+	 tmpSum = tmpSum + attemptedPoss[i];
+	 }
+	 tmpSum = tmpSum / (double) (attemptedPoss.size());
+	 for (uint i = 0; i < attemptedPoss.size(); i++) {
+	 attemptedPoss[i] = attemptedPoss[i] - tmpSum;
+	 }
+	 */
 	for (uint i = 0; i < attemptedPoss.size(); i++) {
 		attemptedPoss[i] = attemptedPoss[i] + center;
 	}
@@ -854,7 +865,7 @@ SimulationInitData_V2 CellInitHelper::initStabInput() {
 
 //RawDataInput rawInput = generateRawInput_stab();
 SimulationInitData_V2_M CellInitHelper::initInput_M() {
-	RawDataInput_M rawInput_m = generateRawInput_stab_M();
+	RawDataInput_M rawInput_m = generateRawInput__M();
 	SimulationInitData_V2_M initData = initInputsV3_M(rawInput_m);
 	initData.isStab = false;
 	return initData;

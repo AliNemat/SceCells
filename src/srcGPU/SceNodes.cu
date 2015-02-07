@@ -724,15 +724,15 @@ void SceNodes::initValues_M(std::vector<bool>& initIsActive,
 		std::vector<SceNodeType>& nodeTypes) {
 
 	std::vector<double> initCellNodePosX = getArrayXComp(initCellNodePos);
+
+	std::vector<double> initCellNodePosY = getArrayYComp(initCellNodePos);
+
 	thrust::copy(initCellNodePosX.begin(), initCellNodePosX.end(),
 			infoVecs.nodeLocX.begin() + allocPara_M.bdryNodeCount);
-	std::vector<double> initCellNodePosY = getArrayYComp(initCellNodePos);
 	thrust::copy(initCellNodePosY.begin(), initCellNodePosY.end(),
 			infoVecs.nodeLocY.begin() + allocPara_M.bdryNodeCount);
-
 	thrust::copy(nodeTypes.begin(), nodeTypes.end(),
 			infoVecs.nodeCellType.begin() + allocPara_M.bdryNodeCount);
-
 	thrust::copy(initIsActive.begin(), initIsActive.end(),
 			infoVecs.nodeIsActive.begin() + allocPara_M.bdryNodeCount);
 
@@ -1000,12 +1000,12 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 	std::vector<std::pair<uint, uint> > pairs = obtainPossibleNeighborPairs_M();
 	cout << "size of potential pairs = " << pairs.size() << endl;
 
-	// unordered_map is more efficient than map, but it is a c++ 11 feature
-	// and c++ 11 seems to be incompatible with Thrust.
+// unordered_map is more efficient than map, but it is a c++ 11 feature
+// and c++ 11 seems to be incompatible with Thrust.
 	IndexMap locIndexToAniIndexMap;
 
-	// Doesn't have to copy the entire nodeLocX array.
-	// Only copy the first half will be sufficient
+// Doesn't have to copy the entire nodeLocX array.
+// Only copy the first half will be sufficient
 	thrust::host_vector<double> hostTmpVectorLocX = infoVecs.nodeLocX;
 	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
 	thrust::host_vector<bool> hostIsActiveVec = infoVecs.nodeIsActive;
@@ -1015,9 +1015,9 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
 	uint maxMemNodePerCell = allocPara_M.maxMembrNodePerCell;
 	uint beginIndx = allocPara_M.bdryNodeCount;
-	//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
+//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
 
-	//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
+//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
 	uint index1;
 	int index2;
 	std::vector<BondInfo> bondInfoVec;
