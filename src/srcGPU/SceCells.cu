@@ -1279,7 +1279,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 
 	growAtRandom_M(dt);
 
-	//divide2D_M();
+	divide2D_M();
 
 	//distributeCellGrowthProgress_M();
 
@@ -1444,7 +1444,7 @@ void SceCells::copyCellsPreDivision_M() {
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
 							divAuxData.tmpNodePosY_M.begin())), isTrue());
-// step 2 , continued
+// step 3 , continued
 	thrust::copy_if(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(countingBegin,
@@ -1904,29 +1904,23 @@ void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 
-// randomly select growth direction and speed.
 	randomizeGrowth_M();
-//std::cout << "after copy grow info" << std::endl;
+
 	updateGrowthProgress_M();
-//std::cout << "after update growth progress" << std::endl;
+
 	decideIsScheduleToGrow_M();
-//std::cout << "after decode os schedule to grow" << std::endl;
+
 	computeCellTargetLength_M();
-//std::cout << "after compute cell target length" << std::endl;
 
 	computeDistToCellCenter_M();
 
-	//myDebugFunction();
-//std::cout << "after compute dist to center" << std::endl;
 	findMinAndMaxDistToCenter_M();
-//std::cout << "after find min and max dist" << std::endl;
+
 	computeLenDiffExpCur_M();
-//std::cout << "after compute diff " << std::endl;
 
 	stretchCellGivenLenDiff_M();
-	//myDebugFunction();
+
 	addPointIfScheduledToGrow_M();
-//std::cout << "after adding node" << std::endl;
 }
 
 void SceCells::divide2D_M() {
@@ -1935,11 +1929,11 @@ void SceCells::divide2D_M() {
 		return;
 	}
 	copyCellsPreDivision_M();
-	createTwoNewCellArr_M();
-	copyFirstCellArr_M();
-	copySecondCellArr_M();
-	updateActiveCellCount_M();
-	markIsDivideFalse_M();
+	//createTwoNewCellArr_M();
+	//copyFirstCellArr_M();
+	//copySecondCellArr_M();
+	//updateActiveCellCount_M();
+	//markIsDivideFalse_M();
 }
 
 void SceCells::distributeCellGrowthProgress_M() {
@@ -2125,64 +2119,56 @@ void SceCells::computeLenDiffExpCur_M() {
 }
 
 void SceCells::stretchCellGivenLenDiff_M() {
+	uint count = allocPara_m.maxAllNodePerCell;
+	uint bdry = allocPara_m.bdryNodeCount;
+	uint actCount = totalNodeCountForActiveCells;
+	uint all = bdry + actCount;
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> iEnd(actCount);
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
 							make_permutation_iterator(
 									cellInfoVecs.lengthDifference.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
+									make_transform_iterator(iBegin,
+											DivideFunctor(count))),
 							make_permutation_iterator(
 									cellInfoVecs.growthXDir.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
+									make_transform_iterator(iBegin,
+											DivideFunctor(count))),
 							make_permutation_iterator(
 									cellInfoVecs.growthYDir.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
-							nodes->getInfoVecs().nodeVelX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelY.begin()
-									+ allocPara_m.bdryNodeCount,
-							make_transform_iterator(countingBegin,
-									ModuloFunctor(
-											allocPara_m.maxAllNodePerCell)))),
+									make_transform_iterator(iBegin,
+											DivideFunctor(count))),
+							nodes->getInfoVecs().nodeVelX.begin() + bdry,
+							nodes->getInfoVecs().nodeVelY.begin() + bdry,
+							make_transform_iterator(iBegin,
+									ModuloFunctor(count)))),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							cellNodeInfoVecs.distToCenterAlongGrowDir.begin(),
+							cellNodeInfoVecs.distToCenterAlongGrowDir.begin()
+									+ actCount,
 							make_permutation_iterator(
 									cellInfoVecs.lengthDifference.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
+									make_transform_iterator(iEnd,
+											DivideFunctor(count))),
 							make_permutation_iterator(
 									cellInfoVecs.growthXDir.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
+									make_transform_iterator(iEnd,
+											DivideFunctor(count))),
 							make_permutation_iterator(
 									cellInfoVecs.growthYDir.begin(),
-									make_transform_iterator(countingBegin,
-											DivideFunctor(
-													allocPara_m.maxAllNodePerCell))),
-							nodes->getInfoVecs().nodeVelX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelY.begin()
-									+ allocPara_m.bdryNodeCount,
-							make_transform_iterator(countingBegin,
-									ModuloFunctor(
-											allocPara_m.maxAllNodePerCell))))
-					+ totalNodeCountForActiveCells,
+									make_transform_iterator(iEnd,
+											DivideFunctor(count))),
+							nodes->getInfoVecs().nodeVelX.begin() + all,
+							nodes->getInfoVecs().nodeVelY.begin() + all,
+							make_transform_iterator(iEnd,
+									ModuloFunctor(count)))),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							nodes->getInfoVecs().nodeVelX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelY.begin()
-									+ allocPara_m.bdryNodeCount)),
+							nodes->getInfoVecs().nodeVelX.begin() + bdry,
+							nodes->getInfoVecs().nodeVelY.begin() + bdry)),
 			ApplyStretchForce_M(bioPara.elongationCoefficient,
 					allocPara_m.maxMembrNodePerCell));
 }
@@ -2237,13 +2223,16 @@ bool SceCells::decideIfGoingToDivide_M() {
 					thrust::make_tuple(cellInfoVecs.isDivided.begin(),
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
-					allocPara_m.maxAllNodePerCell));
-// sum all bool values which indicate whether the cell is going to divide.
-// toBeDivideCount is the total number of cells going to divide.
+					allocPara_m.maxIntnlNodePerCell));
+	// sum all bool values which indicate whether the cell is going to divide.
+	// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
 			cellInfoVecs.isDivided.begin() + allocPara_m.currentActiveCellCount,
 			(uint) (0));
 	if (divAuxData.toBeDivideCount > 0) {
+		std::cout << "about to divide!" << std::endl;
+		int jj;
+		std::cin >> jj;
 		return true;
 	} else {
 		return false;
@@ -2457,8 +2446,9 @@ void SceCells::myDebugFunction() {
 	}
 	std::cout << std::endl;
 	for (uint i = 0; i < maxActiveNodeCount; i++) {
-		if (nodes->getInfoVecs().nodeIsActive[i]) {
-			//std::cout << cellNodeInfoVecs.distToCenterAlongGrowDir[i] << " ";
+		if (nodes->getInfoVecs().nodeIsActive[i]
+				&& nodes->getInfoVecs().nodeCellType[i] == CellIntnl) {
+			std::cout << nodes->getInfoVecs().nodeVelX[i] << " ";
 		}
 	}
 	std::cout << std::endl;
