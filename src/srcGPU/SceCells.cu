@@ -583,6 +583,12 @@ SceCells::SceCells(SceNodes* nodesInput,
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts) {
+	shrinkRatio = globalConfigVars.getConfigValue("ShrinkRatio").toDouble();
+	centerShiftRatio =
+			globalConfigVars.getConfigValue("CenterShiftRatio").toDouble();
+	//TODO : remove this redundent var
+	memNewSpacing = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
+
 	copyToGPUConstMem();
 	initialize_M(nodesInput);
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
@@ -598,7 +604,7 @@ void SceCells::initCellInfoVecs() {
 	cellInfoVecs.biggestDistance.resize(allocPara.maxCellCount);
 	cellInfoVecs.activeNodeCountOfThisCell.resize(allocPara.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara.maxCellCount, 0.0);
-	cellInfoVecs.isDivided.resize(allocPara.maxCellCount);
+	cellInfoVecs.isDividing.resize(allocPara.maxCellCount);
 	cellInfoVecs.cellTypes.resize(allocPara.maxCellCount, MX);
 	cellInfoVecs.isScheduledToGrow.resize(allocPara.maxCellCount, false);
 	cellInfoVecs.centerCoordX.resize(allocPara.maxCellCount);
@@ -622,7 +628,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.activeMembrNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
-	cellInfoVecs.isDivided.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.isDividing.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
@@ -917,14 +923,14 @@ bool SceCells::decideIfGoingToDivide() {
 							cellInfoVecs.activeNodeCountOfThisCell.begin()))
 					+ allocPara.currentActiveCellCount,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.isDivided.begin(),
+					thrust::make_tuple(cellInfoVecs.isDividing.begin(),
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara.maxNodeOfOneCell));
 // sum all bool values which indicate whether the cell is going to divide.
 // toBeDivideCount is the total number of cells going to divide.
-	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
-			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
+	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDividing.begin(),
+			cellInfoVecs.isDividing.begin() + allocPara.currentActiveCellCount,
 			(uint) (0));
 	if (divAuxData.toBeDivideCount > 0) {
 		return true;
@@ -996,7 +1002,7 @@ void SceCells::copyCellsPreDivision() {
 							nodes->getInfoVecs().nodeCellType.begin()
 									+ allocPara.startPosCells))
 					+ totalNodeCountForActiveCells,
-			thrust::make_permutation_iterator(cellInfoVecs.isDivided.begin(),
+			thrust::make_permutation_iterator(cellInfoVecs.isDividing.begin(),
 					make_transform_iterator(countingBegin,
 							DivideFunctor(allocPara.maxNodeOfOneCell))),
 			thrust::make_zip_iterator(
@@ -1125,7 +1131,7 @@ void SceCells::copyFirstArrayToPreviousPos() {
 					thrust::make_tuple(initIntnlNodeCount, initGrowthProgress,
 							initGrowthProgress))
 					+ allocPara.currentActiveCellCount, countingBegin,
-			cellInfoVecs.isDivided.begin(),
+			cellInfoVecs.isDividing.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							cellInfoVecs.activeNodeCountOfThisCell.begin(),
@@ -1152,8 +1158,8 @@ void SceCells::updateActiveCellCount() {
 }
 
 void SceCells::markIsDivideFalse() {
-	thrust::fill(cellInfoVecs.isDivided.begin(),
-			cellInfoVecs.isDivided.begin() + allocPara.currentActiveCellCount,
+	thrust::fill(cellInfoVecs.isDividing.begin(),
+			cellInfoVecs.isDividing.begin() + allocPara.currentActiveCellCount,
 			false);
 }
 
@@ -1419,6 +1425,7 @@ void SceCells::copyCellsPreDivision_M() {
 			divAuxData.nodeStorageCount, 0.0);
 
 // step 2 , continued
+	thrust::counting_iterator<uint> iStart(0);
 	thrust::copy_if(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1437,29 +1444,28 @@ void SceCells::copyCellsPreDivision_M() {
 							nodes->getInfoVecs().nodeLocY.begin()
 									+ allocPara_m.bdryNodeCount))
 					+ totalNodeCountForActiveCells,
-			thrust::make_permutation_iterator(cellInfoVecs.isDivided.begin(),
-					make_transform_iterator(countingBegin,
+			thrust::make_permutation_iterator(cellInfoVecs.isDividing.begin(),
+					make_transform_iterator(iStart,
 							DivideFunctor(allocPara_m.maxAllNodePerCell))),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
 							divAuxData.tmpNodePosY_M.begin())), isTrue());
 // step 3 , continued
+	thrust::counting_iterator<uint> iBegin(0);
 	thrust::copy_if(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(countingBegin,
-							cellInfoVecs.growthXDir.begin(),
+					thrust::make_tuple(iBegin, cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(countingBegin,
-							cellInfoVecs.growthXDir.begin(),
+					thrust::make_tuple(iBegin, cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin()))
-					+ divAuxData.toBeDivideCount,
-			cellInfoVecs.isDivided.begin(),
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.isDividing.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpCellRank_M.begin(),
 							divAuxData.tmpDivDirX_M.begin(),
@@ -1474,6 +1480,8 @@ void SceCells::createTwoNewCellArr_M() {
 	divAuxData.tmp2MemActiveCounts.clear();
 	divAuxData.tmp2InternalActiveCounts.clear();
 
+	divDebug();
+
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint index;
@@ -1484,6 +1492,9 @@ void SceCells::createTwoNewCellArr_M() {
 		divAuxData.tmp1VecMem.clear();
 		divAuxData.tmp2VecMem.clear();
 		uint cellRank = divAuxData.tmpCellRank_M[i];
+
+		std::cout << "cellRank= " << cellRank << std::endl;
+
 		double curLen = cellInfoVecs.biggestDistance[cellRank]
 				- cellInfoVecs.smallestDistance[cellRank];
 		double oldCenterX = divAuxData.tmpCenterPosX_M[i];
@@ -1494,6 +1505,9 @@ void SceCells::createTwoNewCellArr_M() {
 		CVector divDir(divDirX, divDirY, 0);
 		double tmpSqrt = sqrt(divDirX * divDirX + divDirY * divDirY);
 		double lenChange = curLen / 2.0 * centerShiftRatio;
+
+		std::cout << "lenChange= " << lenChange << std::endl;
+
 		double cell1CenterX = oldCenterX + divDirX / tmpSqrt * lenChange;
 		double cell1CenterY = oldCenterY + divDirY / tmpSqrt * lenChange;
 		double cell2CenterX = oldCenterX - divDirX / tmpSqrt * lenChange;
@@ -1507,26 +1521,28 @@ void SceCells::createTwoNewCellArr_M() {
 		uint activeMemThreshold = cellInfoVecs.activeMembrNodeCounts[cellRank];
 
 		for (uint j = 0; j < maxAllNodePerCell; j++) {
-			index = i * maxAllNodePerCell + j + membThreshold;
+			index = i * maxAllNodePerCell + j;
 			if (j < membThreshold) {
 				// means node type is membrane
-				if (divAuxData.tmpIsActive1_M[index] == true) {
+				if (divAuxData.tmpIsActive_M[index] == true) {
 					CVector memPos(divAuxData.tmpNodePosX_M[index],
 							divAuxData.tmpNodePosX_M[index], 0);
+					memPos.Print();
 					CVector centerToPosDir = memPos - centerPos;
 					CVector crossProduct = Cross(centerToPosDir, divDir);
+					crossProduct.Print();
 					double dotProduct = centerToPosDir * divDir;
 					if (crossProduct.z >= 0) {
 						// less than pi, clock-wise
 						if (fabs(dotProduct) < curMin1Val) {
 							curMin1Val = fabs(dotProduct);
-							curMin1Indx = j;
+							curMin1Indx = index;
 						}
 					} else {
 						// more than pi, clock-wise
 						if (fabs(dotProduct) < curMin2Val) {
 							curMin2Val = fabs(dotProduct);
-							curMin2Indx = j;
+							curMin2Indx = index;
 						}
 					}
 				}
@@ -1546,6 +1562,9 @@ void SceCells::createTwoNewCellArr_M() {
 				}
 			}
 		}
+
+		std::cout << "min1Indx = " << curMin1Indx << ", min2Indx = "
+				<< curMin2Indx << std::endl;
 
 		////////////////////////////////
 		//// copy membrane nodes ///////
@@ -1669,6 +1688,7 @@ void SceCells::createTwoNewCellArr_M() {
 			}
 		}
 	}
+	divDebug();
 }
 
 void SceCells::copyFirstCellArr_M() {
@@ -1718,9 +1738,9 @@ void SceCells::updateActiveCellCount_M() {
 }
 
 void SceCells::markIsDivideFalse_M() {
-	thrust::fill(cellInfoVecs.isDivided.begin(),
-			cellInfoVecs.isDivided.begin() + allocPara_m.currentActiveCellCount,
-			false);
+	thrust::fill(cellInfoVecs.isDividing.begin(),
+			cellInfoVecs.isDividing.begin()
+					+ allocPara_m.currentActiveCellCount, false);
 }
 
 void SceCells::adjustNodeVel_M() {
@@ -1929,7 +1949,7 @@ void SceCells::divide2D_M() {
 		return;
 	}
 	copyCellsPreDivision_M();
-	//createTwoNewCellArr_M();
+	createTwoNewCellArr_M();
 	//copyFirstCellArr_M();
 	//copySecondCellArr_M();
 	//updateActiveCellCount_M();
@@ -2220,15 +2240,15 @@ bool SceCells::decideIfGoingToDivide_M() {
 							cellInfoVecs.activeIntnlNodeCounts.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.isDivided.begin(),
+					thrust::make_tuple(cellInfoVecs.isDividing.begin(),
 							cellInfoVecs.growthProgress.begin())),
 			CompuIsDivide(miscPara.isDivideCriticalRatio,
 					allocPara_m.maxIntnlNodePerCell));
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
-	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDivided.begin(),
-			cellInfoVecs.isDivided.begin() + allocPara_m.currentActiveCellCount,
-			(uint) (0));
+	divAuxData.toBeDivideCount = thrust::reduce(cellInfoVecs.isDividing.begin(),
+			cellInfoVecs.isDividing.begin()
+					+ allocPara_m.currentActiveCellCount, (uint) (0));
 	if (divAuxData.toBeDivideCount > 0) {
 		std::cout << "about to divide!" << std::endl;
 		int jj;
@@ -2488,6 +2508,89 @@ void SceCells::myDebugFunction() {
 	std::cout << std::endl;
 	for (uint i = 0; i < maxActiveCellCount; i++) {
 		std::cout << cellInfoVecs.growthYDir[i] << " ";
+	}
+	std::cout << std::endl;
+
+	int jj;
+	std::cin >> jj;
+}
+
+void SceCells::divDebug() {
+
+	std::cout << "tmpIsActive_M: ";
+	for (uint i = 0; i < divAuxData.tmpIsActive_M.size(); i++) {
+		std::cout << divAuxData.tmpIsActive_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpNodePosX_M: ";
+	for (uint i = 0; i < divAuxData.tmpNodePosX_M.size(); i++) {
+		std::cout << divAuxData.tmpNodePosX_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpNodePosY_M : ";
+	for (uint i = 0; i < divAuxData.tmpNodePosY_M.size(); i++) {
+		std::cout << divAuxData.tmpNodePosY_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpCellRank_M : ";
+	for (uint i = 0; i < divAuxData.tmpCellRank_M.size(); i++) {
+		std::cout << divAuxData.tmpCellRank_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpDivDirX_M : ";
+	for (uint i = 0; i < divAuxData.tmpDivDirX_M.size(); i++) {
+		std::cout << divAuxData.tmpDivDirX_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpDivDirY_M : ";
+	for (uint i = 0; i < divAuxData.tmpDivDirY_M.size(); i++) {
+		std::cout << divAuxData.tmpDivDirY_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpCenterPosX_M : ";
+	for (uint i = 0; i < divAuxData.tmpCenterPosX_M.size(); i++) {
+		std::cout << divAuxData.tmpCenterPosX_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpCenterPosY_M : ";
+	for (uint i = 0; i < divAuxData.tmpCenterPosY_M.size(); i++) {
+		std::cout << divAuxData.tmpCenterPosY_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpIsActive1_M : ";
+	for (uint i = 0; i < divAuxData.tmpIsActive1_M.size(); i++) {
+		std::cout << divAuxData.tmpIsActive1_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpXPos1_M : ";
+	for (uint i = 0; i < divAuxData.tmpXPos1_M.size(); i++) {
+		std::cout << divAuxData.tmpXPos1_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpYPos1_M : ";
+	for (uint i = 0; i < divAuxData.tmpYPos1_M.size(); i++) {
+		std::cout << divAuxData.tmpYPos1_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpIsActive2_M: ";
+	for (uint i = 0; i < divAuxData.tmpIsActive2_M.size(); i++) {
+		std::cout << divAuxData.tmpIsActive2_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmpXPos2_M : ";
+	for (uint i = 0; i < divAuxData.tmpXPos2_M.size(); i++) {
+		std::cout << divAuxData.tmpXPos2_M[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << "tmpYPos2_M : ";
+	for (uint i = 0; i < divAuxData.tmpYPos2_M.size(); i++) {
+		std::cout << divAuxData.tmpYPos2_M[i] << " ";
 	}
 	std::cout << std::endl;
 

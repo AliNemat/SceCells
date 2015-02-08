@@ -1017,7 +1017,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> biggestDistance;
 	thrust::device_vector<uint> activeNodeCountOfThisCell;
 	thrust::device_vector<double> lastCheckPoint;
-	thrust::device_vector<bool> isDivided;
+	thrust::device_vector<bool> isDividing;
 	// This cell type array should be initialized together with the host class.
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
@@ -1383,6 +1383,7 @@ class SceCells {
 	void copyToGPUConstMem();
 
 	void myDebugFunction();
+	void divDebug();
 
 public:
 
