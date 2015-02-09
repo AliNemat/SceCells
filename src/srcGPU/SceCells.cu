@@ -1528,13 +1528,9 @@ void SceCells::createTwoNewCellArr_M() {
 				if (divAuxData.tmpIsActive_M[index] == true) {
 					CVector memPos(divAuxData.tmpNodePosX_M[index],
 							divAuxData.tmpNodePosY_M[index], 0);
-					memPos.Print();
-
 					CVector centerToPosDir = memPos - centerPos;
-					centerToPosDir.Print();
 					CVector centerToPosUnit = centerToPosDir.getUnitVector();
 					CVector crossProduct = Cross(centerToPosDir, divPlaneDir);
-					crossProduct.Print();
 					double dotProduct = centerToPosUnit * divPlaneDir;
 					if (crossProduct.z >= 0) {
 						// counter-cloce wise
@@ -1690,6 +1686,7 @@ void SceCells::copyFirstCellArr_M() {
 				divAuxData.tmp1MemActiveCounts[i];
 		cellInfoVecs.growthProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
+		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 	}
 }
 
@@ -1716,6 +1713,7 @@ void SceCells::copySecondCellArr_M() {
 				divAuxData.tmp2MemActiveCounts[i];
 		cellInfoVecs.growthProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
+		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 	}
 }
 
