@@ -127,9 +127,28 @@ struct CVec3Divide: public thrust::binary_function<CVec3, double, CVec3> {
 	}
 };
 
+struct LessEqualTo: public thrust::unary_function<UiB, bool> {
+	uint _limit;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	LessEqualTo(uint limit) :
+			_limit(limit) {
+	}
+	__device__
+	bool operator()(const UiB& numBool) const {
+		uint num = thrust::get<0>(numBool);
+		uint isGrow = thrust::get<1>(numBool);
+		if (num <= _limit && isGrow) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
-struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
+struct AddTensionForce: public thrust::unary_function<TensionData, CVec4> {
 	uint _bdryCount;
 	uint _maxNodePerCell;
 	double* _locXAddr;
@@ -144,7 +163,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
-	CVec2 operator()(const TensionData &tData) const {
+	CVec4 operator()(const TensionData &tData) const {
 		uint maxMemThres = thrust::get<0>(tData);
 		uint cellRank = thrust::get<1>(tData);
 		uint nodeRank = thrust::get<2>(tData);
@@ -155,8 +174,11 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 
 		uint index = _bdryCount + cellRank * _maxNodePerCell + nodeRank;
 
+		double mag = 0;
+		double rightMag = 0;
+
 		if (_isActiveAddr[index] == false || nodeRank >= maxMemThres) {
-			return thrust::make_tuple(velX, velY);
+			return thrust::make_tuple(velX, velY, mag, rightMag);
 		} else {
 			int index_left = nodeRank - 1;
 			if (index_left == -1) {
@@ -173,6 +195,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 				double forceVal = calMembrForce(length);
 				velX = velX + forceVal * leftDiffX / length;
 				velY = velY + forceVal * leftDiffY / length;
+				mag = forceVal + mag;
 			}
 
 			int index_right = nodeRank + 1;
@@ -190,9 +213,10 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec2> {
 				double forceVal = calMembrForce(length);
 				velX = velX + forceVal * rightDiffX / length;
 				velY = velY + forceVal * rightDiffY / length;
+				mag = forceVal + mag;
+				rightMag = forceVal;
 			}
-
-			return thrust::make_tuple(velX, velY);
+			return thrust::make_tuple(velX, velY, mag, rightMag);
 		}
 
 	}
@@ -1063,11 +1087,13 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthSpeed;
 	thrust::device_vector<double> growthXDir;
 	thrust::device_vector<double> growthYDir;
-
 	// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
+
 	thrust::device_vector<uint> activeMembrNodeCounts;
 	thrust::device_vector<uint> activeIntnlNodeCounts;
+	thrust::device_vector<double> membrGrowProgress;
+	thrust::device_vector<bool> isMembrAddingNode;
 };
 
 struct CellNodeInfoVecs {
@@ -1398,6 +1424,12 @@ class SceCells {
 
 	void addPointIfScheduledToGrow_M();
 
+	/**
+	 * It is possible for cells to have node number that is less than expect after division.
+	 * This adjustment is necessary for cells to grow normally.
+	 */
+	void adjustGrowthProgress_M();
+
 	bool decideIfGoingToDivide_M();
 
 	void copyCellsPreDivision_M();
@@ -1414,11 +1446,17 @@ class SceCells {
 	void initCellInfoVecs_M();
 	void initCellNodeInfoVecs_M();
 
+	void handleMembrGrowth_M();
+
 	void copyToGPUConstMem();
 
 	void myDebugFunction();
 	void divDebug();
 
+	void calMembrGrowSpeed_M();
+	void decideIfAddMembrNode_M();
+	void prepareForMembrGrow_M();
+	void addMembrNodes_M();
 public:
 
 	SceCells();

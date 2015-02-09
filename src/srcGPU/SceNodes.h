@@ -12,6 +12,7 @@
 #include <thrust/binary_search.h>
 #include <thrust/tuple.h>
 #include <thrust/random.h>
+#include <thrust/equal.h>
 #include <thrust/inner_product.h>
 #include <thrust/transform_reduce.h>
 
@@ -65,6 +66,7 @@ typedef thrust::tuple<double, double> CVec2;
 typedef thrust::tuple<double, double, bool> CVec2Bool;
 typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, int> BoolInt;
+typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<double, double, double> CVec3;
@@ -701,6 +703,9 @@ public:
 
 	// only for modified version
 	thrust::device_vector<int> nodeAdhereIndex;
+
+	thrust::device_vector<double> membrTensionMag;
+	thrust::device_vector<double> membrTenMagRi;
 };
 
 /**

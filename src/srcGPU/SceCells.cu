@@ -14,6 +14,31 @@ double calMembrForce(double& length) {
 	return (length - membrEquLen) * membrStiff;
 }
 
+__device__
+double obtainRandAngle(uint& cellRank, uint& seed) {
+	thrust::default_random_engine rng(seed);
+	// discard n numbers to avoid correlation
+	rng.discard(cellRank);
+	thrust::uniform_real_distribution<double> u0Pi(0, 2.0 * pI);
+	double randomAngle = u0Pi(rng);
+	return randomAngle;
+
+}
+
+__device__
+uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
+	return (cellRank * maxAllNodePerCell + maxMembrPerCell + curActiveCount);
+}
+
+__device__
+bool isAllIntnlFilled(uint& currentIntnlCount) {
+	if (currentIntnlCount < maxIntnlPerCell) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
 void SceCells::distributeBdryIsActiveInfo() {
 	thrust::fill(nodes->getInfoVecs().nodeIsActive.begin(),
 			nodes->getInfoVecs().nodeIsActive.begin()
@@ -704,6 +729,9 @@ void SceCells::initialize(SceNodes* nodesInput) {
 
 	allocPara = nodesInput->getAllocPara();
 
+	// max internal node count must be even number.
+	assert(allocPara_m.maxIntnlNodePerCell % 2 == 0);
+
 	initCellInfoVecs();
 	initCellNodeInfoVecs();
 	initGrowthAuxData();
@@ -716,6 +744,9 @@ void SceCells::initialize_M(SceNodes* nodesInput) {
 	std::cout.flush();
 	nodes = nodesInput;
 	allocPara_m = nodesInput->getAllocParaM();
+	// max internal node count must be even number.
+	assert(allocPara_m.maxIntnlNodePerCell % 2 == 0);
+
 	std::cout << "break point 1 " << std::endl;
 	std::cout.flush();
 	controlPara = nodes->getControlPara();
@@ -1279,6 +1310,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 
 	applyMemTension_M();
 
+	handleMembrGrowth_M();
 	//myDebugFunction();
 
 	computeCenterPos_M();
@@ -1287,7 +1319,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 
 	divide2D_M();
 
-	//distributeCellGrowthProgress_M();
+	distributeCellGrowthProgress_M();
 
 	allComponentsMove_M();
 }
@@ -1818,7 +1850,9 @@ void SceCells::applyMemTension_M() {
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin()))
+							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin(),
+							nodes->getInfoVecs().membrTenMagRi.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddTensionForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
@@ -1926,6 +1960,8 @@ void SceCells::growAtRandom_M(double dt) {
 	stretchCellGivenLenDiff_M();
 
 	addPointIfScheduledToGrow_M();
+
+	adjustGrowthProgress_M();
 }
 
 void SceCells::divide2D_M() {
@@ -2260,6 +2296,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	thrust::host_vector<bool> hostIsActiveVec =
 			nodes->getInfoVecs().nodeIsActive;
 	thrust::host_vector<int> hostBondVec = nodes->getInfoVecs().nodeAdhereIndex;
+	thrust::host_vector<double> hostTmpVectorTenMag =
+			nodes->getInfoVecs().membrTensionMag;
 	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
 			nodes->getInfoVecs().nodeCellType;
 
@@ -2326,7 +2364,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 							std::pair<uint, uint>(index1, curIndex));
 					curIndex++;
 					tmpPos = CVector(node1X, node1Y, 0);
-					aniVal = hostTmpVectorNodeType[index1];
+					//aniVal = hostTmpVectorNodeType[index1];
+					aniVal = hostTmpVectorTenMag[index1];
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 				}
@@ -2336,7 +2375,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 							std::pair<uint, uint>(index2, curIndex));
 					curIndex++;
 					tmpPos = CVector(node2X, node2Y, 0);
-					aniVal = hostTmpVectorNodeType[index2];
+					//aniVal = hostTmpVectorNodeType[index2];
+					aniVal = hostTmpVectorTenMag[index2];
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 				}
@@ -2370,7 +2410,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 						std::pair<uint, uint>(pairs[i].first, curIndex));
 				curIndex++;
 				tmpPos = CVector(node1X, node1Y, 0);
-				aniVal = hostTmpVectorNodeType[index1];
+				//aniVal = hostTmpVectorNodeType[index1];
+				aniVal = -1;
 				rawAniData.aniNodePosArr.push_back(tmpPos);
 				rawAniData.aniNodeVal.push_back(aniVal);
 			}
@@ -2380,7 +2421,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 						std::pair<uint, uint>(pairs[i].second, curIndex));
 				curIndex++;
 				tmpPos = CVector(node2X, node2Y, 0);
-				aniVal = hostTmpVectorNodeType[index1];
+				//aniVal = hostTmpVectorNodeType[index1];
+				aniVal = -1;
 				rawAniData.aniNodePosArr.push_back(tmpPos);
 				rawAniData.aniNodeVal.push_back(aniVal);
 			}
@@ -2579,6 +2621,26 @@ void SceCells::divDebug() {
 	std::cin >> jj;
 }
 
+void SceCells::adjustGrowthProgress_M() {
+	uint halfMax = allocPara_m.maxIntnlNodePerCell / 2;
+	thrust::transform_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.activeIntnlNodeCounts.begin(),
+							cellInfoVecs.isScheduledToGrow.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.lastCheckPoint.begin())), ForceZero(),
+			LessEqualTo(halfMax));
+}
+
 VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		AnimationCriteria& aniCri) {
 	VtkAnimationData vtkData;
@@ -2622,27 +2684,36 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(maxIntnlPerCell, &maxIntnlNodePerCellCPU, sizeof(uint));
 }
 
-__device__
-double obtainRandAngle(uint& cellRank, uint& seed) {
-	thrust::default_random_engine rng(seed);
-	// discard n numbers to avoid correlation
-	rng.discard(cellRank);
-	thrust::uniform_real_distribution<double> u0Pi(0, 2.0 * pI);
-	double randomAngle = u0Pi(rng);
-	return randomAngle;
-
+void SceCells::handleMembrGrowth_M() {
+	// figure out membr growth speed
+	calMembrGrowSpeed_M();
+	// figure out which cells will add new point
+	decideIfAddMembrNode_M();
+	// figure out the index and location of membr nodes to be added
+	prepareForMembrGrow_M();
+	// add membr nodes
+	addMembrNodes_M();
 }
 
-__device__
-uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
-	return (cellRank * maxAllNodePerCell + maxMembrPerCell + curActiveCount);
+void SceCells::calMembrGrowSpeed_M() {
+	// linear relationship with highest tension; capped by a given value
+	// reduce_by_key, find value of max tension and their index
 }
 
-__device__
-bool isAllIntnlFilled(uint& currentIntnlCount) {
-	if (currentIntnlCount < maxIntnlPerCell) {
-		return false;
-	} else {
-		return true;
-	}
+void SceCells::decideIfAddMembrNode_M() {
+	// decide if add membrane node given current active node count and
+	// membr growth progress
+}
+
+void SceCells::prepareForMembrGrow_M() {
+	// calculate the position of the membr node to be added,
+	// if membr is scheduled to growth.
+}
+
+void SceCells::addMembrNodes_M() {
+	// add node to the array.
+	// this operation is relatively expensive because of memory
+	// re-arrangement.
+
+	// if a node was added, reset the progress to zero.
 }

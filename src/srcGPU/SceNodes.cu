@@ -1010,6 +1010,9 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 	thrust::host_vector<double> hostTmpVectorLocY = infoVecs.nodeLocY;
 	thrust::host_vector<bool> hostIsActiveVec = infoVecs.nodeIsActive;
 	thrust::host_vector<int> hostBondVec = infoVecs.nodeAdhereIndex;
+	thrust::host_vector<double> hostMembrTenMag = infoVecs.membrTensionMag;
+	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
+			infoVecs.nodeCellType;
 
 	uint activeCellCount = allocPara_M.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_M.maxAllNodePerCell;
@@ -1042,9 +1045,6 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 	}
 	vtkData.bondsInfo = bondInfoVec;
 
-	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
-			infoVecs.nodeCellType;
-
 	uint curIndex = 0;
 	for (uint i = 0; i < pairs.size(); i++) {
 		uint node1Index = pairs[i].first;
@@ -1062,8 +1062,9 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].first, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				ptAniData.colorScale = nodeTypeToScale(
-						hostTmpVectorNodeType[node1Index]);
+				//ptAniData.colorScale = nodeTypeToScale(
+				//		hostTmpVectorNodeType[node1Index]);
+				ptAniData.colorScale = -1;
 				ptAniData.pos = CVector(node1X, node1Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -1073,8 +1074,9 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 						std::pair<uint, uint>(pairs[i].second, curIndex));
 				curIndex++;
 				PointAniData ptAniData;
-				ptAniData.colorScale = nodeTypeToScale(
-						hostTmpVectorNodeType[node1Index]);
+				//ptAniData.colorScale = nodeTypeToScale(
+				//		hostTmpVectorNodeType[node1Index]);
+				ptAniData.colorScale = -1;
 				ptAniData.pos = CVector(node2X, node2Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -1146,7 +1148,7 @@ void SceNodes::addNewlyDividedCells(
 							infoVecs.nodeCellType.begin()))
 					+ shiftStartPosNewCell);
 
-// total number of cells has increased.
+	// total number of cells has increased.
 	allocPara.currentActiveCellCount = allocPara.currentActiveCellCount
 			+ addCellCount;
 }
@@ -1314,14 +1316,16 @@ void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
 		if (linkLength > sceIntraParaDiv_M[4]) {
 			forceValue = 0;
 		} else {
-			double intraPara0 = growPro * (sceIntraParaDiv_M[0])
-					+ (1.0 - growPro) * sceIntraPara_M[0];
-			double intraPara1 = growPro * (sceIntraParaDiv_M[1])
-					+ (1.0 - growPro) * sceIntraPara_M[1];
-			double intraPara2 = growPro * (sceIntraParaDiv_M[2])
-					+ (1.0 - growPro) * sceIntraPara_M[2];
-			double intraPara3 = growPro * (sceIntraParaDiv_M[3])
-					+ (1.0 - growPro) * sceIntraPara_M[3];
+			double percent = (growPro - growthPrgrCriVal_M)
+					/ (1.0 - growthPrgrCriVal_M);
+			double intraPara0 = percent * (sceIntraParaDiv_M[0])
+					+ (1.0 - percent) * sceIntraPara_M[0];
+			double intraPara1 = percent * (sceIntraParaDiv_M[1])
+					+ (1.0 - percent) * sceIntraPara_M[1];
+			double intraPara2 = percent * (sceIntraParaDiv_M[2])
+					+ (1.0 - percent) * sceIntraPara_M[2];
+			double intraPara3 = percent * (sceIntraParaDiv_M[3])
+					+ (1.0 - percent) * sceIntraPara_M[3];
 			forceValue = -intraPara0 / intraPara2
 					* exp(-linkLength / intraPara2)
 					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
@@ -2259,6 +2263,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.nodeInterForceX.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceY.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceZ.resize(maxTotalNodeCount);
+		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
+		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);
 	}
 }
 
