@@ -983,6 +983,40 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 	}
 };
 
+struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
+	double _lowerLimit, _upperLimit;
+	uint _seed;
+	thrust::default_random_engine rng;
+	thrust::uniform_real_distribution<double> dist;
+	thrust::uniform_real_distribution<double> dist2;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	RandomizeGrow_M(double low, double high, uint seed) :
+			_lowerLimit(low), _upperLimit(high), _seed(seed), dist(_lowerLimit,
+					_upperLimit), dist2(0, 2 * acos(-1.0)) {
+	}
+	__host__ __device__
+	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
+		double curSpeed = thrust::get<0>(inputInfo);
+		double currentDirX = thrust::get<1>(inputInfo);
+		double currentDirY = thrust::get<2>(inputInfo);
+		bool isInitBefore = thrust::get<3>(inputInfo);
+		if (isInitBefore) {
+			return thrust::make_tuple(curSpeed, currentDirX, currentDirY, true);
+		} else {
+			uint cellRank = thrust::get<4>(inputInfo);
+			uint seedNew = _seed + cellRank;
+			rng.discard(seedNew);
+			double randomNum1 = dist(rng);
+			rng.discard(seedNew);
+			double randomNum2 = dist2(rng);
+			double xDir = cos(randomNum2);
+			double yDir = sin(randomNum2);
+			return thrust::make_tuple(randomNum1, xDir, yDir, true);
+		}
+	}
+};
+
 struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
 	double _speed;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight

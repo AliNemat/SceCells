@@ -116,7 +116,7 @@ bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 	bool condi1 = false, condi2 = false;
 	if (t1 == t2 && r1 == r2) {
 		if (t1 == Boundary || t1 == ECM) {
-			if (abs(seq1 - seq2) == 1) {
+			if (abs((int) seq1 - (int) seq2) == 1) {
 				condi1 = true;
 			}
 		} else if (t1 == MX || t1 == FNM) {
@@ -355,3 +355,21 @@ AblationEvent readAblationEvent(std::string inputName) {
 	return ablaEvent;
 }
 
+std::vector<CVector> obtainPtsBetween(CVector& start, CVector& end,
+		double& spacing) {
+	std::vector<CVector> result;
+	CVector ptVec = end - start;
+	CVector unitVec = ptVec.getUnitVector();
+	double edgeLength = ptVec.getModul();
+	uint numNewMemNodes = edgeLength / spacing;
+	if (edgeLength - numNewMemNodes * spacing < 0.5 * spacing) {
+		numNewMemNodes--;
+	}
+	CVector nodeOld = start, nodeNew;
+	for (uint j = 0; j < numNewMemNodes - 1; j++) {
+		nodeNew = nodeOld + spacing * unitVec;
+		result.push_back(nodeNew);
+		nodeOld = nodeNew;
+	}
+	return result;
+}

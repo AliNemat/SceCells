@@ -39,6 +39,12 @@ CVector CVector::getUnitVector(double tolerance) {
 	return result;
 }
 
+CVector CVector::rotateNintyDeg_XY_CC() {
+	double tmpX = -y;
+	double tmpY = x;
+	return CVector(tmpX, tmpY, z);
+}
+
 void CVector::Print() const {
 	std::cout << "(" << x << "," << y << "," << z << ")\n";
 }

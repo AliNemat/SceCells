@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <algorithm>
 
 #ifndef COMMONDATA_H_
 #define COMMONDATA_H_
@@ -613,5 +614,16 @@ struct AniRawData {
 	std::vector<LinkAniData> internalLinks;
 	std::vector<BondInfo> bondsArr;
 };
+
+struct VecVal {
+	CVector vec;
+	double val;
+	bool operator <(const VecVal& other) const {
+		return (val < other.val);
+	}
+};
+
+std::vector<CVector> obtainPtsBetween(CVector& pt1, CVector& pt2,
+		double& spacing);
 
 #endif /* COMMONDATA_H_ */
