@@ -11,7 +11,11 @@ __constant__ uint maxIntnlPerCell;
 
 __device__
 double calMembrForce(double& length) {
-	return (length - membrEquLen) * membrStiff;
+	if (length < membrEquLen) {
+		return 0;
+	} else {
+		return (length - membrEquLen) * membrStiff;
+	}
 }
 
 __device__
@@ -101,6 +105,15 @@ void SceCells::distributeCellGrowthProgress() {
 					make_transform_iterator(countingEnd,
 							DivideFunctor(allocPara.maxNodeOfOneCell))),
 			nodes->getInfoVecs().nodeGrowPro.begin() + allocPara.startPosCells);
+}
+
+void MembrPara::initFromConfig() {
+	membrEquLenCPU = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
+	membrStiffCPU = globalConfigVars.getConfigValue("MembrStiff").toDouble();
+	membrGrowCoeff =
+			globalConfigVars.getConfigValue("MembrGrowCoeff").toDouble();
+	membrGrowLimit =
+			globalConfigVars.getConfigValue("MembrGrowLimit").toDouble();
 }
 
 SceCells::SceCells() {
@@ -608,6 +621,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts) {
+	tmpDebug = false;
+	membrPara.initFromConfig();
 	shrinkRatio = globalConfigVars.getConfigValue("ShrinkRatio").toDouble();
 	centerShiftRatio =
 			globalConfigVars.getConfigValue("CenterShiftRatio").toDouble();
@@ -1319,7 +1334,6 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 
 	applyMemTension_M();
 
-	handleMembrGrowth_M();
 	//myDebugFunction();
 
 	computeCenterPos_M();
@@ -1331,6 +1345,8 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 	distributeCellGrowthProgress_M();
 
 	allComponentsMove_M();
+
+	handleMembrGrowth_M();
 }
 
 void SceCells::runStretchTest(double dt) {
@@ -1863,7 +1879,7 @@ void SceCells::applyMemTension_M() {
 							nodes->getInfoVecs().membrTensionMag.begin(),
 							nodes->getInfoVecs().membrTenMagRi.begin(),
 							nodes->getInfoVecs().membrLinkRiMidX.begin(),
-							nodes->getInfoVecs().membrLinkRiMidX.begin()))
+							nodes->getInfoVecs().membrLinkRiMidY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddTensionForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
@@ -2674,13 +2690,9 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 }
 
 void SceCells::copyToGPUConstMem() {
-	double membrEquLenCPU =
-			globalConfigVars.getConfigValue("MembrEquLen").toDouble();
-	double membrStiffCPU =
-			globalConfigVars.getConfigValue("MembrStiff").toDouble();
 	double pI_CPU = acos(-1.0);
-	cudaMemcpyToSymbol(membrEquLen, &membrEquLenCPU, sizeof(double));
-	cudaMemcpyToSymbol(membrStiff, &membrStiffCPU, sizeof(double));
+	cudaMemcpyToSymbol(membrEquLen, &membrPara.membrEquLenCPU, sizeof(double));
+	cudaMemcpyToSymbol(membrStiff, &membrPara.membrStiffCPU, sizeof(double));
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
 
 	uint maxAllNodePerCellCPU = globalConfigVars.getConfigValue(
@@ -2704,12 +2716,11 @@ void SceCells::handleMembrGrowth_M() {
 	prepareForMembrGrow_M();
 	// add membr nodes
 	addMembrNodes_M();
+	//membrDebug();
 }
 
 void SceCells::calMembrGrowSpeed_M() {
 
-	double linearCoeff = 1.0;
-	double bound = 1.0;
 	// reduce_by_key, find value of max tension and their index
 	thrust::counting_iterator<uint> iBegin(0);
 	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
@@ -2737,7 +2748,7 @@ void SceCells::calMembrGrowSpeed_M() {
 			cellInfoVecs.maxTenRiVec.begin()
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.membrGrowSpeed.begin(),
-			MultiWithLimit(linearCoeff, bound));
+			MultiWithLimit(membrPara.membrGrowCoeff, membrPara.membrGrowLimit));
 }
 
 void SceCells::decideIfAddMembrNode_M() {
@@ -2797,3 +2808,56 @@ void SceCells::addMembrNodes_M() {
 					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
 			thrust::identity<bool>());
 }
+
+void SceCells::membrDebug() {
+	uint curAcCCount = allocPara_m.currentActiveCellCount;
+	uint maxActiveNodeC = curAcCCount * allocPara_m.maxAllNodePerCell;
+	uint maxNodePC = allocPara_m.maxAllNodePerCell;
+	uint tmp = 0;
+	for (uint i = 0; i < curAcCCount; i++) {
+		tmp += cellInfoVecs.isMembrAddingNode[i];
+	}
+	if (tmp != 0) {
+		tmpDebug = true;
+	}
+	if (!tmpDebug) {
+		return;
+	}
+	for (uint i = 0; i < maxActiveNodeC; i++) {
+		if (i % maxNodePC == 0 || i % maxNodePC == 199
+				|| i % maxNodePC == 200) {
+			std::cout << nodes->getInfoVecs().membrTensionMag[i] << " ";
+		}
+	}
+	std::cout << std::endl;
+	for (uint i = 0; i < maxActiveNodeC; i++) {
+		if (i % maxNodePC == 0 || i % maxNodePC == 199
+				|| i % maxNodePC == 200) {
+			std::cout << nodes->getInfoVecs().membrTenMagRi[i] << " ";
+		}
+	}
+	std::cout << std::endl;
+	for (uint i = 0; i < maxActiveNodeC; i++) {
+		if (i % maxNodePC == 0 || i % maxNodePC == 199
+				|| i % maxNodePC == 200) {
+			std::cout << nodes->getInfoVecs().membrLinkRiMidX[i] << " ";
+		}
+	}
+	std::cout << std::endl;
+	for (uint i = 0; i < maxActiveNodeC; i++) {
+		if (i % maxNodePC == 0 || i % maxNodePC == 199
+				|| i % maxNodePC == 200) {
+			std::cout << nodes->getInfoVecs().membrLinkRiMidY[i] << " ";
+		}
+	}
+	std::cout << std::endl;
+	for (uint i = 0; i < curAcCCount; i++) {
+		std::cout << "(" << cellInfoVecs.maxTenIndxVec[i] << ","
+				<< cellInfoVecs.activeMembrNodeCounts[i] << ","
+				<< cellInfoVecs.maxTenRiMidXVec[i] << ","
+				<< cellInfoVecs.maxTenRiMidYVec[i] << ")" << std::endl;
+	}
+	int jj;
+	std::cin >> jj;
+}
+

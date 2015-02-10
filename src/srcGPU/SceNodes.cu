@@ -600,6 +600,19 @@ void SceNodes::readParas_M() {
 	mechPara_M.minAdhBondLenCPU_M = minAdhBondLen;
 }
 
+void SceNodes::debugNAN() {
+	uint totalActiveNodeC = allocPara_M.currentActiveCellCount
+			* allocPara_M.maxAllNodePerCell;
+	double res = thrust::reduce(infoVecs.nodeLocX.begin(),
+			infoVecs.nodeLocX.begin() + totalActiveNodeC);
+
+	if (isnan(res)) {
+		std::cout << "fatal error! NAN found" << std::endl;
+		std::cout.flush();
+		exit(0);
+	}
+}
+
 std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs_M() {
 	std::vector<std::pair<uint, uint> > result;
 	thrust::host_vector<uint> keyBeginCPU = auxVecs.keyBegin;
@@ -2215,6 +2228,7 @@ void SceNodes::sceForcesDisc() {
 void SceNodes::sceForcesDisc_M() {
 	prepareSceForceComputation();
 	applySceForcesDisc_M();
+	debugNAN();
 }
 
 double SceNodes::getMaxEffectiveRange() {

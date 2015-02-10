@@ -177,7 +177,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
 	CVec6 operator()(const TensionData &tData) const {
-		uint maxMemThres = thrust::get<0>(tData);
+		uint activeMembrCount = thrust::get<0>(tData);
 		uint cellRank = thrust::get<1>(tData);
 		uint nodeRank = thrust::get<2>(tData);
 		double locX = thrust::get<3>(tData);
@@ -191,12 +191,12 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 		double rightMag = 0;
 		double midX = 0;
 		double midY = 0;
-		if (_isActiveAddr[index] == false || nodeRank >= maxMemThres) {
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
 		} else {
 			int index_left = nodeRank - 1;
 			if (index_left == -1) {
-				index_left = maxMemThres - 1;
+				index_left = activeMembrCount - 1;
 			}
 			index_left = index_left + _bdryCount + cellRank * _maxNodePerCell;
 			if (_isActiveAddr[index_left] == true) {
@@ -213,7 +213,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 			}
 
 			int index_right = nodeRank + 1;
-			if (index_right == (int) maxMemThres) {
+			if (index_right == (int) activeMembrCount) {
 				index_right = 0;
 			}
 			index_right = index_right + _bdryCount + cellRank * _maxNodePerCell;
@@ -378,6 +378,9 @@ struct MultiWithLimit: public thrust::unary_function<double, double> {
 	}
 	__host__ __device__
 	double operator()(const double &x) {
+		if (x <= 0) {
+			return 0;
+		}
 		double tmpRes = x * _k;
 		if (tmpRes < _bound) {
 			return tmpRes;
@@ -1131,7 +1134,8 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 			_isActiveAddr[i] = _isActiveAddr[i - 1];
 			_xPosAddr[i] = _xPosAddr[i - 1];
 			_yPosAddr[i] = _yPosAddr[i - 1];
-			_adhIndxAddr[i] = _adhIndxAddr[i - 1];
+			//_adhIndxAddr[i] = _adhIndxAddr[i - 1];
+			_adhIndxAddr[i] = -1;
 		}
 		_isActiveAddr[globalIndexInsert] = true;
 		_xPosAddr[globalIndexInsert] = insertX;
@@ -1272,6 +1276,14 @@ struct CellDivAuxData {
 	std::vector<uint> tmp2MemActiveCounts, tmp2InternalActiveCounts;
 };
 
+struct MembrPara {
+	double membrStiffCPU;
+	double membrEquLenCPU;
+	double membrGrowCoeff;
+	double membrGrowLimit;
+	void initFromConfig();
+};
+
 /**
  * Modified implementation of subcellular element.
  * Important component to process cell growth and division.
@@ -1303,6 +1315,7 @@ class SceCells {
 	ControlPara controlPara;
 
 	NodeAllocPara_M allocPara_m;
+	MembrPara membrPara;
 
 	// in this class, there are a lot of arrays that store information for each cell
 	// this counting iterator is used for all these arrays indicating the begining.
@@ -1547,11 +1560,15 @@ class SceCells {
 
 	void myDebugFunction();
 	void divDebug();
+	void membrDebug();
 
 	void calMembrGrowSpeed_M();
 	void decideIfAddMembrNode_M();
 	void prepareForMembrGrow_M();
 	void addMembrNodes_M();
+
+	bool tmpDebug;
+
 public:
 
 	SceCells();

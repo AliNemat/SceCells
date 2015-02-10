@@ -113,6 +113,17 @@ struct isTrue {
 	}
 };
 
+struct NanCount: public thrust::binary_function<double, double, CVec3> {
+	__device__
+	int operator()(const double& num) {
+		if (isnan(num)) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+};
+
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -837,6 +848,8 @@ class SceNodes {
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs();
 
 	void initControlPara(bool isStab);
+
+	void debugNAN();
 
 	// friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, FindingPossiblePairsTest);
