@@ -2257,14 +2257,21 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
-	if (controlPara.simuType == Disc || controlPara.simuType == SingleCellTest
-			|| controlPara.simuType == Disc_M) {
+	if (controlPara.simuType == Disc
+			|| controlPara.simuType == SingleCellTest) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceX.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceY.resize(maxTotalNodeCount);
 		infoVecs.nodeInterForceZ.resize(maxTotalNodeCount);
+
+	}
+	if (controlPara.simuType == Disc_M) {
+		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount);
+		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
 		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);
+		infoVecs.membrLinkRiMidX.resize(maxTotalNodeCount, 0);
+		infoVecs.membrLinkRiMidY.resize(maxTotalNodeCount, 0);
 	}
 }
 

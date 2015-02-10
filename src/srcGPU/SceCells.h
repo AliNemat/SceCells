@@ -95,6 +95,19 @@ struct isActiveNoneBdry {
 	}
 };
 
+struct MaxWInfo: public thrust::binary_function<DUiDD, DUiDD, DUiDD> {
+	__host__ __device__
+	DUiDD operator()(const DUiDD& data1, const DUiDD& data2) {
+		double num1 = thrust::get<0>(data1);
+		double num2 = thrust::get<0>(data2);
+		if (num1 > num2) {
+			return data1;
+		} else {
+			return data2;
+		}
+	}
+};
+
 /**
  * Functor for add two three dimensional vectors.
  * @param input1 first three dimensional vector to add
@@ -148,7 +161,7 @@ struct LessEqualTo: public thrust::unary_function<UiB, bool> {
 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
-struct AddTensionForce: public thrust::unary_function<TensionData, CVec4> {
+struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 	uint _bdryCount;
 	uint _maxNodePerCell;
 	double* _locXAddr;
@@ -163,7 +176,7 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec4> {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
-	CVec4 operator()(const TensionData &tData) const {
+	CVec6 operator()(const TensionData &tData) const {
 		uint maxMemThres = thrust::get<0>(tData);
 		uint cellRank = thrust::get<1>(tData);
 		uint nodeRank = thrust::get<2>(tData);
@@ -176,9 +189,10 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec4> {
 
 		double mag = 0;
 		double rightMag = 0;
-
+		double midX = 0;
+		double midY = 0;
 		if (_isActiveAddr[index] == false || nodeRank >= maxMemThres) {
-			return thrust::make_tuple(velX, velY, mag, rightMag);
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
 		} else {
 			int index_left = nodeRank - 1;
 			if (index_left == -1) {
@@ -215,8 +229,10 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec4> {
 				velY = velY + forceVal * rightDiffY / length;
 				mag = forceVal + mag;
 				rightMag = forceVal;
+				midX = (rightPosX + locX) / 2;
+				midY = (rightPosY + locY) / 2;
 			}
-			return thrust::make_tuple(velX, velY, mag, rightMag);
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
 		}
 
 	}
@@ -353,6 +369,43 @@ struct SaxpyFunctor: public thrust::binary_function<double, double, double> {
 	}
 };
 
+struct MultiWithLimit: public thrust::unary_function<double, double> {
+	double _k, _bound;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__
+	MultiWithLimit(double k, double bound) :
+			_k(k), _bound(bound) {
+	}
+	__host__ __device__
+	double operator()(const double &x) {
+		double tmpRes = x * _k;
+		if (tmpRes < _bound) {
+			return tmpRes;
+		} else {
+			return _bound;
+		}
+	}
+};
+
+struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
+	uint _bound;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__
+	MemGrowFunc(uint bound) :
+			_bound(bound) {
+	}
+	__host__ __device__
+	BoolD operator()(const DUi& dui) {
+		double progress = thrust::get<0>(dui);
+		uint curActiveMembrNode = thrust::get<1>(dui);
+		if (curActiveMembrNode < _bound && progress >= 1.0) {
+			return thrust::make_tuple(true, 0);
+		} else {
+			return thrust::make_tuple(false, progress);
+		}
+	}
+};
+
 /**
  * One dimensional version of a*X plus Y, return one if result is larger than one.
  * @param input1 X
@@ -362,7 +415,8 @@ struct SaxpyFunctor: public thrust::binary_function<double, double, double> {
  */
 struct SaxpyFunctorWithMaxOfOne: public thrust::binary_function<double, double,
 		double> {
-	double _dt;__host__ __device__
+	double _dt;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
 	SaxpyFunctorWithMaxOfOne(double dt) :
 			_dt(dt) {
 	}
@@ -1054,6 +1108,39 @@ struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
 	}
 };
 
+struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _xPosAddr, *_yPosAddr;
+	int* _adhIndxAddr;
+	AddMemNode(uint maxNodePerCell, bool* isActiveAddr, double* xPosAddr,
+			double* yPosAddr, int* adhIndxAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
+					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
+	}
+	__host__ __device__
+	uint operator()(const Tuuudd &oriData) {
+		uint cellRank = thrust::get<0>(oriData);
+		uint insertIndx = thrust::get<1>(oriData) + 1;
+		uint curActCount = thrust::get<2>(oriData);
+		double insertX = thrust::get<3>(oriData);
+		double insertY = thrust::get<4>(oriData);
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;
+		uint globalIndexInsert = cellRank * _maxNodePerCell + insertIndx;
+		for (uint i = globalIndxEnd; i >= globalIndexInsert; i--) {
+			_isActiveAddr[i] = _isActiveAddr[i - 1];
+			_xPosAddr[i] = _xPosAddr[i - 1];
+			_yPosAddr[i] = _yPosAddr[i - 1];
+			_adhIndxAddr[i] = _adhIndxAddr[i - 1];
+		}
+		_isActiveAddr[globalIndexInsert] = true;
+		_xPosAddr[globalIndexInsert] = insertX;
+		_yPosAddr[globalIndexInsert] = insertY;
+		_adhIndxAddr[globalIndexInsert] = -1;
+		return (curActCount + 1);
+	}
+};
+
 struct CellInfoVecs {
 	/**
 	 * @param growthProgress is a vector of size maxCellCount.
@@ -1092,7 +1179,13 @@ struct CellInfoVecs {
 
 	thrust::device_vector<uint> activeMembrNodeCounts;
 	thrust::device_vector<uint> activeIntnlNodeCounts;
+
 	thrust::device_vector<double> membrGrowProgress;
+	thrust::device_vector<double> membrGrowSpeed;
+	thrust::device_vector<double> maxTenRiVec;
+	thrust::device_vector<double> maxTenRiMidXVec;
+	thrust::device_vector<double> maxTenRiMidYVec;
+	thrust::device_vector<uint> maxTenIndxVec;
 	thrust::device_vector<bool> isMembrAddingNode;
 };
 
@@ -1129,6 +1222,8 @@ struct CellGrowthAuxData {
 	bool* nodeIsActiveAddress;
 	double* nodeXPosAddress;
 	double* nodeYPosAddress;
+
+	int* adhIndxAddr;
 };
 
 struct CellDivAuxData {

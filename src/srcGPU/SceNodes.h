@@ -64,6 +64,8 @@
 
 typedef thrust::tuple<double, double> CVec2;
 typedef thrust::tuple<double, double, bool> CVec2Bool;
+typedef thrust::tuple<double, uint> DUi;
+typedef thrust::tuple<double, uint, double, double> DUiDD;
 typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
@@ -706,6 +708,8 @@ public:
 
 	thrust::device_vector<double> membrTensionMag;
 	thrust::device_vector<double> membrTenMagRi;
+	thrust::device_vector<double> membrLinkRiMidX;
+	thrust::device_vector<double> membrLinkRiMidY;
 };
 
 /**

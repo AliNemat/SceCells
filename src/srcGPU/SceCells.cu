@@ -663,6 +663,13 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.growthXDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.growthYDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.isRandGrowInited.resize(allocPara_m.maxCellCount, false);
+	cellInfoVecs.isMembrAddingNode.resize(allocPara_m.maxCellCount, false);
+	cellInfoVecs.maxTenIndxVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.maxTenRiVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.maxTenRiMidXVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.membrGrowProgress.resize(allocPara_m.maxCellCount, 0);
+	cellInfoVecs.membrGrowSpeed.resize(allocPara_m.maxCellCount, 0);
 	std::cout << "finished " << std::endl;
 }
 
@@ -713,6 +720,8 @@ void SceCells::initGrowthAuxData_M() {
 			&(nodes->getInfoVecs().nodeLocX[allocPara_m.bdryNodeCount]));
 	growthAuxData.nodeYPosAddress = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocY[allocPara_m.bdryNodeCount]));
+	growthAuxData.adhIndxAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeAdhereIndex[allocPara_m.bdryNodeCount]));
 	growthAuxData.randomGrowthSpeedMin = globalConfigVars.getConfigValue(
 			"RandomGrowthSpeedMin").toDouble();
 	growthAuxData.randomGrowthSpeedMax = globalConfigVars.getConfigValue(
@@ -1852,7 +1861,9 @@ void SceCells::applyMemTension_M() {
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
 							nodes->getInfoVecs().nodeVelY.begin(),
 							nodes->getInfoVecs().membrTensionMag.begin(),
-							nodes->getInfoVecs().membrTenMagRi.begin()))
+							nodes->getInfoVecs().membrTenMagRi.begin(),
+							nodes->getInfoVecs().membrLinkRiMidX.begin(),
+							nodes->getInfoVecs().membrLinkRiMidX.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddTensionForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
@@ -2696,24 +2707,93 @@ void SceCells::handleMembrGrowth_M() {
 }
 
 void SceCells::calMembrGrowSpeed_M() {
-	// linear relationship with highest tension; capped by a given value
+
+	double linearCoeff = 1.0;
+	double bound = 1.0;
 	// reduce_by_key, find value of max tension and their index
+	thrust::counting_iterator<uint> iBegin(0);
+	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
+	thrust::reduce_by_key(
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().membrTenMagRi.begin(),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxNPerCell)),
+							nodes->getInfoVecs().membrLinkRiMidX.begin(),
+							nodes->getInfoVecs().membrLinkRiMidY.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.maxTenRiVec.begin(),
+							cellInfoVecs.maxTenIndxVec.begin(),
+							cellInfoVecs.maxTenRiMidXVec.begin(),
+							cellInfoVecs.maxTenRiMidYVec.begin())),
+			thrust::equal_to<uint>(), MaxWInfo());
+
+	// linear relationship with highest tension; capped by a given value
+	thrust::transform(cellInfoVecs.maxTenRiVec.begin(),
+			cellInfoVecs.maxTenRiVec.begin()
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.membrGrowSpeed.begin(),
+			MultiWithLimit(linearCoeff, bound));
 }
 
 void SceCells::decideIfAddMembrNode_M() {
 	// decide if add membrane node given current active node count and
 	// membr growth progress
+	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
+	thrust::transform(cellInfoVecs.membrGrowSpeed.begin(),
+			cellInfoVecs.membrGrowSpeed.begin() + maxNPerCell,
+			cellInfoVecs.membrGrowProgress.begin(),
+			cellInfoVecs.membrGrowProgress.begin(), SaxpyFunctor(dt));
+
+	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.membrGrowProgress.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.membrGrowProgress.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin()))
+					+ maxNPerCell,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
+							cellInfoVecs.membrGrowProgress.begin())),
+			MemGrowFunc(maxMembrNode));
 }
 
 void SceCells::prepareForMembrGrow_M() {
 	// calculate the position of the membr node to be added,
 	// if membr is scheduled to growth.
+	// nothing to be done here because all completed in previous steps
 }
 
 void SceCells::addMembrNodes_M() {
 	// add node to the array.
 	// this operation is relatively expensive because of memory
 	// re-arrangement.
-
-	// if a node was added, reset the progress to zero.
+	thrust::counting_iterator<uint> iBegin(0);
+	uint curAcCCount = allocPara_m.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::transform_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							cellInfoVecs.maxTenIndxVec.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.maxTenRiMidXVec.begin(),
+							cellInfoVecs.maxTenRiMidYVec.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							cellInfoVecs.maxTenIndxVec.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.maxTenRiMidXVec.begin(),
+							cellInfoVecs.maxTenRiMidYVec.begin()))
+					+ curAcCCount, cellInfoVecs.isMembrAddingNode.begin(),
+			cellInfoVecs.activeMembrNodeCounts.begin(),
+			AddMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
+					growthAuxData.nodeXPosAddress,
+					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
+			thrust::identity<bool>());
 }
