@@ -5,6 +5,7 @@ double epsilon = 1.0e-12;
 __constant__ double membrEquLen;
 __constant__ double membrStiff;
 __constant__ double pI;
+__constant__ double numericalLowerBound;
 __constant__ uint maxAllNodePerCell;
 __constant__ uint maxMembrPerCell;
 __constant__ uint maxIntnlPerCell;
@@ -37,6 +38,15 @@ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount) {
 	if (currentIntnlCount < maxIntnlPerCell) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+__device__
+bool longEnough(double& length) {
+	if (length < numericalLowerBound) {
 		return false;
 	} else {
 		return true;
@@ -2691,10 +2701,13 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 
 void SceCells::copyToGPUConstMem() {
 	double pI_CPU = acos(-1.0);
+	double numericalLowerBoundCPU = globalConfigVars.getConfigValue(
+			"NumericalLowerBound").toDouble();
 	cudaMemcpyToSymbol(membrEquLen, &membrPara.membrEquLenCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrStiff, &membrPara.membrStiffCPU, sizeof(double));
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
-
+	cudaMemcpyToSymbol(numericalLowerBound, &numericalLowerBoundCPU,
+			sizeof(double));
 	uint maxAllNodePerCellCPU = globalConfigVars.getConfigValue(
 			"MaxAllNodeCountPerCell").toInt();
 	uint maxMembrNodePerCellCPU = globalConfigVars.getConfigValue(

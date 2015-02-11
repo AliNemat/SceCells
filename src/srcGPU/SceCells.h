@@ -30,7 +30,9 @@ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount);
-
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+__device__
+bool longEnough(double& length);
 /**
  * Functor for divide operation.
  * @param dividend divisor for divide operator.
@@ -207,9 +209,11 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 				double length = sqrt(
 						leftDiffX * leftDiffX + leftDiffY * leftDiffY);
 				double forceVal = calMembrForce(length);
-				velX = velX + forceVal * leftDiffX / length;
-				velY = velY + forceVal * leftDiffY / length;
-				mag = forceVal + mag;
+				if (longEnough(length)) {
+					velX = velX + forceVal * leftDiffX / length;
+					velY = velY + forceVal * leftDiffY / length;
+					mag = forceVal + mag;
+				}
 			}
 
 			int index_right = nodeRank + 1;
@@ -225,12 +229,14 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 				double length = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
 				double forceVal = calMembrForce(length);
-				velX = velX + forceVal * rightDiffX / length;
-				velY = velY + forceVal * rightDiffY / length;
-				mag = forceVal + mag;
-				rightMag = forceVal;
-				midX = (rightPosX + locX) / 2;
-				midY = (rightPosY + locY) / 2;
+				if (longEnough(length)) {
+					velX = velX + forceVal * rightDiffX / length;
+					velY = velY + forceVal * rightDiffY / length;
+					mag = forceVal + mag;
+					rightMag = forceVal;
+					midX = (rightPosX + locX) / 2;
+					midY = (rightPosY + locY) / 2;
+				}
 			}
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
 		}
