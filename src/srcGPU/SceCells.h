@@ -1574,6 +1574,18 @@ class SceCells {
 
 	bool decideIfGoingToDivide_M();
 
+	void copyTmpVec(uint i);
+	void shiftByCellCenter(CVector cell1Center, CVector cell2Center);
+	void createTmpMem(std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
+	void obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
+			vector<CVector>& intnlNodes);
+	CVector obtainCenter(uint i);
+	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
+			double& lenAlongMajorAxis);
+	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
+			double len_MajorAxis, CVector& centerNew1, CVector& centerNew2);
+	void createTmpVec(uint i, CVector divDir, CVector oldCenter,
+			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 public:
 
 	SceCells();

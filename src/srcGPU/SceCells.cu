@@ -30,8 +30,7 @@ double obtainRandAngle(uint& cellRank, uint& seed) {
 
 }
 
-__device__
-uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
+__device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
 	return (cellRank * maxAllNodePerCell + maxMembrPerCell + curActiveCount);
 }
 
@@ -1550,186 +1549,35 @@ void SceCells::createTwoNewCellArr_M() {
 
 	//divDebug();
 
-	uint membThreshold = allocPara_m.maxMembrNodePerCell;
-	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	uint index;
-
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		divAuxData.tmp1Vec.clear();
 		divAuxData.tmp2Vec.clear();
-		divAuxData.tmp1VecMem.clear();
-		divAuxData.tmp2VecMem.clear();
-		uint cellRank = divAuxData.tmpCellRank_M[i];
 
-		//std::cout << "cellRank= " << cellRank << std::endl;
+		vector<CVector> membrNodes;
+		vector<CVector> intnlNodes;
+		obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 
-		double curLen = cellInfoVecs.biggestDistance[cellRank]
-				- cellInfoVecs.smallestDistance[cellRank];
-		double oldCenterX = divAuxData.tmpCenterPosX_M[i];
-		double oldCenterY = divAuxData.tmpCenterPosY_M[i];
-		CVector centerPos(oldCenterX, oldCenterY, 0);
-		double divDirX = divAuxData.tmpDivDirX_M[i];
-		double divDirY = divAuxData.tmpDivDirY_M[i];
-		CVector divDir(divDirX, divDirY, 0);
-		CVector divPlaneDir = divDir.rotateNintyDeg_XY_CC();
-		double tmpSqrt = sqrt(divDirX * divDirX + divDirY * divDirY);
-		double lenChange = curLen / 2.0 * centerShiftRatio;
-
-		//std::cout << "lenChange= " << lenChange << std::endl;
-
-		double cell1CenterX = oldCenterX + divDirX / tmpSqrt * lenChange;
-		double cell1CenterY = oldCenterY + divDirY / tmpSqrt * lenChange;
-		double cell2CenterX = oldCenterX - divDirX / tmpSqrt * lenChange;
-		double cell2CenterY = oldCenterY - divDirY / tmpSqrt * lenChange;
-		CVector cell1Center(cell1CenterX, cell1CenterY, 0);
-		CVector cell2Center(cell2CenterX, cell2CenterY, 0);
-
-		//cellInfoVecs.activeMembrNodeCounts[cellRank];
+		CVector oldCenter = obtainCenter(i);
+		double lenAlongMajorAxis;
+		CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+				lenAlongMajorAxis);
 
 		std::vector<VecVal> tmp1, tmp2;
-		VecVal tmpData;
+		CVector cell1Center, cell2Center;
 
-		for (uint j = 0; j < maxAllNodePerCell; j++) {
-			index = i * maxAllNodePerCell + j;
-			if (j < membThreshold) {
-				// means node type is membrane
-				if (divAuxData.tmpIsActive_M[index] == true) {
-					CVector memPos(divAuxData.tmpNodePosX_M[index],
-							divAuxData.tmpNodePosY_M[index], 0);
-					CVector centerToPosDir = memPos - centerPos;
-					CVector centerToPosUnit = centerToPosDir.getUnitVector();
-					CVector crossProduct = Cross(centerToPosDir, divPlaneDir);
-					double dotProduct = centerToPosUnit * divPlaneDir;
-					if (crossProduct.z >= 0) {
-						// counter-cloce wise
-						tmpData.val = dotProduct;
-						tmpData.vec = memPos;
-						tmp1.push_back(tmpData);
-					} else {
-						// cloce wise
-						tmpData.val = dotProduct;
-						tmpData.vec = memPos;
-						tmp2.push_back(tmpData);
-					}
-				}
-			} else {
-				if (divAuxData.tmpIsActive_M[index] == true) {
-					CVector internalPos(divAuxData.tmpNodePosX_M[index],
-							divAuxData.tmpNodePosY_M[index], 0);
-					CVector centerToPosDir = internalPos - centerPos;
-					CVector shrinkedPos = centerToPosDir * shrinkRatio
-							+ centerPos;
-					double dotProduct = centerToPosDir * divDir;
-					if (dotProduct > 0) {
-						divAuxData.tmp1Vec.push_back(shrinkedPos);
-					} else {
-						divAuxData.tmp2Vec.push_back(shrinkedPos);
-					}
-				}
-			}
-		}
+		obtainTwoNewCenters(oldCenter, divDir, lenAlongMajorAxis, cell1Center,
+				cell2Center);
+		createTmpVec(i, divDir, oldCenter, tmp1, tmp2);
 
 		////////////////////////////////
 		//// copy membrane nodes ///////
 		////////////////////////////////
-
-		std::sort(tmp1.begin(), tmp1.end());
-		std::sort(tmp2.begin(), tmp2.end());
-
-		//std::cout << "tmp1 size = " << tmp1.size() << std::endl;
-		//std::cout << "tmp2 size = " << tmp2.size() << std::endl;
-
-		assert(tmp1.size() > 0);
-		assert(tmp2.size() > 0);
-		std::vector<CVector> ptsBetween1 = obtainPtsBetween(
-				tmp1[tmp1.size() - 1].vec, tmp1[0].vec, memNewSpacing);
-		std::vector<CVector> ptsBetween2 = obtainPtsBetween(
-				tmp2[tmp2.size() - 1].vec, tmp2[0].vec, memNewSpacing);
-		for (uint j = 0; j < tmp1.size(); j++) {
-			divAuxData.tmp1VecMem.push_back(tmp1[j].vec);
-		}
-		for (uint j = 0; j < tmp2.size(); j++) {
-			divAuxData.tmp2VecMem.push_back(tmp2[j].vec);
-		}
-		for (uint j = 0; j < ptsBetween1.size(); j++) {
-			divAuxData.tmp1VecMem.push_back(ptsBetween1[j]);
-		}
-		for (uint j = 0; j < ptsBetween2.size(); j++) {
-			divAuxData.tmp2VecMem.push_back(ptsBetween2[j]);
-		}
-
-		assert(divAuxData.tmp1VecMem.size() <= membThreshold);
-		assert(divAuxData.tmp2VecMem.size() <= membThreshold);
-
-		divAuxData.tmp1MemActiveCounts.push_back(divAuxData.tmp1VecMem.size());
-		for (uint j = 0; j < membThreshold; j++) {
-			index = i * maxAllNodePerCell + j;
-			if (j < divAuxData.tmp1VecMem.size()) {
-				divAuxData.tmpXPos1_M[index] = divAuxData.tmp1VecMem[j].x;
-				divAuxData.tmpYPos1_M[index] = divAuxData.tmp1VecMem[j].y;
-				divAuxData.tmpIsActive1_M[index] = true;
-			} else {
-				divAuxData.tmpIsActive1_M[index] = false;
-			}
-		}
-		divAuxData.tmp2MemActiveCounts.push_back(divAuxData.tmp2VecMem.size());
-		for (uint j = 0; j < membThreshold; j++) {
-			index = i * maxAllNodePerCell + j;
-			if (j < divAuxData.tmp2VecMem.size()) {
-				divAuxData.tmpXPos2_M[index] = divAuxData.tmp2VecMem[j].x;
-				divAuxData.tmpYPos2_M[index] = divAuxData.tmp2VecMem[j].y;
-				divAuxData.tmpIsActive2_M[index] = true;
-			} else {
-				divAuxData.tmpIsActive2_M[index] = false;
-			}
-		}
-
+		createTmpMem(tmp1, tmp2);
 		////////////////////////////////
 		//// copy internal nodes ///////
 		////////////////////////////////
-		CVector tmpCell1Center(0, 0, 0);
-		for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
-			tmpCell1Center = tmpCell1Center + divAuxData.tmp1Vec[j];
-		}
-		tmpCell1Center = tmpCell1Center / divAuxData.tmp1Vec.size();
-		CVector shiftVec1 = cell1Center - tmpCell1Center;
-		for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
-			divAuxData.tmp1Vec[j] = divAuxData.tmp1Vec[j] + shiftVec1;
-		}
-
-		CVector tmpCell2Center(0, 0, 0);
-		for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
-			tmpCell2Center = tmpCell2Center + divAuxData.tmp2Vec[j];
-		}
-		tmpCell2Center = tmpCell2Center / divAuxData.tmp2Vec.size();
-		CVector shiftVec2 = cell2Center - tmpCell2Center;
-		for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
-			divAuxData.tmp2Vec[j] = divAuxData.tmp2Vec[j] + shiftVec2;
-		}
-
-		divAuxData.tmp1InternalActiveCounts.push_back(
-				divAuxData.tmp1Vec.size());
-		divAuxData.tmp2InternalActiveCounts.push_back(
-				divAuxData.tmp2Vec.size());
-
-		for (uint j = membThreshold; j < maxAllNodePerCell; j++) {
-			index = i * maxAllNodePerCell + j;
-			uint shift_j = j - membThreshold;
-			if (shift_j < divAuxData.tmp1Vec.size()) {
-				divAuxData.tmpXPos1_M[index] = divAuxData.tmp1Vec[shift_j].x;
-				divAuxData.tmpYPos1_M[index] = divAuxData.tmp1Vec[shift_j].y;
-				divAuxData.tmpIsActive1_M[index] = true;
-			} else {
-				divAuxData.tmpIsActive1_M[index] = false;
-			}
-			if (shift_j < divAuxData.tmp2Vec.size()) {
-				divAuxData.tmpXPos2_M[index] = divAuxData.tmp2Vec[shift_j].x;
-				divAuxData.tmpYPos2_M[index] = divAuxData.tmp2Vec[shift_j].y;
-				divAuxData.tmpIsActive2_M[index] = true;
-			} else {
-				divAuxData.tmpIsActive2_M[index] = false;
-			}
-		}
+		shiftByCellCenter(cell1Center, cell2Center);
+		copyTmpVec(i);
 	}
 	//divDebug();
 }
@@ -2012,7 +1860,7 @@ void SceCells::growAtRandom_M(double dt) {
 
 	decideIsScheduleToGrow_M();
 
-	computeCellTargetLength_M();
+	//computeCellTargetLength_M();
 
 	computeDistToCellCenter_M();
 
@@ -2020,7 +1868,7 @@ void SceCells::growAtRandom_M(double dt) {
 
 	computeLenDiffExpCur_M();
 
-	stretchCellGivenLenDiff_M();
+	//stretchCellGivenLenDiff_M();
 
 	addPointIfScheduledToGrow_M();
 
@@ -2032,7 +1880,7 @@ void SceCells::divide2D_M() {
 	if (!isDivisionPresent) {
 		return;
 	}
-	aniDebug = true;
+	//aniDebug = true;
 	copyCellsPreDivision_M();
 	createTwoNewCellArr_M();
 	copyFirstCellArr_M();
@@ -2966,5 +2814,231 @@ void SceCells::membrDebug() {
 	}
 	int jj;
 	std::cin >> jj;
+}
+
+void SceCells::copyTmpVec(uint i) {
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint index;
+	for (uint j = 0; j < membThreshold; j++) {
+		index = i * maxAllNodePerCell + j;
+		if (j < divAuxData.tmp1VecMem.size()) {
+			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1VecMem[j].x;
+			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1VecMem[j].y;
+			divAuxData.tmpIsActive1_M[index] = true;
+		} else {
+			divAuxData.tmpIsActive1_M[index] = false;
+		}
+	}
+	for (uint j = 0; j < membThreshold; j++) {
+		index = i * maxAllNodePerCell + j;
+		if (j < divAuxData.tmp2VecMem.size()) {
+			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2VecMem[j].x;
+			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2VecMem[j].y;
+			divAuxData.tmpIsActive2_M[index] = true;
+		} else {
+			divAuxData.tmpIsActive2_M[index] = false;
+		}
+	}
+
+	divAuxData.tmp1MemActiveCounts.push_back(divAuxData.tmp1VecMem.size());
+	divAuxData.tmp2MemActiveCounts.push_back(divAuxData.tmp2VecMem.size());
+
+	for (uint j = membThreshold; j < maxAllNodePerCell; j++) {
+		index = i * maxAllNodePerCell + j;
+		uint shift_j = j - membThreshold;
+		if (shift_j < divAuxData.tmp1Vec.size()) {
+			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1Vec[shift_j].x;
+			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1Vec[shift_j].y;
+			divAuxData.tmpIsActive1_M[index] = true;
+		} else {
+			divAuxData.tmpIsActive1_M[index] = false;
+		}
+		if (shift_j < divAuxData.tmp2Vec.size()) {
+			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2Vec[shift_j].x;
+			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2Vec[shift_j].y;
+			divAuxData.tmpIsActive2_M[index] = true;
+		} else {
+			divAuxData.tmpIsActive2_M[index] = false;
+		}
+	}
+	divAuxData.tmp1InternalActiveCounts.push_back(divAuxData.tmp1Vec.size());
+	divAuxData.tmp2InternalActiveCounts.push_back(divAuxData.tmp2Vec.size());
+}
+
+void SceCells::shiftByCellCenter(CVector cell1Center, CVector cell2Center) {
+	CVector tmpCell1Center(0, 0, 0);
+	for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
+		tmpCell1Center = tmpCell1Center + divAuxData.tmp1Vec[j];
+	}
+	tmpCell1Center = tmpCell1Center / divAuxData.tmp1Vec.size();
+	CVector shiftVec1 = cell1Center - tmpCell1Center;
+	for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
+		divAuxData.tmp1Vec[j] = divAuxData.tmp1Vec[j] + shiftVec1;
+	}
+
+	CVector tmpCell2Center(0, 0, 0);
+	for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
+		tmpCell2Center = tmpCell2Center + divAuxData.tmp2Vec[j];
+	}
+	tmpCell2Center = tmpCell2Center / divAuxData.tmp2Vec.size();
+	CVector shiftVec2 = cell2Center - tmpCell2Center;
+	for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
+		divAuxData.tmp2Vec[j] = divAuxData.tmp2Vec[j] + shiftVec2;
+	}
+}
+
+void SceCells::createTmpMem(std::vector<VecVal>& tmp1,
+		std::vector<VecVal>& tmp2) {
+	divAuxData.tmp1VecMem.clear();
+	divAuxData.tmp2VecMem.clear();
+
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
+
+	std::sort(tmp1.begin(), tmp1.end());
+	std::sort(tmp2.begin(), tmp2.end());
+
+	assert(tmp1.size() > 0);
+	assert(tmp2.size() > 0);
+	std::vector<CVector> ptsBetween1 = obtainPtsBetween(
+			tmp1[tmp1.size() - 1].vec, tmp1[0].vec, memNewSpacing);
+	std::vector<CVector> ptsBetween2 = obtainPtsBetween(
+			tmp2[tmp2.size() - 1].vec, tmp2[0].vec, memNewSpacing);
+	for (uint j = 0; j < tmp1.size(); j++) {
+		divAuxData.tmp1VecMem.push_back(tmp1[j].vec);
+	}
+	for (uint j = 0; j < tmp2.size(); j++) {
+		divAuxData.tmp2VecMem.push_back(tmp2[j].vec);
+	}
+	for (uint j = 0; j < ptsBetween1.size(); j++) {
+		divAuxData.tmp1VecMem.push_back(ptsBetween1[j]);
+	}
+	for (uint j = 0; j < ptsBetween2.size(); j++) {
+		divAuxData.tmp2VecMem.push_back(ptsBetween2[j]);
+	}
+
+	assert(divAuxData.tmp1VecMem.size() <= membThreshold);
+	assert(divAuxData.tmp2VecMem.size() <= membThreshold);
+}
+
+void SceCells::obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
+		vector<CVector>& intnlNodes) {
+	membrNodes.clear();
+	intnlNodes.clear();
+
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint index;
+	for (uint j = 0; j < maxAllNodePerCell; j++) {
+		index = i * maxAllNodePerCell + j;
+		if (j < membThreshold) {
+			// means node type is membrane
+			if (divAuxData.tmpIsActive_M[index] == true) {
+				CVector memPos(divAuxData.tmpNodePosX_M[index],
+						divAuxData.tmpNodePosY_M[index], 0);
+				membrNodes.push_back(memPos);
+			}
+		} else {
+			if (divAuxData.tmpIsActive_M[index] == true) {
+				CVector internalPos(divAuxData.tmpNodePosX_M[index],
+						divAuxData.tmpNodePosY_M[index], 0);
+				intnlNodes.push_back(internalPos);
+			}
+		}
+	}
+}
+
+CVector SceCells::obtainCenter(uint i) {
+	double oldCenterX = divAuxData.tmpCenterPosX_M[i];
+	double oldCenterY = divAuxData.tmpCenterPosY_M[i];
+	CVector centerPos(oldCenterX, oldCenterY, 0);
+	return centerPos;
+}
+
+CVector SceCells::calDivDir_MajorAxis(CVector center,
+		vector<CVector>& membrNodes, double& lenAlongMajorAxis) {
+	// not the optimal algorithm but easy to code
+	double maxDiff = 0;
+	CVector majorAxisDir;
+	for (uint i = 0; i < membrNodes.size(); i++) {
+		CVector tmpDir = membrNodes[i] - center;
+		CVector tmpUnitDir = tmpDir.getUnitVector();
+		double min = 0, max = 0;
+		for (uint j = 0; j < membrNodes.size(); j++) {
+			CVector tmpDir2 = membrNodes[j] - center;
+			double tmpVecProduct = tmpDir2 * tmpUnitDir;
+			if (tmpVecProduct < min) {
+				min = tmpVecProduct;
+			}
+			if (tmpVecProduct > max) {
+				max = tmpVecProduct;
+			}
+		}
+		double diff = max - min;
+		if (diff > maxDiff) {
+			maxDiff = diff;
+			majorAxisDir = tmpUnitDir;
+		}
+	}
+	lenAlongMajorAxis = maxDiff;
+	return majorAxisDir;
+}
+
+void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
+		double len_MajorAxis, CVector& centerNew1, CVector& centerNew2) {
+
+	CVector divDirUnit = divDir.getUnitVector();
+	double lenChange = len_MajorAxis / 2.0 * centerShiftRatio;
+	centerNew1 = oldCenter + lenChange * divDirUnit;
+	centerNew2 = oldCenter - lenChange * divDirUnit;
+}
+
+void SceCells::createTmpVec(uint i, CVector divDir, CVector oldCenter,
+		std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2) {
+	tmp1.clear();
+	tmp2.clear();
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint index;
+	VecVal tmpData;
+	CVector splitDir = divDir.rotateNintyDeg_XY_CC();
+	for (uint j = 0; j < maxAllNodePerCell; j++) {
+		index = i * maxAllNodePerCell + j;
+		if (j < membThreshold) {
+			// means node type is membrane
+			if (divAuxData.tmpIsActive_M[index] == true) {
+				CVector memPos(divAuxData.tmpNodePosX_M[index],
+						divAuxData.tmpNodePosY_M[index], 0);
+				CVector centerToPosDir = memPos - oldCenter;
+				CVector centerToPosUnit = centerToPosDir.getUnitVector();
+				CVector crossProduct = Cross(centerToPosDir, splitDir);
+				double dotProduct = centerToPosUnit * splitDir;
+				if (crossProduct.z >= 0) {
+					// counter-cloce wise
+					tmpData.val = dotProduct;
+					tmpData.vec = memPos;
+					tmp1.push_back(tmpData);
+				} else {
+					// cloce wise
+					tmpData.val = dotProduct;
+					tmpData.vec = memPos;
+					tmp2.push_back(tmpData);
+				}
+			}
+		} else {
+			if (divAuxData.tmpIsActive_M[index] == true) {
+				CVector internalPos(divAuxData.tmpNodePosX_M[index],
+						divAuxData.tmpNodePosY_M[index], 0);
+				CVector centerToPosDir = internalPos - oldCenter;
+				CVector shrinkedPos = centerToPosDir * shrinkRatio + oldCenter;
+				double dotProduct = centerToPosDir * divDir;
+				if (dotProduct > 0) {
+					divAuxData.tmp1Vec.push_back(shrinkedPos);
+				} else {
+					divAuxData.tmp2Vec.push_back(shrinkedPos);
+				}
+			}
+		}
+	}
 }
 
