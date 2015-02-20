@@ -95,14 +95,22 @@ int main(int argc, char* argv[]) {
 	uint aniFrame = 0;
 	// main simulation steps.
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
-		cout << "step number = " << i << endl;
+		//cout << "step number = " << i << endl;
+
 		if (i % mainPara.aniAuxVar == 0) {
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
-			cout << "finished output Animation" << endl;
+			//cout << "finished output Animation" << endl;
 			aniFrame++;
-
 		}
+		/*
+		 if (simuDomain.isDividing_ForAni()) {
+		 cout << "division! i = " << i << std::endl;
+		 simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+		 aniFrame, mainPara.aniCri);
+		 aniFrame++;
+		 }
+		 */
 		// for each step, run all logics of the domain.
 		simuDomain.runAllLogic_M(mainPara.dt);
 	}

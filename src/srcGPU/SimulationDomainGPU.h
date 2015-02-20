@@ -173,6 +173,8 @@ public:
 	 */
 	void runAllLogic_M(double dt);
 
+	bool isDividing_ForAni();
+
 	/**
 	 * Method that animates the domain to VTK format.
 	 * @param scriptNameBase name of the vtk animation series.

@@ -1544,8 +1544,6 @@ class SceCells {
 	 */
 	void adjustGrowthProgress_M();
 
-	bool decideIfGoingToDivide_M();
-
 	void copyCellsPreDivision_M();
 	void createTwoNewCellArr_M();
 	void copyFirstCellArr_M();
@@ -1570,10 +1568,11 @@ class SceCells {
 
 	void calMembrGrowSpeed_M();
 	void decideIfAddMembrNode_M();
-	void prepareForMembrGrow_M();
 	void addMembrNodes_M();
 
 	bool tmpDebug;
+
+	bool decideIfGoingToDivide_M();
 
 public:
 
@@ -1584,8 +1583,8 @@ public:
 			std::vector<SceNodeType> &cellTypes);
 
 	SceCells(SceNodes* nodesInput,
-			std::vector<uint> &numOfInitActiveEpiNodeCounts,
-			std::vector<uint> &numOfInitActiveInternalNodeCounts);
+			std::vector<uint> &numOfInitActiveMembrNodeCounts,
+			std::vector<uint> &numOfInitActiveIntnlNodeCounts);
 
 	void runAllCellLevelLogicsDisc(double dt);
 
@@ -1613,6 +1612,8 @@ public:
 
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);
+
+	bool aniDebug;
 };
 
 #endif /* SCECELLS_H_ */

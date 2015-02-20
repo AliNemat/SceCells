@@ -799,16 +799,22 @@ class SceNodes {
 	 * each data in bucketValues will represent
 	 */
 	void buildBuckets2D();
+
+	void buildBuckets2D_M();
 	/**
 	 * this method extends the previously obtained vector of keys and values to a map
 	 * that each point will map to all bucket IDs that are near the specific point.
 	 */
 	void extendBuckets2D();
 
+	void extendBuckets2D_M();
+
 	/**
 	 * this method prepares data for apply Sce forces.
 	 */
 	void findBucketBounds();
+
+	void findBucketBounds_M();
 
 	/**
 	 * This is the most important part of the parallel algorithm.
@@ -850,6 +856,10 @@ class SceNodes {
 	void initControlPara(bool isStab);
 
 	void debugNAN();
+
+	uint endIndx_M;
+	uint endIndxExt_M;
+	uint endIndxExtProc_M;
 
 	// friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, FindingPossiblePairsTest);
@@ -902,6 +912,11 @@ public:
 	 * this method contains all preparation work for SCE force calculation.
 	 */
 	void prepareSceForceComputation();
+
+	/**
+	 * this method contains all preparation work for SCE force calculation.
+	 */
+	void prepareSceForceComputation_M();
 
 	/**
 	 * wrap apply forces methods together.

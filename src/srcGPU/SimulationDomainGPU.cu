@@ -450,13 +450,13 @@ void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
-	std::cout << "started generate raw data" << std::endl;
+	//std::cout << "started generate raw data" << std::endl;
 	AniRawData rawAni = cells.obtainAniRawData(aniCri);
-	std::cout << "finished generate raw data" << std::endl;
+	//std::cout << "finished generate raw data" << std::endl;
 	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
-	std::cout << "finished generate vtk data" << std::endl;
+	//std::cout << "finished generate vtk data" << std::endl;
 	aniData.outputVtkAni(scriptNameBase, rank);
-	std::cout << "finished generate vtk file" << std::endl;
+	//std::cout << "finished generate vtk file" << std::endl;
 }
 
 void SimulationDomainGPU::printDomainInformation() {
@@ -555,6 +555,14 @@ void SimulationDomainGPU::analyzeLabelMatrix(vector<vector<int> > &labelMatrix,
 	} else {
 		resHelper.outputStat_PolygonCounting(statFileName, step, labelMatrix);
 	}
+}
+
+bool SimulationDomainGPU::isDividing_ForAni() {
+	if (cells.aniDebug) {
+		cells.aniDebug = false;
+		return true;
+	}
+	return false;
 }
 
 void SimulationDomainGPU::performAblation(AblationEvent& ablEvent) {

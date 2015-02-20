@@ -632,12 +632,13 @@ SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts) {
 	tmpDebug = false;
+	aniDebug = false;
 	membrPara.initFromConfig();
 	shrinkRatio = globalConfigVars.getConfigValue("ShrinkRatio").toDouble();
 	centerShiftRatio =
 			globalConfigVars.getConfigValue("CenterShiftRatio").toDouble();
-	//TODO : remove this redundent var
-	memNewSpacing = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
+
+	memNewSpacing = globalConfigVars.getConfigValue("MembrLenDiv").toDouble();
 
 	copyToGPUConstMem();
 	initialize_M(nodesInput);
@@ -1560,7 +1561,7 @@ void SceCells::createTwoNewCellArr_M() {
 		divAuxData.tmp2VecMem.clear();
 		uint cellRank = divAuxData.tmpCellRank_M[i];
 
-		std::cout << "cellRank= " << cellRank << std::endl;
+		//std::cout << "cellRank= " << cellRank << std::endl;
 
 		double curLen = cellInfoVecs.biggestDistance[cellRank]
 				- cellInfoVecs.smallestDistance[cellRank];
@@ -1574,7 +1575,7 @@ void SceCells::createTwoNewCellArr_M() {
 		double tmpSqrt = sqrt(divDirX * divDirX + divDirY * divDirY);
 		double lenChange = curLen / 2.0 * centerShiftRatio;
 
-		std::cout << "lenChange= " << lenChange << std::endl;
+		//std::cout << "lenChange= " << lenChange << std::endl;
 
 		double cell1CenterX = oldCenterX + divDirX / tmpSqrt * lenChange;
 		double cell1CenterY = oldCenterY + divDirY / tmpSqrt * lenChange;
@@ -1583,7 +1584,7 @@ void SceCells::createTwoNewCellArr_M() {
 		CVector cell1Center(cell1CenterX, cell1CenterY, 0);
 		CVector cell2Center(cell2CenterX, cell2CenterY, 0);
 
-		uint activeMemThreshold = cellInfoVecs.activeMembrNodeCounts[cellRank];
+		//cellInfoVecs.activeMembrNodeCounts[cellRank];
 
 		std::vector<VecVal> tmp1, tmp2;
 		VecVal tmpData;
@@ -1635,8 +1636,8 @@ void SceCells::createTwoNewCellArr_M() {
 		std::sort(tmp1.begin(), tmp1.end());
 		std::sort(tmp2.begin(), tmp2.end());
 
-		std::cout << "tmp1 size = " << tmp1.size() << std::endl;
-		std::cout << "tmp2 size = " << tmp2.size() << std::endl;
+		//std::cout << "tmp1 size = " << tmp1.size() << std::endl;
+		//std::cout << "tmp2 size = " << tmp2.size() << std::endl;
 
 		assert(tmp1.size() > 0);
 		assert(tmp2.size() > 0);
@@ -1656,6 +1657,9 @@ void SceCells::createTwoNewCellArr_M() {
 		for (uint j = 0; j < ptsBetween2.size(); j++) {
 			divAuxData.tmp2VecMem.push_back(ptsBetween2[j]);
 		}
+
+		assert(divAuxData.tmp1VecMem.size() <= membThreshold);
+		assert(divAuxData.tmp2VecMem.size() <= membThreshold);
 
 		divAuxData.tmp1MemActiveCounts.push_back(divAuxData.tmp1VecMem.size());
 		for (uint j = 0; j < membThreshold; j++) {
@@ -1732,26 +1736,37 @@ void SceCells::createTwoNewCellArr_M() {
 
 void SceCells::copyFirstCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	uint index, oriIndex;
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		uint cellRank = divAuxData.tmpCellRank_M[i];
-		for (uint j = 0; j < maxAllNodePerCell; j++) {
-			index = cellRank * maxAllNodePerCell + j
-					+ allocPara_m.bdryNodeCount;
-			oriIndex = i * maxAllNodePerCell + j;
-			nodes->getInfoVecs().nodeLocX[index] =
-					divAuxData.tmpXPos1_M[oriIndex];
-			nodes->getInfoVecs().nodeLocY[index] =
-					divAuxData.tmpYPos1_M[oriIndex];
-			nodes->getInfoVecs().nodeIsActive[index] =
-					divAuxData.tmpIsActive1_M[oriIndex];
-			nodes->getInfoVecs().nodeAdhereIndex[index] = -1;
-		}
+		uint nodeStartIndx = cellRank * maxAllNodePerCell
+				+ allocPara_m.bdryNodeCount;
+		uint tmpStartIndx = i * maxAllNodePerCell;
+		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
+		thrust::constant_iterator<int> noAdhesion(-1);
+		thrust::copy(
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
+								divAuxData.tmpYPos1_M.begin(),
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion))
+						+ tmpStartIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
+								divAuxData.tmpYPos1_M.begin(),
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion))
+						+ tmpEndIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(
+								nodes->getInfoVecs().nodeLocX.begin(),
+								nodes->getInfoVecs().nodeLocY.begin(),
+								nodes->getInfoVecs().nodeIsActive.begin(),
+								nodes->getInfoVecs().nodeAdhereIndex.begin()))
+						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp1InternalActiveCounts[i];
 		cellInfoVecs.activeMembrNodeCounts[cellRank] =
 				divAuxData.tmp1MemActiveCounts[i];
 		cellInfoVecs.growthProgress[cellRank] = 0;
+		cellInfoVecs.membrGrowProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 	}
@@ -1759,26 +1774,37 @@ void SceCells::copyFirstCellArr_M() {
 
 void SceCells::copySecondCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	uint index, oriIndex;
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		uint cellRank = allocPara_m.currentActiveCellCount + i;
-		for (uint j = 0; j < maxAllNodePerCell; j++) {
-			index = cellRank * maxAllNodePerCell + j
-					+ allocPara_m.bdryNodeCount;
-			oriIndex = i * maxAllNodePerCell + j;
-			nodes->getInfoVecs().nodeLocX[index] =
-					divAuxData.tmpXPos2_M[oriIndex];
-			nodes->getInfoVecs().nodeLocY[index] =
-					divAuxData.tmpYPos2_M[oriIndex];
-			nodes->getInfoVecs().nodeIsActive[index] =
-					divAuxData.tmpIsActive2_M[oriIndex];
-			nodes->getInfoVecs().nodeAdhereIndex[index] = -1;
-		}
+		uint nodeStartIndx = cellRank * maxAllNodePerCell
+				+ allocPara_m.bdryNodeCount;
+		uint tmpStartIndx = i * maxAllNodePerCell;
+		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
+		thrust::constant_iterator<int> noAdhesion(-1);
+		thrust::copy(
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
+								divAuxData.tmpYPos2_M.begin(),
+								divAuxData.tmpIsActive2_M.begin(), noAdhesion))
+						+ tmpStartIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
+								divAuxData.tmpYPos2_M.begin(),
+								divAuxData.tmpIsActive2_M.begin(), noAdhesion))
+						+ tmpEndIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(
+								nodes->getInfoVecs().nodeLocX.begin(),
+								nodes->getInfoVecs().nodeLocY.begin(),
+								nodes->getInfoVecs().nodeIsActive.begin(),
+								nodes->getInfoVecs().nodeAdhereIndex.begin()))
+						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp2InternalActiveCounts[i];
 		cellInfoVecs.activeMembrNodeCounts[cellRank] =
 				divAuxData.tmp2MemActiveCounts[i];
 		cellInfoVecs.growthProgress[cellRank] = 0;
+		cellInfoVecs.membrGrowProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 	}
@@ -2006,12 +2032,14 @@ void SceCells::divide2D_M() {
 	if (!isDivisionPresent) {
 		return;
 	}
+	aniDebug = true;
 	copyCellsPreDivision_M();
 	createTwoNewCellArr_M();
 	copyFirstCellArr_M();
 	copySecondCellArr_M();
 	updateActiveCellCount_M();
 	markIsDivideFalse_M();
+	//divDebug();
 }
 
 void SceCells::distributeCellGrowthProgress_M() {
@@ -2314,40 +2342,50 @@ bool SceCells::decideIfGoingToDivide_M() {
 }
 
 AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
+	uint activeCellCount = allocPara_m.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	uint beginIndx = allocPara_m.bdryNodeCount;
+
 	AniRawData rawAniData;
 
 	std::vector<std::pair<uint, uint> > pairs =
 			nodes->obtainPossibleNeighborPairs_M();
-	cout << "size of potential pairs = " << pairs.size() << endl;
+	//cout << "size of potential pairs = " << pairs.size() << endl;
 
 // unordered_map is more efficient than map, but it is a c++ 11 feature
 // and c++ 11 seems to be incompatible with Thrust.
 	IndexMap locIndexToAniIndexMap;
 
-// Doesn't have to copy the entire nodeLocX array.
-// Only copy the first half will be sufficient
-	thrust::host_vector<double> hostTmpVectorLocX =
-			nodes->getInfoVecs().nodeLocX;
-	thrust::host_vector<double> hostTmpVectorLocY =
-			nodes->getInfoVecs().nodeLocY;
-	thrust::host_vector<bool> hostIsActiveVec =
-			nodes->getInfoVecs().nodeIsActive;
-	thrust::host_vector<int> hostBondVec = nodes->getInfoVecs().nodeAdhereIndex;
-	thrust::host_vector<double> hostTmpVectorTenMag =
-			nodes->getInfoVecs().membrTensionMag;
-	thrust::host_vector<SceNodeType> hostTmpVectorNodeType =
-			nodes->getInfoVecs().nodeCellType;
+	uint maxActiveNode = activeCellCount * maxNodePerCell;
+	thrust::host_vector<double> hostTmpVectorLocX(maxActiveNode);
+	thrust::host_vector<double> hostTmpVectorLocY(maxActiveNode);
+	thrust::host_vector<bool> hostIsActiveVec(maxActiveNode);
+	thrust::host_vector<int> hostBondVec(maxActiveNode);
+	thrust::host_vector<double> hostTmpVectorTenMag(maxActiveNode);
+
+	thrust::copy(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin()))
+					+ maxActiveNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(hostTmpVectorLocX.begin(),
+							hostTmpVectorLocY.begin(), hostIsActiveVec.begin(),
+							hostBondVec.begin(), hostTmpVectorTenMag.begin())));
 
 	thrust::host_vector<uint> curActiveMemNodeCounts =
 			cellInfoVecs.activeMembrNodeCounts;
 
-	uint activeCellCount = allocPara_m.currentActiveCellCount;
-	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
-	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
-	uint beginIndx = allocPara_m.bdryNodeCount;
-//uint endIndx = beginIndx + activeCellCount * maxNodePerCell;
-
-//uint cellRank1, nodeRank1, cellRank2, nodeRank2;
 	CVector tmpPos;
 	uint index1;
 	int index2;
@@ -2427,6 +2465,20 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 				linkData.node1Index = aniIndex1;
 				linkData.node2Index = aniIndex2;
 				rawAniData.memLinks.push_back(linkData);
+
+				// debug only
+				/*
+				 if (fabs(node1X - node2X) > 0.1
+				 || fabs(node1Y - node2Y) > 0.1) {
+				 std::cout << "index 1 = " << index1 << " index 2 = "
+				 << index2 << std::endl;
+				 std::cout << "strange index = " << j << ", node 1 = ("
+				 << node1X << "," << node1Y << "), node 2 = ("
+				 << node2X << "," << node2Y << ")" << std::endl;
+				 int jj;
+				 std::cin >> jj;
+				 }
+				 */
 			}
 		}
 	}
@@ -2475,7 +2527,6 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 			rawAniData.internalLinks.push_back(linkData);
 		}
 	}
-
 	return rawAniData;
 }
 
@@ -2628,6 +2679,24 @@ void SceCells::divDebug() {
 	std::cout << "tmpXPos1_M : ";
 	for (uint i = 0; i < divAuxData.tmpXPos1_M.size(); i++) {
 		std::cout << divAuxData.tmpXPos1_M[i] << " ";
+		if (i > 0 && i < allocPara_m.maxMembrNodePerCell
+				&& divAuxData.tmpIsActive1_M[i]
+				&& divAuxData.tmpIsActive1_M[i - 1]
+				&& fabs(divAuxData.tmpXPos1_M[i] - divAuxData.tmpXPos1_M[i - 1])
+						> 0.1) {
+			std::cout << "11111111111111111111111, " << i << std::endl;
+			int jj;
+			cin >> jj;
+		}
+	}
+	std::cout << std::endl;
+	std::cout << "XPos1_onDevice : ";
+	for (uint i = 0; i < divAuxData.tmpCellRank_M.size(); i++) {
+		for (uint j = 0; j < allocPara_m.maxAllNodePerCell; j++) {
+			uint index = divAuxData.tmpCellRank_M[i]
+					* allocPara_m.maxAllNodePerCell + j;
+			std::cout << nodes->getInfoVecs().nodeLocX[index] << " ";
+		}
 	}
 	std::cout << std::endl;
 
@@ -2646,11 +2715,44 @@ void SceCells::divDebug() {
 	std::cout << "tmpXPos2_M : ";
 	for (uint i = 0; i < divAuxData.tmpXPos2_M.size(); i++) {
 		std::cout << divAuxData.tmpXPos2_M[i] << " ";
+		if (i > 0 && i < allocPara_m.maxMembrNodePerCell
+				&& divAuxData.tmpIsActive2_M[i]
+				&& divAuxData.tmpIsActive2_M[i - 1]
+				&& fabs(divAuxData.tmpXPos2_M[i] - divAuxData.tmpXPos2_M[i - 1])
+						> 0.1) {
+			std::cout << "2222222222222222222, " << i << std::endl;
+			int jj;
+			cin >> jj;
+		}
 	}
 	std::cout << std::endl;
 	std::cout << "tmpYPos2_M : ";
 	for (uint i = 0; i < divAuxData.tmpYPos2_M.size(); i++) {
 		std::cout << divAuxData.tmpYPos2_M[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmp1InternalActiveCounts: ";
+	for (uint i = 0; i < divAuxData.tmp1InternalActiveCounts.size(); i++) {
+		std::cout << divAuxData.tmp1InternalActiveCounts[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmp2InternalActiveCounts: ";
+	for (uint i = 0; i < divAuxData.tmp2InternalActiveCounts.size(); i++) {
+		std::cout << divAuxData.tmp2InternalActiveCounts[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmp1MemActiveCounts: ";
+	for (uint i = 0; i < divAuxData.tmp1MemActiveCounts.size(); i++) {
+		std::cout << divAuxData.tmp1MemActiveCounts[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "tmp2MemActiveCounts: ";
+	for (uint i = 0; i < divAuxData.tmp2MemActiveCounts.size(); i++) {
+		std::cout << divAuxData.tmp2MemActiveCounts[i] << " ";
 	}
 	std::cout << std::endl;
 
@@ -2721,20 +2823,18 @@ void SceCells::copyToGPUConstMem() {
 }
 
 void SceCells::handleMembrGrowth_M() {
-	// figure out membr growth speed
+// figure out membr growth speed
 	calMembrGrowSpeed_M();
-	// figure out which cells will add new point
+// figure out which cells will add new point
 	decideIfAddMembrNode_M();
-	// figure out the index and location of membr nodes to be added
-	prepareForMembrGrow_M();
-	// add membr nodes
+// add membr nodes
 	addMembrNodes_M();
-	//membrDebug();
+//membrDebug();
 }
 
 void SceCells::calMembrGrowSpeed_M() {
 
-	// reduce_by_key, find value of max tension and their index
+// reduce_by_key, find value of max tension and their index
 	thrust::counting_iterator<uint> iBegin(0);
 	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
 	thrust::reduce_by_key(
@@ -2756,7 +2856,7 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxTenRiMidYVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
-	// linear relationship with highest tension; capped by a given value
+// linear relationship with highest tension; capped by a given value
 	thrust::transform(cellInfoVecs.maxTenRiVec.begin(),
 			cellInfoVecs.maxTenRiVec.begin()
 					+ allocPara_m.currentActiveCellCount,
@@ -2765,8 +2865,8 @@ void SceCells::calMembrGrowSpeed_M() {
 }
 
 void SceCells::decideIfAddMembrNode_M() {
-	// decide if add membrane node given current active node count and
-	// membr growth progress
+// decide if add membrane node given current active node count and
+// membr growth progress
 	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
 	thrust::transform(cellInfoVecs.membrGrowSpeed.begin(),
 			cellInfoVecs.membrGrowSpeed.begin() + maxNPerCell,
@@ -2788,16 +2888,10 @@ void SceCells::decideIfAddMembrNode_M() {
 			MemGrowFunc(maxMembrNode));
 }
 
-void SceCells::prepareForMembrGrow_M() {
-	// calculate the position of the membr node to be added,
-	// if membr is scheduled to growth.
-	// nothing to be done here because all completed in previous steps
-}
-
 void SceCells::addMembrNodes_M() {
-	// add node to the array.
-	// this operation is relatively expensive because of memory
-	// re-arrangement.
+// add node to the array.
+// this operation is relatively expensive because of memory
+// re-arrangement.
 	thrust::counting_iterator<uint> iBegin(0);
 	uint curAcCCount = allocPara_m.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;

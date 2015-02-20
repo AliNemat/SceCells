@@ -1120,10 +1120,27 @@ void SceNodes::findBucketBounds() {
 			search_begin + domainPara.totalBucketCount, auxVecs.keyEnd.begin());
 }
 
+void SceNodes::findBucketBounds_M() {
+	thrust::counting_iterator<uint> search_begin(0);
+	thrust::lower_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExtProc_M, search_begin,
+			search_begin + domainPara.totalBucketCount,
+			auxVecs.keyBegin.begin());
+	thrust::upper_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExtProc_M, search_begin,
+			search_begin + domainPara.totalBucketCount, auxVecs.keyEnd.begin());
+}
+
 void SceNodes::prepareSceForceComputation() {
 	buildBuckets2D();
 	extendBuckets2D();
 	findBucketBounds();
+}
+
+void SceNodes::prepareSceForceComputation_M() {
+	buildBuckets2D_M();
+	extendBuckets2D_M();
+	findBucketBounds_M();
 }
 
 void SceNodes::addNewlyDividedCells(
@@ -1216,6 +1233,46 @@ void SceNodes::buildBuckets2D() {
 	auxVecs.bucketValues.erase(auxVecs.bucketValues.end() - numberOfOutOfRange,
 			auxVecs.bucketValues.end());
 }
+
+void SceNodes::buildBuckets2D_M() {
+	int totalActiveNodes = allocPara_M.bdryNodeCount
+			+ allocPara_M.currentActiveCellCount
+					* allocPara_M.maxAllNodePerCell;
+
+	thrust::counting_iterator<uint> countingIterBegin(0);
+	// takes counting iterator and coordinates
+	// return tuple of keys and values
+	// transform the points to their bucket indices
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), countingIterBegin)),
+			make_zip_iterator(
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), countingIterBegin))
+					+ totalActiveNodes,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
+			pointToBucketIndex2D(domainPara.minX, domainPara.maxX,
+					domainPara.minY, domainPara.maxY, domainPara.gridSpacing));
+
+	// sort the points by their bucket index
+	thrust::sort_by_key(auxVecs.bucketKeys.begin(),
+			auxVecs.bucketKeys.begin() + totalActiveNodes,
+			auxVecs.bucketValues.begin());
+	// for those nodes that are inactive, key value of UINT_MAX will be returned.
+	// we need to removed those keys along with their values.
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeys.begin(),
+			auxVecs.bucketKeys.begin() + totalActiveNodes, UINT_MAX);
+
+	endIndx_M = totalActiveNodes - numberOfOutOfRange;
+}
+
 __device__
 double computeDist(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2) {
@@ -1918,6 +1975,52 @@ void SceNodes::extendBuckets2D() {
 			auxVecs.bucketValuesIncludingNeighbor.end());
 }
 
+void SceNodes::extendBuckets2D_M() {
+	endIndxExt_M = endIndx_M * 9;
+	/**
+	 * beginning of constant iterator
+	 */
+	thrust::constant_iterator<uint> first(9);
+	/**
+	 * end of constant iterator.
+	 * the plus sign only indicate movement of position, not value.
+	 * e.g. movement is 5 and first iterator is initialized as 9
+	 * result array is [9,9,9,9,9];
+	 */
+	thrust::constant_iterator<uint> last = first + endIndx_M;
+
+	expand(first, last,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							auxVecs.bucketValuesIncludingNeighbor.begin())));
+
+	thrust::counting_iterator<uint> countingBegin(0);
+
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)) + endIndxExt_M,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
+			NeighborFunctor2D(domainPara.numOfBucketsInXDim,
+					domainPara.numOfBucketsInYDim));
+
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExt_M, UINT_MAX);
+
+	endIndxExtProc_M = endIndxExt_M - numberOfOutOfRange;
+	thrust::sort_by_key(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExt_M,
+			auxVecs.bucketValuesIncludingNeighbor.begin());
+}
+
 void SceNodes::applySceForcesBasic() {
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);
@@ -2046,14 +2149,14 @@ void SceNodes::applySceForcesDisc_M() {
 			make_zip_iterator(
 					make_tuple(
 							make_permutation_iterator(auxVecs.keyBegin.begin(),
-									auxVecs.bucketKeys.end()),
+									auxVecs.bucketKeys.begin() + endIndx_M),
 							make_permutation_iterator(auxVecs.keyEnd.begin(),
-									auxVecs.bucketKeys.end()),
+									auxVecs.bucketKeys.begin() + endIndx_M),
 							auxVecs.bucketValues.end(),
 							make_permutation_iterator(infoVecs.nodeLocX.begin(),
-									auxVecs.bucketValues.end()),
+									auxVecs.bucketValues.begin() + endIndx_M),
 							make_permutation_iterator(infoVecs.nodeLocY.begin(),
-									auxVecs.bucketValues.end()))),
+									auxVecs.bucketValues.begin() + endIndx_M))),
 			make_zip_iterator(
 					make_tuple(
 							make_permutation_iterator(infoVecs.nodeVelX.begin(),
@@ -2226,9 +2329,9 @@ void SceNodes::sceForcesDisc() {
 }
 
 void SceNodes::sceForcesDisc_M() {
-	prepareSceForceComputation();
+	prepareSceForceComputation_M();
 	applySceForcesDisc_M();
-	debugNAN();
+	//debugNAN();
 }
 
 double SceNodes::getMaxEffectiveRange() {
@@ -2286,6 +2389,11 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidY.resize(maxTotalNodeCount, 0);
+
+		auxVecs.bucketKeys.resize(maxTotalNodeCount);
+		auxVecs.bucketValues.resize(maxTotalNodeCount);
+		auxVecs.bucketKeysExpanded.resize(maxTotalNodeCount * 9);
+		auxVecs.bucketValuesIncludingNeighbor.resize(maxTotalNodeCount * 9);
 	}
 }
 
