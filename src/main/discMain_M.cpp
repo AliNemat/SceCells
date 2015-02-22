@@ -91,6 +91,12 @@ int main(int argc, char* argv[]) {
 	// delete old data file.
 	std::remove(mainPara.dataOutput.c_str());
 
+	std::string polyStatFileName = globalConfigVars.getConfigValue(
+			"PolygonStatFileName").toString();
+	std::remove(polyStatFileName.c_str());
+	double divThreshold =
+			globalConfigVars.getConfigValue("DivThreshold").toDouble();
+
 	// preparation.
 	uint aniFrame = 0;
 	// main simulation steps.
@@ -98,19 +104,14 @@ int main(int argc, char* argv[]) {
 		//cout << "step number = " << i << endl;
 
 		if (i % mainPara.aniAuxVar == 0) {
+			PolyCountData polyData = simuDomain.outputPolyCountData();
+			polyData.printToFile(polyStatFileName, divThreshold);
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			//cout << "finished output Animation" << endl;
 			aniFrame++;
+
 		}
-		/*
-		 if (simuDomain.isDividing_ForAni()) {
-		 cout << "division! i = " << i << std::endl;
-		 simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
-		 aniFrame, mainPara.aniCri);
-		 aniFrame++;
-		 }
-		 */
 		// for each step, run all logics of the domain.
 		simuDomain.runAllLogic_M(mainPara.dt);
 	}

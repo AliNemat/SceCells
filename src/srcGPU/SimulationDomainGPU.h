@@ -214,6 +214,8 @@ public:
 			std::string &imageFileNameBase, std::string &statFileName);
 
 	void performAblation(AblationEvent &ablEvent);
+
+	PolyCountData outputPolyCountData();
 };
 
 #endif

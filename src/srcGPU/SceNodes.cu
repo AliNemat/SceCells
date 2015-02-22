@@ -1427,9 +1427,9 @@ void calAndAddIntraB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 				+ sceIntnlBPara_M[1] / sceIntnlBPara_M[3]
 						* exp(-linkLength / sceIntnlBPara_M[3]);
 	}
-	if (forceValue > 0) {
-		forceValue = 0;
-	}
+	//if (forceValue > 0) {
+	//	forceValue = 0;
+	//}
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
@@ -1658,13 +1658,17 @@ bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
 		return false;
 	}
+	uint cellRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			/ allNodeCountPerCell_M;
+	uint cellRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			/ allNodeCountPerCell_M;
+	if (cellRank1 == cellRank2) {
+		return false;
+	}
 	uint nodeRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
 			% allNodeCountPerCell_M;
 	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
 			% allNodeCountPerCell_M;
-	if (nodeRank1 == nodeRank2) {
-		return false;
-	}
 	if (nodeRank1 < membrThreshold_M && nodeRank2 < membrThreshold_M) {
 		return true;
 	} else {

@@ -127,12 +127,28 @@ struct NanCount: public thrust::binary_function<double, double, CVec3> {
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
-struct ActiveAndInternal {
+struct ActiveAndIntnl {
 	__device__
 	bool operator()(const thrust::tuple<bool, SceNodeType> &bt) {
 		bool isActive = thrust::get<0>(bt);
 		SceNodeType type = thrust::get<1>(bt);
 		if (isActive == true && type == CellIntnl) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
+/**
+ * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
+ */
+struct ActiveAndMembr {
+	__device__
+	bool operator()(const thrust::tuple<bool, SceNodeType> &bt) {
+		bool isActive = thrust::get<0>(bt);
+		SceNodeType type = thrust::get<1>(bt);
+		if (isActive == true && type == CellMembr) {
 			return true;
 		} else {
 			return false;
@@ -555,7 +571,6 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 							xPos, yPos, _nodeLocXAddress[nodeRankOfOtherNode],
 							_nodeLocYAddress[nodeRankOfOtherNode]);
 				}
-
 			}
 
 		}
@@ -716,6 +731,7 @@ public:
 
 	// only for modified version
 	thrust::device_vector<int> nodeAdhereIndex;
+	thrust::device_vector<int> membrIntnlIndex;
 
 	thrust::device_vector<double> membrTensionMag;
 	thrust::device_vector<double> membrTenMagRi;

@@ -602,3 +602,9 @@ void SimulationDomainGPU::performAblation(AblationEvent& ablEvent) {
 
 	cells.runAblationTest(aa);
 }
+
+PolyCountData SimulationDomainGPU::outputPolyCountData() {
+	// this step is necessary for obtaining correct neighbors because new cells might have been created in previous step.
+	nodes.sceForcesDisc_M();
+	return cells.outputPolyCountData();
+}

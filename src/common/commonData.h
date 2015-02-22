@@ -8,6 +8,7 @@
 #include <math.h>
 #include <sstream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -625,5 +626,35 @@ struct VecVal {
 
 std::vector<CVector> obtainPtsBetween(CVector& pt1, CVector& pt2,
 		double& spacing);
+
+struct CellPolyData {
+	uint cellRank;
+	double cellGrowthProgress;
+	bool isBdryCell;
+	uint numNeighbors;
+};
+
+struct CountEntry {
+	uint numOfNeighbor;
+	uint count;
+	bool operator <(const CountEntry& other) const {
+		return (numOfNeighbor < other.numOfNeighbor);
+	}
+};
+
+class PolyCountData {
+public:
+	std::vector<CellPolyData> cellPolyCounts;
+
+	void printToFile(std::string fileName, double divThreshold);
+};
+
+void insertCount(uint numNeighbor, std::map<uint, uint>& count);
+void printCountsToFile(std::string fileName, std::map<uint, uint>& countNormal,
+		std::map<uint, uint>& countDiv, std::map<uint, uint>& countBdry);
+
+std::vector<CountEntry> processCountMap(std::map<uint, uint>& countMap);
+
+void printEntriesToFile(ofstream& fs, std::vector<CountEntry>& countEntries);
 
 #endif /* COMMONDATA_H_ */

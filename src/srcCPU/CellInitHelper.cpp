@@ -917,7 +917,7 @@ void SimulationGlobalParameter::initFromConfig() {
 	aniCri.arrowLength =
 			globalConfigVars.getConfigValue("DisplayArrowLength").toDouble();
 
-	if (simuType != Beak) {
+	if (simuType != Beak && simuType != Disc_M) {
 		dataOutput =
 				globalConfigVars.getConfigValue("PolygonStatFileName").toString();
 		imgOutput =

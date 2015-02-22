@@ -373,3 +373,64 @@ std::vector<CVector> obtainPtsBetween(CVector& start, CVector& end,
 	}
 	return result;
 }
+
+void PolyCountData::printToFile(std::string fileName, double divThreshold) {
+	//std::remove(fileName.c_str());
+	std::map<uint, uint> countBdry, countNormal, countDiv;
+	for (uint i = 0; i < cellPolyCounts.size(); i++) {
+		if (cellPolyCounts[i].isBdryCell == true) {
+			insertCount(cellPolyCounts[i].numNeighbors, countBdry);
+		} else {
+			if (cellPolyCounts[i].cellGrowthProgress <= divThreshold) {
+				insertCount(cellPolyCounts[i].numNeighbors, countNormal);
+			} else {
+				insertCount(cellPolyCounts[i].numNeighbors, countDiv);
+			}
+		}
+	}
+	printCountsToFile(fileName, countNormal, countDiv, countBdry);
+}
+
+void insertCount(uint numNeighbor, std::map<uint, uint>& count) {
+	std::map<uint, uint>::iterator it = count.find(numNeighbor);
+	if (it == count.end()) {
+		count.insert(std::pair<uint, uint>(numNeighbor, 1));
+	} else {
+		it->second = it->second + 1;
+	}
+}
+
+void printCountsToFile(std::string fileName, std::map<uint, uint>& countNormal,
+		std::map<uint, uint>& countDiv, std::map<uint, uint>& countBdry) {
+	ofstream ofs(fileName.c_str(), ios::app);
+	std::vector<CountEntry> normalEntries = processCountMap(countNormal);
+	printEntriesToFile(ofs, normalEntries);
+	ofs << "# ";
+	std::vector<CountEntry> divEntries = processCountMap(countDiv);
+	printEntriesToFile(ofs, divEntries);
+	ofs << "# ";
+	std::vector<CountEntry> bdryEntries = processCountMap(countBdry);
+	printEntriesToFile(ofs, bdryEntries);
+	ofs << std::endl;
+	ofs.close();
+}
+
+std::vector<CountEntry> processCountMap(std::map<uint, uint>& countMap) {
+	std::vector<CountEntry> result;
+	std::map<uint, uint>::iterator it;
+	for (it = countMap.begin(); it != countMap.end(); ++it) {
+		CountEntry tmpEntry;
+		tmpEntry.numOfNeighbor = it->first;
+		tmpEntry.count = it->second;
+		result.push_back(tmpEntry);
+	}
+	sort(result.begin(), result.end());
+	return result;
+}
+
+void printEntriesToFile(ofstream& fs, std::vector<CountEntry>& countEntries) {
+	for (uint i = 0; i < countEntries.size(); i++) {
+		fs << countEntries[i].numOfNeighbor << "," << countEntries[i].count
+				<< " ";
+	}
+}

@@ -7,6 +7,8 @@
 #include <thrust/tabulate.h>
 
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
+typedef thrust::tuple<bool, double, double> BoolDD;
+typedef thrust::tuple<uint, double, double> UiDD;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
@@ -125,6 +127,14 @@ struct CVec3Add: public thrust::binary_function<CVec3, CVec3, CVec3> {
 	}
 };
 
+struct CVec2Add: public thrust::binary_function<CVec2, CVec2, CVec2> {
+	__host__ __device__
+	CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+		return thrust::make_tuple(thrust::get<0>(vec1) + thrust::get<0>(vec2),
+				thrust::get<1>(vec1) + thrust::get<1>(vec2));
+	}
+};
+
 /**
  * Divide three inputs by one same number.
  * @param input1 first number to be divide \n
@@ -139,6 +149,14 @@ struct CVec3Divide: public thrust::binary_function<CVec3, double, CVec3> {
 	CVec3 operator()(const CVec3 &vec1, const double &divisor) {
 		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
 				thrust::get<1>(vec1) / divisor, thrust::get<2>(vec1) / divisor);
+	}
+};
+
+struct CVec2Divide: public thrust::binary_function<CVec2, double, CVec2> {
+	__host__ __device__
+	CVec2 operator()(const CVec2 &vec1, const double &divisor) {
+		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
+				thrust::get<1>(vec1) / divisor);
 	}
 };
 
@@ -629,7 +647,7 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 
 };
 
-struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, BoolUID> {
+struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 	uint _seed;
 	double _addNodeDistance;
 	double _growThreshold;
@@ -648,15 +666,14 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, BoolUID> {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
-	BoolUID operator()(const BoolUIDDUID &biddi) {
+	DUi operator()(const BoolUIDDUID &biddi) {
 		bool isScheduledToGrow = thrust::get<0>(biddi);
 		uint activeMembrNodeThis = thrust::get<1>(biddi);
 		double lastCheckPoint = thrust::get<5>(biddi);
 
 		bool isFull = isAllIntnlFilled(activeMembrNodeThis);
 		if (!isScheduledToGrow || isFull) {
-			return thrust::make_tuple(isScheduledToGrow, activeMembrNodeThis,
-					lastCheckPoint);
+			return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
 		}
 
 		double cellCenterXCoord = thrust::get<2>(biddi);
@@ -673,14 +690,13 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, BoolUID> {
 		_nodeXPosAddress[cellNodeEndPos] = xCoordNewPt;
 		_nodeYPosAddress[cellNodeEndPos] = yCoordNewPt;
 		_nodeIsActiveAddress[cellNodeEndPos] = true;
-		isScheduledToGrow = false;
 		activeMembrNodeThis = activeMembrNodeThis + 1;
 		lastCheckPoint = lastCheckPoint + _growThreshold;
 		if (lastCheckPoint > 1.0) {
 			lastCheckPoint = 1.0;
 		}
-		return thrust::make_tuple(isScheduledToGrow, activeMembrNodeThis,
-				lastCheckPoint);
+
+		return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
 	}
 
 };
@@ -985,6 +1001,25 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, BoolD> {
 	}
 };
 
+struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
+	uint _maxIntnlNodePerCell;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	CompuIsDivide_M(uint maxIntnlNodePerCell) :
+			_maxIntnlNodePerCell(maxIntnlNodePerCell) {
+	}
+	__host__ __device__
+	bool operator()(const DUi &vec) {
+		double growthProgress = thrust::get<0>(vec);
+		uint nodeCount = thrust::get<1>(vec);
+		if (growthProgress >= 1.0 && nodeCount == _maxIntnlNodePerCell) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
 /**
  * Functor for modify veolcities of all nodes given node type and isActive
  * @param input1: take velocity , type and isActive info of node
@@ -1027,6 +1062,26 @@ struct ForceZero: public thrust::unary_function<CVec2, CVec2> {
 	__host__ __device__
 	CVec2 operator()(const CVec2 &oriData) {
 		return thrust::make_tuple(0.0, 0.0);
+	}
+};
+
+struct AdjustGrowth: public thrust::unary_function<UiDD, BoolDD> {
+	uint _halfMax;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AdjustGrowth(uint halfMax) :
+			_halfMax(halfMax) {
+	}
+	__host__ __device__
+	BoolDD operator()(const UiDD &growData) {
+		uint curIntnlNodeCount = thrust::get<0>(growData);
+		double curProgress = thrust::get<1>(growData);
+		double lastPoint = thrust::get<2>(growData);
+		if (curIntnlNodeCount <= _halfMax) {
+			curProgress = 0;
+			lastPoint = 0;
+		}
+		return thrust::make_tuple(false, curProgress, lastPoint);
 	}
 };
 
@@ -1542,7 +1597,7 @@ class SceCells {
 	 * It is possible for cells to have node number that is less than expect after division.
 	 * This adjustment is necessary for cells to grow normally.
 	 */
-	void adjustGrowthProgress_M();
+	void adjustGrowthInfo_M();
 
 	void copyCellsPreDivision_M();
 	void createTwoNewCellArr_M();
@@ -1624,6 +1679,8 @@ public:
 
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);
+
+	PolyCountData outputPolyCountData();
 
 	bool aniDebug;
 };
