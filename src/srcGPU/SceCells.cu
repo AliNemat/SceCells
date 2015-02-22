@@ -27,7 +27,6 @@ double obtainRandAngle(uint& cellRank, uint& seed) {
 	thrust::uniform_real_distribution<double> u0Pi(0, 2.0 * pI);
 	double randomAngle = u0Pi(rng);
 	return randomAngle;
-
 }
 
 __device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {

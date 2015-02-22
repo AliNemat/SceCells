@@ -99,6 +99,9 @@ bool bothMembr(uint nodeGlobalRank1, uint nodeGlobalRank2);
 __device__
 bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
+__device__
+bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2);
+
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -396,7 +399,17 @@ void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
 		double& xRes, double& yRes);
 
 __device__
+void handleIntnlAdh_M(uint& nodeRank, int& adhereIndex, double& xPos,
+		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double& xRes, double& yRes);
+
+__device__
 void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
+		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2);
+
+__device__
+void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
 		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
 		double& yPos2);
 
@@ -530,15 +543,17 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	double* _nodeLocXAddress;
 	double* _nodeLocYAddress;
 	int* _nodeAdhereIndex;
+	int* _membrIntnlIndex;
 	double* _nodeGroProAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
-			double* nodeLocYAddress, int* nodeAdhereIndex,
+			double* nodeLocYAddress, int* nodeAdhereIndex, int* membrIntnlIndex,
 			double* nodeGrowProAddr) :
 			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
 					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeAdhereIndex(
-					nodeAdhereIndex), _nodeGroProAddr(nodeGrowProAddr) {
+					nodeAdhereIndex), _membrIntnlIndex(membrIntnlIndex), _nodeGroProAddr(
+					nodeGrowProAddr) {
 	}
 	__device__
 	CVec2 operator()(const Tuuudd &u3d2) const {
@@ -551,9 +566,9 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		double xPos = thrust::get<3>(u3d2);
 		double yPos = thrust::get<4>(u3d2);
 
-		bool isSuccess = false;
-		uint index;
-		double dist;
+		bool isSuccess = false, isSuccessIntnl = false;
+		uint index, indexIntnl;
+		double dist, distIntnl;
 
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
@@ -572,13 +587,26 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 							_nodeLocYAddress[nodeRankOfOtherNode]);
 				}
 			}
-
+			if (sameCellMemIntnl(myValue, nodeRankOfOtherNode)) {
+				if (_membrIntnlIndex[myValue] == -1) {
+					attemptToAdhereIntnl(isSuccessIntnl, indexIntnl, distIntnl,
+							nodeRankOfOtherNode, xPos, yPos,
+							_nodeLocXAddress[nodeRankOfOtherNode],
+							_nodeLocYAddress[nodeRankOfOtherNode]);
+				}
+			}
 		}
-
 		if (isSuccess) {
 			_nodeAdhereIndex[myValue] = index;
 		}
+
+		if (isSuccessIntnl) {
+			_membrIntnlIndex[myValue] = indexIntnl;
+		}
+
 		handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
+				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
+		handleIntnlAdh_M(myValue, _membrIntnlIndex[myValue], xPos, yPos,
 				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
 
 		return thrust::make_tuple(xRes, yRes);

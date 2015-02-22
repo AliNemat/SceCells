@@ -31,6 +31,11 @@ __constant__ double minAdhBondLen_M;
 __constant__ double bondStiff_M;
 __constant__ double bondAdhCriLen_M;
 
+__constant__ double intnlAdhCriLen_M;
+__constant__ double intnlStiff_M;
+__constant__ double maxIntnlAdhLen_M;
+__constant__ double minIntnlAdhLen_M;
+
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
 //
@@ -398,6 +403,7 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 
 	thrust::host_vector<int> bondVec(maxTotalNodeCount, -1);
 	infoVecs.nodeAdhereIndex = bondVec;
+	infoVecs.membrIntnlIndex = bondVec;
 	//std::cout << "copy finished!" << std::endl;
 	//std::cout.flush();
 	copyParaToGPUConstMem_M();
@@ -443,6 +449,7 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			sizeof(uint));
 	cudaMemcpyToSymbol(bondAdhCriLen_M, &mechPara_M.bondAdhCriLenCPU_M,
 			sizeof(double));
+
 	cudaMemcpyToSymbol(bondStiff_M, &mechPara_M.bondStiffCPU_M, sizeof(double));
 	cudaMemcpyToSymbol(growthPrgrCriVal_M, &mechPara_M.growthPrgrCriValCPU_M,
 			sizeof(double));
@@ -458,6 +465,15 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIntraParaDiv_M, mechPara_M.sceIntraParaDivCPU_M,
 			5 * sizeof(double));
+
+	cudaMemcpyToSymbol(intnlAdhCriLen_M, &mechPara_M.intnlAdhCriLenCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(intnlStiff_M, &mechPara_M.intnlStiffCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(maxIntnlAdhLen_M, &mechPara_M.maxIntnlAdhLenCPU_M,
+			sizeof(double));
+	cudaMemcpyToSymbol(minIntnlAdhLen_M, &mechPara_M.minIntnlAdhLenCPU_M,
+			sizeof(double));
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
@@ -587,8 +603,10 @@ void SceNodes::readParas_M() {
 	double bondAdhCriLen =
 			globalConfigVars.getConfigValue("BondAdhCriLen").toDouble();
 	mechPara_M.bondAdhCriLenCPU_M = bondAdhCriLen;
+
 	double bondStiff = globalConfigVars.getConfigValue("BondStiff").toDouble();
 	mechPara_M.bondStiffCPU_M = bondStiff;
+
 	double growthPrgrCriVal = globalConfigVars.getConfigValue(
 			"GrowthPrgrCriVal").toDouble();
 	mechPara_M.growthPrgrCriValCPU_M = growthPrgrCriVal;
@@ -598,6 +616,20 @@ void SceNodes::readParas_M() {
 	double minAdhBondLen =
 			globalConfigVars.getConfigValue("MinAdhBondLen").toDouble();
 	mechPara_M.minAdhBondLenCPU_M = minAdhBondLen;
+
+	double intnlStiff =
+			globalConfigVars.getConfigValue("IntnlStiff").toDouble();
+	double intnlAdhCriLen =
+			globalConfigVars.getConfigValue("IntnlAdhCriLen").toDouble();
+	double maxIntnlAdhLen =
+			globalConfigVars.getConfigValue("MaxIntnlAdhLen").toDouble();
+	double minIntnlAdhBLen =
+			globalConfigVars.getConfigValue("MinIntnlAdhLen").toDouble();
+
+	mechPara_M.maxIntnlAdhLenCPU_M = maxIntnlAdhLen;
+	mechPara_M.intnlAdhCriLenCPU_M = intnlAdhCriLen;
+	mechPara_M.intnlStiffCPU_M = intnlStiff;
+	mechPara_M.minIntnlAdhLenCPU_M = minIntnlAdhBLen;
 }
 
 void SceNodes::debugNAN() {
@@ -1676,6 +1708,31 @@ bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+__device__
+bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+	if (nodeGlobalRank1 < cellNodeBeginPos_M
+			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
+		return false;
+	}
+	uint cellRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			/ allNodeCountPerCell_M;
+	uint cellRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			/ allNodeCountPerCell_M;
+	if (cellRank1 != cellRank2) {
+		return false;
+	}
+	uint nodeRank1 = (nodeGlobalRank1 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	uint nodeRank2 = (nodeGlobalRank2 - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+	if ((nodeRank1 < membrThreshold_M && nodeRank2 >= membrThreshold_M)
+			|| (nodeRank2 < membrThreshold_M && nodeRank1 >= membrThreshold_M)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 __device__ bool isSameECM(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if ((nodeGlobalRank1 - ECMbeginPos) / nodeCountPerECM
 			== (nodeGlobalRank2 - ECMbeginPos) / nodeCountPerECM) {
@@ -1748,6 +1805,25 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 }
 
 __device__
+void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
+		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2) {
+	double length = computeDist2D(xPos1, yPos1, xPos2, yPos2);
+	if (length <= intnlAdhCriLen_M) {
+		if (isSuccess) {
+			if (length < dist) {
+				dist = length;
+				index = nodeRank2;
+			}
+		} else {
+			isSuccess = true;
+			index = nodeRank2;
+			dist = length;
+		}
+	}
+}
+
+__device__
 void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
 		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
 		double& xRes, double& yRes) {
@@ -1764,6 +1840,29 @@ void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
 		} else {
 			if (curLen > minAdhBondLen_M) {
 				double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
+				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
+				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
+			}
+		}
+	}
+}
+
+__device__
+void handleIntnlAdh_M(uint& nodeRank, int& adhereIndex, double& xPos,
+		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
+		double& xRes, double& yRes) {
+	// should old one break?
+	if (adhereIndex != -1) {
+		// means adhesion has been established
+		double curAdherePosX = _nodeLocXAddress[adhereIndex];
+		double curAdherePosY = _nodeLocYAddress[adhereIndex];
+		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+		if (curLen > maxIntnlAdhLen_M) {
+			adhereIndex = -1;
+			return;
+		} else {
+			if (curLen > minIntnlAdhLen_M) {
+				double forceValue = (curLen - minIntnlAdhLen_M) * intnlStiff_M;
 				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 			}
@@ -2135,6 +2234,8 @@ void SceNodes::applySceForcesDisc_M() {
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
 	int* nodeAdhIdxAddress = thrust::raw_pointer_cast(
 			&infoVecs.nodeAdhereIndex[0]);
+	int* membrIntnlAddress = thrust::raw_pointer_cast(
+			&infoVecs.membrIntnlIndex[0]);
 	double* nodeGrowProAddr = thrust::raw_pointer_cast(
 			&infoVecs.nodeGrowPro[0]);
 
@@ -2168,7 +2269,7 @@ void SceNodes::applySceForcesDisc_M() {
 							make_permutation_iterator(infoVecs.nodeVelY.begin(),
 									auxVecs.bucketValues.begin()))),
 			AddForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
-					nodeAdhIdxAddress, nodeGrowProAddr));
+					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr));
 }
 
 void SceNodes::applySceForces() {
@@ -2388,6 +2489,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	}
 	if (controlPara.simuType == Disc_M) {
 		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount);
+		infoVecs.membrIntnlIndex.resize(maxTotalNodeCount);
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
 		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);

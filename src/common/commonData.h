@@ -153,6 +153,10 @@ struct SceMechPara_M {
 	double minAdhBondLenCPU_M;
 	double bondStiffCPU_M;
 	double bondAdhCriLenCPU_M;
+	double intnlAdhCriLenCPU_M;
+	double intnlStiffCPU_M;
+	double maxIntnlAdhLenCPU_M;
+	double minIntnlAdhLenCPU_M;
 };
 
 /**
