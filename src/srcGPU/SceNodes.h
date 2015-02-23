@@ -812,6 +812,7 @@ public:
 
 	// only for modified version
 	thrust::device_vector<int> nodeAdhereIndex;
+	thrust::host_vector<int> nodeAdhIndxHostCopy;
 	thrust::device_vector<int> membrIntnlIndex;
 
 	thrust::device_vector<double> membrTensionMag;
@@ -954,6 +955,7 @@ class SceNodes {
 
 	void debugNAN();
 
+	void keepAdhIndxCopyInHost_M();
 	void processMembrAdh_M();
 	void removeInvalidPairs_M();
 	void applyMembrAdh_M();

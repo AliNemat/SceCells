@@ -356,8 +356,9 @@ AblationEvent readAblationEvent(std::string inputName) {
 }
 
 std::vector<CVector> obtainPtsBetween(CVector& start, CVector& end,
-		double& spacing) {
+		double& spacing, uint maxNodeCount) {
 	std::vector<CVector> result;
+	double spacingNew = spacing;
 	CVector ptVec = end - start;
 	CVector unitVec = ptVec.getUnitVector();
 	double edgeLength = ptVec.getModul();
@@ -365,9 +366,14 @@ std::vector<CVector> obtainPtsBetween(CVector& start, CVector& end,
 	if (edgeLength - numNewMemNodes * spacing < 0.5 * spacing) {
 		numNewMemNodes--;
 	}
+	numNewMemNodes--;
+	if (numNewMemNodes > maxNodeCount) {
+		spacingNew = edgeLength / (maxNodeCount + 1);
+		numNewMemNodes = maxNodeCount;
+	}
 	CVector nodeOld = start, nodeNew;
-	for (uint j = 0; j < numNewMemNodes - 1; j++) {
-		nodeNew = nodeOld + spacing * unitVec;
+	for (uint j = 0; j < numNewMemNodes; j++) {
+		nodeNew = nodeOld + spacingNew * unitVec;
 		result.push_back(nodeNew);
 		nodeOld = nodeNew;
 	}

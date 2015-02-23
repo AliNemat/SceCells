@@ -629,7 +629,7 @@ struct VecVal {
 };
 
 std::vector<CVector> obtainPtsBetween(CVector& pt1, CVector& pt2,
-		double& spacing);
+		double& spacing, uint maxNewMembrNodeCount);
 
 struct CellPolyData {
 	uint cellRank;

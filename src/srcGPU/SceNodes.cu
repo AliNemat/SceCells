@@ -404,6 +404,7 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	thrust::host_vector<int> bondVec(maxTotalNodeCount, -1);
 	infoVecs.nodeAdhereIndex = bondVec;
 	infoVecs.membrIntnlIndex = bondVec;
+	infoVecs.nodeAdhIndxHostCopy = bondVec;
 	//std::cout << "copy finished!" << std::endl;
 	//std::cout.flush();
 	copyParaToGPUConstMem_M();
@@ -2436,7 +2437,7 @@ void SceNodes::sceForcesDisc() {
 void SceNodes::sceForcesDisc_M() {
 	prepareSceForceComputation_M();
 	applySceForcesDisc_M();
-	//processMembrAdh_M();
+	processMembrAdh_M();
 	//debugNAN();
 }
 
@@ -2490,6 +2491,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	}
 	if (controlPara.simuType == Disc_M) {
 		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount);
+		infoVecs.nodeAdhIndxHostCopy.resize(maxTotalNodeCount);
 		infoVecs.membrIntnlIndex.resize(maxTotalNodeCount);
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
@@ -2604,8 +2606,17 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 }
 
 void SceNodes::processMembrAdh_M() {
+	keepAdhIndxCopyInHost_M();
 	removeInvalidPairs_M();
 	applyMembrAdh_M();
+}
+
+void SceNodes::keepAdhIndxCopyInHost_M() {
+	uint maxTotalNode = allocPara_M.currentActiveCellCount
+			* allocPara_M.maxAllNodePerCell;
+	thrust::copy(infoVecs.nodeAdhereIndex.begin(),
+			infoVecs.nodeAdhereIndex.begin() + maxTotalNode,
+			infoVecs.nodeAdhIndxHostCopy.begin());
 }
 
 void SceNodes::removeInvalidPairs_M() {

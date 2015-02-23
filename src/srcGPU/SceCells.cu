@@ -2893,12 +2893,15 @@ void SceCells::createTmpMem(std::vector<VecVal>& tmp1,
 	std::sort(tmp1.begin(), tmp1.end());
 	std::sort(tmp2.begin(), tmp2.end());
 
-	assert(tmp1.size() > 0);
-	assert(tmp2.size() > 0);
+	uint maxDivMembrNodeCount1 = allocPara_m.maxMembrNodePerCell - tmp1.size();
+	uint maxDivMembrNodeCount2 = allocPara_m.maxMembrNodePerCell - tmp2.size();
 	std::vector<CVector> ptsBetween1 = obtainPtsBetween(
-			tmp1[tmp1.size() - 1].vec, tmp1[0].vec, memNewSpacing);
+			tmp1[tmp1.size() - 1].vec, tmp1[0].vec, memNewSpacing,
+			maxDivMembrNodeCount1);
 	std::vector<CVector> ptsBetween2 = obtainPtsBetween(
-			tmp2[tmp2.size() - 1].vec, tmp2[0].vec, memNewSpacing);
+			tmp2[tmp2.size() - 1].vec, tmp2[0].vec, memNewSpacing,
+			maxDivMembrNodeCount2);
+
 	for (uint j = 0; j < tmp1.size(); j++) {
 		divAuxData.tmp1VecMem.push_back(tmp1[j].vec);
 	}
@@ -3043,10 +3046,11 @@ PolyCountData SceCells::outputPolyCountData() {
 			* allocPara_m.maxAllNodePerCell;
 	uint bdryCriteria =
 			globalConfigVars.getConfigValue("BdryCellCriteria").toInt();
-	thrust::host_vector<int> adhIndxHost(totalNodeCountForActiveCells);
-	thrust::copy(nodes->getInfoVecs().nodeAdhereIndex.begin(),
-			nodes->getInfoVecs().nodeAdhereIndex.begin()
-					+ totalNodeCountForActiveCells, adhIndxHost.begin());
+	thrust::host_vector<int> adhIndxHost =
+			nodes->getInfoVecs().nodeAdhIndxHostCopy;
+	//thrust::copy(nodes->getInfoVecs().nodeAdhereIndex.begin(),
+	//		nodes->getInfoVecs().nodeAdhereIndex.begin()
+	//				+ totalNodeCountForActiveCells, adhIndxHost.begin());
 	thrust::host_vector<double> growthProVecHost(
 			allocPara_m.currentActiveCellCount);
 	thrust::copy(cellInfoVecs.growthProgress.begin(),
