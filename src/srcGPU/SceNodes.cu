@@ -2436,6 +2436,7 @@ void SceNodes::sceForcesDisc() {
 void SceNodes::sceForcesDisc_M() {
 	prepareSceForceComputation_M();
 	applySceForcesDisc_M();
+	//processMembrAdh_M();
 	//debugNAN();
 }
 
@@ -2600,4 +2601,48 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 			infoVecs.nodeLocX.begin() + cellBeginIndex);
 	thrust::copy(cellYRemoved.begin(), cellYRemoved.end(),
 			infoVecs.nodeLocY.begin() + cellBeginIndex);
+}
+
+void SceNodes::processMembrAdh_M() {
+	removeInvalidPairs_M();
+	applyMembrAdh_M();
+}
+
+void SceNodes::removeInvalidPairs_M() {
+	int* nodeAdhIdxAddress = thrust::raw_pointer_cast(
+			&infoVecs.nodeAdhereIndex[0]);
+	uint maxTotalNode = allocPara_M.currentActiveCellCount
+			* allocPara_M.maxAllNodePerCell;
+	thrust::counting_iterator<int> iBegin(0);
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							infoVecs.nodeAdhereIndex.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							infoVecs.nodeAdhereIndex.begin())) + maxTotalNode,
+			infoVecs.nodeAdhereIndex.begin(), AdjustAdh(nodeAdhIdxAddress));
+}
+
+void SceNodes::applyMembrAdh_M() {
+	thrust::counting_iterator<uint> iBegin(0);
+	uint maxTotalNode = allocPara_M.currentActiveCellCount
+			* allocPara_M.maxAllNodePerCell;
+	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
+	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							infoVecs.nodeAdhereIndex.begin(), iBegin,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							infoVecs.nodeAdhereIndex.begin(), iBegin,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())) + maxTotalNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())),
+			ApplyAdh(nodeLocXAddress, nodeLocYAddress));
 }

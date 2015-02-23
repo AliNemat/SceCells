@@ -9,6 +9,7 @@
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/constant_iterator.h>
+#include <thrust/tabulate.h>
 #include <thrust/binary_search.h>
 #include <thrust/tuple.h>
 #include <thrust/random.h>
@@ -70,6 +71,7 @@ typedef thrust::tuple<bool, double> BoolD;
 typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
+typedef thrust::tuple<bool, int, int, double, double> BoolIUiDD;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<double, double, double> CVec3;
 typedef thrust::tuple<double, double, double, uint> CVec3Int;
@@ -81,6 +83,7 @@ typedef thrust::tuple<double, double, double, double, double> CVec5;
 typedef thrust::tuple<double, double, double, double, double, double> CVec6;
 typedef thrust::tuple<double, double, double, double, double, double, bool> CVec6Bool;
 typedef thrust::tuple<double, double, double, double, double, double, uint> CVec6UI;
+typedef thrust::tuple<int, int> Int2;
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
@@ -177,6 +180,29 @@ struct AddFunctor: public thrust::binary_function<CVec3, CVec3, CVec3> {
 		double yPosAfterMove = yMoveDist + thrust::get<1>(loc);
 		double zPosAfterMove = zMoveDist + thrust::get<2>(loc);
 		return thrust::make_tuple(xPosAfterMove, yPosAfterMove, zPosAfterMove);
+	}
+};
+
+struct AdjustAdh: public thrust::unary_function<Int2, int> {
+	int* _adhArrAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AdjustAdh(int* adhArrAddr) :
+			_adhArrAddr(adhArrAddr) {
+	}
+	__host__ __device__
+	int operator()(const Int2& myInt2) const {
+		int nodeIndx = thrust::get<0>(myInt2);
+		int adhIndx = thrust::get<1>(myInt2);
+		if (adhIndx != -1) {
+			if (_adhArrAddr[adhIndx] != nodeIndx) {
+				return -1;
+			} else {
+				return adhIndx;
+			}
+		} else {
+			return -1;
+		}
 	}
 };
 
@@ -604,8 +630,8 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 			_membrIntnlIndex[myValue] = indexIntnl;
 		}
 
-		handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
-				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
+		//handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
+		//		_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
 		handleIntnlAdh_M(myValue, _membrIntnlIndex[myValue], xPos, yPos,
 				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
 
@@ -657,6 +683,33 @@ struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
 		}
 
 		return thrust::make_tuple(xRes, yRes, zRes);
+	}
+};
+
+struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
+	double* _nodeLocXArrAddr;
+	double* _nodeLocYArrAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr) :
+			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr) {
+	}
+	__device__
+	CVec2 operator()(const BoolIUiDD& adhInput) const {
+		bool isActive = thrust::get<0>(adhInput);
+		int adhIndx = thrust::get<1>(adhInput);
+		uint nodeIndx = thrust::get<2>(adhInput);
+		double oriVelX = thrust::get<3>(adhInput);
+		double oriVelY = thrust::get<4>(adhInput);
+		if (adhIndx == -1 || !isActive) {
+			return thrust::make_tuple(oriVelX, oriVelY);
+		} else {
+			double locX = _nodeLocXArrAddr[nodeIndx];
+			double locY = _nodeLocYArrAddr[nodeIndx];
+			handleAdhesionForce_M(nodeIndx, adhIndx, locX, locY,
+					_nodeLocXArrAddr, _nodeLocYArrAddr, oriVelX, oriVelY);
+			return thrust::make_tuple(oriVelX, oriVelY);
+		}
 	}
 };
 
@@ -900,6 +953,10 @@ class SceNodes {
 	void initControlPara(bool isStab);
 
 	void debugNAN();
+
+	void processMembrAdh_M();
+	void removeInvalidPairs_M();
+	void applyMembrAdh_M();
 
 	uint endIndx_M;
 	uint endIndxExt_M;

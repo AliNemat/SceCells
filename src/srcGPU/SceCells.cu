@@ -1589,24 +1589,25 @@ void SceCells::copyFirstCellArr_M() {
 				+ allocPara_m.bdryNodeCount;
 		uint tmpStartIndx = i * maxAllNodePerCell;
 		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
-		thrust::constant_iterator<int> noAdhesion(-1);
+		thrust::constant_iterator<int> noAdhesion(-1), noAdhesion2(-1);
 		thrust::copy(
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
 								divAuxData.tmpYPos1_M.begin(),
-								divAuxData.tmpIsActive1_M.begin(), noAdhesion))
-						+ tmpStartIndx,
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpStartIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
 								divAuxData.tmpYPos1_M.begin(),
-								divAuxData.tmpIsActive1_M.begin(), noAdhesion))
-						+ tmpEndIndx,
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpEndIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(
 								nodes->getInfoVecs().nodeLocX.begin(),
 								nodes->getInfoVecs().nodeLocY.begin(),
 								nodes->getInfoVecs().nodeIsActive.begin(),
-								nodes->getInfoVecs().nodeAdhereIndex.begin()))
+								nodes->getInfoVecs().nodeAdhereIndex.begin(),
+								nodes->getInfoVecs().membrIntnlIndex.begin()))
 						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp1InternalActiveCounts[i];
@@ -1627,24 +1628,25 @@ void SceCells::copySecondCellArr_M() {
 				+ allocPara_m.bdryNodeCount;
 		uint tmpStartIndx = i * maxAllNodePerCell;
 		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
-		thrust::constant_iterator<int> noAdhesion(-1);
+		thrust::constant_iterator<int> noAdhesion(-1), noAdhesion2(-1);
 		thrust::copy(
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
 								divAuxData.tmpYPos2_M.begin(),
-								divAuxData.tmpIsActive2_M.begin(), noAdhesion))
-						+ tmpStartIndx,
+								divAuxData.tmpIsActive2_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpStartIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
 								divAuxData.tmpYPos2_M.begin(),
-								divAuxData.tmpIsActive2_M.begin(), noAdhesion))
-						+ tmpEndIndx,
+								divAuxData.tmpIsActive2_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpEndIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(
 								nodes->getInfoVecs().nodeLocX.begin(),
 								nodes->getInfoVecs().nodeLocY.begin(),
 								nodes->getInfoVecs().nodeIsActive.begin(),
-								nodes->getInfoVecs().nodeAdhereIndex.begin()))
+								nodes->getInfoVecs().nodeAdhereIndex.begin(),
+								nodes->getInfoVecs().membrIntnlIndex.begin()))
 						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp2InternalActiveCounts[i];
