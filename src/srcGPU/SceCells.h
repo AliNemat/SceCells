@@ -379,10 +379,13 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 		uint nodeRank = thrust::get<2>(bData);
 		double oriVelX = thrust::get<3>(bData);
 		double oriVelY = thrust::get<4>(bData);
+
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
+
+		/*
 		int index_left = nodeRank - 1;
 		if (index_left == -1) {
 			index_left = activeMembrCount - 1;
@@ -393,6 +396,7 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 			oriVelX = oriVelX + _bendRightXAddr[index_left];
 			oriVelY = oriVelY + _bendRightYAddr[index_left];
 		}
+
 		int index_right = nodeRank + 1;
 		if (index_right == (int) activeMembrCount) {
 			index_right = 0;
@@ -403,6 +407,7 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 			oriVelX = oriVelX + _bendLeftXAddr[index_right];
 			oriVelY = oriVelY + _bendLeftYAddr[index_right];
 		}
+		*/
 		return thrust::make_tuple(oriVelX, oriVelY);
 	}
 }
