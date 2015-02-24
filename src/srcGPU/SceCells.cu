@@ -750,8 +750,6 @@ void SceCells::initGrowthAuxData_M() {
 			"RandomGrowthSpeedMin").toDouble();
 	growthAuxData.randomGrowthSpeedMax = globalConfigVars.getConfigValue(
 			"RandomGrowthSpeedMax").toDouble();
-	growthAuxData.randGenAuxPara = globalConfigVars.getConfigValue(
-			"RandomGenerationAuxPara").toDouble();
 }
 
 void SceCells::initialize(SceNodes* nodesInput) {
@@ -1260,19 +1258,23 @@ void SceCells::readMiscPara_M() {
 }
 
 void SceCells::readBioPara() {
-	bioPara.cellInitLength =
-			globalConfigVars.getConfigValue("CellInitLength").toDouble();
-	std::cout << "break point 1 " << bioPara.cellInitLength << std::endl;
-	std::cout.flush();
-	bioPara.cellFinalLength =
-			globalConfigVars.getConfigValue("CellFinalLength").toDouble();
-	std::cout << "break point 2 " << bioPara.cellFinalLength << std::endl;
-	std::cout.flush();
-	bioPara.elongationCoefficient = globalConfigVars.getConfigValue(
-			"ElongateCoefficient").toDouble();
+	if (controlPara.simuType != Disc_M) {
+		bioPara.cellInitLength = globalConfigVars.getConfigValue(
+				"CellInitLength").toDouble();
+		std::cout << "break point 1 " << bioPara.cellInitLength << std::endl;
+		std::cout.flush();
+		bioPara.cellFinalLength = globalConfigVars.getConfigValue(
+				"CellFinalLength").toDouble();
+		std::cout << "break point 2 " << bioPara.cellFinalLength << std::endl;
+		std::cout.flush();
+		bioPara.elongationCoefficient = globalConfigVars.getConfigValue(
+				"ElongateCoefficient").toDouble();
 
-	std::cout << "break point 3 " << bioPara.elongationCoefficient << std::endl;
-	std::cout.flush();
+		std::cout << "break point 3 " << bioPara.elongationCoefficient
+				<< std::endl;
+		std::cout.flush();
+
+	}
 
 	if (controlPara.simuType == Beak) {
 		std::cout << "break point 4 " << std::endl;
@@ -1280,7 +1282,6 @@ void SceCells::readBioPara() {
 		bioPara.chemoCoefficient = globalConfigVars.getConfigValue(
 				"ChemoCoefficient").toDouble();
 	}
-	//int jj;
 	//std::cin >> jj;
 }
 
@@ -1342,8 +1343,6 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
 	applyMemTension_M();
-
-	//myDebugFunction();
 
 	computeCenterPos_M();
 

@@ -9,6 +9,8 @@
 
 using namespace std;
 
+//#define DebugModeDomain
+
 /**
  * Constructor.
  * reads values from config file.
@@ -267,13 +269,32 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 }
 
 void SimulationDomainGPU::runAllLogic_M(double dt) {
-	if (memPara.simuType == Disc_M) {
-		nodes.sceForcesDisc_M();
-		cells.runAllCellLogicsDisc_M(dt);
-	} else {
-		throw SceException("this version can only handle Disc_M type",
-				ConfigValueException);
-	}
+#ifdef DebugModeDomain
+	cudaEvent_t start1, start2, stop;
+	float elapsedTime1, elapsedTime2;
+	cudaEventCreate(&start1);
+	cudaEventCreate(&start2);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start1, 0);
+#endif
+
+	nodes.sceForcesDisc_M();
+
+#ifdef DebugModeDomain
+	cudaEventRecord(start2, 0);
+	cudaEventSynchronize(start2);
+	cudaEventElapsedTime(&elapsedTime1, start1, start2);
+#endif
+
+	cells.runAllCellLogicsDisc_M(dt);
+
+#ifdef DebugModeDomain
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime2, start2, stop);
+	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
+			<< elapsedTime2 << std::endl;
+#endif
 }
 
 void SimulationDomainGPU::readMemPara() {
@@ -284,8 +305,11 @@ void SimulationDomainGPU::readMemPara() {
 
 	memPara.maxCellInDomain =
 			globalConfigVars.getConfigValue("MaxCellInDomain").toInt();
-	memPara.maxNodePerCell =
-			globalConfigVars.getConfigValue("MaxNodePerCell").toInt();
+	if (memPara.simuType != Disc_M) {
+		memPara.maxNodePerCell = globalConfigVars.getConfigValue(
+				"MaxNodePerCell").toInt();
+	}
+
 	if (memPara.simuType == Beak) {
 		memPara.maxECMInDomain = globalConfigVars.getConfigValue(
 				"MaxECMInDomain").toInt();
@@ -294,8 +318,6 @@ void SimulationDomainGPU::readMemPara() {
 		memPara.FinalToInitProfileNodeCountRatio =
 				globalConfigVars.getConfigValue(
 						"FinalToInitProfileNodeCountRatio").toDouble();
-		//memPara.FinalToInitCartNodeCountRatio = globalConfigVars.getConfigValue(
-		//		"FinalToInitCartNodeCountRatio").toDouble();
 	} else {
 		memPara.maxECMInDomain = 0;
 		memPara.maxNodePerECM = 0;

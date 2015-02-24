@@ -928,6 +928,8 @@ class SceNodes {
 	 */
 	void applySceForcesBasic();
 
+	void applySceForcesBasic_M();
+
 	/**
 	 * Sce method specifically for wing disc.
 	 */
@@ -1031,6 +1033,8 @@ public:
 	 * This is for performance testing only.
 	 */
 	void sceForcesPerfTesting();
+
+	void sceForcesPerfTesting_M();
 
 	/**
 	 * wrap apply forces methods together.

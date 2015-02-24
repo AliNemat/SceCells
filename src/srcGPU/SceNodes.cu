@@ -36,6 +36,8 @@ __constant__ double intnlStiff_M;
 __constant__ double maxIntnlAdhLen_M;
 __constant__ double minIntnlAdhLen_M;
 
+// #define DebugMode
+
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
 //
@@ -109,14 +111,18 @@ void SceNodes::readMechPara() {
 	double k2 =
 			globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("InterCell_k2_DivFactor").toDouble();
-	double interLinkEffectiveRange = globalConfigVars.getConfigValue(
-			"InterCellLinkEffectRange").toDouble();
 
 	mechPara.sceInterParaCPU[0] = U0;
 	mechPara.sceInterParaCPU[1] = V0;
 	mechPara.sceInterParaCPU[2] = k1;
 	mechPara.sceInterParaCPU[3] = k2;
-	mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
+
+	double interLinkEffectiveRange;
+	if (controlPara.simuType != Disc_M) {
+		interLinkEffectiveRange = globalConfigVars.getConfigValue(
+				"InterCellLinkEffectRange").toDouble();
+		mechPara.sceInterParaCPU[4] = interLinkEffectiveRange;
+	}
 
 	double U0_Intra =
 			globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
@@ -130,14 +136,18 @@ void SceNodes::readMechPara() {
 	double k2_Intra =
 			globalConfigVars.getConfigValue("IntraCell_k2_Original").toDouble()
 					/ globalConfigVars.getConfigValue("IntraCell_k2_DivFactor").toDouble();
-	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
-			"IntraCellLinkEffectRange").toDouble();
 
 	mechPara.sceIntraParaCPU[0] = U0_Intra;
 	mechPara.sceIntraParaCPU[1] = V0_Intra;
 	mechPara.sceIntraParaCPU[2] = k1_Intra;
 	mechPara.sceIntraParaCPU[3] = k2_Intra;
-	mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
+
+	double intraLinkEffectiveRange;
+	if (controlPara.simuType != Disc_M) {
+		intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+				"IntraCellLinkEffectRange").toDouble();
+		mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
+	}
 
 	if (controlPara.simuType == Beak) {
 
@@ -2429,41 +2439,100 @@ void SceNodes::sceForcesPerfTesting() {
 	applySceForcesBasic();
 }
 
+void SceNodes::sceForcesPerfTesting_M() {
+	prepareSceForceComputation_M();
+	applySceForcesBasic_M();
+}
+
+void SceNodes::applySceForcesBasic_M() {
+}
+
 void SceNodes::sceForcesDisc() {
 	prepareSceForceComputation();
 	applySceForcesDisc();
 }
 
 void SceNodes::sceForcesDisc_M() {
+#ifdef DebugMode
+	cudaEvent_t start1, start2, start3, stop;
+	float elapsedTime1, elapsedTime2, elapsedTime3;
+	cudaEventCreate(&start1);
+	cudaEventCreate(&start2);
+	cudaEventCreate(&start3);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start1, 0);
+#endif
+
 	prepareSceForceComputation_M();
+
+#ifdef DebugMode
+	cudaEventRecord(start2, 0);
+	cudaEventSynchronize(start2);
+	cudaEventElapsedTime(&elapsedTime1, start1, start2);
+#endif
+
 	applySceForcesDisc_M();
+
+#ifdef DebugMode
+	cudaEventRecord(start3, 0);
+	cudaEventSynchronize(start3);
+	cudaEventElapsedTime(&elapsedTime2, start2, start3);
+#endif
+
 	processMembrAdh_M();
-	//debugNAN();
+
+#ifdef DebugMode
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime3, start3, stop);
+
+	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
+	<< elapsedTime2 << " " << elapsedTime3 << std::endl;
+#endif
 }
 
 double SceNodes::getMaxEffectiveRange() {
-	double interLinkEffectiveRange = globalConfigVars.getConfigValue(
-			"InterCellLinkEffectRange").toDouble();
-	double maxEffectiveRange = interLinkEffectiveRange;
+	if (controlPara.simuType != Disc_M) {
+		double interLinkEffectiveRange = globalConfigVars.getConfigValue(
+				"InterCellLinkEffectRange").toDouble();
+		double maxEffectiveRange = interLinkEffectiveRange;
 
-	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
-			"IntraCellLinkEffectRange").toDouble();
-	if (intraLinkEffectiveRange > maxEffectiveRange) {
-		maxEffectiveRange = intraLinkEffectiveRange;
-	}
+		double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+				"IntraCellLinkEffectRange").toDouble();
+		if (intraLinkEffectiveRange > maxEffectiveRange) {
+			maxEffectiveRange = intraLinkEffectiveRange;
+		}
 
-	double cartEffectiveRange = 0;
-// cartilage effective range does not apply for other types of simulation.
-	try {
-		cartEffectiveRange = globalConfigVars.getConfigValue(
-				"CartForceEffectiveRange").toDouble();
-	} catch (SceException &exce) {
+		double cartEffectiveRange = 0;
+		// cartilage effective range does not apply for other types of simulation.
+		try {
+			cartEffectiveRange = globalConfigVars.getConfigValue(
+					"CartForceEffectiveRange").toDouble();
+		} catch (SceException &exce) {
 
+		}
+		if (cartEffectiveRange > maxEffectiveRange) {
+			maxEffectiveRange = cartEffectiveRange;
+		}
+		return maxEffectiveRange;
+	} else {
+		double membrMembrEffRange = globalConfigVars.getConfigValue(
+				"InterBEffectiveRange").toDouble();
+		double membrIntnlEffRange = globalConfigVars.getConfigValue(
+				"IntnlBEffectRange").toDouble();
+		double intnlIntnlEffRange = globalConfigVars.getConfigValue(
+				"IntraEffectRange").toDouble();
+		double intnlDivEffRange = globalConfigVars.getConfigValue(
+				"IntraDivEffectRange").toDouble();
+		double maxEffRange = 0;
+		std::vector<double> ranges;
+		ranges.push_back(membrMembrEffRange);
+		ranges.push_back(membrIntnlEffRange);
+		ranges.push_back(intnlIntnlEffRange);
+		ranges.push_back(intnlDivEffRange);
+		maxEffRange = *std::max_element(ranges.begin(), ranges.end());
+		return maxEffRange;
 	}
-	if (cartEffectiveRange > maxEffectiveRange) {
-		maxEffectiveRange = cartEffectiveRange;
-	}
-	return maxEffectiveRange;
 }
 
 void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {

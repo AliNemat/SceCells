@@ -88,9 +88,6 @@ int main(int argc, char* argv[]) {
 	SimulationInitData_V2_M initData = initHelper.initInput_M();
 	simuDomain.initialize_v2_M(initData);
 
-	// delete old data file.
-	std::remove(mainPara.dataOutput.c_str());
-
 	std::string polyStatFileName = globalConfigVars.getConfigValue(
 			"PolygonStatFileName").toString();
 	std::remove(polyStatFileName.c_str());
@@ -101,18 +98,13 @@ int main(int argc, char* argv[]) {
 	uint aniFrame = 0;
 	// main simulation steps.
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
-		//cout << "step number = " << i << endl;
-
 		if (i % mainPara.aniAuxVar == 0) {
 			PolyCountData polyData = simuDomain.outputPolyCountData();
 			polyData.printToFile(polyStatFileName, divThreshold);
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
-			//cout << "finished output Animation" << endl;
 			aniFrame++;
-
 		}
-		// for each step, run all logics of the domain.
 		simuDomain.runAllLogic_M(mainPara.dt);
 	}
 

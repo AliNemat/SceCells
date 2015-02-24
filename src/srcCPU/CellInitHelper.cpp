@@ -542,8 +542,8 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 	std::vector<GEOMETRY::Point2D> insideCenterPoints =
 			mesh.getAllInsidePoints();
 
-	double fine_Ratio =
-			globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
+	//double fine_Ratio =
+	//		globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
 
 	for (uint i = 0; i < insideCenterPoints.size(); i++) {
 		insideCellCenters.push_back(
@@ -551,14 +551,14 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 						insideCenterPoints[i].getY(), 0));
 	}
 
-	mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
+	//mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
 
-	std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
+	//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
 
-	for (uint i = 0; i < bdryPoints.size(); i++) {
-		outsideBdryNodePos.push_back(
-				CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
-	}
+	//for (uint i = 0; i < bdryPoints.size(); i++) {
+	//	outsideBdryNodePos.push_back(
+	//			CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
+	//}
 
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
@@ -566,9 +566,9 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 		centerPos.Print();
 	}
 
-	for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
-		//rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
-	}
+	//for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
+	//rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
+	//}
 
 	generateCellInitNodeInfo_v3(rawData.initCellCenters,
 			rawData.initMembrNodePoss, rawData.initIntnlNodePoss);
@@ -914,8 +914,10 @@ void SimulationGlobalParameter::initFromConfig() {
 			globalConfigVars.getConfigValue("AnimationType").toInt());
 
 	aniCri.threshold = globalConfigVars.getConfigValue("DeltaValue").toDouble();
-	aniCri.arrowLength =
-			globalConfigVars.getConfigValue("DisplayArrowLength").toDouble();
+	if (simuType != Disc_M) {
+		aniCri.arrowLength = globalConfigVars.getConfigValue(
+				"DisplayArrowLength").toDouble();
+	}
 
 	if (simuType != Beak && simuType != Disc_M) {
 		dataOutput =

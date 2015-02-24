@@ -72,7 +72,7 @@ public:
 				+ std::string(
 						_message + ", Exception type: "
 								+ toString(_exceptionType));
-		return fullErrorMsg.c_str();
+		return originalMsg.c_str();
 	}
 };
 
