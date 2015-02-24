@@ -649,7 +649,6 @@ struct CountEntry {
 class PolyCountData {
 public:
 	std::vector<CellPolyData> cellPolyCounts;
-
 	void printToFile(std::string fileName, double divThreshold);
 };
 

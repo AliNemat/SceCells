@@ -560,9 +560,11 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 	//			CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
 	//}
 
+	std::cout << "Printing initial cell center positions ......" << std::endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
 		CVector centerPos = insideCellCenters[i];
 		rawData.initCellCenters.push_back(centerPos);
+		std::cout << "    ";
 		centerPos.Print();
 	}
 

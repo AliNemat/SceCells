@@ -151,11 +151,11 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
 	 * while the last four parameters come from Config file.
 	 */
-	std::cout << "break point 0 " << std::endl;
+	std::cout << "Initializing nodes ...... " << std::endl;
 	nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell);
 
-	std::cout << "break point 1 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 1 " << std::endl;
+	//std::cout.flush();
 	// array size of cell type array
 	uint nodeTypeSize = nodeTypes.size();
 	// array size of initial active node count of cells array.
@@ -167,8 +167,8 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 			memPara.maxCellInDomain * memPara.maxAllNodePerCell
 					== nodeTypes.size());
 
-	std::cout << "break point 2 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 2 " << std::endl;
+	//std::cout.flush();
 	/*
 	 * second part: actual initialization
 	 * copy data from main system memory to GPU memory
@@ -180,24 +180,24 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 					== initMembrNodeCountSize);
 	nodes.setAllocParaM(para);
 
-	std::cout << "break point 3 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 3 " << std::endl;
+	//std::cout.flush();
 
 	nodes.initValues_M(nodeIsActive, initNodesVec, nodeTypes);
 
-	std::cout << "break point 4 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 4 " << std::endl;
+	//std::cout.flush();
 
-	for (uint i = 0; i < initActiveMembrNodeCounts.size(); i++) {
-		std::cout << " (" << initActiveMembrNodeCounts[i] << ", "
-				<< initActiveIntnlNodeCounts[i] << ") ";
-	}
-	std::cout << std::endl;
+	//for (uint i = 0; i < initActiveMembrNodeCounts.size(); i++) {
+	//	std::cout << " (" << initActiveMembrNodeCounts[i] << ", "
+	//			<< initActiveIntnlNodeCounts[i] << ") ";
+	//}
+	//std::cout << std::endl;
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts);
 
-	std::cout << "break point 5 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 5 " << std::endl;
+	//std::cout.flush();
 }
 
 void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
@@ -217,17 +217,18 @@ void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
 }
 
 void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
-	std::cout << "begin initialization process" << std::endl;
+	std::cout << "Start initializing simulation domain ......" << std::endl;
 	memPara.isStab = initData.isStab;
 	initializeNodes_M(initData.nodeTypes, initData.initIsActive,
 			initData.initNodeVec, initData.initActiveMembrNodeCounts,
 			initData.initActiveIntnlNodeCounts);
-	std::cout << "finished init simulation domain nodes" << std::endl;
+	std::cout << "Finished initializing nodes positions" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
-	std::cout << "finished init nodes dimension" << std::endl;
+	//std::cout << "finished init nodes dimension" << std::endl;
 	// The domain task is not stabilization unless specified in the next steps.
 	stabPara.isProcessStab = false;
+	std::cout << "Finished initializing simulation domain" << std::endl;
 }
 
 /**
@@ -293,7 +294,7 @@ void SimulationDomainGPU::runAllLogic_M(double dt) {
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime2, start2, stop);
 	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
-			<< elapsedTime2 << std::endl;
+	<< elapsedTime2 << std::endl;
 #endif
 }
 

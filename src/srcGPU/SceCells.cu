@@ -667,7 +667,7 @@ void SceCells::initCellInfoVecs() {
 }
 
 void SceCells::initCellInfoVecs_M() {
-	std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
+	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
 			bioPara.cellInitLength);
@@ -694,7 +694,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.membrGrowProgress.resize(allocPara_m.maxCellCount, 0);
 	cellInfoVecs.membrGrowSpeed.resize(allocPara_m.maxCellCount, 0);
-	std::cout << "finished " << std::endl;
+	//std::cout << "finished " << std::endl;
 }
 
 void SceCells::initCellNodeInfoVecs() {
@@ -771,37 +771,37 @@ void SceCells::initialize(SceNodes* nodesInput) {
 }
 
 void SceCells::initialize_M(SceNodes* nodesInput) {
-	std::cout << "break point 0 " << std::endl;
-	std::cout.flush();
+	std::cout << "Initializing cells ...... " << std::endl;
+	//std::cout.flush();
 	nodes = nodesInput;
 	allocPara_m = nodesInput->getAllocParaM();
 	// max internal node count must be even number.
 	assert(allocPara_m.maxIntnlNodePerCell % 2 == 0);
 
-	std::cout << "break point 1 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 1 " << std::endl;
+	//std::cout.flush();
 	controlPara = nodes->getControlPara();
-	std::cout << "break point 2 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 2 " << std::endl;
+	//std::cout.flush();
 	readMiscPara_M();
-	std::cout << "break point 3 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 3 " << std::endl;
+	//std::cout.flush();
 	initCellInfoVecs_M();
 
-	std::cout << "break point 4 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 4 " << std::endl;
+	//std::cout.flush();
 	readBioPara();
-	std::cout << "break point 5 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 5 " << std::endl;
+	//std::cout.flush();
 
-	std::cout << "break point 6 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 6 " << std::endl;
+	//std::cout.flush();
 	initCellNodeInfoVecs_M();
-	std::cout << "break point 7 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 7 " << std::endl;
+	//std::cout.flush();
 	initGrowthAuxData_M();
-	std::cout << "break point 8 " << std::endl;
-	std::cout.flush();
+	//std::cout << "break point 8 " << std::endl;
+	//std::cout.flush();
 
 }
 
@@ -2373,13 +2373,13 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
 		std::vector<uint>& initIntnlActiveNodeCounts) {
-	std::cout << "size 1 = " << initMembrActiveNodeCounts.size() << std::endl;
-	std::cout << "size 2 = " << cellInfoVecs.activeMembrNodeCounts.size()
-			<< std::endl;
-	std::cout << "size 3 = " << initIntnlActiveNodeCounts.size() << std::endl;
-	std::cout << "size 4 = " << cellInfoVecs.activeIntnlNodeCounts.size()
-			<< std::endl;
-	std::cout.flush();
+	//std::cout << "size 1 = " << initMembrActiveNodeCounts.size() << std::endl;
+	//std::cout << "size 2 = " << cellInfoVecs.activeMembrNodeCounts.size()
+	//		<< std::endl;
+	//std::cout << "size 3 = " << initIntnlActiveNodeCounts.size() << std::endl;
+	//std::cout << "size 4 = " << cellInfoVecs.activeIntnlNodeCounts.size()
+	//		<< std::endl;
+	//std::cout.flush();
 
 	thrust::copy(initMembrActiveNodeCounts.begin(),
 			initMembrActiveNodeCounts.end(),

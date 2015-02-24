@@ -370,16 +370,18 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	initNodeAllocPara_M(0, maxTotalCellCount, maxMembrNodeCountPerCell,
 			maxIntnlNodeCountPerCell);
 
-	std::cout << "bdry node count = " << allocPara_M.bdryNodeCount << std::endl;
-	std::cout << "max cell count = " << allocPara_M.maxCellCount << std::endl;
-	std::cout << "max node per cell = " << allocPara_M.maxAllNodePerCell
+	std::cout << "    Number of boundary nodes = " << allocPara_M.bdryNodeCount
 			<< std::endl;
-	std::cout << "max membr node per cell= " << allocPara_M.maxMembrNodePerCell
-			<< std::endl;
-	std::cout << "max intnl node per cell= " << allocPara_M.maxIntnlNodePerCell
-			<< std::endl;
-	std::cout << "max total node count= " << allocPara_M.maxTotalNodeCount
-			<< std::endl;
+	std::cout << "    Max number of cells in domain = "
+			<< allocPara_M.maxCellCount << std::endl;
+	std::cout << "    Max all nodes per cell = "
+			<< allocPara_M.maxAllNodePerCell << std::endl;
+	std::cout << "    Max membrane node per cell= "
+			<< allocPara_M.maxMembrNodePerCell << std::endl;
+	std::cout << "    Max internal node per cell= "
+			<< allocPara_M.maxIntnlNodePerCell << std::endl;
+	std::cout << "    Max total number of nodes in domain = "
+			<< allocPara_M.maxTotalNodeCount << std::endl;
 
 	allocSpaceForNodes(maxTotalNodeCount);
 	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
@@ -2492,7 +2494,10 @@ void SceNodes::sceForcesDisc_M() {
 }
 
 double SceNodes::getMaxEffectiveRange() {
-	if (controlPara.simuType != Disc_M) {
+	int simuTypeConfigValue =
+			globalConfigVars.getConfigValue("SimulationType").toInt();
+	SimulationType type = parseTypeFromConfig(simuTypeConfigValue);
+	if (type != Disc_M) {
 		double interLinkEffectiveRange = globalConfigVars.getConfigValue(
 				"InterCellLinkEffectRange").toDouble();
 		double maxEffectiveRange = interLinkEffectiveRange;
