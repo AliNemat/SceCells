@@ -2572,6 +2572,10 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidY.resize(maxTotalNodeCount, 0);
+		infoVecs.membrBendLeftX.resize(maxTotalNodeCount, 0);
+		infoVecs.membrBendLeftY.resize(maxTotalNodeCount, 0);
+		infoVecs.membrBendRightX.resize(maxTotalNodeCount, 0);
+		infoVecs.membrBendRightY.resize(maxTotalNodeCount, 0);
 
 		auxVecs.bucketKeys.resize(maxTotalNodeCount);
 		auxVecs.bucketValues.resize(maxTotalNodeCount);

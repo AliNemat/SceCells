@@ -5,10 +5,12 @@ double epsilon = 1.0e-12;
 __constant__ double membrEquLen;
 __constant__ double membrStiff;
 __constant__ double pI;
-__constant__ double numericalLowerBound;
+__constant__ double minLength;
+__constant__ double minDivisor;
 __constant__ uint maxAllNodePerCell;
 __constant__ uint maxMembrPerCell;
 __constant__ uint maxIntnlPerCell;
+__constant__ double bendCoeff;
 
 __device__
 double calMembrForce(double& length) {
@@ -44,7 +46,7 @@ bool isAllIntnlFilled(uint& currentIntnlCount) {
 
 __device__
 bool longEnough(double& length) {
-	if (length < numericalLowerBound) {
+	if (length < minLength) {
 		return false;
 	} else {
 		return true;
@@ -122,6 +124,8 @@ void MembrPara::initFromConfig() {
 			globalConfigVars.getConfigValue("MembrGrowCoeff").toDouble();
 	membrGrowLimit =
 			globalConfigVars.getConfigValue("MembrGrowLimit").toDouble();
+	membrBendCoeff =
+			globalConfigVars.getConfigValue("MembrBenCoeff").toDouble();
 }
 
 SceCells::SceCells() {
@@ -1342,7 +1346,7 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-	applyMemTension_M();
+	applyMemForce_M();
 
 	computeCenterPos_M();
 
@@ -1705,11 +1709,11 @@ void SceCells::moveNodes_M() {
 			SaxpyFunctorDim2(dt));
 }
 
-void SceCells::applyMemTension_M() {
+void SceCells::applyMemForce_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
@@ -1763,10 +1767,55 @@ void SceCells::applyMemTension_M() {
 							nodes->getInfoVecs().membrTensionMag.begin(),
 							nodes->getInfoVecs().membrTenMagRi.begin(),
 							nodes->getInfoVecs().membrLinkRiMidX.begin(),
-							nodes->getInfoVecs().membrLinkRiMidY.begin()))
+							nodes->getInfoVecs().membrLinkRiMidY.begin(),
+							nodes->getInfoVecs().membrBendLeftX.begin(),
+							nodes->getInfoVecs().membrBendLeftY.begin(),
+							nodes->getInfoVecs().membrBendRightX.begin(),
+							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
-			AddTensionForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
+			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
+
+	double* bendLeftXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().membrBendLeftX[0]));
+	double* bendLeftYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().membrBendLeftY[0]));
+	double* bendRightXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().membrBendRightX[0]));
+	double* bendRightYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().membrBendRightY[0]));
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin1,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin1,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin1,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin1,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin1,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin1,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			AddMembrBend(maxAllNodePerCell, nodeIsActiveAddr, bendLeftXAddr,
+					bendLeftYAddr, bendRightXAddr, bendRightYAddr));
 }
 
 void SceCells::runAblationTest(AblationEvent& ablEvent) {
@@ -2645,13 +2694,17 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 
 void SceCells::copyToGPUConstMem() {
 	double pI_CPU = acos(-1.0);
-	double numericalLowerBoundCPU = globalConfigVars.getConfigValue(
-			"NumericalLowerBound").toDouble();
+	double minLengthCPU =
+			globalConfigVars.getConfigValue("MinLength").toDouble();
+	cudaMemcpyToSymbol(minLength, &minLengthCPU, sizeof(double));
+	double minDivisorCPU =
+			globalConfigVars.getConfigValue("MinDivisor").toDouble();
+	cudaMemcpyToSymbol(minDivisor, &minDivisorCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrEquLen, &membrPara.membrEquLenCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrStiff, &membrPara.membrStiffCPU, sizeof(double));
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
-	cudaMemcpyToSymbol(numericalLowerBound, &numericalLowerBoundCPU,
-			sizeof(double));
+
+	cudaMemcpyToSymbol(bendCoeff, &membrPara.membrBendCoeff, sizeof(double));
 	uint maxAllNodePerCellCPU = globalConfigVars.getConfigValue(
 			"MaxAllNodeCountPerCell").toInt();
 	uint maxMembrNodePerCellCPU = globalConfigVars.getConfigValue(
@@ -3111,3 +3164,21 @@ PolyCountData SceCells::outputPolyCountData() {
 
 	return result;
 }
+
+__device__ bool bigEnough(double& num) {
+	if (num < minDivisor) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+__device__ double cross_Z(double vecA_X, double vecA_Y, double vecB_X,
+		double vecB_Y) {
+	return vecA_X * vecB_Y - vecA_Y * vecB_X;
+}
+
+__device__ double calBendMulti(double& angle) {
+	return bendCoeff * (angle - PI);
+}
+

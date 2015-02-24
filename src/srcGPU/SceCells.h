@@ -6,12 +6,15 @@
 #include <time.h>
 #include <thrust/tabulate.h>
 
+#define PI 3.14159265358979
+
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
 /*
@@ -25,6 +28,9 @@ __device__
 double calMembrForce(double& length);
 
 __device__
+double calBendMulti(double& angle);
+
+__device__
 double obtainRandAngle(uint& cellRank, uint& seed);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 __device__
@@ -35,6 +41,12 @@ bool isAllIntnlFilled(uint& currentIntnlCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 __device__
 bool longEnough(double& length);
+
+__device__
+bool bigEnough(double& num);
+
+__device__
+double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
 /**
  * Functor for divide operation.
  * @param dividend divisor for divide operator.
@@ -181,7 +193,7 @@ struct LessEqualTo: public thrust::unary_function<UiB, bool> {
 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
-struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
+struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	uint _bdryCount;
 	uint _maxNodePerCell;
 	double* _locXAddr;
@@ -189,14 +201,14 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 	bool* _isActiveAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
-	AddTensionForce(uint bdryCount, uint maxNodePerCell, double* locXAddr,
+	AddMembrForce(uint bdryCount, uint maxNodePerCell, double* locXAddr,
 			double* locYAddr, bool* isActiveAddr) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
 					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
-	CVec6 operator()(const TensionData &tData) const {
+	CVec10 operator()(const TensionData &tData) const {
 		uint activeMembrCount = thrust::get<0>(tData);
 		uint cellRank = thrust::get<1>(tData);
 		uint nodeRank = thrust::get<2>(tData);
@@ -211,25 +223,43 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 		double rightMag = 0;
 		double midX = 0;
 		double midY = 0;
+		double bendLeftX = 0;
+		double bendLeftY = 0;
+		double bendRightX = 0;
+		double bendRightY = 0;
+
+		double leftPosX;
+		double leftPosY;
+		double leftDiffX;
+		double leftDiffY;
+		double lenLeft;
+
+		double rightPosX;
+		double rightPosY;
+		double rightDiffX;
+		double rightDiffY;
+		double lenRight;
+
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
+					bendLeftX, bendLeftY, bendRightX, bendRightY);
 		} else {
 			int index_left = nodeRank - 1;
 			if (index_left == -1) {
 				index_left = activeMembrCount - 1;
 			}
 			index_left = index_left + _bdryCount + cellRank * _maxNodePerCell;
-			if (_isActiveAddr[index_left] == true) {
-				double leftPosX = _locXAddr[index_left];
-				double leftPosY = _locYAddr[index_left];
-				double leftDiffX = leftPosX - locX;
-				double leftDiffY = leftPosY - locY;
-				double length = sqrt(
-						leftDiffX * leftDiffX + leftDiffY * leftDiffY);
-				double forceVal = calMembrForce(length);
-				if (longEnough(length)) {
-					velX = velX + forceVal * leftDiffX / length;
-					velY = velY + forceVal * leftDiffY / length;
+			// apply tension force from left
+			if (_isActiveAddr[index_left]) {
+				leftPosX = _locXAddr[index_left];
+				leftPosY = _locYAddr[index_left];
+				leftDiffX = leftPosX - locX;
+				leftDiffY = leftPosY - locY;
+				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
+				double forceVal = calMembrForce(lenLeft);
+				if (longEnough(lenLeft)) {
+					velX = velX + forceVal * leftDiffX / lenLeft;
+					velY = velY + forceVal * leftDiffY / lenLeft;
 					mag = forceVal + mag;
 				}
 			}
@@ -239,28 +269,144 @@ struct AddTensionForce: public thrust::unary_function<TensionData, CVec6> {
 				index_right = 0;
 			}
 			index_right = index_right + _bdryCount + cellRank * _maxNodePerCell;
-			if (_isActiveAddr[index_right] == true) {
-				double rightPosX = _locXAddr[index_right];
-				double rightPosY = _locYAddr[index_right];
-				double rightDiffX = rightPosX - locX;
-				double rightDiffY = rightPosY - locY;
-				double length = sqrt(
+			// apply tension force from right
+			if (_isActiveAddr[index_right]) {
+				rightPosX = _locXAddr[index_right];
+				rightPosY = _locYAddr[index_right];
+				rightDiffX = rightPosX - locX;
+				rightDiffY = rightPosY - locY;
+				lenRight = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = calMembrForce(length);
-				if (longEnough(length)) {
-					velX = velX + forceVal * rightDiffX / length;
-					velY = velY + forceVal * rightDiffY / length;
+				double forceVal = calMembrForce(lenRight);
+				if (longEnough(lenRight)) {
+					velX = velX + forceVal * rightDiffX / lenRight;
+					velY = velY + forceVal * rightDiffY / lenRight;
 					mag = forceVal + mag;
 					rightMag = forceVal;
 					midX = (rightPosX + locX) / 2;
 					midY = (rightPosY + locY) / 2;
 				}
 			}
-			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY);
-		}
+			// applies bending force.
+			if (_isActiveAddr[index_left] && _isActiveAddr[index_right]) {
+				if (longEnough(lenLeft) && longEnough(lenRight)) {
+					double dotP = -leftDiffX * rightDiffX
+							- leftDiffY * rightDiffY;
+					double vecP = dotP / (lenLeft * lenRight);
 
+					double term0 = sqrt(1 - vecP * vecP);
+					// this if statement is required for numerical purpose only.
+					// Whole term would go to zero when term 0 close to zero, but the computation
+					// would cause numerical errors, so need to make sure term0 is big enough.
+					if (bigEnough(term0)) {
+						double angle;
+						// value of cross product in z direction: vecA_X * vecB_Y - vecA_Y * vecB_X
+						double crossZ = leftDiffY * rightDiffX
+								- leftDiffX * rightDiffY;
+						if (crossZ > 0) {
+							// means angle > PI (concave)
+							angle = PI + asin(vecP);
+						} else {
+							// means angle < PI (convex)
+							angle = PI - asin(vecP);
+						}
+						// leftDiffX = ax-bx
+						// rightDiffX = cx-bx
+						double term1x = -rightDiffX / (lenLeft * lenRight);
+						double term2x = leftDiffX / (lenLeft * lenRight);
+						double term3x = (dotP * leftDiffX)
+								/ (lenLeft * lenLeft * lenLeft * lenRight);
+						double term4x = (-dotP * rightDiffX)
+								/ (lenLeft * lenRight * lenRight * lenRight);
+						double term1y = -rightDiffY / (lenLeft * lenRight);
+						double term2y = leftDiffY / (lenLeft * lenRight);
+						double term3y = (dotP * leftDiffY)
+								/ (lenLeft * lenLeft * lenLeft * lenRight);
+						double term4y = (-dotP * rightDiffY)
+								/ (lenLeft * lenRight * lenRight * lenRight);
+
+						double bendMultiplier = calBendMulti(angle);
+
+						// ((bx - cx)/(Lab*Lbc) - (DotP*(ax - bx))/(Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
+						// ((ax - 2*bx + cx)/(Lab*Lbc) + (DotP*(ax - bx))/(Lab^3*Lbc) - (DotP*(bx - cx))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						velX = velX
+								+ bendMultiplier
+										* (term2x - term1x + term3x - term4x)
+										/ term0;
+						// -((ax - bx)/(Lab*Lbc) - (DotP*(bx - cx))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						bendRightX = bendMultiplier * (term4x - term2x) / term0;
+
+						// ((by - cy)/(Lab*Lbc) - (DotP*(ay - by))/(Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						bendLeftY = bendMultiplier * (term1y - term3y) / term0;
+						// ((ay - 2*by + cy)/(Lab*Lbc) + (DotP*(ay - by))/(Lab^3*Lbc) - (DotP*(by - cy))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						velY = velY
+								+ bendMultiplier
+										* (term2y - term1y + term3x - term4x)
+										/ term0;
+						// -((ay - by)/(Lab*Lbc) - (DotP*(by - cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						bendRightY = (term4y - term2y) / term0;
+					}
+				}
+			}
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
+					bendLeftX, bendLeftY, bendRightX, bendRightY);
+		}
 	}
 };
+
+struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _bendLeftXAddr;
+	double* _bendLeftYAddr;
+	double* _bendRightXAddr;
+	double* _bendRightYAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddMembrBend(uint maxNodePerCell, bool* isActiveAddr, double* bendLeftXAddr,
+			double* bendLeftYAddr, double* bendRightXAddr,
+			double* bendRightYAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _bendLeftXAddr(
+					bendLeftXAddr), _bendLeftYAddr(bendLeftYAddr), _bendRightXAddr(
+					bendRightXAddr), _bendRightYAddr(bendRightYAddr) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__
+	CVec2 operator()(const BendData &bData) const {
+		uint activeMembrCount = thrust::get<0>(bData);
+		uint cellRank = thrust::get<1>(bData);
+		uint nodeRank = thrust::get<2>(bData);
+		double oriVelX = thrust::get<3>(bData);
+		double oriVelY = thrust::get<4>(bData);
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(oriVelX, oriVelY);
+		}
+		int index_left = nodeRank - 1;
+		if (index_left == -1) {
+			index_left = activeMembrCount - 1;
+		}
+		index_left = index_left + cellRank * _maxNodePerCell;
+		// apply bend force from left
+		if (_isActiveAddr[index_left]) {
+			oriVelX = oriVelX + _bendRightXAddr[index_left];
+			oriVelY = oriVelY + _bendRightYAddr[index_left];
+		}
+		int index_right = nodeRank + 1;
+		if (index_right == (int) activeMembrCount) {
+			index_right = 0;
+		}
+		index_right = index_right + cellRank * _maxNodePerCell;
+		// apply bend force from right
+		if (_isActiveAddr[index_right]) {
+			oriVelX = oriVelX + _bendLeftXAddr[index_right];
+			oriVelY = oriVelY + _bendLeftYAddr[index_right];
+		}
+		return thrust::make_tuple(oriVelX, oriVelY);
+	}
+}
+;
 
 /**
  * Obtain growth speed and direction given node position.
@@ -1114,7 +1260,6 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 		} else {
 			rng.discard(seed);
 			double randomNum1 = dist(rng);
-			double PI = acos(-1.0);
 			thrust::uniform_real_distribution<double> dist2(0, 2 * PI);
 			rng.discard(seed);
 			double randomNum2 = dist2(rng);
@@ -1342,6 +1487,7 @@ struct MembrPara {
 	double membrEquLenCPU;
 	double membrGrowCoeff;
 	double membrGrowLimit;
+	double membrBendCoeff;
 	void initFromConfig();
 };
 
@@ -1563,7 +1709,7 @@ class SceCells {
 
 	void distributeIsActiveInfo();
 
-	void applyMemTension_M();
+	void applyMemForce_M();
 
 	void computeCenterPos_M();
 

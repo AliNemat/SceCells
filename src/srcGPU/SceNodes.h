@@ -81,6 +81,8 @@ typedef thrust::tuple<double, double, double, double> CVec4;
 typedef thrust::tuple<double, double, double, double, bool> CVec4Bool;
 typedef thrust::tuple<double, double, double, double, double> CVec5;
 typedef thrust::tuple<double, double, double, double, double, double> CVec6;
+typedef thrust::tuple<double, double, double, double, double, double, double,
+		double, double, double> CVec10;
 typedef thrust::tuple<double, double, double, double, double, double, bool> CVec6Bool;
 typedef thrust::tuple<double, double, double, double, double, double, uint> CVec6UI;
 typedef thrust::tuple<int, int> Int2;
@@ -819,6 +821,11 @@ public:
 	thrust::device_vector<double> membrTenMagRi;
 	thrust::device_vector<double> membrLinkRiMidX;
 	thrust::device_vector<double> membrLinkRiMidY;
+
+	thrust::device_vector<double> membrBendLeftX;
+	thrust::device_vector<double> membrBendLeftY;
+	thrust::device_vector<double> membrBendRightX;
+	thrust::device_vector<double> membrBendRightY;
 };
 
 /**
