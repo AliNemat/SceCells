@@ -91,6 +91,9 @@ int main(int argc, char* argv[]) {
 	std::string polyStatFileName = globalConfigVars.getConfigValue(
 			"PolygonStatFileName").toString();
 	std::remove(polyStatFileName.c_str());
+
+	std::string detailStatFileNameBase = globalConfigVars.getConfigValue(
+			"DetailStatFileNameBase").toString();
 	double divThreshold =
 			globalConfigVars.getConfigValue("DivThreshold").toDouble();
 
@@ -99,8 +102,9 @@ int main(int argc, char* argv[]) {
 	// main simulation steps.
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		if (i % mainPara.aniAuxVar == 0) {
-			PolyCountData polyData = simuDomain.outputPolyCountData();
-			polyData.printToFile(polyStatFileName, divThreshold);
+			CellsStatsData polyData = simuDomain.outputPolyCountData();
+			polyData.printPolyCountToFile(polyStatFileName, divThreshold);
+			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			aniFrame++;

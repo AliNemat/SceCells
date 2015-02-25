@@ -215,7 +215,7 @@ public:
 
 	void performAblation(AblationEvent &ablEvent);
 
-	PolyCountData outputPolyCountData();
+	CellsStatsData outputPolyCountData();
 };
 
 #endif

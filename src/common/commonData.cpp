@@ -380,17 +380,18 @@ std::vector<CVector> obtainPtsBetween(CVector& start, CVector& end,
 	return result;
 }
 
-void PolyCountData::printToFile(std::string fileName, double divThreshold) {
+void CellsStatsData::printPolyCountToFile(std::string fileName,
+		double divThreshold) {
 	//std::remove(fileName.c_str());
 	std::map<uint, uint> countBdry, countNormal, countDiv;
-	for (uint i = 0; i < cellPolyCounts.size(); i++) {
-		if (cellPolyCounts[i].isBdryCell == true) {
-			insertCount(cellPolyCounts[i].numNeighbors, countBdry);
+	for (uint i = 0; i < cellsStats.size(); i++) {
+		if (cellsStats[i].isBdryCell == true) {
+			insertCount(cellsStats[i].numNeighbors, countBdry);
 		} else {
-			if (cellPolyCounts[i].cellGrowthProgress <= divThreshold) {
-				insertCount(cellPolyCounts[i].numNeighbors, countNormal);
+			if (cellsStats[i].cellGrowthProgress <= divThreshold) {
+				insertCount(cellsStats[i].numNeighbors, countNormal);
 			} else {
-				insertCount(cellPolyCounts[i].numNeighbors, countDiv);
+				insertCount(cellsStats[i].numNeighbors, countDiv);
 			}
 		}
 	}
@@ -439,4 +440,38 @@ void printEntriesToFile(ofstream& fs, std::vector<CountEntry>& countEntries) {
 		fs << countEntries[i].numOfNeighbor << "," << countEntries[i].count
 				<< " ";
 	}
+}
+
+void CellsStatsData::printDetailStatsToFile(std::string fileNameBase,
+		int timestep) {
+	std::stringstream ss;
+	ss << std::setw(5) << std::setfill('0') << timestep;
+	std::string nameRank = ss.str();
+	std::string fileName = fileNameBase + nameRank + ".txt";
+	ofstream ofs(fileName.c_str(), ios::out);
+	for (uint i = 0; i < cellsStats.size(); i++) {
+		cellsStats[i].printToFile(ofs);
+	}
+	ofs.close();
+}
+
+void CellStats::printToFile(ofstream& ofs) {
+	ofs << "CellRank:" << cellRank << std::endl;
+	ofs << "    GrowthProgress:" << cellGrowthProgress << std::endl;
+	ofs << "    MembrGrowthProgress:" << membrGrowthProgress << std::endl;
+	ofs << "    IsBoundrayCell:" << isBdryCell << std::endl;
+	ofs << "    NumOfNeighbors:" << numNeighbors << std::endl;
+	ofs << "    CellArea:" << cellArea << std::endl;
+	ofs << "    NeighborCells:{ ";
+	for (std::set<int>::iterator it = neighborVec.begin();
+			it != neighborVec.end(); ++it) {
+		ofs << *it << " ";
+	}
+	ofs << "}" << std::endl;
+	ofs << "    CurrentActiveIntnlNode:" << currentActiveIntnlNodes
+			<< std::endl;
+	ofs << "    CurrentActiveMembrNodes:" << currentActiveMembrNodes
+			<< std::endl;
+	ofs << "    CellCenter:" << cellCenter << std::endl;
+	ofs << std::endl;
 }

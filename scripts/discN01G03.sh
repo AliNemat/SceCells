@@ -12,4 +12,4 @@
 #SBATCH --gres=gpu:1
 #SBATCH --nodelist=gpu01
 cd ../
-srun --gres=gpu:1 ./bin/runDiscSimulation -slurm N01_3
+srun --gres=gpu:1 ./bin/runDiscSimulation_M -slurm N01_3

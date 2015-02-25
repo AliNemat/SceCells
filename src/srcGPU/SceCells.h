@@ -423,11 +423,9 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 			oriVelX = oriVelX + _bendLeftXAddr[index_right];
 			oriVelY = oriVelY + _bendLeftYAddr[index_right];
 		}
-
 		return thrust::make_tuple(oriVelX, oriVelY);
 	}
-}
-;
+};
 
 /**
  * Obtain growth speed and direction given node position.
@@ -1847,7 +1845,7 @@ public:
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);
 
-	PolyCountData outputPolyCountData();
+	CellsStatsData outputPolyCountData();
 
 	bool aniDebug;
 };

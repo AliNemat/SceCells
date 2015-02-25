@@ -631,11 +631,18 @@ struct VecVal {
 std::vector<CVector> obtainPtsBetween(CVector& pt1, CVector& pt2,
 		double& spacing, uint maxNewMembrNodeCount);
 
-struct CellPolyData {
+struct CellStats {
 	uint cellRank;
 	double cellGrowthProgress;
 	bool isBdryCell;
 	uint numNeighbors;
+	double membrGrowthProgress;
+	double cellArea;
+	std::set<int> neighborVec;
+	uint currentActiveIntnlNodes;
+	uint currentActiveMembrNodes;
+	CVector cellCenter;
+	void printToFile(ofstream& ofs);
 };
 
 struct CountEntry {
@@ -646,10 +653,11 @@ struct CountEntry {
 	}
 };
 
-class PolyCountData {
+class CellsStatsData {
 public:
-	std::vector<CellPolyData> cellPolyCounts;
-	void printToFile(std::string fileName, double divThreshold);
+	std::vector<CellStats> cellsStats;
+	void printPolyCountToFile(std::string fileName, double divThreshold);
+	void printDetailStatsToFile(std::string fileNameBase, int timestep);
 };
 
 void insertCount(uint numNeighbor, std::map<uint, uint>& count);
