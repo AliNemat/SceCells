@@ -305,10 +305,10 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 								- leftDiffX * rightDiffY;
 						if (crossZ > 0) {
 							// means angle > PI (concave)
-							angle = PI + asin(vecP);
+							angle = PI + acos(vecP);
 						} else {
 							// means angle < PI (convex)
-							angle = PI - asin(vecP);
+							angle = PI - acos(vecP);
 						}
 						// leftDiffX = ax-bx
 						// rightDiffX = cx-bx
@@ -325,27 +325,38 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						double term4y = (-dotP * rightDiffY)
 								/ (lenLeft * lenRight * lenRight * lenRight);
 
-						double bendMultiplier = calBendMulti(angle);
+						double bendMultiplier = -calBendMulti(angle);
+						// because sign of angle formula would change if crossZ < 0
+						if (crossZ > 0) {
+							bendMultiplier = -bendMultiplier;
+						}
 
-						// ((bx - cx)/(Lab*Lbc) - (DotP*(ax - bx))/(Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						// following are values obtained from matlab: (derivative of angle to each coordinate:
+						//-((bx - cx)/(Lab*Lbc) - (DotP*(2*ax - 2*bx))/(2*Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((ax - 2*bx + cx)/(Lab*Lbc) + (DotP*(2*ax - 2*bx))/(2*Lab^3*Lbc) - (DotP*(2*bx - 2*cx))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//((ax - bx)/(Lab*Lbc) - (DotP*(2*bx - 2*cx))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((by - cy)/(Lab*Lbc) - (DotP*(2*ay - 2*by))/(2*Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((ay - 2*by + cy)/(Lab*Lbc) + (DotP*(2*ay - 2*by))/(2*Lab^3*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//((ay - by)/(Lab*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+
+						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
-						// ((ax - 2*bx + cx)/(Lab*Lbc) + (DotP*(ax - bx))/(Lab^3*Lbc) - (DotP*(bx - cx))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
 										/ term0;
-						// -((ax - bx)/(Lab*Lbc) - (DotP*(bx - cx))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+
 						bendRightX = bendMultiplier * (term4x - term2x) / term0;
 
-						// ((by - cy)/(Lab*Lbc) - (DotP*(ay - by))/(Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
 						bendLeftY = bendMultiplier * (term1y - term3y) / term0;
-						// ((ay - 2*by + cy)/(Lab*Lbc) + (DotP*(ay - by))/(Lab^3*Lbc) - (DotP*(by - cy))/(Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+
 						velY = velY
 								+ bendMultiplier
-										* (term2y - term1y + term3x - term4x)
+										* (term2y - term1y + term3y - term4y)
 										/ term0;
-						// -((ay - by)/(Lab*Lbc) - (DotP*(by - cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
-						bendRightY = (term4y - term2y) / term0;
+
+						bendRightY = bendMultiplier * (term4y - term2y) / term0;
 					}
 				}
 			}
@@ -385,7 +396,6 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 
-		/*
 		int index_left = nodeRank - 1;
 		if (index_left == -1) {
 			index_left = activeMembrCount - 1;
@@ -407,7 +417,7 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 			oriVelX = oriVelX + _bendLeftXAddr[index_right];
 			oriVelY = oriVelY + _bendLeftYAddr[index_right];
 		}
-		*/
+
 		return thrust::make_tuple(oriVelX, oriVelY);
 	}
 }
