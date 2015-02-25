@@ -340,6 +340,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						//((ay - by)/(Lab*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
 
 						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
+
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
 
 						velX = velX
@@ -357,6 +358,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 										/ term0;
 
 						bendRightY = bendMultiplier * (term4y - term2y) / term0;
+
 					}
 				}
 			}
