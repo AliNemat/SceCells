@@ -294,6 +294,10 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 							- leftDiffY * rightDiffY;
 					double vecP = dotP / (lenLeft * lenRight);
 
+					// because of numerical error, 1 - vecP*vecP could be less than 0, although it is not possible in mathematics.
+					// sqrt(negative number) would cause term0 to be nan.
+					// if an nan number is produced, it will not be accepted by bigEnough function.
+					// this is OK, because we know at that time bending energy should be 0.
 					double term0 = sqrt(1 - vecP * vecP);
 					// this if statement is required for numerical purpose only.
 					// Whole term would go to zero when term 0 close to zero, but the computation

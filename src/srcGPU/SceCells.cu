@@ -46,10 +46,10 @@ bool isAllIntnlFilled(uint& currentIntnlCount) {
 
 __device__
 bool longEnough(double& length) {
-	if (length < minLength) {
-		return false;
-	} else {
+	if (length > minLength) {
 		return true;
+	} else {
+		return false;
 	}
 }
 
@@ -3166,10 +3166,10 @@ PolyCountData SceCells::outputPolyCountData() {
 }
 
 __device__ bool bigEnough(double& num) {
-	if (num < minDivisor) {
-		return false;
-	} else {
+	if (num > minDivisor) {
 		return true;
+	} else {
+		return false;
 	}
 }
 
