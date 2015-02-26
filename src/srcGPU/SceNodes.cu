@@ -1284,7 +1284,7 @@ void SceNodes::buildBuckets2D_M() {
 			+ allocPara_M.currentActiveCellCount
 					* allocPara_M.maxAllNodePerCell;
 
-	thrust::counting_iterator<uint> countingIterBegin(0);
+	thrust::counting_iterator<uint> iBegin(0);
 	// takes counting iterator and coordinates
 	// return tuple of keys and values
 	// transform the points to their bucket indices
@@ -1293,12 +1293,12 @@ void SceNodes::buildBuckets2D_M() {
 					make_tuple(infoVecs.nodeLocX.begin(),
 							infoVecs.nodeLocY.begin(),
 							infoVecs.nodeLocZ.begin(),
-							infoVecs.nodeIsActive.begin(), countingIterBegin)),
+							infoVecs.nodeIsActive.begin(), iBegin)),
 			make_zip_iterator(
 					make_tuple(infoVecs.nodeLocX.begin(),
 							infoVecs.nodeLocY.begin(),
 							infoVecs.nodeLocZ.begin(),
-							infoVecs.nodeIsActive.begin(), countingIterBegin))
+							infoVecs.nodeIsActive.begin(), iBegin))
 					+ totalActiveNodes,
 			make_zip_iterator(
 					make_tuple(auxVecs.bucketKeys.begin(),
@@ -1837,26 +1837,20 @@ void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
 }
 
 __device__
-void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
-		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double& xRes, double& yRes) {
-
-// should old one break?
-	if (adhereIndex != -1) {
-		// means adhesion has been established
-		double curAdherePosX = _nodeLocXAddress[adhereIndex];
-		double curAdherePosY = _nodeLocYAddress[adhereIndex];
-		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
-		if (curLen > maxAdhBondLen_M) {
-			adhereIndex = -1;
-			return;
-		} else {
-			if (curLen > minAdhBondLen_M) {
-				double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
-				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
-				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
-			}
+void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
+		double& curAdherePosX, double& curAdherePosY, double& xRes,
+		double& yRes) {
+	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+	if (curLen > maxAdhBondLen_M) {
+		adhereIndex = -1;
+		return;
+	} else {
+		if (curLen > minAdhBondLen_M) {
+			double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
+			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
+			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
+
 	}
 }
 
@@ -2700,7 +2694,7 @@ void SceNodes::keepAdhIndxCopyInHost_M() {
 void SceNodes::removeInvalidPairs_M() {
 	int* nodeAdhIdxAddress = thrust::raw_pointer_cast(
 			&infoVecs.nodeAdhereIndex[0]);
-	uint maxTotalNode = allocPara_M.currentActiveCellCount
+	uint curActiveNodeCt = allocPara_M.currentActiveCellCount
 			* allocPara_M.maxAllNodePerCell;
 	thrust::counting_iterator<int> iBegin(0);
 	thrust::transform(
@@ -2709,8 +2703,9 @@ void SceNodes::removeInvalidPairs_M() {
 							infoVecs.nodeAdhereIndex.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(iBegin,
-							infoVecs.nodeAdhereIndex.begin())) + maxTotalNode,
-			infoVecs.nodeAdhereIndex.begin(), AdjustAdh(nodeAdhIdxAddress));
+							infoVecs.nodeAdhereIndex.begin()))
+					+ curActiveNodeCt, infoVecs.nodeAdhereIndex.begin(),
+			AdjustAdh(nodeAdhIdxAddress));
 }
 
 void SceNodes::applyMembrAdh_M() {

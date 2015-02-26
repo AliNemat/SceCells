@@ -1715,7 +1715,6 @@ void SceCells::applyMemForce_M() {
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
-	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));

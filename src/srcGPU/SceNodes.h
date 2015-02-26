@@ -422,9 +422,9 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		double* _nodeGrowProAddr);
 
 __device__
-void handleAdhesionForce_M(uint& nodeRank, int& adhereIndex, double& xPos,
-		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double& xRes, double& yRes);
+void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
+		double& curAdherePosX, double& curAdherePosY, double& xRes,
+		double& yRes);
 
 __device__
 void handleIntnlAdh_M(uint& nodeRank, int& adhereIndex, double& xPos,
@@ -594,9 +594,9 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		double xPos = thrust::get<3>(u3d2);
 		double yPos = thrust::get<4>(u3d2);
 
-		bool isSuccess = false, isSuccessIntnl = false;
-		uint index, indexIntnl;
-		double dist, distIntnl;
+		bool isSuccess = false;
+		uint index;
+		double dist;
 
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
@@ -615,27 +615,10 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 							_nodeLocYAddress[nodeRankOfOtherNode]);
 				}
 			}
-			if (sameCellMemIntnl(myValue, nodeRankOfOtherNode)) {
-				if (_membrIntnlIndex[myValue] == -1) {
-					attemptToAdhereIntnl(isSuccessIntnl, indexIntnl, distIntnl,
-							nodeRankOfOtherNode, xPos, yPos,
-							_nodeLocXAddress[nodeRankOfOtherNode],
-							_nodeLocYAddress[nodeRankOfOtherNode]);
-				}
-			}
 		}
 		if (isSuccess) {
 			_nodeAdhereIndex[myValue] = index;
 		}
-
-		if (isSuccessIntnl) {
-			_membrIntnlIndex[myValue] = indexIntnl;
-		}
-
-		//handleAdhesionForce_M(myValue, _nodeAdhereIndex[myValue], xPos, yPos,
-		//		_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
-		handleIntnlAdh_M(myValue, _membrIntnlIndex[myValue], xPos, yPos,
-				_nodeLocXAddress, _nodeLocYAddress, xRes, yRes);
 
 		return thrust::make_tuple(xRes, yRes);
 	}
@@ -650,7 +633,7 @@ struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
 	double* _nodeLocXAddress;
 	double* _nodeLocYAddress;
 	double* _nodeLocZAddress;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddSceForceBasic(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, double* nodeLocZAddress) :
@@ -691,7 +674,7 @@ struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
 struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 	double* _nodeLocXArrAddr;
 	double* _nodeLocYArrAddr;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr) :
 			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr) {
@@ -708,8 +691,10 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		} else {
 			double locX = _nodeLocXArrAddr[nodeIndx];
 			double locY = _nodeLocYArrAddr[nodeIndx];
-			handleAdhesionForce_M(nodeIndx, adhIndx, locX, locY,
-					_nodeLocXArrAddr, _nodeLocYArrAddr, oriVelX, oriVelY);
+			double adhLocX = _nodeLocXArrAddr[adhIndx];
+			double adhLocY = _nodeLocYArrAddr[adhIndx];
+			handleAdhesionForce_M(adhIndx, locX, locY, adhLocX, adhLocY,
+					oriVelX, oriVelY);
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 	}
@@ -726,7 +711,7 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	double* _nodeVelYLinkBeginAddress;
 	double* _nodeVelZLinkBeginAddress;
 	uint _maxNumberOfNodes;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddLinkForces(double* nodeLocXLinkBeginAddress,
 			double* nodeLocYLinkBeginAddress, double* nodeLocZLinkBeginAddress,
 			double* nodeVelXLinkBeginAddress, double* nodeVelYLinkBeginAddress,
@@ -739,7 +724,7 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 					nodeVelZLinkBeginAddress), _maxNumberOfNodes(
 					maxNumberOfNodes) {
 	}
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ CVec3 operator()(const uint &pos) const {
 		// nodes on two ends should be fixed.
 		// therefore, velocity is set to 0.
@@ -778,26 +763,26 @@ struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
  */
 struct NodeInfoVecs {
 public:
-	// this vector is used to indicate whether a node is active or not.
-	// E.g, max number of nodes of a cell is 100 maybe the first 75 nodes are active.
-	// The value of this vector will be changed by external process.
+// this vector is used to indicate whether a node is active or not.
+// E.g, max number of nodes of a cell is 100 maybe the first 75 nodes are active.
+// The value of this vector will be changed by external process.
 	thrust::device_vector<bool> nodeIsActive;
-	// X locations of nodes
+// X locations of nodes
 	thrust::device_vector<double> nodeLocX;
-	// Y locations of nodes
+// Y locations of nodes
 	thrust::device_vector<double> nodeLocY;
-	// Z locations of nodes
+// Z locations of nodes
 	thrust::device_vector<double> nodeLocZ;
-	// X velocities of nodes
+// X velocities of nodes
 	thrust::device_vector<double> nodeVelX;
-	// Y velocities of nodes
+// Y velocities of nodes
 	thrust::device_vector<double> nodeVelY;
-	// Z velocities of nodes
+// Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
-	// represents nodes's stress level.
+// represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
 
-	// growth progress of the cell that the node belongs to.
+// growth progress of the cell that the node belongs to.
 	thrust::device_vector<double> nodeGrowPro;
 
 	thrust::device_vector<double> nodeInterForceX;
@@ -806,13 +791,13 @@ public:
 
 	thrust::device_vector<double> nodeInterForceZ;
 
-	// in order to represent differential adhesion, we also need an vector
-	// for each cell node to identify the cell type.
+// in order to represent differential adhesion, we also need an vector
+// for each cell node to identify the cell type.
 	thrust::device_vector<SceNodeType> nodeCellType;
-	// for each node, we need to identify which cell it belongs to.
+// for each node, we need to identify which cell it belongs to.
 	thrust::device_vector<uint> nodeCellRank;
 
-	// only for modified version
+// only for modified version
 	thrust::device_vector<int> nodeAdhereIndex;
 	thrust::host_vector<int> nodeAdhIndxHostCopy;
 	thrust::device_vector<int> membrIntnlIndex;
@@ -832,17 +817,17 @@ public:
  * Store temporary values while computing for Sub-cellular element method.
  */
 struct NodeAuxVecs {
-	// bucket key means which bucket ID does a certain point fit into
+// bucket key means which bucket ID does a certain point fit into
 	thrust::device_vector<uint> bucketKeys;
-	// bucket value means global rank of a certain point
+// bucket value means global rank of a certain point
 	thrust::device_vector<uint> bucketValues;
-	// bucket key expanded means what are the bucket IDs are the neighbors of a certain point
+// bucket key expanded means what are the bucket IDs are the neighbors of a certain point
 	thrust::device_vector<uint> bucketKeysExpanded;
-	// bucket value expanded means each point ( represented by its global rank) will have multiple copies
+// bucket value expanded means each point ( represented by its global rank) will have multiple copies
 	thrust::device_vector<uint> bucketValuesIncludingNeighbor;
-	// begin position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
+// begin position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
 	thrust::device_vector<uint> keyBegin;
-	// end position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
+// end position of a keys in bucketKeysExpanded and bucketValuesIncludingNeighbor
 	thrust::device_vector<uint> keyEnd;
 };
 
@@ -973,9 +958,9 @@ class SceNodes {
 	uint endIndxExt_M;
 	uint endIndxExtProc_M;
 
-	// friend unit test so these it can test private functions
+// friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, FindingPossiblePairsTest);
-	// friend unit test so these it can test private functions
+// friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, outputAnimationLinks);
 public:
 	/**
