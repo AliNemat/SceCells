@@ -30,7 +30,7 @@
 #include <assert.h>
 #include "commonData.h"
 #include "ResAnalysisHelper.h"
-//#include "commonGPUData.h"
+
 #include <ctime>
 
 // include google test files in order to test private functions.
@@ -102,7 +102,7 @@ __device__
 bool bothMembr(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
 __device__
-bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
+bool bothMembrDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
 __device__
 bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2);
@@ -599,20 +599,17 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		double dist;
 
 		for (uint i = begin; i < end; i++) {
-			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
-			if (nodeRankOfOtherNode == myValue) {
+			uint nodeRankOther = _extendedValuesAddress[i];
+			if (nodeRankOther == myValue) {
 				continue;
 			}
-			handleSceForceNodesDisc_M(myValue, nodeRankOfOtherNode, xPos, yPos,
-					_nodeLocXAddress[nodeRankOfOtherNode],
-					_nodeLocYAddress[nodeRankOfOtherNode], xRes, yRes,
-					_nodeLocXAddress, _nodeLocYAddress, _nodeGroProAddr);
-
-			if (bothEpiDiffCell(myValue, nodeRankOfOtherNode)) {
+			if (bothMembrDiffCell(myValue, nodeRankOther)) {
+				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+						_nodeLocYAddress[nodeRankOther], xRes, yRes);
 				if (_nodeAdhereIndex[myValue] == -1) {
-					attemptToAdhere(isSuccess, index, dist, nodeRankOfOtherNode,
-							xPos, yPos, _nodeLocXAddress[nodeRankOfOtherNode],
-							_nodeLocYAddress[nodeRankOfOtherNode]);
+					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
+							yPos, _nodeLocXAddress[nodeRankOther],
+							_nodeLocYAddress[nodeRankOther]);
 				}
 			}
 		}
@@ -1098,6 +1095,14 @@ public:
 	}
 
 	std::vector<std::pair<uint, uint> > obtainPossibleNeighborPairs_M();
+
+	const SceMechPara_M& getMechParaM() const {
+		return mechPara_M;
+	}
+
+	void setMechParaM(const SceMechPara_M& mechParaM) {
+		mechPara_M = mechParaM;
+	}
 };
 
 #endif /* SCENODES_H_ */

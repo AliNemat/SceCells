@@ -182,7 +182,7 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 		fs << "3" << endl;
 	}
 	fs << "POINT_DATA " << pointsAniData.size() << endl;
-	fs << "SCALARS relative_compression float" << endl;
+	fs << "SCALARS relative_tension float" << endl;
 	fs << "LOOKUP_TABLE default" << endl;
 
 	for (uint i = 0; i < pointsAniData.size(); i++) {

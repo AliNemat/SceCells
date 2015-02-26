@@ -12,6 +12,12 @@ __constant__ uint maxMembrPerCell;
 __constant__ uint maxIntnlPerCell;
 __constant__ double bendCoeff;
 
+__constant__ double sceIB_M[5];
+__constant__ double sceII_M[5];
+__constant__ double sceIIDiv_M[5];
+__constant__ double grthPrgrCriVal_M;
+__constant__ double grthPrgrCriEnd_M;
+
 __device__
 double calMembrForce(double& length) {
 	if (length < membrEquLen) {
@@ -1346,6 +1352,8 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
+
+	applySceCellDisc_M();
 
 	applyMemForce_M();
 
@@ -2715,6 +2723,18 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(maxAllNodePerCell, &maxAllNodePerCellCPU, sizeof(uint));
 	cudaMemcpyToSymbol(maxMembrPerCell, &maxMembrNodePerCellCPU, sizeof(uint));
 	cudaMemcpyToSymbol(maxIntnlPerCell, &maxIntnlNodePerCellCPU, sizeof(uint));
+
+	cudaMemcpyToSymbol(grthPrgrCriVal_M,
+			&(nodes->getMechParaM().growthPrgrCriValCPU_M), sizeof(double));
+	cudaMemcpyToSymbol(sceIB_M, &(nodes->getMechParaM().sceIntnlBParaCPU_M),
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceII_M, &(nodes->getMechParaM().sceIntraParaCPU_M),
+			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIIDiv_M,
+			&(nodes->getMechParaM().sceIntraParaDivCPU_M), 5 * sizeof(double));
+	double grthProgrEndCPU =
+			globalConfigVars.getConfigValue("GrowthPrgrValEnd").toDouble();
+	cudaMemcpyToSymbol(grthPrgrCriEnd_M, &grthProgrEndCPU, sizeof(double));
 }
 
 void SceCells::handleMembrGrowth_M() {
@@ -3282,3 +3302,126 @@ __device__ double calBendMulti(double& angle) {
 	return bendCoeff * (angle - PI);
 }
 
+void SceCells::applySceCellDisc_M() {
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+
+	double* nodeLocXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[0]));
+	double* nodeLocYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[0]));
+	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[0]));
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeIntnlNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeIntnlNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
+					nodeLocYAddr, nodeIsActiveAddr));
+}
+
+__device__
+void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	/*
+	 double forceValue;
+	 if (linkLength > sceIntnlBPara_M[4]) {
+	 forceValue = 0;
+	 } else {
+	 forceValue = -sceIntnlBPara_M[0] / sceIntnlBPara_M[2]
+	 * exp(-linkLength / sceIntnlBPara_M[2])
+	 + sceIntnlBPara_M[1] / sceIntnlBPara_M[3]
+	 * exp(-linkLength / sceIntnlBPara_M[3]);
+	 }
+	 xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	 yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	 */
+}
+
+__device__
+void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceIIDiv_M[4]) {
+			forceValue = -sceIIDiv_M[0] / sceIIDiv_M[2]
+					* exp(-linkLength / sceIIDiv_M[2])
+					+ sceIIDiv_M[1] / sceIIDiv_M[3]
+							* exp(-linkLength / sceIIDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIIDiv_M[4])
+				+ (grthPrgrCriEnd_M - percent) * sceII_M[4];
+		if (linkLength < lenLimit) {
+			double intraPara0 = percent * (sceIIDiv_M[0])
+					+ (grthPrgrCriEnd_M - percent) * sceII_M[0];
+			double intraPara1 = percent * (sceIIDiv_M[1])
+					+ (grthPrgrCriEnd_M - percent) * sceII_M[1];
+			double intraPara2 = percent * (sceIIDiv_M[2])
+					+ (grthPrgrCriEnd_M - percent) * sceII_M[2];
+			double intraPara3 = percent * (sceIIDiv_M[3])
+					+ (grthPrgrCriEnd_M - percent) * sceII_M[3];
+			forceValue = -intraPara0 / intraPara2
+					* exp(-linkLength / intraPara2)
+					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		}
+	} else {
+		if (linkLength < sceII_M[4]) {
+			forceValue = -sceII_M[0] / sceII_M[2]
+					* exp(-linkLength / sceII_M[2])
+					+ sceII_M[1] / sceII_M[3] * exp(-linkLength / sceII_M[3]);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}

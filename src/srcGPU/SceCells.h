@@ -15,6 +15,7 @@ typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
+typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
 /*
@@ -47,6 +48,15 @@ bool bigEnough(double& num);
 
 __device__
 double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
+
+__device__
+void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes);
+
+__device__
+void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes);
+
 /**
  * Functor for divide operation.
  * @param dividend divisor for divide operator.
@@ -422,6 +432,64 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 		if (_isActiveAddr[index_right]) {
 			oriVelX = oriVelX + _bendLeftXAddr[index_right];
 			oriVelY = oriVelY + _bendLeftYAddr[index_right];
+		}
+		return thrust::make_tuple(oriVelX, oriVelY);
+	}
+};
+
+struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
+	uint _maxNodePerCell;
+	uint _maxMemNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddSceCellForce(uint maxNodePerCell, uint maxMemNodePerCell,
+			double* locXAddr, double* locYAddr, bool* isActiveAddr) :
+			_maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
+					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
+					locYAddr), _isActiveAddr(isActiveAddr) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__
+	CVec2 operator()(const CellData &cData) const {
+		uint activeMembrCount = thrust::get<0>(cData);
+		uint activeIntnlCount = thrust::get<1>(cData);
+		uint cellRank = thrust::get<2>(cData);
+		uint nodeRank = thrust::get<3>(cData);
+		double progress = thrust::get<4>(cData);
+		double oriVelX = thrust::get<5>(cData);
+		double oriVelY = thrust::get<6>(cData);
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+
+		if (_isActiveAddr[index] == false) {
+			return thrust::make_tuple(oriVelX, oriVelY);
+		}
+		uint intnlIndxBegin = cellRank * _maxNodePerCell + _maxMemNodePerCell;
+		uint intnlIndxEnd = (cellRank + 1) * _maxNodePerCell;
+		uint index_other;
+		double nodeX = _locXAddr[index];
+		double nodeY = _locYAddr[index];
+		double nodeXOther, nodeYOther;
+		// means membrane node
+		if (nodeRank < _maxMemNodePerCell) {
+			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
+					index_other++) {
+				nodeXOther = _locXAddr[index_other];
+				nodeYOther = _locYAddr[index_other];
+				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY);
+			}
+		} else {
+			// means internal node
+			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
+					index_other++) {
+				nodeXOther = _locXAddr[index_other];
+				nodeYOther = _locYAddr[index_other];
+				calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY);
+			}
 		}
 		return thrust::make_tuple(oriVelX, oriVelY);
 	}
@@ -1779,6 +1847,8 @@ class SceCells {
 	void distributeIsActiveInfo();
 
 	void applyMemForce_M();
+
+	void applySceCellDisc_M();
 
 	void computeCenterPos_M();
 

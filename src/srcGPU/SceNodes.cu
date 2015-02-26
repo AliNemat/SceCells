@@ -36,7 +36,7 @@ __constant__ double intnlStiff_M;
 __constant__ double maxIntnlAdhLen_M;
 __constant__ double minIntnlAdhLen_M;
 
-// #define DebugMode
+#define DebugMode
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,
@@ -1698,7 +1698,7 @@ bool bothMembr(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 }
 
 __device__
-bool bothEpiDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
+bool bothMembrDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeGlobalRank1 < cellNodeBeginPos_M
 			|| nodeGlobalRank2 < cellNodeBeginPos_M) {
 		return false;
@@ -2483,7 +2483,7 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventElapsedTime(&elapsedTime3, start3, stop);
 
 	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
-	<< elapsedTime2 << " " << elapsedTime3 << std::endl;
+			<< elapsedTime2 << " " << elapsedTime3 << std::endl;
 #endif
 }
 
