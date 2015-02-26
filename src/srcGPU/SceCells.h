@@ -1341,12 +1341,14 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 	bool* _isActiveAddr;
 	double* _xPosAddr, *_yPosAddr;
 	int* _adhIndxAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
 	AddMemNode(uint maxNodePerCell, bool* isActiveAddr, double* xPosAddr,
 			double* yPosAddr, int* adhIndxAddr) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
 					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
 	}
-	__host__ __device__
+	__device__
 	uint operator()(const Tuuudd &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
 		uint insertIndx = thrust::get<1>(oriData) + 1;
@@ -1370,6 +1372,52 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 	}
 };
 
+struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _locXAddr;
+	double* _locYAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	CalTriArea(uint maxNodePerCell, bool* isActiveAddr, double* locXAddr,
+			double* locYAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _locXAddr(
+					locXAddr), _locYAddr(locYAddr) {
+	}
+	__device__
+	double operator()(const Tuuudd &inputData) const {
+		uint activeMembrCount = thrust::get<0>(inputData);
+		uint cellRank = thrust::get<1>(inputData);
+		uint nodeRank = thrust::get<2>(inputData);
+		double centerX = thrust::get<3>(inputData);
+		double centerY = thrust::get<4>(inputData);
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return 0.0;
+		} else {
+			int index_right = nodeRank + 1;
+			if (index_right == (int) activeMembrCount) {
+				index_right = 0;
+			}
+			index_right = index_right + cellRank * _maxNodePerCell;
+			// apply tension force from right
+			if (_isActiveAddr[index_right]) {
+				double posX = _locXAddr[index];
+				double posY = _locYAddr[index];
+				double vec1X = _locXAddr[index_right] - posX;
+				double vec1Y = _locYAddr[index_right] - posY;
+				double vec2X = centerX - posX;
+				double vec2Y = centerY - posY;
+				double result = fabs(vec1X * vec2Y - vec2X * vec1Y) / 2.0;
+				return result;
+			} else {
+				return 0;
+			}
+		}
+	}
+};
+
 struct CellInfoVecs {
 	/**
 	 * @param growthProgress is a vector of size maxCellCount.
@@ -1380,19 +1428,19 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthProgress;
 
 	thrust::device_vector<double> expectedLength;
-	//thrust::device_vector<double> currentLength;
+//thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;
-	// array to hold temp value computed in growth phase.
-	// obtained by smallest value of vector product of (a cell node to the cell center)
-	// and (growth direction). This will be a negative value
+// array to hold temp value computed in growth phase.
+// obtained by smallest value of vector product of (a cell node to the cell center)
+// and (growth direction). This will be a negative value
 	thrust::device_vector<double> smallestDistance;
-	// biggest value of vector product of (a cell node to the cell center)
-	// and (growth direction). This will be a positive value
+// biggest value of vector product of (a cell node to the cell center)
+// and (growth direction). This will be a positive value
 	thrust::device_vector<double> biggestDistance;
 	thrust::device_vector<uint> activeNodeCountOfThisCell;
 	thrust::device_vector<double> lastCheckPoint;
 	thrust::device_vector<bool> isDividing;
-	// This cell type array should be initialized together with the host class.
+// This cell type array should be initialized together with the host class.
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
 	thrust::device_vector<double> centerCoordX;
@@ -1403,7 +1451,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthSpeed;
 	thrust::device_vector<double> growthXDir;
 	thrust::device_vector<double> growthYDir;
-	// some memory for holding intermediate values instead of dynamically allocating.
+// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
 
 	thrust::device_vector<uint> activeMembrNodeCounts;
@@ -1416,23 +1464,25 @@ struct CellInfoVecs {
 	thrust::device_vector<double> maxTenRiMidYVec;
 	thrust::device_vector<uint> maxTenIndxVec;
 	thrust::device_vector<bool> isMembrAddingNode;
+
+	thrust::device_vector<double> cellAreaVec;
 };
 
 struct CellNodeInfoVecs {
-	// some memory for holding intermediate values instead of dynamically allocating.
+// some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanks;
 	thrust::device_vector<double> activeXPoss;
 	thrust::device_vector<double> activeYPoss;
 	thrust::device_vector<double> activeZPoss;
 
-	// temp value for holding a node direction to its corresponding center
+// temp value for holding a node direction to its corresponding center
 	thrust::device_vector<double> distToCenterAlongGrowDir;
 };
 
 struct CellGrowthAuxData {
 	double randomGrowthSpeedMin;
 	double randomGrowthSpeedMax;
-	// we need help from this parameter to generate better quality pseduo-random numbers.
+// we need help from this parameter to generate better quality pseduo-random numbers.
 	uint randGenAuxPara;
 
 	double fixedGrowthSpeed;
@@ -1441,7 +1491,7 @@ struct CellGrowthAuxData {
 	double* growthFactorDirXAddress;
 	double* growthFactorDirYAddress;
 
-	// obtain pointer address for second region
+// obtain pointer address for second region
 	double* growthFactorMagAddress2;
 	double* growthFactorDirXAddress2;
 	double* growthFactorDirYAddress2;
@@ -1456,9 +1506,9 @@ struct CellGrowthAuxData {
 };
 
 struct CellDivAuxData {
-	// ************************ these parameters are used for cell division *************************
-	// sum all bool values which indicate whether the cell is going to divide.
-	// toBeDivideCount is the total number of cells going to divide.
+// ************************ these parameters are used for cell division *************************
+// sum all bool values which indicate whether the cell is going to divide.
+// toBeDivideCount is the total number of cells going to divide.
 	uint toBeDivideCount;
 	uint nodeStorageCount;
 	thrust::device_vector<bool> tmpIsActiveHold1;
@@ -1475,7 +1525,7 @@ struct CellDivAuxData {
 	thrust::device_vector<double> tmpZValueHold2;
 
 	thrust::device_vector<SceNodeType> tmpCellTypes;
-	// ************************ these parameters are used for cell division *************************
+// ************************ these parameters are used for cell division *************************
 
 	thrust::device_vector<uint> tmpCellRank_M;
 	thrust::device_vector<double> tmpDivDirX_M;
@@ -1543,8 +1593,8 @@ class SceCells {
 	NodeAllocPara_M allocPara_m;
 	MembrPara membrPara;
 
-	// in this class, there are a lot of arrays that store information for each cell
-	// this counting iterator is used for all these arrays indicating the begining.
+// in this class, there are a lot of arrays that store information for each cell
+// this counting iterator is used for all these arrays indicating the begining.
 	thrust::counting_iterator<uint> countingBegin;
 	thrust::constant_iterator<uint> initIntnlNodeCount;
 	thrust::constant_iterator<double> initGrowthProgress;
@@ -1806,6 +1856,8 @@ class SceCells {
 			double len_MajorAxis, CVector& centerNew1, CVector& centerNew2);
 	void createTmpVec(uint i, CVector divDir, CVector oldCenter,
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
+
+	void calCellArea();
 public:
 
 	SceCells();
