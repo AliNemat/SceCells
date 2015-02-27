@@ -36,7 +36,7 @@ __constant__ double intnlStiff_M;
 __constant__ double maxIntnlAdhLen_M;
 __constant__ double minIntnlAdhLen_M;
 
-#define DebugMode
+// #define DebugMode
 
 // This template method expands an input sequence by
 // replicating each element a variable number of times. For example,

@@ -102,12 +102,12 @@ int main(int argc, char* argv[]) {
 	// main simulation steps.
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		if (i % mainPara.aniAuxVar == 0) {
-			//CellsStatsData polyData = simuDomain.outputPolyCountData();
-			//polyData.printPolyCountToFile(polyStatFileName, divThreshold);
-			//polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
-			//simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
-			//		aniFrame, mainPara.aniCri);
-			std::cout << "in ani step " << aniFrame << std::endl;
+			CellsStatsData polyData = simuDomain.outputPolyCountData();
+			polyData.printPolyCountToFile(polyStatFileName, divThreshold);
+			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
+			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+					aniFrame, mainPara.aniCri);
+			// std::cout << "in ani step " << aniFrame << std::endl;
 			aniFrame++;
 		}
 		simuDomain.runAllLogic_M(mainPara.dt);

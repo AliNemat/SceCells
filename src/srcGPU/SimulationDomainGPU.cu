@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define DebugModeDomain
+// #define DebugModeDomain
 
 /**
  * Constructor.

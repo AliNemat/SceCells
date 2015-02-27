@@ -60,6 +60,12 @@ bool longEnough(double& length) {
 	}
 }
 
+__device__
+double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2) {
+	return sqrt(
+			(xPos - xPos2) * (xPos - xPos2) + (yPos - yPos2) * (yPos - yPos2));
+}
+
 void SceCells::distributeBdryIsActiveInfo() {
 	thrust::fill(nodes->getInfoVecs().nodeIsActive.begin(),
 			nodes->getInfoVecs().nodeIsActive.begin()
@@ -1354,21 +1360,21 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-	//applySceCellDisc_M();
+	applySceCellDisc_M();
 
-	//applyMemForce_M();
+	applyMemForce_M();
 
-	//computeCenterPos_M();
+	computeCenterPos_M();
 
-	//growAtRandom_M(dt);
+	growAtRandom_M(dt);
 
-	//divide2D_M();
+	divide2D_M();
 
-	//distributeCellGrowthProgress_M();
+	distributeCellGrowthProgress_M();
 
 	allComponentsMove_M();
 
-	//handleMembrGrowth_M();
+	handleMembrGrowth_M();
 }
 
 void SceCells::runStretchTest(double dt) {
@@ -1702,10 +1708,6 @@ void SceCells::adjustNodeVel_M() {
 }
 
 void SceCells::moveNodes_M() {
-	std::cout << "entering move nodes" << std::endl;
-	std::cout << "(" << totalNodeCountForActiveCells << ","
-			<< allocPara_m.bdryNodeCount << std::endl;
-	std::cout.flush();
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
@@ -1721,8 +1723,6 @@ void SceCells::moveNodes_M() {
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin())),
 			SaxpyFunctorDim2(dt));
-	std::cout << "finishing move nodes" << std::endl;
-	std::cout.flush();
 }
 
 void SceCells::applyMemForce_M() {
@@ -2252,9 +2252,6 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	uint beginIndx = allocPara_m.bdryNodeCount;
 
 	AniRawData rawAniData;
-
-	std::vector<std::pair<uint, uint> > pairs =
-			nodes->obtainPossibleNeighborPairs_M();
 	//cout << "size of potential pairs = " << pairs.size() << endl;
 
 // unordered_map is more efficient than map, but it is a c++ 11 feature
@@ -2369,66 +2366,58 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 				linkData.node1Index = aniIndex1;
 				linkData.node2Index = aniIndex2;
 				rawAniData.memLinks.push_back(linkData);
-
-				// debug only
-				/*
-				 if (fabs(node1X - node2X) > 0.1
-				 || fabs(node1Y - node2Y) > 0.1) {
-				 std::cout << "index 1 = " << index1 << " index 2 = "
-				 << index2 << std::endl;
-				 std::cout << "strange index = " << j << ", node 1 = ("
-				 << node1X << "," << node1Y << "), node 2 = ("
-				 << node2X << "," << node2Y << ")" << std::endl;
-				 int jj;
-				 std::cin >> jj;
-				 }
-				 */
 			}
 		}
 	}
 
-	for (uint i = 0; i < pairs.size(); i++) {
-		uint node1Index = pairs[i].first;
-		uint node2Index = pairs[i].second;
-		node1X = hostTmpVectorLocX[node1Index];
-		node1Y = hostTmpVectorLocY[node1Index];
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < allocPara_m.maxIntnlNodePerCell; j++) {
+			for (uint k = j + 1; k < allocPara_m.maxIntnlNodePerCell; k++) {
+				index1 = i * maxNodePerCell + maxMemNodePerCell + j;
+				index2 = i * maxNodePerCell + maxMemNodePerCell + k;
+				if (hostIsActiveVec[index1] && hostIsActiveVec[index2]) {
+					node1X = hostTmpVectorLocX[index1];
+					node1Y = hostTmpVectorLocY[index1];
+					node2X = hostTmpVectorLocX[index2];
+					node2Y = hostTmpVectorLocY[index2];
+					if (aniCri.isPairQualify_M(node1X, node1Y, node2X,
+							node2Y)) {
+						IndexMap::iterator it = locIndexToAniIndexMap.find(
+								index1);
+						if (it == locIndexToAniIndexMap.end()) {
+							locIndexToAniIndexMap.insert(
+									std::pair<uint, uint>(index1, curIndex));
+							curIndex++;
+							tmpPos = CVector(node1X, node1Y, 0);
+							//aniVal = hostTmpVectorNodeType[index1];
+							aniVal = -1;
+							rawAniData.aniNodePosArr.push_back(tmpPos);
+							rawAniData.aniNodeVal.push_back(aniVal);
+						}
+						it = locIndexToAniIndexMap.find(index2);
+						if (it == locIndexToAniIndexMap.end()) {
+							locIndexToAniIndexMap.insert(
+									std::pair<uint, uint>(index2, curIndex));
+							curIndex++;
+							tmpPos = CVector(node2X, node2Y, 0);
+							//aniVal = hostTmpVectorNodeType[index1];
+							aniVal = -1;
+							rawAniData.aniNodePosArr.push_back(tmpPos);
+							rawAniData.aniNodeVal.push_back(aniVal);
+						}
 
-		node2X = hostTmpVectorLocX[node2Index];
-		node2Y = hostTmpVectorLocY[node2Index];
+						it = locIndexToAniIndexMap.find(index1);
+						uint aniIndex1 = it->second;
+						it = locIndexToAniIndexMap.find(index2);
+						uint aniIndex2 = it->second;
 
-		if (aniCri.isPairQualify_M(node1X, node1Y, node2X, node2Y)) {
-			IndexMap::iterator it = locIndexToAniIndexMap.find(pairs[i].first);
-			if (it == locIndexToAniIndexMap.end()) {
-				locIndexToAniIndexMap.insert(
-						std::pair<uint, uint>(pairs[i].first, curIndex));
-				curIndex++;
-				tmpPos = CVector(node1X, node1Y, 0);
-				//aniVal = hostTmpVectorNodeType[index1];
-				aniVal = -1;
-				rawAniData.aniNodePosArr.push_back(tmpPos);
-				rawAniData.aniNodeVal.push_back(aniVal);
+						LinkAniData linkData;
+						linkData.node1Index = aniIndex1;
+						linkData.node2Index = aniIndex2;
+						rawAniData.internalLinks.push_back(linkData);
+					}
+				}
 			}
-			it = locIndexToAniIndexMap.find(pairs[i].second);
-			if (it == locIndexToAniIndexMap.end()) {
-				locIndexToAniIndexMap.insert(
-						std::pair<uint, uint>(pairs[i].second, curIndex));
-				curIndex++;
-				tmpPos = CVector(node2X, node2Y, 0);
-				//aniVal = hostTmpVectorNodeType[index1];
-				aniVal = -1;
-				rawAniData.aniNodePosArr.push_back(tmpPos);
-				rawAniData.aniNodeVal.push_back(aniVal);
-			}
-
-			it = locIndexToAniIndexMap.find(pairs[i].first);
-			uint aniIndex1 = it->second;
-			it = locIndexToAniIndexMap.find(pairs[i].second);
-			uint aniIndex2 = it->second;
-
-			LinkAniData linkData;
-			linkData.node1Index = aniIndex1;
-			linkData.node2Index = aniIndex2;
-			rawAniData.internalLinks.push_back(linkData);
 		}
 	}
 	return rawAniData;
@@ -2733,18 +2722,71 @@ void SceCells::copyToGPUConstMem() {
 			globalConfigVars.getConfigValue("GrowthPrgrValEnd").toDouble();
 	cudaMemcpyToSymbol(grthPrgrCriEnd_M, &grthProgrEndCPU, sizeof(double));
 
-	/*
-	 cudaMemcpyToSymbol(grthPrgrCriVal_M,
-	 &(nodes->getMechParaM().growthPrgrCriValCPU_M), sizeof(double));
+	double sceIntnlBParaCPU_M[5];
+	double sceIntraParaCPU_M[5];
+	double sceIntraParaDivCPU_M[5];
+	double growthPrgrCriValCPU_M;
 
+	double U0_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_U0").toDouble();
+	double V0_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_V0").toDouble();
+	double k1_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_k1").toDouble();
+	double k2_IntnlB =
+			globalConfigVars.getConfigValue("SceIntnlB_k2").toDouble();
+	double intnlBEffectiveRange = globalConfigVars.getConfigValue(
+			"IntnlBEffectRange").toDouble();
+	sceIntnlBParaCPU_M[0] = U0_IntnlB;
+	sceIntnlBParaCPU_M[1] = V0_IntnlB;
+	sceIntnlBParaCPU_M[2] = k1_IntnlB;
+	sceIntnlBParaCPU_M[3] = k2_IntnlB;
+	sceIntnlBParaCPU_M[4] = intnlBEffectiveRange;
 
-	 cudaMemcpyToSymbol(sceIB_M, nodes->getMechParaM().sceIntnlBParaCPU_M,
-	 5 * sizeof(double));
-	 cudaMemcpyToSymbol(sceII_M, nodes->getMechParaM().sceIntraParaCPU_M,
-	 5 * sizeof(double));
-	 cudaMemcpyToSymbol(sceIIDiv_M, nodes->getMechParaM().sceIntraParaDivCPU_M,
-	 5 * sizeof(double));
-	 */
+	//////////////////////
+	//// Block 3 /////////
+	//////////////////////
+	double U0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_U0").toDouble();
+	double V0_Intra =
+			globalConfigVars.getConfigValue("IntraCell_V0").toDouble();
+	double k1_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k1").toDouble();
+	double k2_Intra =
+			globalConfigVars.getConfigValue("IntraCell_k2").toDouble();
+	double intraLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraEffectRange").toDouble();
+	sceIntraParaCPU_M[0] = U0_Intra;
+	sceIntraParaCPU_M[1] = V0_Intra;
+	sceIntraParaCPU_M[2] = k1_Intra;
+	sceIntraParaCPU_M[3] = k2_Intra;
+	sceIntraParaCPU_M[4] = intraLinkEffectiveRange;
+
+	//////////////////////
+	//// Block 4 /////////
+	//////////////////////
+	double U0_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_U0_Div").toDouble();
+	double V0_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_V0_Div").toDouble();
+	double k1_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_k1_Div").toDouble();
+	double k2_Intra_Div =
+			globalConfigVars.getConfigValue("IntraCell_k2_Div").toDouble();
+	double intraDivEffectiveRange = globalConfigVars.getConfigValue(
+			"IntraDivEffectRange").toDouble();
+	sceIntraParaDivCPU_M[0] = U0_Intra_Div;
+	sceIntraParaDivCPU_M[1] = V0_Intra_Div;
+	sceIntraParaDivCPU_M[2] = k1_Intra_Div;
+	sceIntraParaDivCPU_M[3] = k2_Intra_Div;
+	sceIntraParaDivCPU_M[4] = intraDivEffectiveRange;
+
+	double growthPrgrCriVal = globalConfigVars.getConfigValue(
+			"GrowthPrgrCriVal").toDouble();
+	cudaMemcpyToSymbol(grthPrgrCriVal_M, &growthPrgrCriVal, sizeof(double));
+	cudaMemcpyToSymbol(sceIB_M, sceIntnlBParaCPU_M, 5 * sizeof(double));
+	cudaMemcpyToSymbol(sceII_M, sceIntraParaCPU_M, 5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIIDiv_M, sceIntraParaCPU_M, 5 * sizeof(double));
 
 	double IBDivHost[5];
 	IBDivHost[0] =
@@ -3391,7 +3433,7 @@ void SceCells::applySceCellDisc_M() {
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes) {
-	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
 
 	double forceValue = 0;
 	if (growPro > grthPrgrCriEnd_M) {
@@ -3434,7 +3476,7 @@ void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes) {
-	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
 
 	double forceValue = 0;
 	if (growPro > grthPrgrCriEnd_M) {
