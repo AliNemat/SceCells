@@ -454,7 +454,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
 	CVec2 operator()(const CellData &cData) const {
-		uint activeMembrCount = thrust::get<0>(cData);
+		// uint activeMembrCount = thrust::get<0>(cData);
 		uint activeIntnlCount = thrust::get<1>(cData);
 		uint cellRank = thrust::get<2>(cData);
 		uint nodeRank = thrust::get<3>(cData);
@@ -467,7 +467,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 		uint intnlIndxBegin = cellRank * _maxNodePerCell + _maxMemNodePerCell;
-		uint intnlIndxEnd = (cellRank + 1) * _maxNodePerCell;
+		uint intnlIndxEnd = intnlIndxBegin + activeIntnlCount;
 		uint index_other;
 		double nodeX = _locXAddr[index];
 		double nodeY = _locYAddr[index];

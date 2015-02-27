@@ -2526,9 +2526,10 @@ double SceNodes::getMaxEffectiveRange() {
 		double maxEffRange = 0;
 		std::vector<double> ranges;
 		ranges.push_back(membrMembrEffRange);
-		ranges.push_back(membrIntnlEffRange);
-		ranges.push_back(intnlIntnlEffRange);
-		ranges.push_back(intnlDivEffRange);
+		// all these are now
+		//ranges.push_back(membrIntnlEffRange);
+		//ranges.push_back(intnlIntnlEffRange);
+		//ranges.push_back(intnlDivEffRange);
 		maxEffRange = *std::max_element(ranges.begin(), ranges.end());
 		return maxEffRange;
 	}

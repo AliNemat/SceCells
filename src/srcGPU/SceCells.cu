@@ -13,6 +13,7 @@ __constant__ uint maxIntnlPerCell;
 __constant__ double bendCoeff;
 
 __constant__ double sceIB_M[5];
+__constant__ double sceIBDiv_M[5];
 __constant__ double sceII_M[5];
 __constant__ double sceIIDiv_M[5];
 __constant__ double grthPrgrCriVal_M;
@@ -1353,21 +1354,21 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt) {
 	this->dt = dt;
 
-	applySceCellDisc_M();
+	//applySceCellDisc_M();
 
-	applyMemForce_M();
+	//applyMemForce_M();
 
-	computeCenterPos_M();
+	//computeCenterPos_M();
 
-	growAtRandom_M(dt);
+	//growAtRandom_M(dt);
 
-	divide2D_M();
+	//divide2D_M();
 
-	distributeCellGrowthProgress_M();
+	//distributeCellGrowthProgress_M();
 
 	allComponentsMove_M();
 
-	handleMembrGrowth_M();
+	//handleMembrGrowth_M();
 }
 
 void SceCells::runStretchTest(double dt) {
@@ -1701,6 +1702,10 @@ void SceCells::adjustNodeVel_M() {
 }
 
 void SceCells::moveNodes_M() {
+	std::cout << "entering move nodes" << std::endl;
+	std::cout << "(" << totalNodeCountForActiveCells << ","
+			<< allocPara_m.bdryNodeCount << std::endl;
+	std::cout.flush();
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
@@ -1716,6 +1721,8 @@ void SceCells::moveNodes_M() {
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin())),
 			SaxpyFunctorDim2(dt));
+	std::cout << "finishing move nodes" << std::endl;
+	std::cout.flush();
 }
 
 void SceCells::applyMemForce_M() {
@@ -2430,13 +2437,11 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
 		std::vector<uint>& initIntnlActiveNodeCounts) {
-	//std::cout << "size 1 = " << initMembrActiveNodeCounts.size() << std::endl;
-	//std::cout << "size 2 = " << cellInfoVecs.activeMembrNodeCounts.size()
-	//		<< std::endl;
-	//std::cout << "size 3 = " << initIntnlActiveNodeCounts.size() << std::endl;
-	//std::cout << "size 4 = " << cellInfoVecs.activeIntnlNodeCounts.size()
-	//		<< std::endl;
-	//std::cout.flush();
+	assert(
+			initMembrActiveNodeCounts.size()
+					== initIntnlActiveNodeCounts.size());
+	totalNodeCountForActiveCells = initMembrActiveNodeCounts.size()
+			* allocPara_m.maxAllNodePerCell;
 
 	thrust::copy(initMembrActiveNodeCounts.begin(),
 			initMembrActiveNodeCounts.end(),
@@ -2724,17 +2729,35 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(maxMembrPerCell, &maxMembrNodePerCellCPU, sizeof(uint));
 	cudaMemcpyToSymbol(maxIntnlPerCell, &maxIntnlNodePerCellCPU, sizeof(uint));
 
-	cudaMemcpyToSymbol(grthPrgrCriVal_M,
-			&(nodes->getMechParaM().growthPrgrCriValCPU_M), sizeof(double));
-	cudaMemcpyToSymbol(sceIB_M, &(nodes->getMechParaM().sceIntnlBParaCPU_M),
-			5 * sizeof(double));
-	cudaMemcpyToSymbol(sceII_M, &(nodes->getMechParaM().sceIntraParaCPU_M),
-			5 * sizeof(double));
-	cudaMemcpyToSymbol(sceIIDiv_M,
-			&(nodes->getMechParaM().sceIntraParaDivCPU_M), 5 * sizeof(double));
 	double grthProgrEndCPU =
 			globalConfigVars.getConfigValue("GrowthPrgrValEnd").toDouble();
 	cudaMemcpyToSymbol(grthPrgrCriEnd_M, &grthProgrEndCPU, sizeof(double));
+
+	/*
+	 cudaMemcpyToSymbol(grthPrgrCriVal_M,
+	 &(nodes->getMechParaM().growthPrgrCriValCPU_M), sizeof(double));
+
+
+	 cudaMemcpyToSymbol(sceIB_M, nodes->getMechParaM().sceIntnlBParaCPU_M,
+	 5 * sizeof(double));
+	 cudaMemcpyToSymbol(sceII_M, nodes->getMechParaM().sceIntraParaCPU_M,
+	 5 * sizeof(double));
+	 cudaMemcpyToSymbol(sceIIDiv_M, nodes->getMechParaM().sceIntraParaDivCPU_M,
+	 5 * sizeof(double));
+	 */
+
+	double IBDivHost[5];
+	IBDivHost[0] =
+			globalConfigVars.getConfigValue("SceIntnlB_U0_Div").toDouble();
+	IBDivHost[1] =
+			globalConfigVars.getConfigValue("SceIntnlB_V0_Div").toDouble();
+	IBDivHost[2] =
+			globalConfigVars.getConfigValue("SceIntnlB_k1_Div").toDouble();
+	IBDivHost[3] =
+			globalConfigVars.getConfigValue("SceIntnlB_k2_Div").toDouble();
+	IBDivHost[4] =
+			globalConfigVars.getConfigValue("IntnlBDivEffectRange").toDouble();
+	cudaMemcpyToSymbol(sceIBDiv_M, IBDivHost, 5 * sizeof(double));
 }
 
 void SceCells::handleMembrGrowth_M() {
@@ -3369,19 +3392,43 @@ __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes) {
 	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
-	/*
-	 double forceValue;
-	 if (linkLength > sceIntnlBPara_M[4]) {
-	 forceValue = 0;
-	 } else {
-	 forceValue = -sceIntnlBPara_M[0] / sceIntnlBPara_M[2]
-	 * exp(-linkLength / sceIntnlBPara_M[2])
-	 + sceIntnlBPara_M[1] / sceIntnlBPara_M[3]
-	 * exp(-linkLength / sceIntnlBPara_M[3]);
-	 }
-	 xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
-	 yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-	 */
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceIBDiv_M[4]) {
+			forceValue = -sceIBDiv_M[0] / sceIBDiv_M[2]
+					* exp(-linkLength / sceIBDiv_M[2])
+					+ sceIBDiv_M[1] / sceIBDiv_M[3]
+							* exp(-linkLength / sceIBDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIBDiv_M[4])
+				+ (1.0 - percent) * sceIB_M[4];
+		if (linkLength < lenLimit) {
+			double intnlBPara0 = percent * (sceIBDiv_M[0])
+					+ (1.0 - percent) * sceIB_M[0];
+			double intnlBPara1 = percent * (sceIBDiv_M[1])
+					+ (1.0 - percent) * sceIB_M[1];
+			double intnlBPara2 = percent * (sceIBDiv_M[2])
+					+ (1.0 - percent) * sceIB_M[2];
+			double intnlBPara3 = percent * (sceIBDiv_M[3])
+					+ (1.0 - percent) * sceIB_M[3];
+			forceValue = -intnlBPara0 / intnlBPara2
+					* exp(-linkLength / intnlBPara2)
+					+ intnlBPara1 / intnlBPara3
+							* exp(-linkLength / intnlBPara3);
+		}
+	} else {
+		if (linkLength < sceIB_M[4]) {
+			forceValue = -sceIB_M[0] / sceIB_M[2]
+					* exp(-linkLength / sceIB_M[2])
+					+ sceIB_M[1] / sceIB_M[3] * exp(-linkLength / sceIB_M[3]);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
 
 __device__
@@ -3401,16 +3448,16 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double percent = (growPro - grthPrgrCriVal_M)
 				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
 		double lenLimit = percent * (sceIIDiv_M[4])
-				+ (grthPrgrCriEnd_M - percent) * sceII_M[4];
+				+ (1.0 - percent) * sceII_M[4];
 		if (linkLength < lenLimit) {
 			double intraPara0 = percent * (sceIIDiv_M[0])
-					+ (grthPrgrCriEnd_M - percent) * sceII_M[0];
+					+ (1.0 - percent) * sceII_M[0];
 			double intraPara1 = percent * (sceIIDiv_M[1])
-					+ (grthPrgrCriEnd_M - percent) * sceII_M[1];
+					+ (1.0 - percent) * sceII_M[1];
 			double intraPara2 = percent * (sceIIDiv_M[2])
-					+ (grthPrgrCriEnd_M - percent) * sceII_M[2];
+					+ (1.0 - percent) * sceII_M[2];
 			double intraPara3 = percent * (sceIIDiv_M[3])
-					+ (grthPrgrCriEnd_M - percent) * sceII_M[3];
+					+ (1.0 - percent) * sceII_M[3];
 			forceValue = -intraPara0 / intraPara2
 					* exp(-linkLength / intraPara2)
 					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);

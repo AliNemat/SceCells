@@ -9,7 +9,7 @@
 
 using namespace std;
 
-//#define DebugModeDomain
+#define DebugModeDomain
 
 /**
  * Constructor.
@@ -293,7 +293,7 @@ void SimulationDomainGPU::runAllLogic_M(double dt) {
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsedTime2, start2, stop);
-	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
+	std::cout << "time spent in Simu Domain logic: " << elapsedTime1 << " "
 	<< elapsedTime2 << std::endl;
 #endif
 }

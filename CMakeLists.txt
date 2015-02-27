@@ -13,7 +13,7 @@ endif()
 # After some performance testing, there is no significant performance difference
 # between compute_20 and compute_30. 
 # Therefore, for compatibility reason, compute 2.0 is used.
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_20,code=compute_20)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_30,code=compute_30)
 
 MESSAGE("NVCC flags are : " ${CUDA_NVCC_FLAGS})
 
