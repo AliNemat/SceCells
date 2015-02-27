@@ -2483,7 +2483,7 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventElapsedTime(&elapsedTime3, start3, stop);
 
 	std::cout << "time spent in Node logic: " << elapsedTime1 << " "
-			<< elapsedTime2 << " " << elapsedTime3 << std::endl;
+	<< elapsedTime2 << " " << elapsedTime3 << std::endl;
 #endif
 }
 

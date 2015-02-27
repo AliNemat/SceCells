@@ -57,6 +57,7 @@ class SceException: public std::exception {
 private:
 	std::string _message;
 	SceExceptionType _exceptionType;
+	std::string _msg_combine;
 public:
 	SceException(const std::string& message) :
 			_message(message), _exceptionType(BaseException) {
@@ -67,12 +68,9 @@ public:
 	~SceException() throw () {
 	}
 	virtual const char* what() const throw () {
-		std::string originalMsg = std::string(this->what());
-		std::string fullErrorMsg = originalMsg + ", "
-				+ std::string(
-						_message + ", Exception type: "
-								+ toString(_exceptionType));
-		return originalMsg.c_str();
+		std::string _msg_combine = _message + ", "
+				+ std::string(", Exception type: " + toString(_exceptionType));
+		return _msg_combine.c_str();
 	}
 };
 

@@ -1568,8 +1568,8 @@ void SceCells::createTwoNewCellArr_M() {
 	//divDebug();
 
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
-		divAuxData.tmp1Vec.clear();
-		divAuxData.tmp2Vec.clear();
+		divAuxData.tmp1IntnlVec.clear();
+		divAuxData.tmp2IntnlVec.clear();
 
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
@@ -1580,22 +1580,19 @@ void SceCells::createTwoNewCellArr_M() {
 		CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
 				lenAlongMajorAxis);
 
-		std::vector<VecVal> tmp1, tmp2;
+		std::vector<VecVal> tmp1Membr, tmp2Membr;
 		CVector cell1Center, cell2Center;
 
 		obtainTwoNewCenters(oldCenter, divDir, lenAlongMajorAxis, cell1Center,
 				cell2Center);
-		createTmpVec(i, divDir, oldCenter, tmp1, tmp2);
 
-		////////////////////////////////
-		//// copy membrane nodes ///////
-		////////////////////////////////
-		createTmpMem(tmp1, tmp2);
-		////////////////////////////////
-		//// copy internal nodes ///////
-		////////////////////////////////
-		shiftByCellCenter(cell1Center, cell2Center);
-		copyTmpVec(i);
+		prepareTmpVec(i, divDir, oldCenter, tmp1Membr, tmp2Membr);
+
+		processMemVec(tmp1Membr, tmp2Membr);
+
+		shiftIntnlNodesByCellCenter(cell1Center, cell2Center);
+
+		assembleVecForTwoCells(i);
 	}
 	//divDebug();
 }
@@ -1681,9 +1678,7 @@ void SceCells::copySecondCellArr_M() {
 void SceCells::updateActiveCellCount_M() {
 	allocPara_m.currentActiveCellCount = allocPara_m.currentActiveCellCount
 			+ divAuxData.toBeDivideCount;
-	NodeAllocPara_M para_m = nodes->getAllocParaM();
-	para_m.currentActiveCellCount = allocPara_m.currentActiveCellCount;
-	nodes->setAllocParaM(para_m);
+	nodes->setActiveCellCount(allocPara_m.currentActiveCellCount);
 }
 
 void SceCells::markIsDivideFalse_M() {
@@ -2718,14 +2713,9 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(maxMembrPerCell, &maxMembrNodePerCellCPU, sizeof(uint));
 	cudaMemcpyToSymbol(maxIntnlPerCell, &maxIntnlNodePerCellCPU, sizeof(uint));
 
-	double grthProgrEndCPU =
-			globalConfigVars.getConfigValue("GrowthPrgrValEnd").toDouble();
-	cudaMemcpyToSymbol(grthPrgrCriEnd_M, &grthProgrEndCPU, sizeof(double));
-
 	double sceIntnlBParaCPU_M[5];
 	double sceIntraParaCPU_M[5];
 	double sceIntraParaDivCPU_M[5];
-	double growthPrgrCriValCPU_M;
 
 	double U0_IntnlB =
 			globalConfigVars.getConfigValue("SceIntnlB_U0").toDouble();
@@ -2781,12 +2771,15 @@ void SceCells::copyToGPUConstMem() {
 	sceIntraParaDivCPU_M[3] = k2_Intra_Div;
 	sceIntraParaDivCPU_M[4] = intraDivEffectiveRange;
 
+	double grthProgrEndCPU =
+			globalConfigVars.getConfigValue("GrowthPrgrValEnd").toDouble();
+	cudaMemcpyToSymbol(grthPrgrCriEnd_M, &grthProgrEndCPU, sizeof(double));
 	double growthPrgrCriVal = globalConfigVars.getConfigValue(
 			"GrowthPrgrCriVal").toDouble();
 	cudaMemcpyToSymbol(grthPrgrCriVal_M, &growthPrgrCriVal, sizeof(double));
 	cudaMemcpyToSymbol(sceIB_M, sceIntnlBParaCPU_M, 5 * sizeof(double));
 	cudaMemcpyToSymbol(sceII_M, sceIntraParaCPU_M, 5 * sizeof(double));
-	cudaMemcpyToSymbol(sceIIDiv_M, sceIntraParaCPU_M, 5 * sizeof(double));
+	cudaMemcpyToSymbol(sceIIDiv_M, sceIntraParaDivCPU_M, 5 * sizeof(double));
 
 	double IBDivHost[5];
 	IBDivHost[0] =
@@ -2964,7 +2957,7 @@ void SceCells::membrDebug() {
 	std::cin >> jj;
 }
 
-void SceCells::copyTmpVec(uint i) {
+void SceCells::assembleVecForTwoCells(uint i) {
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint index;
@@ -2995,48 +2988,51 @@ void SceCells::copyTmpVec(uint i) {
 	for (uint j = membThreshold; j < maxAllNodePerCell; j++) {
 		index = i * maxAllNodePerCell + j;
 		uint shift_j = j - membThreshold;
-		if (shift_j < divAuxData.tmp1Vec.size()) {
-			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1Vec[shift_j].x;
-			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1Vec[shift_j].y;
+		if (shift_j < divAuxData.tmp1IntnlVec.size()) {
+			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1IntnlVec[shift_j].x;
+			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1IntnlVec[shift_j].y;
 			divAuxData.tmpIsActive1_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive1_M[index] = false;
 		}
-		if (shift_j < divAuxData.tmp2Vec.size()) {
-			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2Vec[shift_j].x;
-			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2Vec[shift_j].y;
+		if (shift_j < divAuxData.tmp2IntnlVec.size()) {
+			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2IntnlVec[shift_j].x;
+			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2IntnlVec[shift_j].y;
 			divAuxData.tmpIsActive2_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive2_M[index] = false;
 		}
 	}
-	divAuxData.tmp1InternalActiveCounts.push_back(divAuxData.tmp1Vec.size());
-	divAuxData.tmp2InternalActiveCounts.push_back(divAuxData.tmp2Vec.size());
+	divAuxData.tmp1InternalActiveCounts.push_back(
+			divAuxData.tmp1IntnlVec.size());
+	divAuxData.tmp2InternalActiveCounts.push_back(
+			divAuxData.tmp2IntnlVec.size());
 }
 
-void SceCells::shiftByCellCenter(CVector cell1Center, CVector cell2Center) {
+void SceCells::shiftIntnlNodesByCellCenter(CVector cell1Center,
+		CVector cell2Center) {
 	CVector tmpCell1Center(0, 0, 0);
-	for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
-		tmpCell1Center = tmpCell1Center + divAuxData.tmp1Vec[j];
+	for (uint j = 0; j < divAuxData.tmp1IntnlVec.size(); j++) {
+		tmpCell1Center = tmpCell1Center + divAuxData.tmp1IntnlVec[j];
 	}
-	tmpCell1Center = tmpCell1Center / divAuxData.tmp1Vec.size();
+	tmpCell1Center = tmpCell1Center / divAuxData.tmp1IntnlVec.size();
 	CVector shiftVec1 = cell1Center - tmpCell1Center;
-	for (uint j = 0; j < divAuxData.tmp1Vec.size(); j++) {
-		divAuxData.tmp1Vec[j] = divAuxData.tmp1Vec[j] + shiftVec1;
+	for (uint j = 0; j < divAuxData.tmp1IntnlVec.size(); j++) {
+		divAuxData.tmp1IntnlVec[j] = divAuxData.tmp1IntnlVec[j] + shiftVec1;
 	}
 
 	CVector tmpCell2Center(0, 0, 0);
-	for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
-		tmpCell2Center = tmpCell2Center + divAuxData.tmp2Vec[j];
+	for (uint j = 0; j < divAuxData.tmp2IntnlVec.size(); j++) {
+		tmpCell2Center = tmpCell2Center + divAuxData.tmp2IntnlVec[j];
 	}
-	tmpCell2Center = tmpCell2Center / divAuxData.tmp2Vec.size();
+	tmpCell2Center = tmpCell2Center / divAuxData.tmp2IntnlVec.size();
 	CVector shiftVec2 = cell2Center - tmpCell2Center;
-	for (uint j = 0; j < divAuxData.tmp2Vec.size(); j++) {
-		divAuxData.tmp2Vec[j] = divAuxData.tmp2Vec[j] + shiftVec2;
+	for (uint j = 0; j < divAuxData.tmp2IntnlVec.size(); j++) {
+		divAuxData.tmp2IntnlVec[j] = divAuxData.tmp2IntnlVec[j] + shiftVec2;
 	}
 }
 
-void SceCells::createTmpMem(std::vector<VecVal>& tmp1,
+void SceCells::processMemVec(std::vector<VecVal>& tmp1,
 		std::vector<VecVal>& tmp2) {
 	divAuxData.tmp1VecMem.clear();
 	divAuxData.tmp2VecMem.clear();
@@ -3046,14 +3042,26 @@ void SceCells::createTmpMem(std::vector<VecVal>& tmp1,
 	std::sort(tmp1.begin(), tmp1.end());
 	std::sort(tmp2.begin(), tmp2.end());
 
+	//assert(tmp1.size() < allocPara_m.maxMembrNodePerCell);
+	//assert(tmp2.size() < allocPara_m.maxMembrNodePerCell);
+
 	uint maxDivMembrNodeCount1 = allocPara_m.maxMembrNodePerCell - tmp1.size();
 	uint maxDivMembrNodeCount2 = allocPara_m.maxMembrNodePerCell - tmp2.size();
-	std::vector<CVector> ptsBetween1 = obtainPtsBetween(
-			tmp1[tmp1.size() - 1].vec, tmp1[0].vec, memNewSpacing,
-			maxDivMembrNodeCount1);
-	std::vector<CVector> ptsBetween2 = obtainPtsBetween(
-			tmp2[tmp2.size() - 1].vec, tmp2[0].vec, memNewSpacing,
-			maxDivMembrNodeCount2);
+
+	std::vector<CVector> ptsBetween1, ptsBetween2;
+
+	// if size is less than 1, the situation would have already been very bad.
+	// Just keep this statement so no seg fault would happen.
+	if (tmp1.size() >= 1) {
+		ptsBetween1 = obtainPtsBetween(tmp1[tmp1.size() - 1].vec, tmp1[0].vec,
+				memNewSpacing, maxDivMembrNodeCount1);
+	}
+	// if size is less than 1, the situation would have already been very bad.
+	// Just keep this statement so no seg fault would happen.
+	if (tmp2.size() >= 1) {
+		ptsBetween2 = obtainPtsBetween(tmp2[tmp2.size() - 1].vec, tmp2[0].vec,
+				memNewSpacing, maxDivMembrNodeCount2);
+	}
 
 	for (uint j = 0; j < tmp1.size(); j++) {
 		divAuxData.tmp1VecMem.push_back(tmp1[j].vec);
@@ -3082,19 +3090,18 @@ void SceCells::obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 	uint index;
 	for (uint j = 0; j < maxAllNodePerCell; j++) {
 		index = i * maxAllNodePerCell + j;
+		if (divAuxData.tmpIsActive_M[index] != true) {
+			continue;
+		}
+		double posX = divAuxData.tmpNodePosX_M[index];
+		double posY = divAuxData.tmpNodePosY_M[index];
 		if (j < membThreshold) {
 			// means node type is membrane
-			if (divAuxData.tmpIsActive_M[index] == true) {
-				CVector memPos(divAuxData.tmpNodePosX_M[index],
-						divAuxData.tmpNodePosY_M[index], 0);
-				membrNodes.push_back(memPos);
-			}
+			CVector memPos(posX, posY, 0);
+			membrNodes.push_back(memPos);
 		} else {
-			if (divAuxData.tmpIsActive_M[index] == true) {
-				CVector internalPos(divAuxData.tmpNodePosX_M[index],
-						divAuxData.tmpNodePosY_M[index], 0);
-				intnlNodes.push_back(internalPos);
-			}
+			CVector intnlPos(posX, posY, 0);
+			intnlNodes.push_back(intnlPos);
 		}
 	}
 }
@@ -3144,7 +3151,7 @@ void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 	centerNew2 = oldCenter - lenChange * divDirUnit;
 }
 
-void SceCells::createTmpVec(uint i, CVector divDir, CVector oldCenter,
+void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 		std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2) {
 	tmp1.clear();
 	tmp2.clear();
@@ -3164,15 +3171,13 @@ void SceCells::createTmpVec(uint i, CVector divDir, CVector oldCenter,
 				CVector centerToPosUnit = centerToPosDir.getUnitVector();
 				CVector crossProduct = Cross(centerToPosDir, splitDir);
 				double dotProduct = centerToPosUnit * splitDir;
+				tmpData.val = dotProduct;
+				tmpData.vec = memPos;
 				if (crossProduct.z >= 0) {
 					// counter-cloce wise
-					tmpData.val = dotProduct;
-					tmpData.vec = memPos;
 					tmp1.push_back(tmpData);
 				} else {
 					// cloce wise
-					tmpData.val = dotProduct;
-					tmpData.vec = memPos;
 					tmp2.push_back(tmpData);
 				}
 			}
@@ -3184,9 +3189,9 @@ void SceCells::createTmpVec(uint i, CVector divDir, CVector oldCenter,
 				CVector shrinkedPos = centerToPosDir * shrinkRatio + oldCenter;
 				double dotProduct = centerToPosDir * divDir;
 				if (dotProduct > 0) {
-					divAuxData.tmp1Vec.push_back(shrinkedPos);
+					divAuxData.tmp1IntnlVec.push_back(shrinkedPos);
 				} else {
-					divAuxData.tmp2Vec.push_back(shrinkedPos);
+					divAuxData.tmp2IntnlVec.push_back(shrinkedPos);
 				}
 			}
 		}

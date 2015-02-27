@@ -1620,6 +1620,10 @@ struct CellDivAuxData {
 	thrust::device_vector<double> tmpNodePosX_M;
 	thrust::device_vector<double> tmpNodePosY_M;
 
+	thrust::device_vector<bool> tmpIsActiveHost_M;
+	thrust::device_vector<double> tmpNodePosXHost_M;
+	thrust::device_vector<double> tmpNodePosYHost_M;
+
 	thrust::device_vector<bool> tmpIsActive1_M;
 	thrust::device_vector<double> tmpXPos1_M;
 	thrust::device_vector<double> tmpYPos1_M;
@@ -1628,7 +1632,7 @@ struct CellDivAuxData {
 	thrust::device_vector<double> tmpXPos2_M;
 	thrust::device_vector<double> tmpYPos2_M;
 
-	std::vector<CVector> tmp1Vec, tmp2Vec;
+	std::vector<CVector> tmp1IntnlVec, tmp2IntnlVec;
 	std::vector<CVector> tmp1VecMem, tmp2VecMem;
 	std::vector<uint> tmp1MemActiveCounts, tmp1InternalActiveCounts;
 	std::vector<uint> tmp2MemActiveCounts, tmp2InternalActiveCounts;
@@ -1929,9 +1933,9 @@ class SceCells {
 
 	bool decideIfGoingToDivide_M();
 
-	void copyTmpVec(uint i);
-	void shiftByCellCenter(CVector cell1Center, CVector cell2Center);
-	void createTmpMem(std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
+	void assembleVecForTwoCells(uint i);
+	void shiftIntnlNodesByCellCenter(CVector cell1Center, CVector cell2Center);
+	void processMemVec(std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 	void obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 			vector<CVector>& intnlNodes);
 	CVector obtainCenter(uint i);
@@ -1939,7 +1943,7 @@ class SceCells {
 			double& lenAlongMajorAxis);
 	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 			double len_MajorAxis, CVector& centerNew1, CVector& centerNew2);
-	void createTmpVec(uint i, CVector divDir, CVector oldCenter,
+	void prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
 	void calCellArea();

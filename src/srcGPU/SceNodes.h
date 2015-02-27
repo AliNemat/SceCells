@@ -1103,6 +1103,10 @@ public:
 	void setMechParaM(const SceMechPara_M& mechParaM) {
 		mechPara_M = mechParaM;
 	}
+
+	void setActiveCellCount(uint activeCellCount) {
+		allocPara_M.currentActiveCellCount = activeCellCount;
+	}
 };
 
 #endif /* SCENODES_H_ */
