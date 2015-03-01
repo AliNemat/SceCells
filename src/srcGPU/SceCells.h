@@ -1545,6 +1545,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> maxTenRiVec;
 	thrust::device_vector<double> maxTenRiMidXVec;
 	thrust::device_vector<double> maxTenRiMidYVec;
+	thrust::device_vector<double> aveTension;
 	thrust::device_vector<uint> maxTenIndxVec;
 	thrust::device_vector<bool> isMembrAddingNode;
 

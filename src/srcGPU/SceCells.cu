@@ -709,6 +709,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.maxTenRiVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiMidXVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.aveTension.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.membrGrowProgress.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.membrGrowSpeed.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.cellAreaVec.resize(allocPara_m.maxCellCount, 0.0);
@@ -2829,9 +2830,24 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxTenRiMidYVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
+	thrust::reduce_by_key(
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))
+					+ totalNodeCountForActiveCells,
+			nodes->getInfoVecs().membrTensionMag.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.aveTension.begin(), thrust::equal_to<uint>(),
+			thrust::plus<double>());
+
+	thrust::transform(cellInfoVecs.aveTension.begin(),
+			cellInfoVecs.aveTension.begin()
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.activeMembrNodeCounts.begin(),
+			cellInfoVecs.aveTension.begin(), thrust::divides<double>());
+
 // linear relationship with highest tension; capped by a given value
-	thrust::transform(cellInfoVecs.maxTenRiVec.begin(),
-			cellInfoVecs.maxTenRiVec.begin()
+	thrust::transform(cellInfoVecs.aveTension.begin(),
+			cellInfoVecs.aveTension.begin()
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.membrGrowSpeed.begin(),
 			MultiWithLimit(membrPara.membrGrowCoeff, membrPara.membrGrowLimit));
