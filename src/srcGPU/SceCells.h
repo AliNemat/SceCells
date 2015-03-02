@@ -29,7 +29,7 @@ __device__
 double calMembrForce(double& length);
 
 __device__
-double calBendMulti(double& angle);
+double calBendMulti(double& angle, uint activeMembrCt);
 
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
@@ -342,7 +342,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						double term4y = (-dotP * rightDiffY)
 								/ (lenLeft * lenRight * lenRight * lenRight);
 
-						double bendMultiplier = -calBendMulti(angle);
+						double bendMultiplier = -calBendMulti(angle,
+								activeMembrCount);
 						// because sign of angle formula would change if crossZ < 0
 						if (crossZ > 0) {
 							bendMultiplier = -bendMultiplier;

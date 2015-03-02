@@ -3384,8 +3384,9 @@ __device__ double cross_Z(double vecA_X, double vecA_Y, double vecB_X,
 	return vecA_X * vecB_Y - vecA_Y * vecB_X;
 }
 
-__device__ double calBendMulti(double& angle) {
-	return bendCoeff * (angle - PI);
+__device__ double calBendMulti(double& angle, uint activeMembrCt) {
+	double equAngle = PI - PI / activeMembrCt;
+	return bendCoeff * (angle - equAngle);
 }
 
 void SceCells::applySceCellDisc_M() {
