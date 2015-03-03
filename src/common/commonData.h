@@ -208,6 +208,12 @@ struct SceMiscPara {
 	 * prevents numerical instability.
 	 */
 	double minDistanceToOtherNode;
+
+	/**
+	 * proliferation slows down with time.
+	 * this parameter controls exponential decay.
+	 */
+	double prolifDecayCoeff;
 };
 
 /**

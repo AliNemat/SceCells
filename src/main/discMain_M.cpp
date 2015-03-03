@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
 			"DetailStatFileNameBase").toString();
 	double divThreshold =
 			globalConfigVars.getConfigValue("DivThreshold").toDouble();
+	double curDivThred;
 
 	// preparation.
 	uint aniFrame = 0;
@@ -103,7 +104,14 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
 		if (i % mainPara.aniAuxVar == 0) {
 			CellsStatsData polyData = simuDomain.outputPolyCountData();
-			polyData.printPolyCountToFile(polyStatFileName, divThreshold);
+			//////// these statements need to be zipped somewhere //////
+			double curTime = i * mainPara.dt;
+			double decayCoeff = globalConfigVars.getConfigValue(
+					"ProlifDecayCoeff").toDouble();
+			double decay = exp(-curTime * decayCoeff);
+			curDivThred = 1.0 - (1.0 - divThreshold) * decay;
+			//////// these statements need to be zipped somewhere //////
+			polyData.printPolyCountToFile(polyStatFileName, curDivThred);
 			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);

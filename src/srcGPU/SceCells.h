@@ -51,11 +51,11 @@ double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
 
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes);
+		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
 
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes);
+		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
 
 __device__
 double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
@@ -447,13 +447,16 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 	double* _locXAddr;
 	double* _locYAddr;
 	bool* _isActiveAddr;
+	double _grthPrgrCriVal_M;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddSceCellForce(uint maxNodePerCell, uint maxMemNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr) :
+			double* locXAddr, double* locYAddr, bool* isActiveAddr,
+			double grthPrgrCriVal_M) :
 			_maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
 					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
-					locYAddr), _isActiveAddr(isActiveAddr) {
+					locYAddr), _isActiveAddr(isActiveAddr), _grthPrgrCriVal_M(
+					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__
@@ -484,7 +487,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY);
+						oriVelX, oriVelY, _grthPrgrCriVal_M);
 			}
 		} else {
 			// means internal node
@@ -494,7 +497,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY);
+						oriVelX, oriVelY, _grthPrgrCriVal_M);
 			}
 			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
 					index_other++) {
@@ -504,7 +507,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
 				calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY);
+						oriVelX, oriVelY, _grthPrgrCriVal_M);
 			}
 		}
 		return thrust::make_tuple(oriVelX, oriVelY);
@@ -1588,8 +1591,16 @@ struct CellNodeInfoVecs {
 };
 
 struct CellGrowthAuxData {
+	double prolifDecay;
+
+	double randomGrowthSpeedMin_Ori;
+	double randomGrowthSpeedMax_Ori;
+
 	double randomGrowthSpeedMin;
 	double randomGrowthSpeedMax;
+
+	double grthPrgrCriVal_M_Ori;
+	double grthProgrEndCPU;
 // we need help from this parameter to generate better quality pseduo-random numbers.
 	uint randGenAuxPara;
 
@@ -1979,6 +1990,7 @@ class SceCells {
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
 	void calCellArea();
+	double curTime;
 public:
 
 	SceCells();
