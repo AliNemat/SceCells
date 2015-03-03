@@ -139,6 +139,10 @@ void MembrPara::initFromConfig() {
 			globalConfigVars.getConfigValue("MembrGrowLimit").toDouble();
 	membrBendCoeff =
 			globalConfigVars.getConfigValue("MembrBenCoeff").toDouble();
+	adjustLimit =
+			globalConfigVars.getConfigValue("MembrAdjustLimit").toDouble();
+	adjustCoeff =
+			globalConfigVars.getConfigValue("MembrAdjustCoeff").toDouble();
 }
 
 SceCells::SceCells() {
@@ -2800,6 +2804,9 @@ void SceCells::handleMembrGrowth_M() {
 // figure out membr growth speed
 	calMembrGrowSpeed_M();
 // figure out which cells will add new point
+
+	adjustMembrGrowSpeed_M();
+
 	decideIfAddMembrNode_M();
 // add membr nodes
 	addMembrNodes_M();
@@ -2851,6 +2858,25 @@ void SceCells::calMembrGrowSpeed_M() {
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.membrGrowSpeed.begin(),
 			MultiWithLimit(membrPara.membrGrowCoeff, membrPara.membrGrowLimit));
+}
+
+void SceCells::adjustMembrGrowSpeed_M() {
+	calCellArea();
+	thrust::transform(
+			thrust::make_zip_iterator(
+
+					thrust::make_tuple(
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.membrGrowSpeed.begin(),
+							cellInfoVecs.cellAreaVec.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.membrGrowSpeed.begin(),
+							cellInfoVecs.cellAreaVec.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.membrGrowSpeed.begin(),
+			AdjustMembrGrow(membrPara.adjustCoeff, membrPara.adjustLimit));
 }
 
 void SceCells::decideIfAddMembrNode_M() {

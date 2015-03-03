@@ -663,6 +663,29 @@ struct MultiWithLimit: public thrust::unary_function<double, double> {
 	}
 };
 
+struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
+	double _k, _bound;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__
+	AdjustMembrGrow(double k, double bound) :
+			_k(k), _bound(bound) {
+	}
+	__device__
+	double operator()(const UiDD &input) const {
+		uint curActiveMembrNode = thrust::get<0>(input);
+		double curSpeed = thrust::get<1>(input);
+		double cellArea = thrust::get<2>(input);
+		double tmpVal = sqrt(cellArea) / curActiveMembrNode;
+		if (tmpVal < _bound) {
+			curSpeed = (tmpVal - _bound) * _k + curSpeed;
+		}
+		if (curSpeed < 0) {
+			curSpeed = 0;
+		}
+		return curSpeed;
+	}
+};
+
 struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
 	uint _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
@@ -1646,6 +1669,8 @@ struct MembrPara {
 	double membrGrowCoeff;
 	double membrGrowLimit;
 	double membrBendCoeff;
+	double adjustLimit;
+	double adjustCoeff;
 	void initFromConfig();
 };
 
@@ -1928,6 +1953,11 @@ class SceCells {
 	void membrDebug();
 
 	void calMembrGrowSpeed_M();
+	/**
+	 * if cell is under compression, its area will not be less than expected.
+	 * growth speed is adjusted by sqrt(area) and circumference ratio.
+	 */
+	void adjustMembrGrowSpeed_M();
 	void decideIfAddMembrNode_M();
 	void addMembrNodes_M();
 
