@@ -1370,7 +1370,7 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	}
 
 	allComponentsMove();
-//std::cerr << "after all components move." << std::endl;
+	//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::runAllCellLogicsDisc_M(double dt) {
@@ -1382,11 +1382,6 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 	growthAuxData.randomGrowthSpeedMax = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMax_Ori;
 	curTime = curTime + dt;
-
-	//cout << growthAuxData.prolifDecay << ", "
-	//		<< growthAuxData.randomGrowthSpeedMin << ", "
-	//		<< growthAuxData.randomGrowthSpeedMax << ", " << curTime
-	//		<< std::endl;
 
 	applySceCellDisc_M();
 
