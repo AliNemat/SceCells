@@ -1677,6 +1677,8 @@ struct CellDivAuxData {
 struct MembrPara {
 	double membrStiffCPU;
 	double membrEquLenCPU;
+	double membrGrowCoeff_Ori;
+	double membrGrowLimit_Ori;
 	double membrGrowCoeff;
 	double membrGrowLimit;
 	double membrBendCoeff;

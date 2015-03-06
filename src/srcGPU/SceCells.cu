@@ -132,10 +132,12 @@ void SceCells::distributeCellGrowthProgress() {
 void MembrPara::initFromConfig() {
 	membrEquLenCPU = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
 	membrStiffCPU = globalConfigVars.getConfigValue("MembrStiff").toDouble();
-	membrGrowCoeff =
+	membrGrowCoeff_Ori =
 			globalConfigVars.getConfigValue("MembrGrowCoeff").toDouble();
-	membrGrowLimit =
+	membrGrowLimit_Ori =
 			globalConfigVars.getConfigValue("MembrGrowLimit").toDouble();
+	membrGrowCoeff = membrGrowCoeff_Ori;
+	membrGrowLimit = membrGrowLimit_Ori;
 	membrBendCoeff =
 			globalConfigVars.getConfigValue("MembrBenCoeff").toDouble();
 	adjustLimit =
@@ -2829,7 +2831,10 @@ void SceCells::handleMembrGrowth_M() {
 }
 
 void SceCells::calMembrGrowSpeed_M() {
-
+	membrPara.membrGrowCoeff = growthAuxData.prolifDecay
+			* membrPara.membrGrowCoeff_Ori;
+	membrPara.membrGrowLimit = growthAuxData.prolifDecay
+			* membrPara.membrGrowLimit_Ori;
 // reduce_by_key, find value of max tension and their index
 	thrust::counting_iterator<uint> iBegin(0);
 	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
