@@ -653,7 +653,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
-		std::vector<uint>& initActiveIntnlNodeCounts) {
+		std::vector<uint>& initActiveIntnlNodeCounts,
+		std::vector<double> &initGrowProgVec) {
 	curTime = 0.0;
 	tmpDebug = false;
 	aniDebug = false;
@@ -667,7 +668,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 	initialize_M(nodesInput);
 	copyToGPUConstMem();
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
-			initActiveIntnlNodeCounts);
+			initActiveIntnlNodeCounts, initGrowProgVec);
 }
 
 void SceCells::initCellInfoVecs() {
@@ -2445,7 +2446,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
-		std::vector<uint>& initIntnlActiveNodeCounts) {
+		std::vector<uint>& initIntnlActiveNodeCounts,
+		std::vector<double> &initGrowProgVec) {
 	assert(
 			initMembrActiveNodeCounts.size()
 					== initIntnlActiveNodeCounts.size());
@@ -2458,6 +2460,8 @@ void SceCells::copyInitActiveNodeCount_M(
 	thrust::copy(initIntnlActiveNodeCounts.begin(),
 			initIntnlActiveNodeCounts.end(),
 			cellInfoVecs.activeIntnlNodeCounts.begin());
+	thrust::copy(initGrowProgVec.begin(), initGrowProgVec.end(),
+			cellInfoVecs.growthProgress.begin());
 }
 
 void SceCells::myDebugFunction() {

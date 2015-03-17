@@ -1740,7 +1740,8 @@ class SceCells {
 	void copyInitActiveNodeCount(
 			std::vector<uint>& numOfInitActiveNodesOfCells);
 	void copyInitActiveNodeCount_M(std::vector<uint>& initMembrActiveNodeCounts,
-			std::vector<uint>& initIntnlActiveNodeCounts);
+			std::vector<uint>& initIntnlActiveNodeCounts,
+			std::vector<double> &initGrowProgVec);
 
 	void initCellInfoVecs();
 	void initCellNodeInfoVecs();
@@ -2003,7 +2004,8 @@ public:
 
 	SceCells(SceNodes* nodesInput,
 			std::vector<uint> &numOfInitActiveMembrNodeCounts,
-			std::vector<uint> &numOfInitActiveIntnlNodeCounts);
+			std::vector<uint> &numOfInitActiveIntnlNodeCounts,
+			std::vector<double> &initGrowProgVec);
 
 	void runAllCellLevelLogicsDisc(double dt);
 

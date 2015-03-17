@@ -146,7 +146,8 @@ void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
 void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 		std::vector<bool> &nodeIsActive, std::vector<CVector> &initNodesVec,
 		std::vector<uint> &initActiveMembrNodeCounts,
-		std::vector<uint> &initActiveIntnlNodeCounts) {
+		std::vector<uint> &initActiveIntnlNodeCounts,
+		std::vector<double> &initGrowProgVec) {
 	/*
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
 	 * while the last four parameters come from Config file.
@@ -194,7 +195,7 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	//}
 	//std::cout << std::endl;
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
-			initActiveIntnlNodeCounts);
+			initActiveIntnlNodeCounts,initGrowProgVec);
 
 	//std::cout << "break point 5 " << std::endl;
 	//std::cout.flush();
@@ -221,7 +222,7 @@ void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
 	memPara.isStab = initData.isStab;
 	initializeNodes_M(initData.nodeTypes, initData.initIsActive,
 			initData.initNodeVec, initData.initActiveMembrNodeCounts,
-			initData.initActiveIntnlNodeCounts);
+			initData.initActiveIntnlNodeCounts, initData.initGrowProgVec);
 	std::cout << "Finished initializing nodes positions" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);

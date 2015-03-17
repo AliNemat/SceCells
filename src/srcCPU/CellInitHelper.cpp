@@ -113,15 +113,6 @@ RawDataInput CellInitHelper::generateRawInput_simu(
 	}
 }
 
-RawDataInput_M CellInitHelper::generateRawInput_simu_M(
-		std::vector<CVector>& cellCenterPoss) {
-	RawDataInput_M rawInput;
-	initializeRawInput_M(rawInput, cellCenterPoss);
-	rawInput.isStab = false;
-	rawInput.simuType = simuType;
-	return rawInput;
-}
-
 void CellInitHelper::transformRawCartData(CartilageRawData& cartRawData,
 		CartPara& cartPara, std::vector<CVector>& initNodePos) {
 	// step 1, switch tip node1 to pos 0
@@ -195,16 +186,6 @@ void CellInitHelper::initializeRawInput(RawDataInput& rawInput,
 
 	generateCellInitNodeInfo_v2(rawInput.initCellNodePoss);
 
-}
-
-void CellInitHelper::initializeRawInput_M(RawDataInput_M& rawInput_m,
-		std::vector<CVector>& cellCenterPoss) {
-	for (unsigned int i = 0; i < cellCenterPoss.size(); i++) {
-		CVector centerPos = cellCenterPoss[i];
-		rawInput_m.initCellCenters.push_back(centerPos);
-	}
-	generateCellInitNodeInfo_v3(rawInput_m.initCellCenters,
-			rawInput_m.initMembrNodePoss, rawInput_m.initIntnlNodePoss);
 }
 
 /**
@@ -406,12 +387,14 @@ SimulationInitData_V2_M CellInitHelper::initInputsV3_M(
 	initData.nodeTypes.resize(maxNodeInDomain);
 	initData.initNodeVec.resize(initMaxNodeCount);
 	initData.initIsActive.resize(initMaxNodeCount, false);
+	//initData.initGrowProgVec.resize(initCellCount, 0);
 
 	for (uint i = 0; i < initCellCount; i++) {
 		initData.initActiveMembrNodeCounts.push_back(
 				rawData_m.initMembrNodePoss[i].size());
 		initData.initActiveIntnlNodeCounts.push_back(
 				rawData_m.initIntnlNodePoss[i].size());
+		initData.initGrowProgVec.push_back(rawData_m.cellGrowProgVec[i]);
 	}
 
 	for (uint i = 0; i < maxNodeInDomain; i++) {
@@ -526,7 +509,7 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 	return rawData;
 }
 
-RawDataInput_M CellInitHelper::generateRawInput__M() {
+RawDataInput_M CellInitHelper::generateRawInput_M() {
 	RawDataInput_M rawData;
 	rawData.simuType = simuType;
 	vector<CVector> insideCellCenters;
@@ -539,26 +522,25 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
 			bdryInputFileName);
 
-	std::vector<GEOMETRY::Point2D> insideCenterPoints =
+	std::vector<GEOMETRY::Point2D> insideCenterCenters =
 			mesh.getAllInsidePoints();
 
-	//double fine_Ratio =
-	//		globalConfigVars.getConfigValue("StabBdrySpacingRatio").toDouble();
+	uint initCellCt = insideCenterCenters.size();
 
-	for (uint i = 0; i < insideCenterPoints.size(); i++) {
+	for (uint i = 0; i < initCellCt; i++) {
 		insideCellCenters.push_back(
-				CVector(insideCenterPoints[i].getX(),
-						insideCenterPoints[i].getY(), 0));
+				CVector(insideCenterCenters[i].getX(),
+						insideCenterCenters[i].getY(), 0));
 	}
 
-	//mesh = meshGen.generateMesh2DFromFile(bdryInputFileName, fine_Ratio);
-
-	//std::vector<GEOMETRY::Point2D> bdryPoints = mesh.getOrderedBdryPts();
-
-	//for (uint i = 0; i < bdryPoints.size(); i++) {
-	//	outsideBdryNodePos.push_back(
-	//			CVector(bdryPoints[i].getX(), bdryPoints[i].getY(), 0));
-	//}
+	double randNum;
+	double progDivStart =
+			globalConfigVars.getConfigValue("GrowthPrgrCriVal").toDouble();
+	for (uint i = 0; i < initCellCt; i++) {
+		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart;
+		//std::cout << "rand init growth progress = " << randNum << std::endl;
+		rawData.cellGrowProgVec.push_back(randNum);
+	}
 
 	std::cout << "Printing initial cell center positions ......" << std::endl;
 	for (unsigned int i = 0; i < insideCellCenters.size(); i++) {
@@ -568,12 +550,12 @@ RawDataInput_M CellInitHelper::generateRawInput__M() {
 		centerPos.Print();
 	}
 
-	//for (uint i = 0; i < outsideBdryNodePos.size(); i++) {
-	//rawData.bdryNodes.push_back(outsideBdryNodePos[i]);
-	//}
-
 	generateCellInitNodeInfo_v3(rawData.initCellCenters,
-			rawData.initMembrNodePoss, rawData.initIntnlNodePoss);
+			rawData.cellGrowProgVec, rawData.initMembrNodePoss,
+			rawData.initIntnlNodePoss);
+
+	//std::cout << "finished generate raw data" << std::endl;
+	//std::cout.flush();
 
 	rawData.isStab = true;
 	return rawData;
@@ -709,13 +691,16 @@ void CellInitHelper::generateCellInitNodeInfo_v2(vector<CVector>& initPos) {
 }
 
 void CellInitHelper::generateCellInitNodeInfo_v3(vector<CVector>& initCenters,
-		vector<vector<CVector> >& initMembrPos,
+		vector<double>& initGrowProg, vector<vector<CVector> >& initMembrPos,
 		vector<vector<CVector> >& initIntnlPos) {
+	assert(initCenters.size() == initGrowProg.size());
 	vector<CVector> initMembrPosTmp;
 	vector<CVector> initIntnlPosTmp;
 	for (uint i = 0; i < initCenters.size(); i++) {
-		initMembrPosTmp = generateInitMembrNodes(initCenters[i]);
-		initIntnlPosTmp = generateInitCellNodes(initCenters[i]);
+		initMembrPosTmp = generateInitMembrNodes(initCenters[i],
+				initGrowProg[i]);
+		initIntnlPosTmp = generateInitIntnlNodes(initCenters[i],
+				initGrowProg[i]);
 		initMembrPos.push_back(initMembrPosTmp);
 		initIntnlPos.push_back(initIntnlPosTmp);
 	}
@@ -731,8 +716,8 @@ vector<CVector> CellInitHelper::generateInitCellNodes() {
 	bool isSuccess = false;
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {
-		attemptedPoss = attemptGeenerateInitCellNodes();
-		if (isPositionQualify(attemptedPoss)) {
+		attemptedPoss = tryGenInitCellNodes();
+		if (isPosQualify(attemptedPoss)) {
 			isSuccess = true;
 		}
 	}
@@ -748,12 +733,22 @@ vector<CVector> CellInitHelper::generateInitCellNodes() {
 	return attemptedPoss;
 }
 
-vector<CVector> CellInitHelper::generateInitCellNodes(CVector& center) {
+vector<CVector> CellInitHelper::generateInitIntnlNodes(CVector& center,
+		double initProg) {
 	bool isSuccess = false;
+
+	uint minInitNodeCount =
+			globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
+	uint maxInitNodeCount = globalConfigVars.getConfigValue(
+			"MaxIntnlNodeCountPerCell").toInt();
+
+	uint initIntnlNodeCt = minInitNodeCount
+			+ (maxInitNodeCount - minInitNodeCount) * initProg;
+
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {
-		attemptedPoss = attemptGeenerateInitCellNodes();
-		if (isPositionQualify(attemptedPoss)) {
+		attemptedPoss = tryGenInitCellNodes(initIntnlNodeCt);
+		if (isPosQualify(attemptedPoss)) {
 			isSuccess = true;
 		}
 	}
@@ -774,25 +769,29 @@ vector<CVector> CellInitHelper::generateInitCellNodes(CVector& center) {
 	return attemptedPoss;
 }
 
-vector<CVector> CellInitHelper::generateInitMembrNodes(CVector& center) {
+vector<CVector> CellInitHelper::generateInitMembrNodes(CVector& center,
+		double initProg) {
 	double initRadius =
 			globalConfigVars.getConfigValue("InitMembrRadius").toDouble();
-	uint initEpiNodeCount = globalConfigVars.getConfigValue(
+	uint initMembrNodeCount = globalConfigVars.getConfigValue(
 			"InitMembrNodeCount").toInt();
-	vector<CVector> initEpiNodes;
-	double unitAngle = 2 * acos(-1.0) / (double) (initEpiNodeCount);
-	for (uint i = 0; i < initEpiNodeCount; i++) {
+	vector<CVector> initMembrNodes;
+	double unitAngle = 2 * acos(-1.0) / (double) (initMembrNodeCount);
+	for (uint i = 0; i < initMembrNodeCount; i++) {
 		CVector node;
 		node.x = initRadius * cos(unitAngle * i) + center.x;
 		node.y = initRadius * sin(unitAngle * i) + center.y;
-		initEpiNodes.push_back(node);
+		initMembrNodes.push_back(node);
 	}
-	return initEpiNodes;
+	return initMembrNodes;
 }
 
-vector<CVector> CellInitHelper::attemptGeenerateInitCellNodes() {
+vector<CVector> CellInitHelper::tryGenInitCellNodes() {
 	double radius =
 			globalConfigVars.getConfigValue("InitCellRadius").toDouble();
+	//int initCellNodeCount =
+	//    globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
+	// now we need non-uniform initial growth progress.
 	int initCellNodeCount =
 			globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
 	vector<CVector> poss;
@@ -811,7 +810,26 @@ vector<CVector> CellInitHelper::attemptGeenerateInitCellNodes() {
 	return poss;
 }
 
-bool CellInitHelper::isPositionQualify(vector<CVector>& poss) {
+vector<CVector> CellInitHelper::tryGenInitCellNodes(uint initNodeCt) {
+	double radius =
+			globalConfigVars.getConfigValue("InitCellRadius").toDouble();
+	vector<CVector> poss;
+	int foundCount = 0;
+	double randX, randY;
+	while (foundCount < initNodeCt) {
+		bool isInCircle = false;
+		while (!isInCircle) {
+			randX = getRandomNum(-radius, radius);
+			randY = getRandomNum(-radius, radius);
+			isInCircle = (sqrt(randX * randX + randY * randY) < radius);
+		}
+		poss.push_back(CVector(randX, randY, 0));
+		foundCount++;
+	}
+	return poss;
+}
+
+bool CellInitHelper::isPosQualify(vector<CVector>& poss) {
 	double minInitDist = globalConfigVars.getConfigValue(
 			"MinInitDistToOtherNodes").toDouble();
 	bool isQualify = true;
@@ -867,7 +885,7 @@ SimulationInitData_V2 CellInitHelper::initStabInput() {
 
 //RawDataInput rawInput = generateRawInput_stab();
 SimulationInitData_V2_M CellInitHelper::initInput_M() {
-	RawDataInput_M rawInput_m = generateRawInput__M();
+	RawDataInput_M rawInput_m = generateRawInput_M();
 	SimulationInitData_V2_M initData = initInputsV3_M(rawInput_m);
 	initData.isStab = false;
 	return initData;
@@ -877,14 +895,6 @@ SimulationInitData_V2 CellInitHelper::initSimuInput(
 		std::vector<CVector> &cellCenterPoss) {
 	RawDataInput rawInput = generateRawInput_simu(cellCenterPoss);
 	SimulationInitData_V2 simuInitData = initInputsV3(rawInput);
-	simuInitData.isStab = false;
-	return simuInitData;
-}
-
-SimulationInitData_V2_M CellInitHelper::initSimuInput_M(
-		std::vector<CVector> &cellCenterPoss) {
-	RawDataInput_M rawInput_m = generateRawInput_simu_M(cellCenterPoss);
-	SimulationInitData_V2_M simuInitData = initInputsV3_M(rawInput_m);
 	simuInitData.isStab = false;
 	return simuInitData;
 }

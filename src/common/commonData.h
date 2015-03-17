@@ -450,6 +450,7 @@ struct RawDataInput_M {
 	SimulationType simuType;
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> initCellCenters;
+	std::vector<double> cellGrowProgVec;
 	std::vector<std::vector<CVector> > initIntnlNodePoss;
 	std::vector<std::vector<CVector> > initMembrNodePoss;
 };
@@ -501,6 +502,7 @@ struct SimulationInitData_V2_M {
 	SimulationType simuType;
 	std::vector<uint> initActiveMembrNodeCounts;
 	std::vector<uint> initActiveIntnlNodeCounts;
+	std::vector<double> initGrowProgVec;
 	std::vector<SceNodeType> nodeTypes;
 	std::vector<CVector> initNodeVec;
 	std::vector<bool> initIsActive;

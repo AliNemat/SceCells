@@ -29,7 +29,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 	}
 }
 
-void initializeModelTestConfig(int argc, char* argv[]) {
+void initializeSlurmConfig(int argc, char* argv[]) {
 	// read configuration.
 	ConfigParser parser;
 	std::string configFileNameDefault = "./resources/disc_M.cfg";
@@ -69,11 +69,19 @@ void initializeModelTestConfig(int argc, char* argv[]) {
 	}
 }
 
+void updateDivThres(double& curDivThred, uint& i, double& dt,
+		double& decayCoeff, double& divThreshold) {
+	double curTime = i * dt;
+	double decay = exp(-curTime * decayCoeff);
+	curDivThred = 1.0 - (1.0 - divThreshold) * decay;
+}
+
 int main(int argc, char* argv[]) {
 	// initialize random seed.
 	srand(time(NULL));
 
-	initializeModelTestConfig(argc, argv);
+	// Slurm is computer-cluster management system.
+	initializeSlurmConfig(argc, argv);
 
 	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;
@@ -96,23 +104,26 @@ int main(int argc, char* argv[]) {
 			"DetailStatFileNameBase").toString();
 	double divThreshold =
 			globalConfigVars.getConfigValue("DivThreshold").toDouble();
+	double decayCoeff =
+			globalConfigVars.getConfigValue("ProlifDecayCoeff").toDouble();
 	double curDivThred;
 
 	// preparation.
 	uint aniFrame = 0;
 	// main simulation steps.
-	for (int i = 0; i <= mainPara.totalTimeSteps; i++) {
+	for (uint i = 0; i <= (uint) (mainPara.totalTimeSteps); i++) {
 		if (i % mainPara.aniAuxVar == 0) {
 			CellsStatsData polyData = simuDomain.outputPolyCountData();
-			//////// these statements need to be zipped somewhere //////
-			double curTime = i * mainPara.dt;
-			double decayCoeff = globalConfigVars.getConfigValue(
-					"ProlifDecayCoeff").toDouble();
-			double decay = exp(-curTime * decayCoeff);
-			curDivThred = 1.0 - (1.0 - divThreshold) * decay;
-			//////// these statements need to be zipped somewhere //////
+
+			//////// update division threshold //////
+			updateDivThres(curDivThred, i, mainPara.dt, decayCoeff,
+					divThreshold);
+
+			// prints brief polygon counting statistics to file
 			polyData.printPolyCountToFile(polyStatFileName, curDivThred);
+			// prints detailed individual cell statistics to file
 			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
+			// prints the animation frames to file. They can be open by Paraview
 			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			// std::cout << "in ani step " << aniFrame << std::endl;

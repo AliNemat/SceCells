@@ -29,7 +29,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 	}
 }
 
-void initializeModelTestConfig(int argc, char* argv[]) {
+void initializeSlurmConfig(int argc, char* argv[]) {
 	// read configuration.
 	ConfigParser parser;
 	std::string configFileNameDefault = "./resources/disc_master.cfg";
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 	// initialize random seed.
 	srand(time(NULL));
 
-	initializeModelTestConfig(argc, argv);
+	initializeSlurmConfig(argc, argv);
 
 	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;
