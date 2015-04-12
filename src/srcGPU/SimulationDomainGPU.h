@@ -5,6 +5,7 @@
 #include "SceCells.h"
 #include "Cartilage.h"
 #include "commonData.h"
+#include "NetworkInfo.h"
 
 #include <sstream>
 #include <iomanip>
@@ -40,6 +41,8 @@ class SimulationDomainGPU {
 	 * Handles cell level logics like growth and division.
 	 */
 	SceCells cells;
+
+	NetworkInfo netInfo;
 
 	/**
 	 * Cartilage is another important components in the beak model.

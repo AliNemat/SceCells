@@ -19,4 +19,6 @@ add_library(SceUtils
       commonData.cpp
       ResAnalysisHelper.h
       ResAnalysisHelper.cpp
+      NetworkInfo.h
+      NetworkInfo.cpp
 )
