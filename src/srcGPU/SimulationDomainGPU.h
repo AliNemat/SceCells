@@ -44,6 +44,10 @@ class SimulationDomainGPU {
 
 	NetworkInfo netInfo;
 
+	std::vector<std::vector<PreT1State> > preT1Vec;
+
+	std::set<int> t1CellSet;
+
 	/**
 	 * Cartilage is another important components in the beak model.
 	 */
@@ -128,6 +132,8 @@ class SimulationDomainGPU {
 			std::vector<uint> &numOfInitActiveInternalNodeCounts,
 			std::vector<double> &initGrowProgVec);
 
+	NetworkInfo buildNetInfo(CellsStatsData &polyData);
+	std::set<int> findT1Transition();
 public:
 	/**
 	 * Default constructor.
@@ -220,6 +226,8 @@ public:
 	void performAblation(AblationEvent &ablEvent);
 
 	CellsStatsData outputPolyCountData();
+
+	void processT1Info(int maxStepTraceBack, CellsStatsData &polyData);
 };
 
 #endif

@@ -195,7 +195,7 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	//}
 	//std::cout << std::endl;
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
-			initActiveIntnlNodeCounts,initGrowProgVec);
+			initActiveIntnlNodeCounts, initGrowProgVec);
 
 	//std::cout << "break point 5 " << std::endl;
 	//std::cout.flush();
@@ -631,4 +631,55 @@ CellsStatsData SimulationDomainGPU::outputPolyCountData() {
 	// this step is necessary for obtaining correct neighbors because new cells might have been created in previous step.
 	nodes.sceForcesDisc_M();
 	return cells.outputPolyCountData();
+}
+
+NetworkInfo SimulationDomainGPU::buildNetInfo(CellsStatsData &polyData) {
+	std::vector<NetworkNode> netNodes;
+	for (uint i = 0; i < polyData.cellsStats.size(); i++) {
+		NetworkNode netNode;
+		netNode.setGrowP(polyData.cellsStats[i].cellGrowthProgress);
+		netNode.setNodeRank(polyData.cellsStats[i].cellRank);
+		netNode.setPos(polyData.cellsStats[i].cellCenter);
+		std::vector<int> ngbrVec(polyData.cellsStats[i].neighborVec.begin(),
+				polyData.cellsStats[i].neighborVec.end());
+		netNode.setNgbrList(ngbrVec);
+		netNodes.push_back(netNode);
+	}
+	NetworkInfo result(netNodes);
+	return result;
+}
+
+std::set<int> SimulationDomainGPU::findT1Transition() {
+	std::set<int> result;
+	for (uint i = 0; i < preT1Vec.size(); i++) {
+		for (uint j = 0; j < preT1Vec[i].size(); j++) {
+			if (netInfo.isT1Tran(preT1Vec[i][j])) {
+				result.insert(preT1Vec[i][j].nodeRank);
+				result.insert(preT1Vec[i][j].centerNgbr);
+				result.insert(preT1Vec[i][j].sideNgbrs[0]);
+				result.insert(preT1Vec[i][j].sideNgbrs[1]);
+			}
+		}
+	}
+	return result;
+}
+
+void SimulationDomainGPU::processT1Info(int maxStepTraceBack,
+		CellsStatsData &polyData) {
+	// first, construct network info
+	netInfo = buildNetInfo(polyData);
+
+	// second, find all of the previous pre-t1 states matches
+	// has make t1 transition under current network info. output
+	// these cell numbers.
+	t1CellSet = findT1Transition();
+
+	// finally, update the pre-T1 info vector by remove old one
+	// and add new one.
+	if (preT1Vec.size() >= maxStepTraceBack) {
+		int eraseSize = preT1Vec.size() - maxStepTraceBack + 1;
+		preT1Vec.erase(preT1Vec.begin(), preT1Vec.begin() + eraseSize);
+	}
+	std::vector<PreT1State> preT1States = netInfo.scanForPreT1States();
+	preT1Vec.push_back(preT1States);
 }
