@@ -47,6 +47,7 @@ class SimulationDomainGPU {
 	std::vector<std::vector<PreT1State> > preT1Vec;
 
 	std::set<int> t1CellSet;
+	std::vector<double> cellColorVec;
 
 	/**
 	 * Cartilage is another important components in the beak model.
@@ -134,6 +135,11 @@ class SimulationDomainGPU {
 
 	NetworkInfo buildNetInfo(CellsStatsData &polyData);
 	std::set<int> findT1Transition();
+
+	void outputVtkGivenCellColor(std::string scriptNameBase, int rank,
+			AnimationCriteria aniCri, std::vector<double>& cellColorVec);
+	std::vector<double> processT1Color();
+
 public:
 	/**
 	 * Default constructor.
@@ -203,6 +209,8 @@ public:
 	void outputVtkFilesWithCri_M(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 
+	void outputVtkColorByCell(std::string scriptNameBase, int rank,
+			AnimationCriteria aniCri);
 	/**
 	 * Method that animates the domain to VTK format.
 	 * @param resultNameBase name of the labelMatrix series.

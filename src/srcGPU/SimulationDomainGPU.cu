@@ -470,7 +470,6 @@ void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
 
-// TODO
 void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	nodes.prepareSceForceComputation();
@@ -481,6 +480,35 @@ void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 	//std::cout << "finished generate vtk data" << std::endl;
 	aniData.outputVtkAni(scriptNameBase, rank);
 	//std::cout << "finished generate vtk file" << std::endl;
+}
+
+void SimulationDomainGPU::outputVtkGivenCellColor(std::string scriptNameBase,
+		int rank, AnimationCriteria aniCri, std::vector<double>& cellColorVal) {
+	nodes.prepareSceForceComputation();
+	AniRawData rawAni = cells.obtainAniRawDataGivenCellColor(cellColorVal,
+			aniCri);
+	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
+	aniData.outputVtkAni(scriptNameBase, rank);
+}
+
+void SimulationDomainGPU::outputVtkColorByCell(std::string scriptNameBase,
+		int rank, AnimationCriteria aniCri) {
+	assert(aniCri.animationType == T1Tran);
+	std::vector<double> t1ColorVec = processT1Color();
+	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, t1ColorVec);
+}
+
+std::vector<double> SimulationDomainGPU::processT1Color() {
+	std::vector<double> result;
+	result.resize(cells.getAllocParaM().currentActiveCellCount);
+	for (int i = 0; i < int(result.size()); i++) {
+		if (t1CellSet.find(i) == t1CellSet.end()) {
+			result[i] = 0;
+		} else {
+			result[i] = 1;
+		}
+	}
+	return result;
 }
 
 void SimulationDomainGPU::printDomainInformation() {
@@ -661,6 +689,9 @@ std::set<int> SimulationDomainGPU::findT1Transition() {
 			}
 		}
 	}
+	if (result.size() != 0) {
+		std::cout << "found T1 transition!" << std::endl;
+	}
 	return result;
 }
 
@@ -672,7 +703,7 @@ void SimulationDomainGPU::processT1Info(int maxStepTraceBack,
 	// second, find all of the previous pre-t1 states matches
 	// has make t1 transition under current network info. output
 	// these cell numbers.
-	t1CellSet = findT1Transition();
+	//t1CellSet = findT1Transition();
 
 	// finally, update the pre-T1 info vector by remove old one
 	// and add new one.

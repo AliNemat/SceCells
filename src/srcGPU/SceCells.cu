@@ -2444,6 +2444,188 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	return rawAniData;
 }
 
+AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
+		AnimationCriteria& aniCri) {
+
+	uint activeCellCount = allocPara_m.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	uint beginIndx = allocPara_m.bdryNodeCount;
+
+	assert(cellColors.size() >= activeCellCount);
+
+	AniRawData rawAniData;
+	//cout << "size of potential pairs = " << pairs.size() << endl;
+
+	// unordered_map is more efficient than map, but it is a c++ 11 feature
+	// and c++ 11 seems to be incompatible with Thrust.
+	IndexMap locIndexToAniIndexMap;
+
+	uint maxActiveNode = activeCellCount * maxNodePerCell;
+	thrust::host_vector<double> hostTmpVectorLocX(maxActiveNode);
+	thrust::host_vector<double> hostTmpVectorLocY(maxActiveNode);
+	thrust::host_vector<bool> hostIsActiveVec(maxActiveNode);
+	thrust::host_vector<int> hostBondVec(maxActiveNode);
+	thrust::host_vector<double> hostTmpVectorTenMag(maxActiveNode);
+
+	thrust::copy(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin()))
+					+ maxActiveNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(hostTmpVectorLocX.begin(),
+							hostTmpVectorLocY.begin(), hostIsActiveVec.begin(),
+							hostBondVec.begin(), hostTmpVectorTenMag.begin())));
+
+	thrust::host_vector<uint> curActiveMemNodeCounts =
+			cellInfoVecs.activeMembrNodeCounts;
+
+	CVector tmpPos;
+	uint index1;
+	int index2;
+	std::vector<BondInfo> bondInfoVec;
+
+	double node1X, node1Y;
+	double node2X, node2Y;
+	double aniVal;
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < maxMemNodePerCell; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (hostIsActiveVec[index1] == true) {
+				index2 = hostBondVec[index1];
+				if (index2 > index1 && index2 != -1) {
+					BondInfo bond;
+					bond.cellRank1 = i;
+					bond.pos1 = CVector(hostTmpVectorLocX[index1],
+							hostTmpVectorLocY[index1], 0);
+					bond.cellRank2 = (index2 - beginIndx) / maxNodePerCell;
+					bond.pos2 = CVector(hostTmpVectorLocX[index2],
+							hostTmpVectorLocY[index2], 0);
+					bondInfoVec.push_back(bond);
+				}
+			}
+		}
+	}
+
+	rawAniData.bondsArr = bondInfoVec;
+
+	uint curIndex = 0;
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (j == curActiveMemNodeCounts[i] - 1) {
+				index2 = beginIndx + i * maxNodePerCell;
+			} else {
+				index2 = beginIndx + i * maxNodePerCell + j + 1;
+			}
+
+			if (hostIsActiveVec[index1] == true
+					&& hostIsActiveVec[index2] == true) {
+				node1X = hostTmpVectorLocX[index1];
+				node1Y = hostTmpVectorLocY[index1];
+				node2X = hostTmpVectorLocX[index2];
+				node2Y = hostTmpVectorLocY[index2];
+				IndexMap::iterator it = locIndexToAniIndexMap.find(index1);
+				if (it == locIndexToAniIndexMap.end()) {
+					locIndexToAniIndexMap.insert(
+							std::pair<uint, uint>(index1, curIndex));
+					curIndex++;
+					tmpPos = CVector(node1X, node1Y, 0);
+					//aniVal = hostTmpVectorNodeType[index1];
+					aniVal = cellColors[i];
+					rawAniData.aniNodePosArr.push_back(tmpPos);
+					rawAniData.aniNodeVal.push_back(aniVal);
+				}
+				it = locIndexToAniIndexMap.find(index2);
+				if (it == locIndexToAniIndexMap.end()) {
+					locIndexToAniIndexMap.insert(
+							std::pair<uint, uint>(index2, curIndex));
+					curIndex++;
+					tmpPos = CVector(node2X, node2Y, 0);
+					//aniVal = hostTmpVectorNodeType[index2];
+					aniVal = cellColors[i];
+					rawAniData.aniNodePosArr.push_back(tmpPos);
+					rawAniData.aniNodeVal.push_back(aniVal);
+				}
+
+				it = locIndexToAniIndexMap.find(index1);
+				uint aniIndex1 = it->second;
+				it = locIndexToAniIndexMap.find(index2);
+				uint aniIndex2 = it->second;
+
+				LinkAniData linkData;
+				linkData.node1Index = aniIndex1;
+				linkData.node2Index = aniIndex2;
+				rawAniData.memLinks.push_back(linkData);
+			}
+		}
+	}
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < allocPara_m.maxIntnlNodePerCell; j++) {
+			for (uint k = j + 1; k < allocPara_m.maxIntnlNodePerCell; k++) {
+				index1 = i * maxNodePerCell + maxMemNodePerCell + j;
+				index2 = i * maxNodePerCell + maxMemNodePerCell + k;
+				if (hostIsActiveVec[index1] && hostIsActiveVec[index2]) {
+					node1X = hostTmpVectorLocX[index1];
+					node1Y = hostTmpVectorLocY[index1];
+					node2X = hostTmpVectorLocX[index2];
+					node2Y = hostTmpVectorLocY[index2];
+					if (aniCri.isPairQualify_M(node1X, node1Y, node2X,
+							node2Y)) {
+						IndexMap::iterator it = locIndexToAniIndexMap.find(
+								index1);
+						if (it == locIndexToAniIndexMap.end()) {
+							locIndexToAniIndexMap.insert(
+									std::pair<uint, uint>(index1, curIndex));
+							curIndex++;
+							tmpPos = CVector(node1X, node1Y, 0);
+							//aniVal = hostTmpVectorNodeType[index1];
+							aniVal = cellColors[i];
+							rawAniData.aniNodePosArr.push_back(tmpPos);
+							rawAniData.aniNodeVal.push_back(aniVal);
+						}
+						it = locIndexToAniIndexMap.find(index2);
+						if (it == locIndexToAniIndexMap.end()) {
+							locIndexToAniIndexMap.insert(
+									std::pair<uint, uint>(index2, curIndex));
+							curIndex++;
+							tmpPos = CVector(node2X, node2Y, 0);
+							//aniVal = hostTmpVectorNodeType[index1];
+							aniVal = cellColors[i];
+							rawAniData.aniNodePosArr.push_back(tmpPos);
+							rawAniData.aniNodeVal.push_back(aniVal);
+						}
+
+						it = locIndexToAniIndexMap.find(index1);
+						uint aniIndex1 = it->second;
+						it = locIndexToAniIndexMap.find(index2);
+						uint aniIndex2 = it->second;
+
+						LinkAniData linkData;
+						linkData.node1Index = aniIndex1;
+						linkData.node2Index = aniIndex2;
+						rawAniData.internalLinks.push_back(linkData);
+					}
+				}
+			}
+		}
+	}
+	return rawAniData;
+}
+
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
 		std::vector<uint>& initIntnlActiveNodeCounts,

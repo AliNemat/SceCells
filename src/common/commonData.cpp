@@ -256,6 +256,8 @@ AniType parseAniTpFromConfig(int configValue) {
 		return Force;
 	} else if (configValue == 3) {
 		return Tension;
+	} else if (configValue == 4) {
+		return T1Tran;
 	} else {
 		throw SceException("Animation type in config file is not defined",
 				ConfigValueException);

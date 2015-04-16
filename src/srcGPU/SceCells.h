@@ -2031,10 +2031,21 @@ public:
 
 	AniRawData obtainAniRawData(AnimationCriteria& aniCri);
 
+	AniRawData obtainAniRawDataGivenCellColor(vector<double>& cellColors,
+			AnimationCriteria& aniCri);
+
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);
 
 	CellsStatsData outputPolyCountData();
+
+	const NodeAllocPara_M& getAllocParaM() const {
+		return allocPara_m;
+	}
+
+	void setAllocParaM(const NodeAllocPara_M& allocParaM) {
+		allocPara_m = allocParaM;
+	}
 
 	bool aniDebug;
 };

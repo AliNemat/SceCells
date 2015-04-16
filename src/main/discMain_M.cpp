@@ -128,11 +128,13 @@ int main(int argc, char* argv[]) {
 			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
 			// prints the animation frames to file. They can be open by Paraview
 
-			if(i!=0){
-				simuDomain.processT1Info(maxStepTraceBack, polyData);
+			if (i != 0) {
+				//simuDomain.processT1Info(maxStepTraceBack, polyData);
 			}
 
-			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+			//simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+			//		aniFrame, mainPara.aniCri);
+			simuDomain.outputVtkColorByCell(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			// std::cout << "in ani step " << aniFrame << std::endl;
 			aniFrame++;
