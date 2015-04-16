@@ -45,6 +45,18 @@ CVector CVector::rotateNintyDeg_XY_CC() {
 	return CVector(tmpX, tmpY, z);
 }
 
+double CVector::getAngle2DPlane() {
+	double angle;
+	static const double TwoPi = 2 * acos(-1.0);
+	CVector unitVec = this->getUnitVector();
+	if (unitVec.x > 0) {
+		angle = acos(unitVec.y);
+	} else {
+		angle = 2 * TwoPi - acos(unitVec.y);
+	}
+	return angle;
+}
+
 void CVector::Print() const {
 	std::cout << "(" << x << "," << y << "," << z << ")\n";
 }

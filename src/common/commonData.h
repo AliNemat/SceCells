@@ -81,7 +81,7 @@ enum SimulationType {
 SimulationType parseTypeFromConfig(int configValue);
 
 enum AniType {
-	CellType, ForceAbsVal, Force, Tension
+	CellType, ForceAbsVal, Force, Tension, T1Tran
 };
 
 class BondInfo {

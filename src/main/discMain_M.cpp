@@ -108,6 +108,9 @@ int main(int argc, char* argv[]) {
 			globalConfigVars.getConfigValue("ProlifDecayCoeff").toDouble();
 	double curDivThred;
 
+	int maxStepTraceBack =
+			globalConfigVars.getConfigValue("MaxStepTraceBack").toInt();
+
 	// preparation.
 	uint aniFrame = 0;
 	// main simulation steps.
@@ -124,7 +127,14 @@ int main(int argc, char* argv[]) {
 			// prints detailed individual cell statistics to file
 			polyData.printDetailStatsToFile(detailStatFileNameBase, aniFrame);
 			// prints the animation frames to file. They can be open by Paraview
-			simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+
+			if (i != 0) {
+				//simuDomain.processT1Info(maxStepTraceBack, polyData);
+			}
+
+			//simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
+			//		aniFrame, mainPara.aniCri);
+			simuDomain.outputVtkColorByCell(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			// std::cout << "in ani step " << aniFrame << std::endl;
 			aniFrame++;

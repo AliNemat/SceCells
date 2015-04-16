@@ -54,6 +54,7 @@ public:
 	void Printf(char *name);
 	void FilePrint(const char *);
 	CVector getUnitVector(double tolerance = 1.0e-14);
+	double getAngle2DPlane();
 	/*
 	 * rotate 90 degrees counter-clock wise in XY plane
 	 */
