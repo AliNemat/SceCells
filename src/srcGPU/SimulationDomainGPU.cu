@@ -668,8 +668,14 @@ NetworkInfo SimulationDomainGPU::buildNetInfo(CellsStatsData &polyData) {
 		netNode.setGrowP(polyData.cellsStats[i].cellGrowthProgress);
 		netNode.setNodeRank(polyData.cellsStats[i].cellRank);
 		netNode.setPos(polyData.cellsStats[i].cellCenter);
-		std::vector<int> ngbrVec(polyData.cellsStats[i].neighborVec.begin(),
-				polyData.cellsStats[i].neighborVec.end());
+
+		std::vector<int> ngbrVec;
+		std::set<int>::iterator it;
+		for (it = polyData.cellsStats[i].neighborVec.begin();
+				it != polyData.cellsStats[i].neighborVec.end(); ++it) {
+			ngbrVec.push_back(*it);
+		}
+
 		netNode.setNgbrList(ngbrVec);
 		netNodes.push_back(netNode);
 	}
@@ -703,7 +709,7 @@ void SimulationDomainGPU::processT1Info(int maxStepTraceBack,
 	// second, find all of the previous pre-t1 states matches
 	// has make t1 transition under current network info. output
 	// these cell numbers.
-	//t1CellSet = findT1Transition();
+	t1CellSet = findT1Transition();
 
 	// finally, update the pre-T1 info vector by remove old one
 	// and add new one.

@@ -124,6 +124,8 @@ vector<PreT1State> NetworkInfo::scanForPreT1States() {
 			ngbrListWithCor.push_back(tmpData);
 		}
 		angleSortVec(ngbrListWithCor);
+		//std::cout << "current node:" << nodeRank << std::endl;
+		//std::cout << " ngbr list size = " << ngbrList.size() << std::endl;
 		vector<PreT1State> tmpPreT1s = extractPreT1States(ngbrListWithCor,
 				nodeRank, nodeProg, this);
 		result.insert(result.end(), tmpPreT1s.begin(), tmpPreT1s.end());
@@ -142,7 +144,7 @@ vector<PreT1State> extractPreT1States(std::vector<RankWithCor>& ngbrListWithCor,
 		int nodeRank, double nodePg, NetworkInfo* netInfo) {
 	vector<PreT1State> result;
 	PreT1State preT1Tmp;
-	for (uint i = 0; i < ngbrListWithCor.size() - 2; i++) {
+	for (int i = 0; i < int(ngbrListWithCor.size()) - 2; i++) {
 		int side1Rank = ngbrListWithCor[i].nodeRank;
 		int centerRank = ngbrListWithCor[i + 1].nodeRank;
 		int side2Rank = ngbrListWithCor[i + 2].nodeRank;
@@ -161,6 +163,9 @@ vector<PreT1State> extractPreT1States(std::vector<RankWithCor>& ngbrListWithCor,
 			preT1Tmp.gp3 = ngbrListWithCor[i].growP;
 			preT1Tmp.sideNgbrs.push_back(side2Rank);
 			preT1Tmp.gp4 = ngbrListWithCor[i + 2].growP;
+			//std::cout << "extracting pre-T1:(" << preT1Tmp.nodeRank << ","
+			//		<< preT1Tmp.centerNgbr << "," << preT1Tmp.sideNgbrs[0]
+			//		<< "," << preT1Tmp.sideNgbrs[1] << ")" << std::endl;
 			result.push_back(preT1Tmp);
 		}
 	}
