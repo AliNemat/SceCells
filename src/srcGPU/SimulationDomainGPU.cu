@@ -347,9 +347,9 @@ void SimulationDomainGPU::readDomainPara() {
 	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
 	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
 	domainPara.gridSpacing = nodes.getMaxEffectiveRange();
-	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+	domainPara.XBucketSize = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
-	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
+	domainPara.YBucketSize = (domainPara.maxY - domainPara.minY)
 			/ domainPara.gridSpacing + 1;
 }
 

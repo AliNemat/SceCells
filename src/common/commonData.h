@@ -267,8 +267,9 @@ struct SceDomainPara {
 	double minZ;
 	double maxZ;
 	double gridSpacing;
-	uint numOfBucketsInXDim;
-	uint numOfBucketsInYDim;
+	uint XBucketSize;
+	uint YBucketSize;
+	uint ZBucketSize;
 	uint totalBucketCount;
 };
 

@@ -261,6 +261,42 @@ struct pointToBucketIndex2D: public thrust::unary_function<CVec3BoolInt, Tuint2>
 	}
 };
 
+struct BucketIndexer3D: public thrust::unary_function<CVec3BoolInt, Tuint2> {
+	double _minX;
+	double _maxX;
+	double _minY;
+	double _maxY;
+	double _minZ;
+	double _maxZ;
+
+	double _unitLen;
+	uint _XSize;
+	uint _YSize;
+
+	__host__ __device__ BucketIndexer3D(double minX, double maxX, double minY,
+			double maxY, double minZ, double maxZ, double unitLen) :
+			_minX(minX), _maxX(maxX), _minY(minY), _maxY(maxY), _minZ(minZ), _maxZ(
+					maxZ), _unitLen(unitLen), _XSize(
+					(maxX - minX) / _unitLen + 1), _YSize(
+					(maxY - minY) / _unitLen + 1) {
+	}
+
+	__host__ __device__ Tuint2 operator()(const CVec3BoolInt& v) const {
+		// find the raster indices of p's bucket
+		if (thrust::get<3>(v) == true) {
+			uint x = static_cast<uint>((thrust::get<0>(v) - _minX) / _unitLen);
+			uint y = static_cast<uint>((thrust::get<1>(v) - _minY) / _unitLen);
+			uint z = static_cast<uint>((thrust::get<2>(v) - _minZ) / _unitLen);
+			// return the bucket's linear index and node's global index
+			return thrust::make_tuple(z * _XSize * _YSize + y * _XSize + x,
+					thrust::get<4>(v));
+		} else {
+			// return UINT_MAX to indicate the node is inactive and its value should not be used
+			return thrust::make_tuple(UINT_MAX, UINT_MAX);
+		}
+	}
+};
+
 /**
  * Functor to compute neighbor buckets(center bucket included) of a node.
  * @param input1 bucket index of node
@@ -345,6 +381,68 @@ struct NeighborFunctor2D: public thrust::unary_function<Tuint2, Tuint2> {
 		default:
 			return thrust::make_tuple(UINT_MAX, UINT_MAX);
 		}
+	}
+};
+
+struct NgbrFunc3D: public thrust::unary_function<Tuint2, Tuint2> {
+	uint _XSize;
+	uint _YSize;
+	uint _ZSize;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	NgbrFunc3D(uint XSize, uint YSize, uint ZSize) :
+			_XSize(XSize), _YSize(YSize), _ZSize(ZSize) {
+	}
+	__host__ __device__ Tuint2 operator()(const Tuint2 &v) {
+		uint relativeRank = thrust::get<1>(v) % 27;
+		uint XYSize = _XSize * _YSize;
+		uint zPos = thrust::get<0>(v) / XYSize;
+		uint xyPos = thrust::get<0>(v) % XYSize;
+		uint xPos = xyPos % _XSize;
+		uint yPos = xyPos / _XSize;
+
+		int rankZ = relativeRank / 9;
+		int rankTmp = relativeRank % 9;
+		int rankY = rankTmp / 3;
+		int rankX = rankTmp % 3;
+
+		rankX--;
+		rankY--;
+		rankZ--;
+
+		if (rankX == -1) {
+			// try to find left neighbor, but already in leftmost position
+			if (xPos == 0) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		} else if (rankX == 1) {
+			// try to find right neighbor, but already in rightmost position
+			if (xPos == _XSize - 1) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		}
+		if (rankY == -1) {
+			if (yPos == 0) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		} else if (rankY == 1) {
+			if (yPos == _YSize - 1) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		}
+		if (rankZ == -1) {
+			if (zPos == 0) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		} else if (rankZ == 1) {
+			if (zPos == _ZSize - 1) {
+				return thrust::make_tuple(UINT_MAX, thrust::get<1>(v));
+			}
+		}
+
+		uint ngbrPos = (xPos + rankX) + (yPos + rankY) * _XSize
+				+ (zPos + rankZ) * XYSize;
+		return thrust::make_tuple(ngbrPos, thrust::get<1>(v));
 	}
 };
 
@@ -1011,6 +1109,15 @@ public:
 	 * this method contains all preparation work for SCE force calculation.
 	 */
 	void prepareSceForceComputation_M();
+
+	void buildBuckets3D();
+	void extendBuckets3D();
+	void findBucketBounds3D();
+	/**
+	 * this method contains all preparation work for SCE force calculation
+	 * in 3D.
+	 */
+	void prepareSceForceComputation3D();
 
 	/**
 	 * wrap apply forces methods together.

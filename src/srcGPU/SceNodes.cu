@@ -92,9 +92,11 @@ void SceNodes::readDomainPara() {
 	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
 	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
 	domainPara.gridSpacing = getMaxEffectiveRange();
-	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+	domainPara.XBucketSize = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
-	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
+	domainPara.YBucketSize = (domainPara.maxY - domainPara.minY)
+			/ domainPara.gridSpacing + 1;
+	domainPara.ZBucketSize = (domainPara.maxZ - domainPara.minZ)
 			/ domainPara.gridSpacing + 1;
 }
 
@@ -496,12 +498,12 @@ void SceNodes::initDimension(double domainMinX, double domainMaxX,
 	domainPara.minY = domainMinY;
 	domainPara.maxY = domainMaxY;
 	domainPara.gridSpacing = domainBucketSize;
-	domainPara.numOfBucketsInXDim = (domainPara.maxX - domainPara.minX)
+	domainPara.XBucketSize = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
-	domainPara.numOfBucketsInYDim = (domainPara.maxY - domainPara.minY)
+	domainPara.YBucketSize = (domainPara.maxY - domainPara.minY)
 			/ domainPara.gridSpacing + 1;
-	domainPara.totalBucketCount = domainPara.numOfBucketsInXDim
-			* domainPara.numOfBucketsInYDim;
+	domainPara.totalBucketCount = domainPara.XBucketSize
+			* domainPara.YBucketSize;
 
 	auxVecs.keyBegin.resize(domainPara.totalBucketCount);
 	auxVecs.keyEnd.resize(domainPara.totalBucketCount);
@@ -1176,6 +1178,17 @@ void SceNodes::findBucketBounds_M() {
 			search_begin + domainPara.totalBucketCount, auxVecs.keyEnd.begin());
 }
 
+void SceNodes::findBucketBounds3D() {
+	thrust::counting_iterator<uint> search_begin(0);
+	thrust::lower_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExtProc_M, search_begin,
+			search_begin + domainPara.totalBucketCount,
+			auxVecs.keyBegin.begin());
+	thrust::upper_bound(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExtProc_M, search_begin,
+			search_begin + domainPara.totalBucketCount, auxVecs.keyEnd.begin());
+}
+
 void SceNodes::prepareSceForceComputation() {
 	buildBuckets2D();
 	extendBuckets2D();
@@ -1186,6 +1199,12 @@ void SceNodes::prepareSceForceComputation_M() {
 	buildBuckets2D_M();
 	extendBuckets2D_M();
 	findBucketBounds_M();
+}
+
+void SceNodes::prepareSceForceComputation3D() {
+	buildBuckets3D();
+	extendBuckets3D();
+	findBucketBounds3D();
 }
 
 void SceNodes::addNewlyDividedCells(
@@ -1316,6 +1335,47 @@ void SceNodes::buildBuckets2D_M() {
 			auxVecs.bucketKeys.begin() + totalActiveNodes, UINT_MAX);
 
 	endIndx_M = totalActiveNodes - numberOfOutOfRange;
+}
+
+void SceNodes::buildBuckets3D() {
+	int totalActiveNodes = allocPara_M.bdryNodeCount
+			+ allocPara_M.currentActiveCellCount
+					* allocPara_M.maxAllNodePerCell;
+
+	thrust::counting_iterator<uint> iBegin(0);
+	// takes counting iterator and coordinates
+	// return tuple of keys and values
+	// transform the points to their bucket indices
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), iBegin)),
+			make_zip_iterator(
+					make_tuple(infoVecs.nodeLocX.begin(),
+							infoVecs.nodeLocY.begin(),
+							infoVecs.nodeLocZ.begin(),
+							infoVecs.nodeIsActive.begin(), iBegin))
+					+ totalActiveNodes,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
+			BucketIndexer3D(domainPara.minX, domainPara.maxX, domainPara.minY,
+					domainPara.maxY, domainPara.minZ, domainPara.maxZ,
+					domainPara.gridSpacing));
+
+	// sort the points by their bucket index
+	thrust::sort_by_key(auxVecs.bucketKeys.begin(),
+			auxVecs.bucketKeys.begin() + totalActiveNodes,
+			auxVecs.bucketValues.begin());
+	// for those nodes that are inactive, key value of UINT_MAX will be returned.
+	// we need to removed those keys along with their values.
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeys.begin(),
+			auxVecs.bucketKeys.begin() + totalActiveNodes, UINT_MAX);
+
+	endIndx_M = totalActiveNodes - numberOfOutOfRange;
+
 }
 
 __device__
@@ -2066,8 +2126,7 @@ void SceNodes::extendBuckets2D() {
 			make_zip_iterator(
 					make_tuple(auxVecs.bucketKeysExpanded.begin(),
 							countingBegin)),
-			NeighborFunctor2D(domainPara.numOfBucketsInXDim,
-					domainPara.numOfBucketsInYDim));
+			NeighborFunctor2D(domainPara.XBucketSize, domainPara.YBucketSize));
 
 	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
 			auxVecs.bucketKeysExpanded.end(), UINT_MAX);
@@ -2119,8 +2178,53 @@ void SceNodes::extendBuckets2D_M() {
 			make_zip_iterator(
 					make_tuple(auxVecs.bucketKeysExpanded.begin(),
 							countingBegin)),
-			NeighborFunctor2D(domainPara.numOfBucketsInXDim,
-					domainPara.numOfBucketsInYDim));
+			NeighborFunctor2D(domainPara.XBucketSize, domainPara.YBucketSize));
+
+	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExt_M, UINT_MAX);
+
+	endIndxExtProc_M = endIndxExt_M - numberOfOutOfRange;
+	thrust::sort_by_key(auxVecs.bucketKeysExpanded.begin(),
+			auxVecs.bucketKeysExpanded.begin() + endIndxExt_M,
+			auxVecs.bucketValuesIncludingNeighbor.begin());
+}
+
+void SceNodes::extendBuckets3D() {
+	endIndxExt_M = endIndx_M * 27;
+	/**
+	 * beginning of constant iterator
+	 */
+	thrust::constant_iterator<uint> first(27);
+	/**
+	 * end of constant iterator.
+	 * the plus sign only indicate movement of position, not value.
+	 * e.g. movement is 5 and first iterator is initialized as 9
+	 * result array is [9,9,9,9,9];
+	 */
+	thrust::constant_iterator<uint> last = first + endIndx_M; // this is NOT numerical addition!
+
+	expand(first, last,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeys.begin(),
+							auxVecs.bucketValues.begin())),
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							auxVecs.bucketValuesIncludingNeighbor.begin())));
+
+	thrust::counting_iterator<uint> countingBegin(0);
+
+	thrust::transform(
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)) + endIndxExt_M,
+			make_zip_iterator(
+					make_tuple(auxVecs.bucketKeysExpanded.begin(),
+							countingBegin)),
+			NgbrFunc3D(domainPara.XBucketSize, domainPara.YBucketSize,
+					domainPara.ZBucketSize));
 
 	int numberOfOutOfRange = thrust::count(auxVecs.bucketKeysExpanded.begin(),
 			auxVecs.bucketKeysExpanded.begin() + endIndxExt_M, UINT_MAX);

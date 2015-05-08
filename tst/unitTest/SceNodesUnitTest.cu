@@ -205,8 +205,8 @@ TEST_F(SceNodeTest, ParameterInitTest) {
 	int Expected_BucketXDim = (Test_maxX - Test_minX) / Test_bucketSize + 1;
 	int Expected_BucketYDim = (Test_maxY - Test_minY) / Test_bucketSize + 1;
 	int Expected_TotalBucket = Expected_BucketXDim * Expected_BucketYDim;
-	EXPECT_EQ(Expected_BucketXDim, nodes.getDomainPara().numOfBucketsInXDim);
-	EXPECT_EQ(Expected_BucketYDim, nodes.getDomainPara().numOfBucketsInYDim);
+	EXPECT_EQ(Expected_BucketXDim, nodes.getDomainPara().XBucketSize);
+	EXPECT_EQ(Expected_BucketYDim, nodes.getDomainPara().YBucketSize);
 	EXPECT_EQ(Expected_TotalBucket, nodes.getDomainPara().totalBucketCount);
 	//cout << " point 2, middle of no where" << endl;
 
