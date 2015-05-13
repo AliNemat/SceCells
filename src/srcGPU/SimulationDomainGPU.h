@@ -79,11 +79,6 @@ class SimulationDomainGPU {
 	void readDomainPara();
 
 	/**
-	 * reads chemical related parameters.
-	 */
-	void readChemPara();
-
-	/**
 	 * reads all parameters by calling all other reading methods.
 	 */
 	void readAllParameters();
@@ -117,28 +112,7 @@ public:
 	 * Assigns values to the data fields in simulation domain.
 	 * @param initData initial data set for simulation domain
 	 */
-	void initialize_v2(SimulationInitData_V2 &initData);
-
-	/**
-	 * Domain initialization.
-	 * Assigns values to the data fields in simulation domain.
-	 * @param initData initial data set for simulation domain
-	 */
 	void initialize_v2_M(SimulationInitData_V2_M &initData);
-
-	/**
-	 * This method is used for producing more or less evenly distributed cell center positions.
-	 * Because CGAL mesh cannot guarantee that mesh vertices are relatively evenly distributed,
-	 * we would need this extra step in order to stabilize the cell center positions
-	 * so that cells can be allocated evenly in our simulation domain.
-	 */
-	std::vector<CVector> stablizeCellCenters(SimulationInitData_V2 &initData);
-
-	/**
-	 * Checks if all data fields are valid.
-	 * This methods only loosely checks the data validity.
-	 */
-	void printDomainInformation();
 
 	/**
 	 * Run one step of simulation in the domain.
