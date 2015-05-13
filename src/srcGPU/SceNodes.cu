@@ -150,106 +150,7 @@ void SceNodes::readMechPara() {
 				"IntraCellLinkEffectRange").toDouble();
 		mechPara.sceIntraParaCPU[4] = intraLinkEffectiveRange;
 	}
-
-	if (controlPara.simuType == Beak) {
-
-		double U0_Cart =
-				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-						/ globalConfigVars.getConfigValue("Cart_U0_DivFactor").toDouble();
-		double V0_Cart =
-				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-						/ globalConfigVars.getConfigValue("Cart_V0_DivFactor").toDouble();
-		double k1_Cart =
-				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-						/ globalConfigVars.getConfigValue("Cart_k1_DivFactor").toDouble();
-		double k2_Cart =
-				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-						/ globalConfigVars.getConfigValue("Cart_k2_DivFactor").toDouble();
-		double cartProfileEffectiveRange = globalConfigVars.getConfigValue(
-				"CartForceEffectiveRange").toDouble();
-		mechPara.sceCartParaCPU[0] = U0_Cart;
-		mechPara.sceCartParaCPU[1] = V0_Cart;
-		mechPara.sceCartParaCPU[2] = k1_Cart;
-		mechPara.sceCartParaCPU[3] = k2_Cart;
-		mechPara.sceCartParaCPU[4] = cartProfileEffectiveRange;
-
-		// 1.8 comes from standard
-		double neutralLength = globalConfigVars.getConfigValue(
-				"Epi_link_neutral_dist").toDouble();
-
-		double linearParameter = globalConfigVars.getConfigValue(
-				"Epi_linear_parameter").toDouble();
-
-		double U0_Bdry =
-				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Bdry_U0_DivFactor").toDouble();
-		double V0_Bdry =
-				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Bdry_V0_DivFactor").toDouble();
-		double k1_Bdry =
-				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Bdry_k1_DivFactor").toDouble();
-		double k2_Bdry =
-				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Bdry_k2_DivFactor").toDouble();
-
-		mechPara.sceProfileParaCPU[0] = U0_Bdry;
-		mechPara.sceProfileParaCPU[1] = V0_Bdry;
-		mechPara.sceProfileParaCPU[2] = k1_Bdry;
-		mechPara.sceProfileParaCPU[3] = k2_Bdry;
-		mechPara.sceProfileParaCPU[4] = interLinkEffectiveRange;
-		mechPara.sceProfileParaCPU[5] = linearParameter;
-		mechPara.sceProfileParaCPU[6] = neutralLength;
-
-		double U0_ECM =
-				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_ECM_U0_DivFactor").toDouble();
-		double V0_ECM =
-				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_ECM_V0_DivFactor").toDouble();
-		double k1_ECM =
-				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_ECM_k1_DivFactor").toDouble();
-		double k2_ECM =
-				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_ECM_k2_DivFactor").toDouble();
-		mechPara.sceECMParaCPU[0] = U0_ECM;
-		mechPara.sceECMParaCPU[1] = V0_ECM;
-		mechPara.sceECMParaCPU[2] = k1_ECM;
-		mechPara.sceECMParaCPU[3] = k2_ECM;
-		mechPara.sceECMParaCPU[4] = interLinkEffectiveRange;
-		double U0_Diff =
-				globalConfigVars.getConfigValue("InterCell_U0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Diff_U0_DivFactor").toDouble();
-		double V0_Diff =
-				globalConfigVars.getConfigValue("InterCell_V0_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Diff_V0_DivFactor").toDouble();
-		double k1_Diff =
-				globalConfigVars.getConfigValue("InterCell_k1_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Diff_k1_DivFactor").toDouble();
-		double k2_Diff =
-				globalConfigVars.getConfigValue("InterCell_k2_Original").toDouble()
-						/ globalConfigVars.getConfigValue(
-								"InterCell_Diff_k2_DivFactor").toDouble();
-
-		mechPara.sceInterDiffParaCPU[0] = U0_Diff;
-		mechPara.sceInterDiffParaCPU[1] = V0_Diff;
-		mechPara.sceInterDiffParaCPU[2] = k1_Diff;
-		mechPara.sceInterDiffParaCPU[3] = k2_Diff;
-		mechPara.sceInterDiffParaCPU[4] = interLinkEffectiveRange;
-
-	} else if (controlPara.simuType == Disc) {
+	if (controlPara.simuType == Disc) {
 		double U0_Intra_Div =
 				globalConfigVars.getConfigValue("IntraCell_U0_Original").toDouble()
 						/ globalConfigVars.getConfigValue(
@@ -796,37 +697,6 @@ void SceNodes::initValues_M(std::vector<bool>& initIsActive,
 	thrust::copy(initIsActive.begin(), initIsActive.end(),
 			infoVecs.nodeIsActive.begin() + allocPara_M.bdryNodeCount);
 
-}
-
-void SceNodes::applyProfileForces() {
-	thrust::counting_iterator<uint> countingIterBegin(0);
-	thrust::counting_iterator<uint> countingIterEnd(
-			allocPara.currentActiveProfileNodeCount);
-
-	double* nodeLocXAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeLocX[allocPara.startPosProfile]);
-	double* nodeLocYAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeLocY[allocPara.startPosProfile]);
-	double* nodeLocZAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeLocZ[allocPara.startPosProfile]);
-
-	double* nodeVelXAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeVelX[allocPara.startPosProfile]);
-	double* nodeVelYAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeVelY[allocPara.startPosProfile]);
-	double* nodeVelZAddressEpiBegin = thrust::raw_pointer_cast(
-			&infoVecs.nodeVelZ[allocPara.startPosProfile]);
-
-	thrust::transform(countingIterBegin, countingIterEnd,
-			thrust::make_zip_iterator(
-					thrust::make_tuple(infoVecs.nodeVelX.begin(),
-							infoVecs.nodeVelY.begin(),
-							infoVecs.nodeVelZ.begin()))
-					+ allocPara.startPosProfile,
-			AddLinkForces(nodeLocXAddressEpiBegin, nodeLocYAddressEpiBegin,
-					nodeLocZAddressEpiBegin, nodeVelXAddressEpiBegin,
-					nodeVelYAddressEpiBegin, nodeVelZAddressEpiBegin,
-					allocPara.currentActiveProfileNodeCount));
 }
 
 VtkAnimationData SceNodes::obtainAnimationData(AnimationCriteria aniCri) {
@@ -2022,70 +1892,6 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 	}
 }
 
-__device__
-void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
-		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
-		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
-		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double* _nodeLocZAddress) {
-// this means that both nodes are come from cells, not other types
-	if (bothCellNodes(type1, type2)) {
-		// this means that nodes come from different type of cell, apply differential adhesion
-		if (type1 != type2) {
-			// differential adhesion applies here.
-			calculateAndAddDiffInterCellForce(xPos, yPos, zPos,
-					_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
-					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
-		} else {
-			if (isSameCell(nodeRank1, nodeRank2)) {
-				calculateAndAddIntraForce(xPos, yPos, zPos,
-						_nodeLocXAddress[nodeRank2],
-						_nodeLocYAddress[nodeRank2],
-						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
-			} else {
-				double xPre = xRes;
-				double yPre = yRes;
-				double zPre = zRes;
-				calculateAndAddInterForce(xPos, yPos, zPos,
-						_nodeLocXAddress[nodeRank2],
-						_nodeLocYAddress[nodeRank2],
-						_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
-				double xDiff = xRes - xPre;
-				double yDiff = yRes - yPre;
-				double zDiff = zRes - zPre;
-				double force = sqrt(
-						xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
-				if (force > maxForce) {
-					maxForce = force;
-				}
-			}
-		}
-	}
-
-// this means that both nodes come from ECM and from same ECM
-	else if (type1 == ECM && type2 == ECM && isSameECM(nodeRank1, nodeRank2)) {
-		if (isNeighborECMNodes(nodeRank1, nodeRank2)) {
-			calculateAndAddECMForce(xPos, yPos, zPos,
-					_nodeLocXAddress[nodeRank2], _nodeLocYAddress[nodeRank2],
-					_nodeLocZAddress[nodeRank2], xRes, yRes, zRes);
-		}
-		// if both nodes belong to same ECM but are not neighbors they shouldn't interact.
-	} else if ((type1 == Profile && type2 == Cart)
-			|| (type1 == Cart && type2 == Profile)) {
-		calculateAndAddCartForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
-				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
-				yRes, zRes);
-	} else if (type1 == Cart && type2 == Cart) {
-	} else if (type1 == Profile && type2 == Profile) {
-	} else {
-		// for now, we assume that interaction between other nodes are the same as inter-cell force.
-		calculateAndAddInterForce(xPos, yPos, zPos, _nodeLocXAddress[nodeRank2],
-				_nodeLocYAddress[nodeRank2], _nodeLocZAddress[nodeRank2], xRes,
-				yRes, zRes);
-	}
-
-}
-
 void SceNodes::extendBuckets2D() {
 	static const uint extensionFactor2D = 9;
 	uint valuesCount = auxVecs.bucketValues.size();
@@ -2383,68 +2189,6 @@ void SceNodes::applySceForcesDisc_M() {
 					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr));
 }
 
-void SceNodes::applySceForces() {
-
-// There are two reasons why I use thrust cast every time.
-// (1) Technically, make a device pointer a global variable seems to be difficult.
-// (2) Vectors might change the memory address dynamically.
-	uint* valueAddress = thrust::raw_pointer_cast(
-			&auxVecs.bucketValuesIncludingNeighbor[0]);
-	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
-	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
-	double* nodeLocZAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocZ[0]);
-
-	SceNodeType* nodeTypeAddress = thrust::raw_pointer_cast(
-			&infoVecs.nodeCellType[0]);
-
-	thrust::transform(
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(auxVecs.keyBegin.begin(),
-									auxVecs.bucketKeys.begin()),
-							make_permutation_iterator(auxVecs.keyEnd.begin(),
-									auxVecs.bucketKeys.begin()),
-							auxVecs.bucketValues.begin(),
-							make_permutation_iterator(infoVecs.nodeLocX.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeLocY.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
-									auxVecs.bucketValues.begin()))),
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(auxVecs.keyBegin.begin(),
-									auxVecs.bucketKeys.end()),
-							make_permutation_iterator(auxVecs.keyEnd.begin(),
-									auxVecs.bucketKeys.end()),
-							auxVecs.bucketValues.end(),
-							make_permutation_iterator(infoVecs.nodeLocX.begin(),
-									auxVecs.bucketValues.end()),
-							make_permutation_iterator(infoVecs.nodeLocY.begin(),
-									auxVecs.bucketValues.end()),
-							make_permutation_iterator(infoVecs.nodeLocZ.begin(),
-									auxVecs.bucketValues.end()))),
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(infoVecs.nodeVelX.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeVelY.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeVelZ.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(
-									infoVecs.nodeMaxForce.begin(),
-									auxVecs.bucketValues.begin()))),
-			AddSceForce(valueAddress, nodeLocXAddress, nodeLocYAddress,
-					nodeLocZAddress, nodeTypeAddress));
-}
-
-void SceNodes::calculateAndApplySceForces() {
-	prepareSceForceComputation();
-	applySceForces();
-	applyProfileForces();
-}
-
 const SceDomainPara& SceNodes::getDomainPara() const {
 	return domainPara;
 }
@@ -2503,15 +2247,6 @@ std::vector<std::vector<int> > SceNodes::obtainLabelMatrix(
 
 	result = resHelper.outputLabelMatrix(nodeLabels);
 	return result;
-}
-
-void SceNodes::processCartGrowthDir(CVector dir) {
-	double growthDir[3];
-	dir = dir.getUnitVector();
-	growthDir[0] = dir.GetX();
-	growthDir[1] = dir.GetY();
-	growthDir[2] = dir.GetZ();
-	cudaMemcpyToSymbol(cartGrowDirVec, growthDir, 3 * sizeof(double));
 }
 
 void SceNodes::initControlPara(bool isStab) {

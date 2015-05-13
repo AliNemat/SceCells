@@ -6,10 +6,6 @@ include_directories(${COMMON_INCLUDES} ${GOOGLETEST_DIR}/include/)
 MESSAGE(${GOOGLETEST_DIR}/include/)
 
 CUDA_ADD_LIBRARY(SceGPU
-    Cartilage.h
-    Cartilage.cu
-	GrowthDistriMap.h
-	GrowthDistriMap.cu
 	SceNodes.h
 	SceNodes.cu
 	SceCells.h

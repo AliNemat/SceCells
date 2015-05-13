@@ -150,79 +150,6 @@ SceCells::SceCells() {
 	curTime = 0;
 }
 
-/**
- * This is a method for cell growth. growth is influened by two chemical fields.
- * first step: assign the growth magnitude and direction info that was calculated outside
- *     to internal values
- *     please note that a cell should not grow if its type is boundary.
- *
- * second step: use the growth magnitude and dt to update growthProgress
- *
- * third step: use lastCheckPoint and growthProgress to decide whether add point or not
- *
- * fourth step: use growthProgress and growthXDir&growthYDir to compute
- *     expected length along the growth direction.
- *
- * fifth step:  reducing the smallest value and biggest value
- *     a cell's node to its center point
- *
- * sixth step: compute the current length and then
- *     compute its difference with expected length
- *
- * seventh step: use the difference that just computed and growthXDir&growthYDir
- *     to apply stretching force (velocity) on nodes of all cells
- *
- * eighth step: cell move according to the velocity computed
- *
- * ninth step: also add a point if scheduled to grow.
- *     This step does not guarantee success ; If adding new point failed, it will not change
- *     isScheduleToGrow and activeNodeCount;
- */
-void SceCells::grow2DTwoRegions(double d_t, GrowthDistriMap &region1,
-		GrowthDistriMap &region2) {
-// obtain pointer address for first region
-	growthAuxData.growthFactorMagAddress = thrust::raw_pointer_cast(
-			&(region1.growthFactorMag[0]));
-	growthAuxData.growthFactorDirXAddress = thrust::raw_pointer_cast(
-			&(region1.growthFactorDirXComp[0]));
-	growthAuxData.growthFactorDirYAddress = thrust::raw_pointer_cast(
-			&(region1.growthFactorDirYComp[0]));
-
-// obtain pointer address for second region
-	growthAuxData.growthFactorMagAddress2 = thrust::raw_pointer_cast(
-			&(region2.growthFactorMag[0]));
-	growthAuxData.growthFactorDirXAddress2 = thrust::raw_pointer_cast(
-			&(region2.growthFactorDirXComp[0]));
-	growthAuxData.growthFactorDirYAddress2 = thrust::raw_pointer_cast(
-			&(region2.growthFactorDirYComp[0]));
-
-	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
-			* allocPara.maxNodeOfOneCell;
-	//std::cout << "totalNodeCount = " << totalNodeCountForActiveCells
-	//		<< std::endl;
-	//std::cout << "before all functions start" << std::endl;
-	copyGrowInfoFromGridToCells(region1, region2);
-	//std::cout << "after copy grow info" << std::endl;
-	updateGrowthProgress();
-	//std::cout << "after update growth progress" << std::endl;
-	decideIsScheduleToGrow();
-	//std::cout << "after decode os schedule to grow" << std::endl;
-	computeCellTargetLength();
-	//std::cout << "after compute cell target length" << std::endl;
-	computeDistToCellCenter();
-	//std::cout << "after compute dist to center" << std::endl;
-	findMinAndMaxDistToCenter();
-	//std::cout << "after find min and max dist" << std::endl;
-	computeLenDiffExpCur();
-	//std::cout << "after compute diff " << std::endl;
-	stretchCellGivenLenDiff();
-	//std::cout << "after apply stretch force" << std::endl;
-	cellChemotaxis();
-	//std::cout << "after apply cell chemotaxis" << std::endl;
-	addPointIfScheduledToGrow();
-	//std::cout << "after adding node" << std::endl;
-}
-
 void SceCells::growAtRandom(double d_t) {
 	totalNodeCountForActiveCells = allocPara.currentActiveCellCount
 			* allocPara.maxNodeOfOneCell;
@@ -249,35 +176,6 @@ void SceCells::growAtRandom(double d_t) {
 	//std::cout << "after apply cell chemotaxis" << std::endl;
 	addPointIfScheduledToGrow();
 	//std::cout << "after adding node" << std::endl;
-}
-
-/**
- * we need to copy the growth information from grid for chemical to cell nodes.
- */
-void SceCells::copyGrowInfoFromGridToCells(GrowthDistriMap &region1,
-		GrowthDistriMap &region2) {
-	thrust::transform(
-			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin(),
-							cellInfoVecs.cellTypes.begin())),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin(),
-							cellInfoVecs.cellTypes.begin()))
-					+ allocPara.currentActiveCellCount,
-			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin())),
-			LoadChemDataToNode(region1.gridDimensionX, region1.gridDimensionY,
-					region1.gridSpacing, growthAuxData.growthFactorMagAddress,
-					growthAuxData.growthFactorDirXAddress,
-					growthAuxData.growthFactorDirYAddress,
-					region2.gridDimensionX, region2.gridDimensionY,
-					region2.gridSpacing, growthAuxData.growthFactorMagAddress2,
-					growthAuxData.growthFactorDirXAddress2,
-					growthAuxData.growthFactorDirYAddress2));
 }
 
 /**
@@ -1408,30 +1306,6 @@ void SceCells::runStretchTest(double dt) {
 	computeCenterPos();
 	growAlongX(false, dt);
 	moveNodes();
-}
-
-void SceCells::runAllCellLevelLogicsBeak(double dt, GrowthDistriMap& region1,
-		GrowthDistriMap& region2) {
-	this->dt = dt;
-//std::cerr << "enter run all cell level logics" << std::endl;
-	computeCenterPos();
-//std::cerr << "after compute center position." << std::endl;
-// for wind disk project, switch from chemical based growth to random growth
-//growAtRandom(dt);
-
-	if (nodes->getControlPara().controlSwitchs.stab == OFF) {
-		grow2DTwoRegions(dt, region1, region2);
-		//std::cerr << "after grow cells" << std::endl;
-		distributeIsActiveInfo();
-		//std::cerr << "after distribute is active info." << std::endl;
-		divide2DSimplified();
-		//std::cerr << "after divide 2D simplified." << std::endl;
-		distributeIsActiveInfo();
-		//std::cerr << "after distribute is active info." << std::endl;
-	}
-
-	allComponentsMove();
-//std::cerr << "after all components move." << std::endl;
 }
 
 void SceCells::growAlongX(bool isAddPt, double d_t) {
