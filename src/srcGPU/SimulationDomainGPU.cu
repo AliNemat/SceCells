@@ -102,11 +102,6 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 		nodes.sceForcesDisc();
 	}
 
-<<<<<<< HEAD
-=======
-	// This function only calculates velocity.
-
->>>>>>> 2e45d9535c0791d3e4693fabd577a5f5d996583b
 	// This function applies velocity so nodes actually move inside this function.
 	if (memPara.simuType == Disc) {
 		cells.runAllCellLevelLogicsDisc(dt);
@@ -195,10 +190,6 @@ void SimulationDomainGPU::readAllParameters() {
 	readMemPara();
 	readDomainPara();
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 2e45d9535c0791d3e4693fabd577a5f5d996583b
 
 void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
