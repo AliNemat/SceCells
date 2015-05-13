@@ -466,18 +466,10 @@ void calAndAddIntraDiv_M(double& xPos, double& yPos, double& xPos2,
 		double& yPos2, double& growPro, double& xRes, double& yRes);
 
 __device__
-void calculateAndAddECMForce(double &xPos, double &yPos, double &zPos,
-		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes);
-__device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
 		double &zRes);
 
-__device__
-void calculateAndAddCartForce(double &xPos, double &yPos, double &zPos,
-		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
-		double &zRes);
 __device__
 void calculateAndAddIntraForce(double &xPos, double &yPos, double &zPos,
 		double &xPos2, double &yPos2, double &zPos2, double &xRes, double &yRes,
@@ -540,74 +532,10 @@ void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
 		double& yPos2);
 
 __device__
-void handleForceBetweenNodes(uint &nodeRank1, SceNodeType &type1,
-		uint &nodeRank2, SceNodeType &type2, double &xPos, double &yPos,
-		double &zPos, double &xPos2, double &yPos2, double &zPos2, double &xRes,
-		double &yRes, double &zRes, double &maxForce, double* _nodeLocXAddress,
-		double* _nodeLocYAddress, double* _nodeLocZAddress);
-
-__device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
 		double &yLocRight, double &zLocRight, double &xVel, double &yVel,
 		double &zVel);
-
-/**
- * a complicated data structure for adding subcellular element force to cell nodes.
- * This data structure is designed in an unconventional way because of performance considerations.
- */
-struct AddSceForce: public thrust::unary_function<Tuuuddd, CVec4> {
-	uint* _extendedValuesAddress;
-	double* _nodeLocXAddress;
-	double* _nodeLocYAddress;
-	double* _nodeLocZAddress;
-	SceNodeType* _cellTypesAddress;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddSceForce(uint* valueAddress, double* nodeLocXAddress,
-			double* nodeLocYAddress, double* nodeLocZAddress,
-			SceNodeType* cellTypesAddress) :
-			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
-					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeLocZAddress(
-					nodeLocZAddress), _cellTypesAddress(cellTypesAddress) {
-	}
-	__device__ CVec4 operator()(const Tuuuddd &u3d3) const {
-		double xRes = 0.0;
-		double yRes = 0.0;
-		double zRes = 0.0;
-
-		double maxForce = 0.0;
-
-		uint begin = thrust::get<0>(u3d3);
-		uint end = thrust::get<1>(u3d3);
-		uint myValue = thrust::get<2>(u3d3);
-		double xPos = thrust::get<3>(u3d3);
-		double yPos = thrust::get<4>(u3d3);
-		double zPos = thrust::get<5>(u3d3);
-
-		SceNodeType myType = _cellTypesAddress[myValue];
-
-		for (uint i = begin; i < end; i++) {
-			uint nodeRankOfOtherNode = _extendedValuesAddress[i];
-			SceNodeType cellTypeOfOtherNode =
-					_cellTypesAddress[nodeRankOfOtherNode];
-			if (nodeRankOfOtherNode == myValue) {
-				continue;
-			}
-
-			handleForceBetweenNodes(myValue, myType, nodeRankOfOtherNode,
-					cellTypeOfOtherNode, xPos, yPos, zPos,
-					_nodeLocXAddress[nodeRankOfOtherNode],
-					_nodeLocYAddress[nodeRankOfOtherNode],
-					_nodeLocZAddress[nodeRankOfOtherNode], xRes, yRes, zRes,
-					maxForce, _nodeLocXAddress, _nodeLocYAddress,
-					_nodeLocZAddress);
-
-		}
-
-		return thrust::make_tuple(xRes, yRes, zRes, maxForce);
-	}
-};
 
 /**
  * A compute functor designed for computing SceForce for Disc project.
@@ -1002,15 +930,6 @@ class SceNodes {
 	void findBucketBounds_M();
 
 	/**
-	 * This is the most important part of the parallel algorithm.
-	 * For each particle in SCE model (represented by bucketValues here),
-	 * the algorithm finds all particles that fits in the nearby grids and then
-	 * apply forces with them.
-	 * The algorithm is very scalable.
-	 */
-	void applySceForces();
-
-	/**
 	 * Basic Sce method for performance testing purpose.
 	 */
 	void applySceForcesBasic();
@@ -1023,13 +942,6 @@ class SceNodes {
 	void applySceForcesDisc();
 
 	void applySceForcesDisc_M();
-
-	/**
-	 * This function exerts force on the profile nodes.
-	 * Because cartilage actually pins to the epitheilum layer, I have recently
-	 * added some new constraints in this function.
-	 */
-	void applyProfileForces();
 
 	/**
 	 * This method outputs a vector of possible neighbor pairs.
@@ -1098,8 +1010,6 @@ public:
 			std::vector<CVector> &initCellNodePos,
 			std::vector<SceNodeType>& nodeTypes);
 
-	void processCartGrowthDir(CVector dir);
-
 	/**
 	 * this method contains all preparation work for SCE force calculation.
 	 */
@@ -1118,11 +1028,6 @@ public:
 	 * in 3D.
 	 */
 	void prepareSceForceComputation3D();
-
-	/**
-	 * wrap apply forces methods together.
-	 */
-	void calculateAndApplySceForces();
 
 	/**
 	 * wrap apply forces methods together.

@@ -1,5 +1,5 @@
 //============================================================================
-// Name        : MeshGen.cpp
+// Name        : Main.cpp
 // Author      : Wenzhao Sun
 // Version     :
 // Copyright   : Your copyright notice

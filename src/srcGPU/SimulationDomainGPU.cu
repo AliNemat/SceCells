@@ -17,130 +17,6 @@ using namespace std;
  */
 SimulationDomainGPU::SimulationDomainGPU() {
 	readAllParameters();
-	if (memPara.simuType == Beak) {
-		initializeGrowthMap();
-	}
-}
-
-void SimulationDomainGPU::initializeNodes(CartPara &cartPara,
-		std::vector<SceNodeType>& cellTypes,
-		std::vector<uint>& numOfInitActiveNodesOfCells,
-		std::vector<CVector>& initBdryNodeVec,
-		std::vector<CVector>& initProfileNodeVec,
-		std::vector<CVector>& initCartNodeVec,
-		std::vector<CVector>& initECMNodeVec,
-		std::vector<CVector>& initFNMNodeVec,
-		std::vector<CVector>& initMXNodeVec) {
-
-	/*
-	 * number of boundary nodes is always fixed.
-	 */
-	uint bdryNodeCount = initBdryNodeVec.size();
-	/*
-	 * total potential number of profile nodes could be more than initial number provided,
-	 * because the total length of profile might increase.
-	 * FinalToInitProfileNodeCountRatio is defined in Config file.
-	 */
-	uint maxProfileNodeCount = initProfileNodeVec.size()
-			* memPara.FinalToInitProfileNodeCountRatio;
-
-	/**
-	 * different from profile nodes, the cartilage nodes should already
-	 * have buffer before executing this method.
-	 */
-	uint maxCartNodeCount = initCartNodeVec.size();
-
-	/*
-	 * Initialize SceNodes by constructor. first two parameters come from input parameters
-	 * while the last four parameters come from Config file.
-	 */
-	nodes = SceNodes(bdryNodeCount, maxProfileNodeCount, maxCartNodeCount,
-			memPara.maxECMInDomain, memPara.maxNodePerECM,
-			memPara.maxCellInDomain, memPara.maxNodePerCell, memPara.isStab);
-
-	//cartilage.distributeIsActive();
-	//cartilage.initializeNodes(initCartNodeVec);
-
-	/*
-	 * first step: error checking.
-	 * we need to first check if inputs are valid
-	 */
-	// get max node per cell. should be defined previously.
-	uint maxNodePerCell = nodes.getAllocPara().maxNodeOfOneCell;
-	// get max node per ECM. Should be defined previously.
-	uint maxNodePerECM = nodes.getAllocPara().maxNodePerECM;
-	// check if we successfully loaded maxNodePerCell
-	assert(maxNodePerCell != 0);
-
-	// obtain sizes of the input arrays
-	//uint bdryNodeCount = initBdryNodeVec.size();
-	uint ProfileNodeCount = initProfileNodeVec.size();
-	uint CartNodeCount = initCartNodeVec.size();
-	uint ECMNodeCount = initECMNodeVec.size();
-	uint FNMNodeCount = initFNMNodeVec.size();
-	uint MXNodeCount = initMXNodeVec.size();
-
-	// array size of cell type array
-	uint cellTypeSize = cellTypes.size();
-	// array size of initial active node count of cells array.
-	uint initNodeCountSize = numOfInitActiveNodesOfCells.size();
-	// two sizes must match.
-	assert(cellTypeSize == initNodeCountSize);
-
-	// size of inputs must be divided exactly by max node per cell.
-	// uint bdryRemainder = bdryNodeCountX % maxNodePerCell;
-	uint ecmRemainder = 0;
-	uint ecmQuotient = 0;
-	if (memPara.simuType == Beak) {
-		ecmQuotient = ECMNodeCount / maxNodePerECM;
-		ecmRemainder = ECMNodeCount % maxNodePerECM;
-	}
-	uint fnmRemainder = FNMNodeCount % maxNodePerCell;
-	uint mxRemainder = MXNodeCount % maxNodePerCell;
-
-	// uint bdryQuotient = bdryNodeCountX / maxNodePerCell;
-	uint fnmQuotient = FNMNodeCount / maxNodePerCell;
-	uint mxQuotient = MXNodeCount / maxNodePerCell;
-
-	// remainder must be zero.
-	if ((fnmRemainder != 0) || (mxRemainder != 0) || (ecmRemainder != 0)) {
-		throw SceException("Initialization vector size incorrect!",
-				InputInitException);
-	}
-	// size of cellType array and sum of all cell types must match.
-	assert(fnmQuotient + mxQuotient == cellTypeSize);
-
-	for (uint i = 0; i < cellTypeSize; i++) {
-		if (i < fnmQuotient) {
-			assert(cellTypes[i] == FNM);
-		} else {
-			assert(cellTypes[i] == MX);
-		}
-	}
-	/*
-	 * second part: actual initialization
-	 * copy data from main system memory to GPU memory
-	 */
-	NodeAllocPara para = nodes.getAllocPara();
-	para.currentActiveCellCount = fnmQuotient + mxQuotient;
-	para.currentActiveECM = ecmQuotient;
-	para.currentActiveProfileNodeCount = ProfileNodeCount;
-	nodes.setAllocPara(para);
-
-	assert(nodes.getAllocPara().startPosProfile == bdryNodeCount);
-
-	nodes.initValues(initBdryNodeVec, initProfileNodeVec, initCartNodeVec,
-			initECMNodeVec, initFNMNodeVec, initMXNodeVec);
-
-	/**
-	 * setting the cartilage related parameters in the simulation domain.
-	 */
-	if (memPara.simuType == Beak && !memPara.isStab) {
-		cartilage.setCartPara(cartPara);
-		cartilage.initializeMem(&nodes);
-	}
-
-	cells = SceCells(&nodes, numOfInitActiveNodesOfCells, cellTypes);
 }
 
 void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
@@ -201,22 +77,6 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	//std::cout.flush();
 }
 
-void SimulationDomainGPU::initialize_v2(SimulationInitData_V2& initData) {
-	std::cout << "begin initialization process" << std::endl;
-	memPara.isStab = initData.isStab;
-	initializeNodes(initData.cartPara, initData.cellTypes,
-			initData.numOfInitActiveNodesOfCells, initData.initBdryNodeVec,
-			initData.initProfileNodeVec, initData.initCartNodeVec,
-			initData.initECMNodeVec, initData.initFNMNodeVec,
-			initData.initMXNodeVec);
-	std::cout << "finished init simulation domain nodes" << std::endl;
-	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
-			domainPara.maxY, domainPara.gridSpacing);
-	std::cout << "finished init nodes dimension" << std::endl;
-	// The domain task is not stabilization unless specified in the next steps.
-	stabPara.isProcessStab = false;
-}
-
 void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
 	std::cout << "Start initializing simulation domain ......" << std::endl;
 	memPara.isStab = initData.isStab;
@@ -237,30 +97,15 @@ void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
  *
  */
 void SimulationDomainGPU::runAllLogic(double dt) {
-	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
-		nodes.processCartGrowthDir(cartilage.getCartPara().growthDir);
-	}
 
-	if (memPara.simuType == Beak) {
-		nodes.calculateAndApplySceForces();
-	} else if (memPara.simuType == Disc) {
+	if (memPara.simuType == Disc) {
 		nodes.sceForcesDisc();
 	}
 
 	// This function only calculates velocity.
 
-	// Only beak simulation need to take care of cartilage.
-	if (memPara.simuType == Beak && !stabPara.isProcessStab) {
-		// cartilage logics must come before cell logics, because node velocities will be modified
-		// in cell logic and consequently we won't be able to compute cartilage data.
-		// also responsible for handling interaction between epithelium layer and carilage.
-		cartilage.runAllLogics(dt);
-	}
-
 	// This function applies velocity so nodes actually move inside this function.
-	if (memPara.simuType == Beak) {
-		cells.runAllCellLevelLogicsBeak(dt, growthMap, growthMap2);
-	} else if (memPara.simuType == Disc) {
+	if (memPara.simuType == Disc) {
 		cells.runAllCellLevelLogicsDisc(dt);
 	}
 
@@ -312,19 +157,9 @@ void SimulationDomainGPU::readMemPara() {
 				"MaxNodePerCell").toInt();
 	}
 
-	if (memPara.simuType == Beak) {
-		memPara.maxECMInDomain = globalConfigVars.getConfigValue(
-				"MaxECMInDomain").toInt();
-		memPara.maxNodePerECM =
-				globalConfigVars.getConfigValue("MaxNodePerECM").toInt();
-		memPara.FinalToInitProfileNodeCountRatio =
-				globalConfigVars.getConfigValue(
-						"FinalToInitProfileNodeCountRatio").toDouble();
-	} else {
-		memPara.maxECMInDomain = 0;
-		memPara.maxNodePerECM = 0;
-		memPara.FinalToInitProfileNodeCountRatio = 0;
-	}
+	memPara.maxECMInDomain = 0;
+	memPara.maxNodePerECM = 0;
+	memPara.FinalToInitProfileNodeCountRatio = 0;
 
 	if (memPara.simuType == Disc_M) {
 		memPara.maxMembrNodePerCell = globalConfigVars.getConfigValue(
@@ -391,77 +226,8 @@ void SimulationDomainGPU::readChemPara() {
 void SimulationDomainGPU::readAllParameters() {
 	readMemPara();
 	readDomainPara();
-	if (memPara.simuType == Beak) {
-		readChemPara();
-	}
 }
 
-void SimulationDomainGPU::initializeGrowthMap() {
-	growthMap = GrowthDistriMap(chemPara.growthGridXDim,
-			chemPara.growthGridYDim, chemPara.growthGridSpacing);
-	growthMap.initialize(chemPara.growthGridLowerLeftPtX,
-			chemPara.growthGridLowerLeftPtY, chemPara.growthMorCenterXCoord,
-			chemPara.growthMorCenterYCoord, chemPara.growthMorHighConcen,
-			chemPara.growthMorLowConcen, chemPara.growthMorDiffSlope);
-
-	//cout << "after created growthMap1" << endl;
-	growthMap2 = GrowthDistriMap(chemPara.growthGridXDim,
-			chemPara.growthGridYDim, chemPara.growthGridSpacing);
-	growthMap2.initialize(chemPara.growthGridLowerLeftPtX,
-			chemPara.growthGridLowerLeftPtY, chemPara.growthMorCenterXCoordMX,
-			chemPara.growthMorCenterYCoordMX, chemPara.growthMorHighConcenMX,
-			chemPara.growthMorLowConcenMX, chemPara.growthMorDiffSlopeMX);
-	//cout << "after created growthMap2" << endl;
-}
-
-std::vector<CVector> SimulationDomainGPU::stablizeCellCenters(
-		SimulationInitData_V2 &initData) {
-
-	std::vector<CVector> result;
-
-	stabPara.outputFrameCount = globalConfigVars.getConfigValue(
-			"StabFrameCount").toInt();
-	stabPara.totalIterCount = globalConfigVars.getConfigValue(
-			"StabTotalIterCount").toInt();
-	stabPara.bdrySpacingRatio = globalConfigVars.getConfigValue(
-			"StabBdrySpacingRatio").toDouble();
-	stabPara.dt = globalConfigVars.getConfigValue("StabDt").toDouble();
-	stabPara.outputAniName =
-			globalConfigVars.getConfigValue("StabAniName").toString();
-
-	initialize_v2(initData);
-	stabPara.isProcessStab = true;
-	int aniAuxPara;
-	if (stabPara.outputFrameCount == 0) {
-		aniAuxPara = INT_MAX;
-	} else {
-		aniAuxPara = (double) (stabPara.totalIterCount)
-				/ stabPara.outputFrameCount;
-	}
-
-	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
-			"IntraLinkDisplayRange").toDouble();
-	int configAniType =
-			globalConfigVars.getConfigValue("AnimationType").toInt();
-	aniCri.animationType = CellType;
-
-	uint index = 0;
-	for (int i = 0; i < stabPara.totalIterCount; i++) {
-		//std::cout << "in stablizing, before run all logics" << std::endl;
-		if (i % aniAuxPara == 0) {
-			outputVtkFilesWithCri(stabPara.outputAniName, index, aniCri);
-			index++;
-		}
-		runAllLogic(stabPara.dt);
-	}
-
-	result = cells.getAllCellCenters();
-
-	cout << "finished stablizeCellCenters" << endl;
-	cout.flush();
-	return result;
-}
 
 void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {

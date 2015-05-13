@@ -2,7 +2,6 @@
 #define SCECELLS_H_
 
 #include "SceNodes.h"
-#include "GrowthDistriMap.h"
 #include <time.h>
 #include <thrust/tabulate.h>
 
@@ -1761,8 +1760,6 @@ class SceCells {
 	void distributeIsCellRank();
 
 	void allComponentsMove();
-	void grow2DTwoRegions(double dt, GrowthDistriMap &region1,
-			GrowthDistriMap &region2);
 
 	void growAtRandom(double d_t);
 
@@ -1775,12 +1772,6 @@ class SceCells {
 	void computeCenterPos();
 
 	void divide2DSimplified();
-
-	/**
-	 * we need to copy the growth information from grid for chemical to cell nodes.
-	 */
-	void copyGrowInfoFromGridToCells(GrowthDistriMap &region1,
-			GrowthDistriMap &region2);
 
 	/**
 	 * Use the growth magnitude and dt to update growthProgress.
@@ -2012,9 +2003,6 @@ public:
 	void runAllCellLogicsDisc_M(double dt);
 
 	void runStretchTest(double dt);
-
-	void runAllCellLevelLogicsBeak(double dt, GrowthDistriMap &region1,
-			GrowthDistriMap &region2);
 
 	std::vector<CVector> getAllCellCenters();
 	std::vector<double> getGrowthProgressVec();

@@ -3,7 +3,6 @@
 
 #include "SceNodes.h"
 #include "SceCells.h"
-#include "Cartilage.h"
 #include "commonData.h"
 #include "NetworkInfo.h"
 
@@ -50,21 +49,6 @@ class SimulationDomainGPU {
 	std::vector<double> cellColorVec;
 
 	/**
-	 * Cartilage is another important components in the beak model.
-	 */
-	Cartilage cartilage;
-
-	/**
-	 * Growth map that controls the growth for cells.
-	 */
-	GrowthDistriMap growthMap;
-
-	/**
-	 * Growth map that controls the growth for cells.
-	 */
-	GrowthDistriMap growthMap2;
-
-	/**
 	 * memory related parameters.
 	 */
 	SceMemPara memPara;
@@ -103,25 +87,6 @@ class SimulationDomainGPU {
 	 * reads all parameters by calling all other reading methods.
 	 */
 	void readAllParameters();
-
-	/**
-	 * initializes growth maps.
-	 */
-	void initializeGrowthMap();
-
-	/**
-	 * Initializes data vectors by given vectors.
-	 * improved from the previous version.
-	 */
-	void initializeNodes(CartPara &cartPara,
-			std::vector<SceNodeType> &cellTypes,
-			std::vector<uint> &numOfInitActiveNodesOfCells,
-			std::vector<CVector> &initBdryNodeVec,
-			std::vector<CVector> &initProfileNodeVec,
-			std::vector<CVector> &initCartNodeVec,
-			std::vector<CVector> &initECMNodeVec,
-			std::vector<CVector> &initFNMNodeVec,
-			std::vector<CVector> &initMXNodeVec);
 
 	/**
 	 * Initializes data vectors by given vectors.

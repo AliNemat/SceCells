@@ -68,6 +68,7 @@ void readModelTestConfig(uint i) {
 }
 
 int main(int argc, char* argv[]) {
+	/*
 	// initialize random seed.
 	srand(time(NULL));
 
@@ -118,6 +119,7 @@ int main(int argc, char* argv[]) {
 			simuDomain.runAllLogic(mainPara.dt);
 		}
 	}
+	*/
 
 	return 0;
 }
