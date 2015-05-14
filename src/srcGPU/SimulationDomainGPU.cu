@@ -177,8 +177,8 @@ void SimulationDomainGPU::readDomainPara() {
 	domainPara.maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
 	domainPara.minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
 	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
-	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
-	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
+	//domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
+	//domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
 	domainPara.gridSpacing = nodes.getMaxEffectiveRange();
 	domainPara.XBucketSize = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;

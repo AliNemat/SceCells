@@ -96,12 +96,16 @@ int main(int argc, char* argv[]) {
 	SimulationInitData_V2_M initData = initHelper.initInput_M();
 	simuDomain.initialize_v2_M(initData);
 
-	std::string polyStatFileName = globalConfigVars.getConfigValue(
+	std::string polyStatFileNameBase = globalConfigVars.getConfigValue(
 			"PolygonStatFileName").toString();
+	std::string uniqueSymbol =
+			globalConfigVars.getConfigValue("UniqueSymbol").toString();
+	std::string polyStatFileName = polyStatFileNameBase + uniqueSymbol + ".txt";
+
 	std::remove(polyStatFileName.c_str());
 
 	std::string detailStatFileNameBase = globalConfigVars.getConfigValue(
-			"DetailStatFileNameBase").toString();
+			"DetailStatFileNameBase").toString() + uniqueSymbol;
 	double divThreshold =
 			globalConfigVars.getConfigValue("DivThreshold").toDouble();
 	double decayCoeff =

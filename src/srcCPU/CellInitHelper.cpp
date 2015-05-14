@@ -814,7 +814,7 @@ vector<CVector> CellInitHelper::tryGenInitCellNodes(uint initNodeCt) {
 	double radius =
 			globalConfigVars.getConfigValue("InitCellRadius").toDouble();
 	vector<CVector> poss;
-	int foundCount = 0;
+	uint foundCount = 0;
 	double randX, randY;
 	while (foundCount < initNodeCt) {
 		bool isInCircle = false;
@@ -905,7 +905,8 @@ void SimulationGlobalParameter::initFromConfig() {
 
 	animationNameBase =
 			globalConfigVars.getConfigValue("AnimationFolder").toString()
-					+ globalConfigVars.getConfigValue("AnimationName").toString();
+					+ globalConfigVars.getConfigValue("AnimationName").toString()
+					+ globalConfigVars.getConfigValue("UniqueSymbol").toString();
 
 	totalSimuTime =
 			globalConfigVars.getConfigValue("SimulationTotalTime").toDouble();
@@ -919,7 +920,7 @@ void SimulationGlobalParameter::initFromConfig() {
 
 	aniAuxVar = totalTimeSteps / totalFrameCount;
 
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+	aniCri.pairDisplayDist = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
 
 	aniCri.animationType = parseAniTpFromConfig(
@@ -933,7 +934,9 @@ void SimulationGlobalParameter::initFromConfig() {
 
 	if (simuType != Beak && simuType != Disc_M) {
 		dataOutput =
-				globalConfigVars.getConfigValue("PolygonStatFileName").toString();
+				globalConfigVars.getConfigValue("PolygonStatFileName").toString()
+						+ globalConfigVars.getConfigValue("UniqueSymbol").toString()
+						+ ".txt";
 		imgOutput =
 				globalConfigVars.getConfigValue("DataOutputFolder").toString()
 						+ globalConfigVars.getConfigValue("ImgSubFolder").toString()

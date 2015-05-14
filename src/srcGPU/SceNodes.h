@@ -517,17 +517,7 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& yRes);
 
 __device__
-void handleIntnlAdh_M(uint& nodeRank, int& adhereIndex, double& xPos,
-		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double& xRes, double& yRes);
-
-__device__
 void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
-		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
-		double& yPos2);
-
-__device__
-void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
 		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
 		double& yPos2);
 

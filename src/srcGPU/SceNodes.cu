@@ -31,11 +31,6 @@ __constant__ double minAdhBondLen_M;
 __constant__ double bondStiff_M;
 __constant__ double bondAdhCriLen_M;
 
-__constant__ double intnlAdhCriLen_M;
-__constant__ double intnlStiff_M;
-__constant__ double maxIntnlAdhLen_M;
-__constant__ double minIntnlAdhLen_M;
-
 // #define DebugMode
 
 // This template method expands an input sequence by
@@ -89,15 +84,15 @@ void SceNodes::readDomainPara() {
 	domainPara.maxX = globalConfigVars.getConfigValue("DOMAIN_XMAX").toDouble();
 	domainPara.minY = globalConfigVars.getConfigValue("DOMAIN_YMIN").toDouble();
 	domainPara.maxY = globalConfigVars.getConfigValue("DOMAIN_YMAX").toDouble();
-	domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
-	domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
+	//domainPara.minZ = globalConfigVars.getConfigValue("DOMAIN_ZMIN").toDouble();
+	//domainPara.maxZ = globalConfigVars.getConfigValue("DOMAIN_ZMAX").toDouble();
 	domainPara.gridSpacing = getMaxEffectiveRange();
 	domainPara.XBucketSize = (domainPara.maxX - domainPara.minX)
 			/ domainPara.gridSpacing + 1;
 	domainPara.YBucketSize = (domainPara.maxY - domainPara.minY)
 			/ domainPara.gridSpacing + 1;
-	domainPara.ZBucketSize = (domainPara.maxZ - domainPara.minZ)
-			/ domainPara.gridSpacing + 1;
+	//domainPara.ZBucketSize = (domainPara.maxZ - domainPara.minZ)
+	//		/ domainPara.gridSpacing + 1;
 }
 
 void SceNodes::readMechPara() {
@@ -381,15 +376,6 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIntraParaDiv_M, mechPara_M.sceIntraParaDivCPU_M,
 			5 * sizeof(double));
-
-	cudaMemcpyToSymbol(intnlAdhCriLen_M, &mechPara_M.intnlAdhCriLenCPU_M,
-			sizeof(double));
-	cudaMemcpyToSymbol(intnlStiff_M, &mechPara_M.intnlStiffCPU_M,
-			sizeof(double));
-	cudaMemcpyToSymbol(maxIntnlAdhLen_M, &mechPara_M.maxIntnlAdhLenCPU_M,
-			sizeof(double));
-	cudaMemcpyToSymbol(minIntnlAdhLen_M, &mechPara_M.minIntnlAdhLenCPU_M,
-			sizeof(double));
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
@@ -532,20 +518,6 @@ void SceNodes::readParas_M() {
 	double minAdhBondLen =
 			globalConfigVars.getConfigValue("MinAdhBondLen").toDouble();
 	mechPara_M.minAdhBondLenCPU_M = minAdhBondLen;
-
-	double intnlStiff =
-			globalConfigVars.getConfigValue("IntnlStiff").toDouble();
-	double intnlAdhCriLen =
-			globalConfigVars.getConfigValue("IntnlAdhCriLen").toDouble();
-	double maxIntnlAdhLen =
-			globalConfigVars.getConfigValue("MaxIntnlAdhLen").toDouble();
-	double minIntnlAdhBLen =
-			globalConfigVars.getConfigValue("MinIntnlAdhLen").toDouble();
-
-	mechPara_M.maxIntnlAdhLenCPU_M = maxIntnlAdhLen;
-	mechPara_M.intnlAdhCriLenCPU_M = intnlAdhCriLen;
-	mechPara_M.intnlStiffCPU_M = intnlStiff;
-	mechPara_M.minIntnlAdhLenCPU_M = minIntnlAdhBLen;
 }
 
 void SceNodes::debugNAN() {
@@ -1748,25 +1720,6 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 }
 
 __device__
-void attemptToAdhereIntnl(bool& isSuccess, uint& index, double& dist,
-		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
-		double& yPos2) {
-	double length = computeDist2D(xPos1, yPos1, xPos2, yPos2);
-	if (length <= intnlAdhCriLen_M) {
-		if (isSuccess) {
-			if (length < dist) {
-				dist = length;
-				index = nodeRank2;
-			}
-		} else {
-			isSuccess = true;
-			index = nodeRank2;
-			dist = length;
-		}
-	}
-}
-
-__device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
 		double& yRes) {
@@ -1781,29 +1734,6 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
 
-	}
-}
-
-__device__
-void handleIntnlAdh_M(uint& nodeRank, int& adhereIndex, double& xPos,
-		double& yPos, double* _nodeLocXAddress, double* _nodeLocYAddress,
-		double& xRes, double& yRes) {
-	// should old one break?
-	if (adhereIndex != -1) {
-		// means adhesion has been established
-		double curAdherePosX = _nodeLocXAddress[adhereIndex];
-		double curAdherePosY = _nodeLocYAddress[adhereIndex];
-		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
-		if (curLen > maxIntnlAdhLen_M) {
-			adhereIndex = -1;
-			return;
-		} else {
-			if (curLen > minIntnlAdhLen_M) {
-				double forceValue = (curLen - minIntnlAdhLen_M) * intnlStiff_M;
-				xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
-				yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
-			}
-		}
 	}
 }
 

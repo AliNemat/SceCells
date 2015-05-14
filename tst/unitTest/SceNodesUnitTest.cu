@@ -793,7 +793,7 @@ TEST_F(SceNodeTest, outputAnimationLinks) {
 	}
 
 	AnimationCriteria aniCri;
-	aniCri.defaultEffectiveDistance = globalConfigVars.getConfigValue(
+	aniCri.pairDisplayDist = globalConfigVars.getConfigValue(
 			"IntraLinkDisplayRange").toDouble();
 	aniCri.animationType = CellType;
 	VtkAnimationData vtkData = nodes.obtainAnimationData(aniCri);

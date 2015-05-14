@@ -151,7 +151,7 @@ public:
 	void outputVtkColorByCell(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 	/**
-	 * Method that animates the domain to VTK format.
+	 * Method that output the simulation domain as label matrix.
 	 * @param resultNameBase name of the labelMatrix series.
 	 * @param rank frame sequence in the labelMatrix series.
 	 * @param pixelPara criteria for labelMatrix generation.

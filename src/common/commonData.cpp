@@ -124,7 +124,7 @@ bool AnimationCriteria::isPairQualify(uint seq1, uint seq2, double x1,
 		}
 		if (condi1) {
 			double dist = compuDistHost(x1, y1, z1, x2, y2, z2);
-			if (dist < defaultEffectiveDistance) {
+			if (dist < pairDisplayDist) {
 				condi2 = true;
 			}
 		}
@@ -136,7 +136,7 @@ bool AnimationCriteria::isPairQualify_M(double x1, double y1, double x2,
 		double y2) {
 	double dummy = 0;
 	double dist = compuDistHost(x1, y1, dummy, x2, y2, dummy);
-	if (dist < defaultEffectiveDistance) {
+	if (dist < pairDisplayDist) {
 		return true;
 	} else {
 		return false;
