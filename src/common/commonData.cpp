@@ -258,6 +258,8 @@ AniType parseAniTpFromConfig(int configValue) {
 		return Tension;
 	} else if (configValue == 4) {
 		return T1Tran;
+	} else if (configValue == 5) {
+		return PolySide;
 	} else {
 		throw SceException("Animation type in config file is not defined",
 				ConfigValueException);
@@ -476,4 +478,12 @@ void CellStats::printToFile(ofstream& ofs) {
 			<< std::endl;
 	ofs << "    CellCenter:" << cellCenter << std::endl;
 	ofs << std::endl;
+}
+
+vector<double> CellsStatsData::outputPolySides() {
+	vector<double> result;
+	for (uint i = 0; i < cellsStats.size(); i++) {
+		result.push_back(cellsStats[i].numNeighbors);
+	}
+	return result;
 }

@@ -99,6 +99,7 @@ class SimulationDomainGPU {
 	void outputVtkGivenCellColor(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri, std::vector<double>& cellColorVec);
 	std::vector<double> processT1Color();
+	std::vector<double> processPolySideColor();
 
 public:
 	/**
@@ -148,7 +149,10 @@ public:
 	void outputVtkFilesWithCri_M(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 
-	void outputVtkColorByCell(std::string scriptNameBase, int rank,
+	void outputVtkColorByCell_T1(std::string scriptNameBase, int rank,
+			AnimationCriteria aniCri);
+
+	void outputVtkColorByCell_polySide(std::string scriptNameBase, int rank,
 			AnimationCriteria aniCri);
 	/**
 	 * Method that output the simulation domain as label matrix.

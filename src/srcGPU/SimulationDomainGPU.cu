@@ -219,7 +219,7 @@ void SimulationDomainGPU::outputVtkGivenCellColor(std::string scriptNameBase,
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
 
-void SimulationDomainGPU::outputVtkColorByCell(std::string scriptNameBase,
+void SimulationDomainGPU::outputVtkColorByCell_T1(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	assert(aniCri.animationType == T1Tran);
 	std::vector<double> t1ColorVec = processT1Color();
@@ -236,6 +236,19 @@ std::vector<double> SimulationDomainGPU::processT1Color() {
 			result[i] = 1;
 		}
 	}
+	return result;
+}
+
+void SimulationDomainGPU::outputVtkColorByCell_polySide(
+		std::string scriptNameBase, int rank, AnimationCriteria aniCri) {
+	assert(aniCri.animationType == PolySide);
+	std::vector<double> polySideColorVec = processPolySideColor();
+	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, polySideColorVec);
+}
+
+std::vector<double> SimulationDomainGPU::processPolySideColor() {
+	CellsStatsData cellStatsVec = cells.outputPolyCountData();
+	std::vector<double> result = cellStatsVec.outputPolySides();
 	return result;
 }
 

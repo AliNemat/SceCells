@@ -143,7 +143,9 @@ int main(int argc, char* argv[]) {
 			//std::cout << "substep 5 " << std::endl;
 			//simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 			//		aniFrame, mainPara.aniCri);
-			simuDomain.outputVtkColorByCell(mainPara.animationNameBase,
+			//simuDomain.outputVtkColorByCell_T1(mainPara.animationNameBase,
+			//		aniFrame, mainPara.aniCri);
+			simuDomain.outputVtkColorByCell_polySide(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			// std::cout << "in ani step " << aniFrame << std::endl;
 			//std::cout << "substep 6 " << std::endl;

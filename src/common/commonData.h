@@ -81,7 +81,7 @@ enum SimulationType {
 SimulationType parseTypeFromConfig(int configValue);
 
 enum AniType {
-	CellType, ForceAbsVal, Force, Tension, T1Tran
+	CellType, ForceAbsVal, Force, Tension, T1Tran, PolySide
 };
 
 class BondInfo {
@@ -661,6 +661,7 @@ public:
 	std::vector<CellStats> cellsStats;
 	void printPolyCountToFile(std::string fileName, double divThreshold);
 	void printDetailStatsToFile(std::string fileNameBase, int timestep);
+	vector<double> outputPolySides();
 };
 
 void insertCount(uint numNeighbor, std::map<uint, uint>& count);
