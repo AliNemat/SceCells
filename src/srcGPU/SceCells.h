@@ -10,6 +10,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
@@ -33,8 +34,7 @@ double calBendMulti(double& angle, uint activeMembrCt);
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
-__device__
-uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
+__device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount);
@@ -68,12 +68,10 @@ double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
 struct DivideFunctor: public thrust::unary_function<uint, uint> {
 	uint dividend;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	DivideFunctor(uint dividendInput) :
+	__host__ __device__ DivideFunctor(uint dividendInput) :
 			dividend(dividendInput) {
 	}
-	__host__ __device__
-	uint operator()(const uint &num) {
+	__host__                __device__ uint operator()(const uint &num) {
 		return num / dividend;
 	}
 };
@@ -81,8 +79,7 @@ struct DivideFunctor: public thrust::unary_function<uint, uint> {
 struct PlusNum: public thrust::unary_function<uint, uint> {
 	uint _addNum;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	PlusNum(uint num) :
+	__host__ __device__ PlusNum(uint num) :
 			_addNum(num) {
 	}
 	__host__ __device__
@@ -100,12 +97,10 @@ struct PlusNum: public thrust::unary_function<uint, uint> {
 struct ModuloFunctor: public thrust::unary_function<uint, uint> {
 	uint dividend;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	ModuloFunctor(uint dividendInput) :
+	__host__ __device__ ModuloFunctor(uint dividendInput) :
 			dividend(dividendInput) {
 	}
-	__host__ __device__
-	uint operator()(const uint &num) {
+	__host__                __device__ uint operator()(const uint &num) {
 		return num % dividend;
 	}
 };
@@ -124,8 +119,8 @@ struct isActiveNoneBdry {
 };
 
 struct MaxWInfo: public thrust::binary_function<DUiDD, DUiDD, DUiDD> {
-	__host__ __device__
-	DUiDD operator()(const DUiDD& data1, const DUiDD& data2) {
+	__host__                __device__ DUiDD operator()(const DUiDD& data1,
+			const DUiDD& data2) {
 		double num1 = thrust::get<0>(data1);
 		double num2 = thrust::get<0>(data2);
 		if (num1 > num2) {
@@ -143,8 +138,7 @@ struct MaxWInfo: public thrust::binary_function<DUiDD, DUiDD, DUiDD> {
  * @return output result of addition
  */
 struct CVec3Add: public thrust::binary_function<CVec3, CVec3, CVec3> {
-	__host__ __device__
-	CVec3 operator()(const CVec3 &vec1, const CVec3 &vec2) {
+	__host__                __device__ CVec3 operator()(const CVec3 &vec1, const CVec3 &vec2) {
 		return thrust::make_tuple(thrust::get<0>(vec1) + thrust::get<0>(vec2),
 				thrust::get<1>(vec1) + thrust::get<1>(vec2),
 				thrust::get<2>(vec1) + thrust::get<2>(vec2));
@@ -152,8 +146,7 @@ struct CVec3Add: public thrust::binary_function<CVec3, CVec3, CVec3> {
 };
 
 struct CVec2Add: public thrust::binary_function<CVec2, CVec2, CVec2> {
-	__host__ __device__
-	CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+	__host__                __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
 		return thrust::make_tuple(thrust::get<0>(vec1) + thrust::get<0>(vec2),
 				thrust::get<1>(vec1) + thrust::get<1>(vec2));
 	}
@@ -169,16 +162,16 @@ struct CVec2Add: public thrust::binary_function<CVec2, CVec2, CVec2> {
  *        output3 third division result \n
  */
 struct CVec3Divide: public thrust::binary_function<CVec3, double, CVec3> {
-	__host__ __device__
-	CVec3 operator()(const CVec3 &vec1, const double &divisor) {
+	__host__                __device__ CVec3 operator()(const CVec3 &vec1,
+			const double &divisor) {
 		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
 				thrust::get<1>(vec1) / divisor, thrust::get<2>(vec1) / divisor);
 	}
 };
 
 struct CVec2Divide: public thrust::binary_function<CVec2, double, CVec2> {
-	__host__ __device__
-	CVec2 operator()(const CVec2 &vec1, const double &divisor) {
+	__host__                __device__ CVec2 operator()(const CVec2 &vec1,
+			const double &divisor) {
 		return thrust::make_tuple(thrust::get<0>(vec1) / divisor,
 				thrust::get<1>(vec1) / divisor);
 	}
@@ -187,8 +180,7 @@ struct CVec2Divide: public thrust::binary_function<CVec2, double, CVec2> {
 struct LessEqualTo: public thrust::unary_function<UiB, bool> {
 	uint _limit;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	LessEqualTo(uint limit) :
+	__host__ __device__ LessEqualTo(uint limit) :
 			_limit(limit) {
 	}
 	__device__
@@ -212,15 +204,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	double* _locYAddr;
 	bool* _isActiveAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddMembrForce(uint bdryCount, uint maxNodePerCell, double* locXAddr,
-			double* locYAddr, bool* isActiveAddr) :
+	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
+			double* locXAddr, double* locYAddr, bool* isActiveAddr) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
 					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__
-	CVec10 operator()(const TensionData &tData) const {
+	__device__ CVec10 operator()(const TensionData &tData) const {
 		uint activeMembrCount = thrust::get<0>(tData);
 		uint cellRank = thrust::get<1>(tData);
 		uint nodeRank = thrust::get<2>(tData);
@@ -393,17 +383,15 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 	double* _bendRightXAddr;
 	double* _bendRightYAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddMembrBend(uint maxNodePerCell, bool* isActiveAddr, double* bendLeftXAddr,
-			double* bendLeftYAddr, double* bendRightXAddr,
-			double* bendRightYAddr) :
+	__host__ __device__ AddMembrBend(uint maxNodePerCell, bool* isActiveAddr,
+			double* bendLeftXAddr, double* bendLeftYAddr,
+			double* bendRightXAddr, double* bendRightYAddr) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _bendLeftXAddr(
 					bendLeftXAddr), _bendLeftYAddr(bendLeftYAddr), _bendRightXAddr(
 					bendRightXAddr), _bendRightYAddr(bendRightYAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__
-	CVec2 operator()(const BendData &bData) const {
+	__device__ CVec2 operator()(const BendData &bData) const {
 		uint activeMembrCount = thrust::get<0>(bData);
 		uint cellRank = thrust::get<1>(bData);
 		uint nodeRank = thrust::get<2>(bData);
@@ -448,18 +436,16 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 	bool* _isActiveAddr;
 	double _grthPrgrCriVal_M;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddSceCellForce(uint maxNodePerCell, uint maxMemNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr,
-			double grthPrgrCriVal_M) :
+	__host__ __device__ AddSceCellForce(uint maxNodePerCell,
+			uint maxMemNodePerCell, double* locXAddr, double* locYAddr,
+			bool* isActiveAddr, double grthPrgrCriVal_M) :
 			_maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
 					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
 					locYAddr), _isActiveAddr(isActiveAddr), _grthPrgrCriVal_M(
 					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__
-	CVec2 operator()(const CellData &cData) const {
+	__device__ CVec2 operator()(const CellData &cData) const {
 		uint activeMembrCount = thrust::get<0>(cData);
 		uint activeIntnlCount = thrust::get<1>(cData);
 		uint cellRank = thrust::get<2>(cData);
@@ -536,16 +522,15 @@ struct LoadGridDataToNode: public thrust::unary_function<CVec2, CVec3> {
 	double _gridSpacing;
 	double* _gridMagValue;
 	double* _gridDirXCompValue;
-	double* _gridDirYCompValue;__host__ __device__
-	LoadGridDataToNode(uint gridDimensionX, uint gridDimensionY,
-			double gridSpacing, double* gridMagValue, double* gridDirXCompValue,
-			double* gridDirYCompValue) :
+	double* _gridDirYCompValue;
+	__host__ __device__ LoadGridDataToNode(uint gridDimensionX,
+			uint gridDimensionY, double gridSpacing, double* gridMagValue,
+			double* gridDirXCompValue, double* gridDirYCompValue) :
 			_gridDimensionX(gridDimensionX), _gridDimensionY(gridDimensionY), _gridSpacing(
 					gridSpacing), _gridMagValue(gridMagValue), _gridDirXCompValue(
 					gridDirXCompValue), _gridDirYCompValue(gridDirYCompValue) {
 	}
-	__host__ __device__
-	CVec3 operator()(const CVec2 &d2) const {
+	__host__                __device__ CVec3 operator()(const CVec2 &d2) const {
 		double xCoord = thrust::get<0>(d2);
 		double yCoord = thrust::get<1>(d2);
 		uint gridLoc = (uint) (xCoord / _gridSpacing)
@@ -589,12 +574,12 @@ struct LoadChemDataToNode: public thrust::unary_function<CVec2Type, CVec3> {
 	double* _gridDirXCompValue2;
 	double* _gridDirYCompValue2;
 
-	__host__ __device__
-	LoadChemDataToNode(uint gridDimensionX, uint gridDimensionY,
-			double gridSpacing, double* gridMagValue, double* gridDirXCompValue,
-			double* gridDirYCompValue, uint gridDimensionX2,
-			uint gridDimensionY2, double gridSpacing2, double* gridMagValue2,
-			double* gridDirXCompValue2, double* gridDirYCompValue2) :
+	__host__ __device__ LoadChemDataToNode(uint gridDimensionX,
+			uint gridDimensionY, double gridSpacing, double* gridMagValue,
+			double* gridDirXCompValue, double* gridDirYCompValue,
+			uint gridDimensionX2, uint gridDimensionY2, double gridSpacing2,
+			double* gridMagValue2, double* gridDirXCompValue2,
+			double* gridDirYCompValue2) :
 			_gridDimensionX(gridDimensionX), _gridDimensionY(gridDimensionY), _gridSpacing(
 					gridSpacing), _gridMagValue(gridMagValue), _gridDirXCompValue(
 					gridDirXCompValue), _gridDirYCompValue(gridDirYCompValue), _gridDimensionX2(
@@ -602,7 +587,7 @@ struct LoadChemDataToNode: public thrust::unary_function<CVec2Type, CVec3> {
 					gridSpacing2), _gridMagValue2(gridMagValue2), _gridDirXCompValue2(
 					gridDirXCompValue2), _gridDirYCompValue2(gridDirYCompValue2) {
 	}
-	__host__ __device__
+	__host__  __device__ 					// place holder for eclipse formatter
 	CVec3 operator()(const CVec2Type &d2) const {
 		double xCoord = thrust::get<0>(d2);
 		double yCoord = thrust::get<1>(d2);
@@ -634,8 +619,8 @@ struct LoadChemDataToNode: public thrust::unary_function<CVec2Type, CVec3> {
  * @return output1 a*X+Y
  */
 struct SaxpyFunctor: public thrust::binary_function<double, double, double> {
-	double _dt;__host__ __device__
-	SaxpyFunctor(double dt) :
+	double _dt;
+	__host__ __device__ SaxpyFunctor(double dt) :
 			_dt(dt) {
 	}
 	__host__ __device__
@@ -647,8 +632,7 @@ struct SaxpyFunctor: public thrust::binary_function<double, double, double> {
 struct MultiWithLimit: public thrust::unary_function<double, double> {
 	double _k, _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__
-	MultiWithLimit(double k, double bound) :
+	__host__ __device__ MultiWithLimit(double k, double bound) :
 			_k(k), _bound(bound) {
 	}
 	__host__ __device__
@@ -666,37 +650,51 @@ struct MultiWithLimit: public thrust::unary_function<double, double> {
 };
 
 struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
-	double _k, _bound;
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__
-	AdjustMembrGrow(double k, double bound) :
-			_k(k), _bound(bound) {
+	/*
+	 * Growth speed set to be constant when growth is necessary.
+	 */
+	double _constSpeed;
+
+	/*
+	 * Initial count of membrane elements
+	 */
+	uint _initMembrCt;
+
+	/*
+	 * Initial count of internal elements
+	 */
+	uint _initIntnlCt;
+
+	__host__ __device__ //place holder for eclipse formatter
+	AdjustMembrGrow(double constSpeed, uint initIntnlCt, uint initMembrCt) :
+			_constSpeed(constSpeed), // place holder for eclipse formatter
+			_initMembrCt(initMembrCt), // place holder for eclipse formatter
+			_initIntnlCt(initIntnlCt) {
 	}
 	__device__
-	double operator()(const UiDD &input) const {
+	double operator()(const UiUi &input) const {
 		uint curActiveMembrNode = thrust::get<0>(input);
-		double curSpeed = thrust::get<1>(input);
-		double cellArea = thrust::get<2>(input);
-		double tmpVal = sqrt(cellArea) / curActiveMembrNode;
-		if (tmpVal < _bound) {
-			curSpeed = (tmpVal - _bound) * _k + curSpeed;
+		uint curActiveIntnlNode = thrust::get<1>(input);
+
+		// Force conversion of double to integer
+		uint targetMembrCt = sqrt(double(curActiveIntnlNode) / _initIntnlCt)
+				* _initMembrCt;
+
+		if (curActiveMembrNode < targetMembrCt) {
+			return _constSpeed;
+		} else {
+			return 0;
 		}
-		if (curSpeed < 0) {
-			curSpeed = 0;
-		}
-		return curSpeed;
 	}
 };
 
 struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
 	uint _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__
-	MemGrowFunc(uint bound) :
+	__host__ __device__ MemGrowFunc(uint bound) :
 			_bound(bound) {
 	}
-	__host__ __device__
-	BoolD operator()(const DUi& dui) {
+	__host__                __device__ BoolD operator()(const DUi& dui) {
 		double progress = thrust::get<0>(dui);
 		uint curActiveMembrNode = thrust::get<1>(dui);
 		if (curActiveMembrNode < _bound && progress >= 1.0) {
@@ -740,12 +738,11 @@ struct SaxpyFunctorWithMaxOfOne: public thrust::binary_function<double, double,
  * @return output1 x and y compoents of result
  */
 struct SaxpyFunctorDim2: public thrust::binary_function<CVec2, CVec2, CVec2> {
-	double _dt;__host__ __device__
-	SaxpyFunctorDim2(double dt) :
+	double _dt;
+	__host__ __device__ SaxpyFunctorDim2(double dt) :
 			_dt(dt) {
 	}
-	__host__ __device__
-	CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+	__host__                __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
 		double xRes = thrust::get<0>(vec1) * _dt + thrust::get<0>(vec2);
 		double yRes = thrust::get<1>(vec1) * _dt + thrust::get<1>(vec2);
 		return thrust::make_tuple(xRes, yRes);
@@ -762,8 +759,8 @@ struct SaxpyFunctorDim2: public thrust::binary_function<CVec2, CVec2, CVec2> {
  * @return output2 updated check point value (change or unchanged)
  */
 struct PtCondiOp: public thrust::unary_function<CVec2, bool> {
-	double _threshold;__host__ __device__
-	PtCondiOp(double threshold) :
+	double _threshold;
+	__host__ __device__ PtCondiOp(double threshold) :
 			_threshold(threshold) {
 	}
 	__host__ __device__
@@ -794,8 +791,7 @@ struct GetZero: public thrust::unary_function<SceNodeType, double> {
  * determines if cell type is boundary.
  */
 struct IsBoundary: public thrust::unary_function<SceNodeType, bool> {
-	__host__ __device__
-	uint operator()(const SceNodeType &type) {
+	__host__                __device__ uint operator()(const SceNodeType &type) {
 		if (type == Boundary) {
 			return true;
 		} else {
@@ -850,8 +846,7 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 	unsigned int m_seed;
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddPtOp(uint maxNodeOfOneCell, double addNodeDistance,
+	__host__ __device__ AddPtOp(uint maxNodeOfOneCell, double addNodeDistance,
 			double minDistanceToOtherNode, bool* nodeIsActiveAddress,
 			double* nodeXPosAddress, double* nodeYPosAddress, uint seed,
 			double growThreshold) :
@@ -863,8 +858,7 @@ struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 					seed) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	BoolUID operator()(const BoolUIDDUID &biddi) {
+	__host__                __device__ BoolUID operator()(const BoolUIDDUID &biddi) {
 		const double pI = acos(-1.0);
 		bool isScheduledToGrow = thrust::get<0>(biddi);
 		uint activeNodeCountOfThisCell = thrust::get<1>(biddi);
@@ -930,17 +924,15 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 	bool* _nodeIsActiveAddress;
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddPtOp_M(uint seed, double addNodeDistance, double growThreshold,
-			double* nodeXPosAddress, double* nodeYPosAddress,
-			bool* nodeIsActiveAddress) :
+	__host__ __device__ AddPtOp_M(uint seed, double addNodeDistance,
+			double growThreshold, double* nodeXPosAddress,
+			double* nodeYPosAddress, bool* nodeIsActiveAddress) :
 			_seed(seed), _addNodeDistance(addNodeDistance), _growThreshold(
 					growThreshold), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
 					nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__
-	DUi operator()(const BoolUIDDUID &biddi) {
+	__device__ DUi operator()(const BoolUIDDUID &biddi) {
 		bool isScheduledToGrow = thrust::get<0>(biddi);
 		uint activeMembrNodeThis = thrust::get<1>(biddi);
 		double lastCheckPoint = thrust::get<5>(biddi);
@@ -985,8 +977,7 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 struct CompuTarLen: thrust::unary_function<double, double> {
 	double _cellInitLength, _cellFinalLength;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CompuTarLen(double initLen, double finalLen) :
+	__host__ __device__ CompuTarLen(double initLen, double finalLen) :
 			_cellInitLength(initLen), _cellFinalLength(finalLen) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -1061,12 +1052,10 @@ struct CompuDiff: thrust::unary_function<CVec3, double> {
 struct ApplyStretchForce: thrust::unary_function<CVec6, CVec2> {
 	double _elongationCoefficient;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	ApplyStretchForce(double elongationCoefficient) :
+	__host__ __device__ ApplyStretchForce(double elongationCoefficient) :
 			_elongationCoefficient(elongationCoefficient) {
 	}
-	__host__ __device__
-	CVec2 operator()(const CVec6 &vec6) {
+	__host__                __device__ CVec2 operator()(const CVec6 &vec6) {
 		double distToCenterAlongGrowDir = thrust::get<0>(vec6);
 		// minimum distance of node to its corresponding center along growth direction
 		double lengthDifference = thrust::get<1>(vec6);
@@ -1088,13 +1077,12 @@ struct ApplyStretchForce_M: thrust::unary_function<CVec6UI, CVec2> {
 	double _elongationCoefficient;
 	double _typeThreshold;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	ApplyStretchForce_M(double elongationCoefficient, uint threshold) :
+	__host__ __device__ ApplyStretchForce_M(double elongationCoefficient,
+			uint threshold) :
 			_elongationCoefficient(elongationCoefficient), _typeThreshold(
 					threshold) {
 	}
-	__host__ __device__
-	CVec2 operator()(const CVec6UI &vec6ui) {
+	__host__                __device__ CVec2 operator()(const CVec6UI &vec6ui) {
 		double distToCenterAlongGrowDir = thrust::get<0>(vec6ui);
 		// minimum distance of node to its corresponding center along growth direction
 		double lengthDifference = thrust::get<1>(vec6ui);
@@ -1121,12 +1109,10 @@ struct ApplyStretchForce_M: thrust::unary_function<CVec6UI, CVec2> {
 struct ApplyChemoVel: thrust::unary_function<CVec5, CVec2> {
 	double _chemoCoefficient;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	ApplyChemoVel(double chemoCoefficient) :
+	__host__ __device__ ApplyChemoVel(double chemoCoefficient) :
 			_chemoCoefficient(chemoCoefficient) {
 	}
-	__host__ __device__
-	CVec2 operator()(const CVec5 &vec5) {
+	__host__                __device__ CVec2 operator()(const CVec5 &vec5) {
 		double growthSpeed = thrust::get<0>(vec5);
 		double growthXDir = thrust::get<1>(vec5);
 		double growthYDir = thrust::get<2>(vec5);
@@ -1149,12 +1135,10 @@ struct ApplyChemoVel: thrust::unary_function<CVec5, CVec2> {
 struct LeftShiftFunctor: thrust::unary_function<uint, uint> {
 	uint _shiftLeftOffset;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	LeftShiftFunctor(uint maxNodeOfOneCell) :
+	__host__ __device__ LeftShiftFunctor(uint maxNodeOfOneCell) :
 			_shiftLeftOffset(maxNodeOfOneCell / 2) {
 	}
-	__host__ __device__
-	uint operator()(const uint &position) {
+	__host__                __device__ uint operator()(const uint &position) {
 		uint result;
 		if (position < _shiftLeftOffset) {
 			// could be 0, because these region will actually never be used
@@ -1177,8 +1161,7 @@ struct IsRightSide: thrust::unary_function<uint, bool> {
 	uint _maxNodeCountPerCell;
 	uint _halfMaxNode;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	IsRightSide(uint maxNodeOfOneCell) :
+	__host__ __device__ IsRightSide(uint maxNodeOfOneCell) :
 			_maxNodeCountPerCell(maxNodeOfOneCell), _halfMaxNode(
 					maxNodeOfOneCell / 2) {
 	}
@@ -1203,8 +1186,7 @@ struct IsLeftSide: thrust::unary_function<uint, bool> {
 	uint _maxNodeCountPerCell;
 	uint _halfMaxNode;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	IsLeftSide(uint maxNodeOfOneCell) :
+	__host__ __device__ IsLeftSide(uint maxNodeOfOneCell) :
 			_maxNodeCountPerCell(maxNodeOfOneCell), _halfMaxNode(
 					maxNodeOfOneCell / 2) {
 	}
@@ -1228,12 +1210,10 @@ struct IsLeftSide: thrust::unary_function<uint, bool> {
 struct CompuPos: thrust::unary_function<Tuint2, uint> {
 	uint _maxNodeCountPerCell;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CompuPos(uint maxNodeOfOneCell) :
+	__host__ __device__ CompuPos(uint maxNodeOfOneCell) :
 			_maxNodeCountPerCell(maxNodeOfOneCell) {
 	}
-	__host__ __device__
-	uint operator()(const Tuint2 &vec) {
+	__host__                __device__ uint operator()(const Tuint2 &vec) {
 		uint rankInCell = thrust::get<0>(vec) % _maxNodeCountPerCell;
 		uint cellRank = thrust::get<1>(vec);
 		return (cellRank * _maxNodeCountPerCell + rankInCell);
@@ -1254,13 +1234,12 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, BoolD> {
 	double _isDivideCriticalRatio;
 	uint _maxNodePerCell;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CompuIsDivide(double isDivideCriticalRatio, uint maxNodePerCell) :
+	__host__ __device__ CompuIsDivide(double isDivideCriticalRatio,
+			uint maxNodePerCell) :
 			_isDivideCriticalRatio(isDivideCriticalRatio), _maxNodePerCell(
 					maxNodePerCell) {
 	}
-	__host__ __device__
-	BoolD operator()(const CVec3Int &vec) {
+	__host__                __device__ BoolD operator()(const CVec3Int &vec) {
 		double lengthDifference = thrust::get<0>(vec);
 		double expectedLength = thrust::get<1>(vec);
 		double currentLength = expectedLength - lengthDifference;
@@ -1278,8 +1257,7 @@ struct CompuIsDivide: thrust::unary_function<CVec3Int, BoolD> {
 struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
 	uint _maxIntnlNodePerCell;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CompuIsDivide_M(uint maxIntnlNodePerCell) :
+	__host__ __device__ CompuIsDivide_M(uint maxIntnlNodePerCell) :
 			_maxIntnlNodePerCell(maxIntnlNodePerCell) {
 	}
 	__host__ __device__
@@ -1304,12 +1282,12 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 	uint beginPosOfProfileNodes;
 	uint currentActiveProfileNodes;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	VelocityModifier(uint beginPos, uint currentProfileNodeCount) {
+	__host__ __device__ VelocityModifier(uint beginPos,
+			uint currentProfileNodeCount) {
 		beginPosOfProfileNodes = beginPos;
 		currentActiveProfileNodes = currentProfileNodeCount;
 	}
-	__host__ __device__
+	__host__    __device__ 									// place holder for eclipse formatter
 	CVec2 operator()(const Vel2DActiveTypeRank &nodeInfo) {
 		double velX = thrust::get<0>(nodeInfo);
 		double velY = thrust::get<1>(nodeInfo);
@@ -1333,8 +1311,7 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 };
 
 struct ForceZero: public thrust::unary_function<CVec2, CVec2> {
-	__host__ __device__
-	CVec2 operator()(const CVec2 &oriData) {
+	__host__                __device__ CVec2 operator()(const CVec2 &oriData) {
 		return thrust::make_tuple(0.0, 0.0);
 	}
 };
@@ -1342,12 +1319,10 @@ struct ForceZero: public thrust::unary_function<CVec2, CVec2> {
 struct AdjustGrowth: public thrust::unary_function<UiDD, BoolDD> {
 	uint _halfMax;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AdjustGrowth(uint halfMax) :
+	__host__ __device__ AdjustGrowth(uint halfMax) :
 			_halfMax(halfMax) {
 	}
-	__host__ __device__
-	BoolDD operator()(const UiDD &growData) {
+	__host__                __device__ BoolDD operator()(const UiDD &growData) {
 		uint curIntnlNodeCount = thrust::get<0>(growData);
 		double curProgress = thrust::get<1>(growData);
 		double lastPoint = thrust::get<2>(growData);
@@ -1364,14 +1339,12 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 	double _lowerLimit, _upperLimit;
 	uint _currentCellCount, _randAux;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AssignRandIfNotInit(double low, double high, uint currentCellCount,
-			uint randAux) :
+	__host__ __device__ AssignRandIfNotInit(double low, double high,
+			uint currentCellCount, uint randAux) :
 			_lowerLimit(low), _upperLimit(high), _currentCellCount(
 					currentCellCount), _randAux(randAux) {
 	}
-	__host__ __device__
-	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
+	__host__                __device__ CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
 		uint preSeed = _currentCellCount / _randAux;
 		double currentDirX = thrust::get<1>(inputInfo);
 		double currentDirY = thrust::get<2>(inputInfo);
@@ -1405,13 +1378,11 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 	thrust::uniform_real_distribution<double> dist;
 	thrust::uniform_real_distribution<double> dist2;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	RandomizeGrow_M(double low, double high, uint seed) :
+	__host__ __device__ RandomizeGrow_M(double low, double high, uint seed) :
 			_lowerLimit(low), _upperLimit(high), _seed(seed), dist(_lowerLimit,
 					_upperLimit), dist2(0, 2 * acos(-1.0)) {
 	}
-	__host__ __device__
-	CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
+	__host__                __device__ CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
 		double curSpeed = thrust::get<0>(inputInfo);
 		double currentDirX = thrust::get<1>(inputInfo);
 		double currentDirY = thrust::get<2>(inputInfo);
@@ -1435,12 +1406,10 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
 	double _speed;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AssignFixedGrowth(double fixedSpeed) :
+	__host__ __device__ AssignFixedGrowth(double fixedSpeed) :
 			_speed(fixedSpeed) {
 	}
-	__host__ __device__
-	CVec3 operator()(const CVec3BoolInt &inputInfo) {
+	__host__ __device__ CVec3 operator()(const CVec3BoolInt &inputInfo) {
 		return thrust::make_tuple(_speed, 1, 0);
 	}
 };
@@ -1451,14 +1420,12 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 	double* _xPosAddr, *_yPosAddr;
 	int* _adhIndxAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	AddMemNode(uint maxNodePerCell, bool* isActiveAddr, double* xPosAddr,
-			double* yPosAddr, int* adhIndxAddr) :
+	__host__ __device__ AddMemNode(uint maxNodePerCell, bool* isActiveAddr,
+			double* xPosAddr, double* yPosAddr, int* adhIndxAddr) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
 					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
 	}
-	__device__
-	uint operator()(const Tuuudd &oriData) {
+	__device__ uint operator()(const Tuuudd &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
 		uint insertIndx = thrust::get<1>(oriData) + 1;
 		uint curActCount = thrust::get<2>(oriData);
@@ -1487,9 +1454,8 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 	double* _locXAddr;
 	double* _locYAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__
-	CalTriArea(uint maxNodePerCell, bool* isActiveAddr, double* locXAddr,
-			double* locYAddr) :
+	__host__ __device__ CalTriArea(uint maxNodePerCell, bool* isActiveAddr,
+			double* locXAddr, double* locYAddr) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _locXAddr(
 					locXAddr), _locYAddr(locYAddr) {
 	}
@@ -1683,6 +1649,10 @@ struct MembrPara {
 	double membrBendCoeff;
 	double adjustLimit;
 	double adjustCoeff;
+
+	double growthConst_N;
+	uint initMembrCt_N;
+	uint initIntnlCt_N;
 	void initFromConfig();
 };
 

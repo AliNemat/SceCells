@@ -144,6 +144,13 @@ void MembrPara::initFromConfig() {
 			globalConfigVars.getConfigValue("MembrAdjustLimit").toDouble();
 	adjustCoeff =
 			globalConfigVars.getConfigValue("MembrAdjustCoeff").toDouble();
+
+	growthConst_N =
+			globalConfigVars.getConfigValue("MembrGrowthConst").toDouble();
+	initMembrCt_N =
+			globalConfigVars.getConfigValue("InitMembrNodeCount").toInt();
+	initIntnlCt_N =
+			globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
 }
 
 SceCells::SceCells() {
@@ -302,8 +309,8 @@ void SceCells::findMinAndMaxDistToCenter() {
 			thrust::minimum<double>());
 
 	// for nodes of each cell, find the maximum distance from the node to the corresponding
-	// cell center along the pre-defined growth direction.
 
+	// cell center along the pre-defined growth direction.
 	thrust::reduce_by_key(
 			make_transform_iterator(countingBegin,
 					DivideFunctor(allocPara.maxNodeOfOneCell)),
@@ -2878,9 +2885,9 @@ void SceCells::copyToGPUConstMem() {
 }
 
 void SceCells::handleMembrGrowth_M() {
-// figure out membr growth speed
-	calMembrGrowSpeed_M();
-// figure out which cells will add new point
+	// figure out membr growth speed
+	//calMembrGrowSpeed_M();
+	// figure out which cells will add new point
 
 	adjustMembrGrowSpeed_M();
 
@@ -2932,7 +2939,7 @@ void SceCells::calMembrGrowSpeed_M() {
 			cellInfoVecs.activeMembrNodeCounts.begin(),
 			cellInfoVecs.aveTension.begin(), thrust::divides<double>());
 
-// linear relationship with highest tension; capped by a given value
+	// linear relationship with highest tension; capped by a given value
 	thrust::transform(cellInfoVecs.aveTension.begin(),
 			cellInfoVecs.aveTension.begin()
 					+ allocPara_m.currentActiveCellCount,
@@ -2941,22 +2948,19 @@ void SceCells::calMembrGrowSpeed_M() {
 }
 
 void SceCells::adjustMembrGrowSpeed_M() {
-	calCellArea();
 	thrust::transform(
 			thrust::make_zip_iterator(
-
 					thrust::make_tuple(
 							cellInfoVecs.activeMembrNodeCounts.begin(),
-							cellInfoVecs.membrGrowSpeed.begin(),
-							cellInfoVecs.cellAreaVec.begin())),
+							cellInfoVecs.activeIntnlNodeCounts.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							cellInfoVecs.activeMembrNodeCounts.begin(),
-							cellInfoVecs.membrGrowSpeed.begin(),
-							cellInfoVecs.cellAreaVec.begin()))
+							cellInfoVecs.activeIntnlNodeCounts.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.membrGrowSpeed.begin(),
-			AdjustMembrGrow(membrPara.adjustCoeff, membrPara.adjustLimit));
+			AdjustMembrGrow(membrPara.growthConst_N, membrPara.initMembrCt_N,
+					membrPara.initIntnlCt_N));
 }
 
 void SceCells::decideIfAddMembrNode_M() {
@@ -2983,10 +2987,11 @@ void SceCells::decideIfAddMembrNode_M() {
 			MemGrowFunc(maxMembrNode));
 }
 
+/**
+ * Add new membrane elements to cells.
+ * This operation is relatively expensive because of memory rearrangement.
+ */
 void SceCells::addMembrNodes_M() {
-// add node to the array.
-// this operation is relatively expensive because of memory
-// re-arrangement.
 	thrust::counting_iterator<uint> iBegin(0);
 	uint curAcCCount = allocPara_m.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;

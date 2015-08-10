@@ -43,7 +43,7 @@
 // TODO: maybe it's because of the -ansi compiler option instead of Thrust?
 
 /**
- * @mainpage chicken beak development project main documentation page
+ * @mainpage Subcellular Element Method for development biology
  *
  * @author Wenzhao Sun wsun2@nd.edu
  *
