@@ -2886,7 +2886,7 @@ void SceCells::copyToGPUConstMem() {
 
 void SceCells::handleMembrGrowth_M() {
 	// figure out membr growth speed
-	//calMembrGrowSpeed_M();
+	calMembrGrowSpeed_M();
 	// figure out which cells will add new point
 
 	adjustMembrGrowSpeed_M();
