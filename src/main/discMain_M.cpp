@@ -120,15 +120,15 @@ int main(int argc, char* argv[]) {
 	// main simulation steps.
 	for (uint i = 0; i <= (uint) (mainPara.totalTimeSteps); i++) {
 		if (i % mainPara.aniAuxVar == 0) {
-			//std::cout << "substep 1 " << std::endl;
+			std::cout << "substep 1 " << std::endl;
 			CellsStatsData polyData = simuDomain.outputPolyCountData();
 
-			//std::cout << "substep 2 " << std::endl;
+			std::cout << "substep 2 " << std::endl;
 			//////// update division threshold //////
 			updateDivThres(curDivThred, i, mainPara.dt, decayCoeff,
 					divThreshold);
 
-			//std::cout << "substep 3 " << std::endl;
+			std::cout << "substep 3 " << std::endl;
 			// prints brief polygon counting statistics to file
 			polyData.printPolyCountToFile(polyStatFileName, curDivThred);
 			// prints detailed individual cell statistics to file
@@ -136,11 +136,11 @@ int main(int argc, char* argv[]) {
 			// prints the animation frames to file. They can be open by Paraview
 
 			//std::cout << "substep 4 " << std::endl;
-			if (i != 0) {
-				simuDomain.processT1Info(maxStepTraceBack, polyData);
-			}
+			//if (i != 0) {
+				//simuDomain.processT1Info(maxStepTraceBack, polyData);
+			//}
 
-			//std::cout << "substep 5 " << std::endl;
+			std::cout << "substep 5 " << std::endl;
 			//simuDomain.outputVtkFilesWithCri_M(mainPara.animationNameBase,
 			//		aniFrame, mainPara.aniCri);
 			//simuDomain.outputVtkColorByCell_T1(mainPara.animationNameBase,
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
 			simuDomain.outputVtkColorByCell_polySide(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
 			// std::cout << "in ani step " << aniFrame << std::endl;
-			//std::cout << "substep 6 " << std::endl;
+			std::cout << "substep 6 " << std::endl;
 			aniFrame++;
 		}
 		simuDomain.runAllLogic_M(mainPara.dt);
