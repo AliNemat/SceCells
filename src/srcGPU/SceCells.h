@@ -588,7 +588,8 @@ struct LoadChemDataToNode: public thrust::unary_function<CVec2Type, CVec3> {
 					gridSpacing2), _gridMagValue2(gridMagValue2), _gridDirXCompValue2(
 					gridDirXCompValue2), _gridDirYCompValue2(gridDirYCompValue2) {
 	}
-	__host__ __device__ 				// place holder for eclipse formatter
+	__host__ __device__
+	// place holder for eclipse formatter
 	CVec3 operator()(const CVec2Type &d2) const {
 		double xCoord = thrust::get<0>(d2);
 		double yCoord = thrust::get<1>(d2);
@@ -1291,7 +1292,8 @@ struct VelocityModifier: public thrust::unary_function<Vel2DActiveTypeRank,
 		beginPosOfProfileNodes = beginPos;
 		currentActiveProfileNodes = currentProfileNodeCount;
 	}
-	__host__ __device__ 				// place holder for eclipse formatter
+	__host__ __device__
+	// place holder for eclipse formatter
 	CVec2 operator()(const Vel2DActiveTypeRank &nodeInfo) {
 		double velX = thrust::get<0>(nodeInfo);
 		double velY = thrust::get<1>(nodeInfo);

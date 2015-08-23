@@ -2227,7 +2227,8 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventCreate(&stop);
 	cudaEventRecord(start1, 0);
 #endif
-
+	cout << "     --- 1 ---" << endl;
+	cout.flush();
 	prepareSceForceComputation_M();
 
 #ifdef DebugMode
@@ -2235,7 +2236,8 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventSynchronize(start2);
 	cudaEventElapsedTime(&elapsedTime1, start1, start2);
 #endif
-
+	cout << "     --- 2 ---" << endl;
+	cout.flush();
 	applySceForcesDisc_M();
 
 #ifdef DebugMode
@@ -2243,8 +2245,12 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventSynchronize(start3);
 	cudaEventElapsedTime(&elapsedTime2, start2, start3);
 #endif
-
+	cout << "     --- 3 ---" << endl;
+	cout.flush();
 	processMembrAdh_M();
+
+	cout << "     --- 4 ---" << endl;
+	cout.flush();
 
 #ifdef DebugMode
 	cudaEventRecord(stop, 0);

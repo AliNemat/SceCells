@@ -9,10 +9,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         add_definitions(-Wall -ansi -Wno-deprecated -fpermissive -frounding-math)
 endif()
 
-#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
 # After some performance testing, there is no significant performance difference
 # between compute_20 and compute_30. 
 # Therefore, for compatibility reason, compute 2.0 is used.
+# set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -DTHRUST_DEBUG -gencode arch=compute_20,code=sm_20)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -gencode arch=compute_20,code=compute_20)
 
 MESSAGE("NVCC flags are : " ${CUDA_NVCC_FLAGS})

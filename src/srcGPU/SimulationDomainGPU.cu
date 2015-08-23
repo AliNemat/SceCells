@@ -122,17 +122,21 @@ void SimulationDomainGPU::runAllLogic_M(double dt) {
 	cudaEventCreate(&stop);
 	cudaEventRecord(start1, 0);
 #endif
-
+	cout << "--- 1 ---" << endl;
+	cout.flush();
 	nodes.sceForcesDisc_M();
-
+	cout << "--- 2 ---" << endl;
+	cout.flush();
 #ifdef DebugModeDomain
 	cudaEventRecord(start2, 0);
 	cudaEventSynchronize(start2);
 	cudaEventElapsedTime(&elapsedTime1, start1, start2);
 #endif
-
+	cout << "--- 3 ---" << endl;
+	cout.flush();
 	cells.runAllCellLogicsDisc_M(dt);
-
+	cout << "--- 4 ---" << endl;
+	cout.flush();
 #ifdef DebugModeDomain
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);

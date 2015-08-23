@@ -1282,6 +1282,8 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 }
 
 void SceCells::runAllCellLogicsDisc_M(double dt) {
+	std::cout << "     *** 1 ***" << endl;
+	std::cout.flush();
 	this->dt = dt;
 
 	growthAuxData.prolifDecay = exp(-curTime * miscPara.prolifDecayCoeff);
@@ -1291,21 +1293,32 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 			* growthAuxData.randomGrowthSpeedMax_Ori;
 	curTime = curTime + dt;
 
+	std::cout << "     *** 2 ***" << endl;
+	std::cout.flush();
 	applySceCellDisc_M();
-
+	std::cout << "     *** 3 ***" << endl;
+	std::cout.flush();
 	applyMemForce_M();
-
+	std::cout << "     *** 4 ***" << endl;
+	std::cout.flush();
 	computeCenterPos_M();
-
+	std::cout << "     *** 5 ***" << endl;
+	std::cout.flush();
 	growAtRandom_M(dt);
-
+	std::cout << "     *** 6 ***" << endl;
+	std::cout.flush();
 	divide2D_M();
-
+	std::cout << "     *** 7 ***" << endl;
+	std::cout.flush();
 	distributeCellGrowthProgress_M();
-
+	std::cout << "     *** 8 ***" << endl;
+	std::cout.flush();
 	allComponentsMove_M();
-
+	std::cout << "     *** 9 ***" << endl;
+	std::cout.flush();
 	handleMembrGrowth_M();
+	std::cout << "     *** 10 ***" << endl;
+	std::cout.flush();
 }
 
 void SceCells::runStretchTest(double dt) {
