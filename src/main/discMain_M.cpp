@@ -73,7 +73,8 @@ void updateDivThres(double& curDivThred, uint& i, double& dt,
 		double& decayCoeff, double& divThreshold) {
 	double curTime = i * dt;
 	double decay = exp(-curTime * decayCoeff);
-	curDivThred = 1.0 - (1.0 - divThreshold) * decay;
+	//curDivThred = 1.0 - (1.0 - divThreshold) * decay;
+	curDivThred = divThreshold ;
 }
 
 int main(int argc, char* argv[]) {

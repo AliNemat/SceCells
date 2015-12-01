@@ -2455,8 +2455,8 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 
 void SceNodes::processMembrAdh_M() {
 	keepAdhIndxCopyInHost_M();
-	removeInvalidPairs_M();
 	applyMembrAdh_M();
+	removeInvalidPairs_M();
 }
 
 void SceNodes::keepAdhIndxCopyInHost_M() {

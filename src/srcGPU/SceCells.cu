@@ -1,4 +1,5 @@
 #include "SceCells.h"
+#include <cmath>
 
 double epsilon = 1.0e-12;
 
@@ -2986,7 +2987,7 @@ void SceCells::decideIfAddMembrNode_M() {
 			cellInfoVecs.membrGrowProgress.begin(), SaxpyFunctor(dt));
 
 	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
-	thrust::transform(
+/**Ali	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.membrGrowProgress.begin(),
 							cellInfoVecs.activeMembrNodeCounts.begin())),
@@ -2998,6 +2999,20 @@ void SceCells::decideIfAddMembrNode_M() {
 					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
 							cellInfoVecs.membrGrowProgress.begin())),
 			MemGrowFunc(maxMembrNode));
+*/
+         thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin()))
+					+ curActCellCt,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
+							cellInfoVecs.membrGrowProgress.begin())),
+			MemGrowFunc(maxMembrNode));
+
 }
 
 /**
@@ -3385,6 +3400,9 @@ void SceCells::calCellArea() {
 }
 
 CellsStatsData SceCells::outputPolyCountData() {
+       double sumX,sumY,cntr_X_Domain,cntr_Y_Domain ; 
+       int BdryApproach ; 
+       BdryApproach=2 ;  
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	calCellArea();
@@ -3438,7 +3456,8 @@ CellsStatsData SceCells::outputPolyCountData() {
 	thrust::copy(cellInfoVecs.cellAreaVec.begin(),
 			cellInfoVecs.cellAreaVec.begin()
 					+ allocPara_m.currentActiveCellCount, cellAreaHost.begin());
-
+        sumX=0 ; 
+        sumY=0 ; 
 	for (uint i = 0; i < allocPara_m.currentActiveCellCount; i++) {
 		CellStats cellStatsData;
 		cellStatsData.cellGrowthProgress = growthProVecHost[i];
@@ -3480,7 +3499,8 @@ CellsStatsData SceCells::outputPolyCountData() {
 				}
 			}
 		}
-
+                 
+                
 		cellStatsData.isBdryCell = isBdry;
 		cellStatsData.numNeighbors = neighbors.size();
 		cellStatsData.currentActiveMembrNodes = activeMembrNodeCountHost[i];
@@ -3491,7 +3511,43 @@ CellsStatsData SceCells::outputPolyCountData() {
 				centerCoordYHost[i], 0);
 		cellStatsData.cellArea = cellAreaHost[i];
 		result.cellsStats.push_back(cellStatsData);
+                sumX=sumX+cellStatsData.cellCenter.x ; 
+                sumY=sumY+cellStatsData.cellCenter.y ;
+                
 	}
+//Ali
+        if (BdryApproach==2) {  
+          cout << "sumX=" << sumX << endl ; 
+          cout << "sumY=" << sumY << endl ; 
+          cntr_X_Domain=sumX/result.cellsStats.size() ; 
+          cntr_Y_Domain=sumY/result.cellsStats.size() ;  
+          cout << "cntr_X=" << cntr_X_Domain << endl ; 
+          cout << "cntr_Y=" << cntr_Y_Domain << endl ;
+
+          double R_Max ;
+          double Distance ;
+          R_Max=0 ;  
+	  for (uint i = 0; i < allocPara_m.currentActiveCellCount; i++) {
+            Distance=sqrt( pow(centerCoordXHost[i]-cntr_X_Domain,2) +pow(centerCoordYHost[i]-cntr_Y_Domain,2) ) ; 
+            if (Distance > R_Max) {
+              R_Max=Distance ; 
+            }
+          }
+        
+          cout << "R_Max=" << R_Max << endl ;
+
+	  for (uint i = 0; i < allocPara_m.currentActiveCellCount; i++) {
+            Distance=sqrt( pow(centerCoordXHost[i]-cntr_X_Domain,2) +pow(centerCoordYHost[i]-cntr_Y_Domain,2) ) ; 
+            if (Distance > 0.9* R_Max) {
+	      result.cellsStats[i].isBdryCell = true;
+              cout << "isBdryCell"<< i<< endl ; 
+            }
+            else {
+	      result.cellsStats[i].isBdryCell = false;
+              cout << "isNormalCell"<< i << endl ; 
+            }
+          }
+        }
 	return result;
 }
 

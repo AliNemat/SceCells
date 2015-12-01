@@ -614,6 +614,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		uint index;
 		double dist;
 
+		_nodeAdhereIndex[myValue] = -1 ; 
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOther = _extendedValuesAddress[i];
 			if (nodeRankOther == myValue) {
@@ -622,11 +623,11 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 			if (bothMembrDiffCell(myValue, nodeRankOther)) {
 				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
-				if (_nodeAdhereIndex[myValue] == -1) {
+			//	if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
 							yPos, _nodeLocXAddress[nodeRankOther],
 							_nodeLocYAddress[nodeRankOther]);
-				}
+			//	}
 			}
 		}
 		if (isSuccess) {

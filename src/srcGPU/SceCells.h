@@ -691,16 +691,24 @@ struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 	}
 };
 
-struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
+
+
+
+//Ali struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
+struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 	uint _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
 	__host__ __device__ MemGrowFunc(uint bound) :
 			_bound(bound) {
 	}
-	__host__ __device__ BoolD operator()(const DUi& dui) {
-		double progress = thrust::get<0>(dui);
-		uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0) {
+	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
+	__host__ __device__ BoolD operator()(const UiDD& uidd) {
+		//Ali double progress = thrust::get<0>(dui);
+		uint   curActiveMembrNode = thrust::get<0>(uidd); //Ali
+		double progress = thrust::get<1>(uidd); //Ali
+                double TensionMax=thrust::get<2>(uidd); //Ali
+		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
+		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>2.5 ) {
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
