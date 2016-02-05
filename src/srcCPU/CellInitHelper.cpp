@@ -1,11 +1,38 @@
-/*
- * CellInitHelper.cpp
+
+ /* CellInitHelper.cpp
  *
  *  Created on: Sep 22, 2013
  *      Author: wsun2
  */
-
+#include <fstream>
 #include "CellInitHelper.h"
+
+//Ali 
+ForReadingData_M2 ReadFile_M2() {
+
+          std::vector<GEOMETRY::Point2D> result;
+          std::fstream inputc;
+          ForReadingData_M2  ForReadingData1; 
+
+          inputc.open("/home/anematba/workspace/2016/Feb/2nd/SceCells/resources/CellCenters2.txt");
+
+          if (inputc.is_open())
+          {
+            cout << "File successfully open";
+          }
+         else
+         {
+          cout << "Error opening file";
+          }
+          for (int i = 0; i < 7; i = i + 1) {
+	    cout << "i=" << i << endl;		
+	    inputc >> ForReadingData1.TempSX[i] >> ForReadingData1.TempSY[i] >> ForReadingData1.TempSZ[i];	
+            }     
+
+return ForReadingData1; 
+}
+//Ali 
+
 
 CellInitHelper::CellInitHelper() {
 	int type = globalConfigVars.getConfigValue("SimulationType").toInt();
@@ -511,19 +538,41 @@ RawDataInput CellInitHelper::generateRawInput_stab() {
 
 RawDataInput_M CellInitHelper::generateRawInput_M() {
 	RawDataInput_M rawData;
+
 	rawData.simuType = simuType;
 	vector<CVector> insideCellCenters;
 	vector<CVector> outsideBdryNodePos;
 	std::string bdryInputFileName = globalConfigVars.getConfigValue(
 			"Bdry_InputFileName").toString();
 
+         //Ali 
+        GEOMETRY::Point2D Point2D1[7];
+        ForReadingData_M2 ForReadingData2 = ReadFile_M2();
+        //Ali 
+
 	GEOMETRY::MeshGen meshGen;
 
 	GEOMETRY::UnstructMesh2D mesh = meshGen.generateMesh2DFromFile(
 			bdryInputFileName);
 
-	std::vector<GEOMETRY::Point2D> insideCenterCenters =
-			mesh.getAllInsidePoints();
+
+         //Ali
+        std::vector<GEOMETRY::Point2D> insideCenterCenters ; 
+        for (int ii = 0; ii <7; ii = ii + 1) {
+		
+		Point2D1[ii].Assign_M2(ForReadingData2.TempSX[ii], ForReadingData2.TempSY[ii]);
+		cout << "x coordinate=" << Point2D1[ii].getX() << "y coordinate=" << Point2D1[ii].getY() << "Is on Boundary=" << Point2D1[ii].isIsOnBdry() << endl;
+	insideCenterCenters.push_back(Point2D1[ii]); 
+	}
+         
+        //Ali 
+
+
+         //Ali comment
+//	std::vector<GEOMETRY::Point2D> insideCenterCenters =
+//			mesh.getAllInsidePoints();
+
+       //Ali comment
 
 	uint initCellCt = insideCenterCenters.size();
 
@@ -532,6 +581,8 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 				CVector(insideCenterCenters[i].getX(),
 						insideCenterCenters[i].getY(), 0));
 	}
+
+
 
 	double randNum;
 	double progDivStart =

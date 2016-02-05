@@ -19,10 +19,18 @@ Point2D::~Point2D() {
 
 }
 
-} /* namespace GEOMETRY */
+void Point2D::Assign_M2(double inputx1, double inputy1) {
+	isOnBdry = false;
+	x = inputx1;
+	y = inputy1;
+}
+
 
 GEOMETRY::Point2D::Point2D(double inputX, double inputY) {
 	isOnBdry = false;
 	x = inputX;
 	y = inputY;
 }
+
+
+} /* namespace GEOMETRY */

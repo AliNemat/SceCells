@@ -43,6 +43,10 @@ public:
 	void setIsOnBdry(bool isOnBdry) {
 		this->isOnBdry = isOnBdry;
 	}
+
+        void Assign_M2(double inputx1, double inputy1) ; 
+                 
+
 };
 
 } /* namespace GEOMETRY */

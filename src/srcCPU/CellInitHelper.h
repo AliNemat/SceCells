@@ -24,6 +24,15 @@ using namespace std;
 /**
  * Parameter the controls the simualtion.
  */
+//Ali
+struct ForReadingData_M2 {
+      public: 
+       double TempSX[7],TempSY[7],TempSZ[7]; 
+}; 
+
+ForReadingData_M2  ReadFile_M2();
+//Ali 
+
 struct SimulationGlobalParameter {
 public:
 	std::string animationNameBase;
