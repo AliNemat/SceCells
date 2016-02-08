@@ -14,7 +14,7 @@ ForReadingData_M2 ReadFile_M2() {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
 
-          inputc.open("/home/anematba/workspace/2016/Feb/2nd/SceCells/resources/CellCenters2.txt");
+          inputc.open("./resources/CellCenters2.txt");
 
           if (inputc.is_open())
           {
