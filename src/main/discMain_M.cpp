@@ -28,7 +28,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort =
 			exit(code);
 	}
 }
-
+//test here
 void initializeSlurmConfig(int argc, char* argv[]) {
 	// read configuration.
 	ConfigParser parser;
