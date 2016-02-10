@@ -14,7 +14,7 @@ ForReadingData_M2 ReadFile_M2() {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
 
-          inputc.open("./resources/CellCenters.txt");
+          inputc.open("./resources/CellCenters22.txt");
 
           if (inputc.is_open())
           {
