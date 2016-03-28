@@ -602,6 +602,9 @@ void SceCells::initCellInfoVecs() {
 void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0);
+        //Ali
+	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0);
+        //Ali
 	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
 			bioPara.cellInitLength);
 	cellInfoVecs.lengthDifference.resize(allocPara_m.maxCellCount, 0.0);
@@ -1299,12 +1302,19 @@ void SceCells::runAllCellLogicsDisc_M(double dt) {
 	applySceCellDisc_M();
 	std::cout << "     *** 3 ***" << endl;
 	std::cout.flush();
-	applyMemForce_M();
-	std::cout << "     *** 4 ***" << endl;
-	std::cout.flush();
+//Ali        
 	computeCenterPos_M();
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
+//Ali 
+	applyMemForce_M();
+	std::cout << "     *** 4 ***" << endl;
+	std::cout.flush();
+     //Ali cmment //
+//	computeCenterPos_M();
+	std::cout << "     *** 5 ***" << endl;
+	std::cout.flush();
+     //Ali cmment //
 	growAtRandom_M(dt);
 	std::cout << "     *** 6 ***" << endl;
 	std::cout.flush();
@@ -1646,14 +1656,17 @@ void SceCells::applyMemForce_M() {
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
-
+        //Ali
+        thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
+        //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
 	double* nodeLocYAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocY[0]));
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
-
+//Ali Comment start
+/*
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1706,6 +1719,85 @@ void SceCells::applyMemForce_M() {
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
+**/
+// Ali comment end
+//Ali 
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Time.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ allocPara_m.bdryNodeCount)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Time.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeVelY.begin()
+									+ allocPara_m.bdryNodeCount))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().membrTensionMag.begin(),
+							nodes->getInfoVecs().membrTenMagRi.begin(),
+							nodes->getInfoVecs().membrLinkRiMidX.begin(),
+							nodes->getInfoVecs().membrLinkRiMidY.begin(),
+							nodes->getInfoVecs().membrBendLeftX.begin(),
+							nodes->getInfoVecs().membrBendLeftY.begin(),
+							nodes->getInfoVecs().membrBendRightX.begin(),
+							nodes->getInfoVecs().membrBendRightY.begin()))
+					+ allocPara_m.bdryNodeCount,
+			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
+
+
+
+//Ali
+
+
 
 	double* bendLeftXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().membrBendLeftX[0]));

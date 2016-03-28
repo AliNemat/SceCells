@@ -28,6 +28,7 @@ using namespace std;
 struct ForReadingData_M2 {
       public: 
        double TempSX[7],TempSY[7],TempSZ[7]; 
+       int    CellNumber ; 
 }; 
 
 ForReadingData_M2  ReadFile_M2();

@@ -13,7 +13,12 @@ typedef thrust::tuple<uint, double, double> UiDD;
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
-typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
+//Ali comment 
+//typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
+//Ali comment
+//Ali
+typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, double> TensionData;
+//Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
@@ -196,7 +201,8 @@ struct LessEqualTo: public thrust::unary_function<UiB, bool> {
 };
 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
-
+//Ali comment
+/**
 struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	uint _bdryCount;
 	uint _maxNodePerCell;
@@ -349,11 +355,18 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
 
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
-
+                                                if (locX > 25) {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0;
+										/ term0 +0.5  ;
+                                                }
+                                                else {
+						velX = velX
+								+ bendMultiplier
+										* (term2x - term1x + term3x - term4x)
+										/ term0 -0.5  ;
+                                                }
 
 						bendRightX = bendMultiplier * (term4x - term2x) / term0;
 
@@ -374,6 +387,197 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		}
 	}
 };
+**/ //Ali comment end
+//Ali
+struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
+	uint _bdryCount;
+	uint _maxNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
+			double* locXAddr, double* locYAddr, bool* isActiveAddr) :
+			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec10 operator()(const TensionData &tData) const {
+
+		uint activeMembrCount = thrust::get<0>(tData);
+		double Cell_CenterX = thrust::get<1>(tData);
+		double Cell_Time_F  = thrust::get<2>(tData);
+		uint   cellRank = thrust::get<3>(tData);
+		uint   nodeRank = thrust::get<4>(tData);
+		double locX = thrust::get<5>(tData);
+		double locY = thrust::get<6>(tData);
+		double velX = thrust::get<7>(tData);
+		double velY = thrust::get<8>(tData);
+
+		uint index = _bdryCount + cellRank * _maxNodePerCell + nodeRank;
+
+		double mag = 0;
+		double rightMag = 0;
+		double midX = 0;
+		double midY = 0;
+		double bendLeftX = 0;
+		double bendLeftY = 0;
+		double bendRightX = 0;
+		double bendRightY = 0;
+
+		double leftPosX;
+		double leftPosY;
+		double leftDiffX;
+		double leftDiffY;
+		double lenLeft;
+
+		double rightPosX;
+		double rightPosY;
+		double rightDiffX;
+		double rightDiffY;
+		double lenRight;
+
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
+					bendLeftX, bendLeftY, bendRightX, bendRightY);
+		} else {
+			int index_left = nodeRank - 1;
+			if (index_left == -1) {
+				index_left = activeMembrCount - 1;
+			}
+			index_left = index_left + _bdryCount + cellRank * _maxNodePerCell;
+			// apply tension force from left
+			if (_isActiveAddr[index_left]) {
+				leftPosX = _locXAddr[index_left];
+				leftPosY = _locYAddr[index_left];
+				leftDiffX = leftPosX - locX;
+				leftDiffY = leftPosY - locY;
+				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
+				double forceVal = calMembrForce(lenLeft);
+				if (longEnough(lenLeft)) {
+					velX = velX + forceVal * leftDiffX / lenLeft;
+					velY = velY + forceVal * leftDiffY / lenLeft;
+					mag = forceVal + mag;
+				}
+			}
+
+			int index_right = nodeRank + 1;
+			if (index_right == (int) activeMembrCount) {
+				index_right = 0;
+			}
+			index_right = index_right + _bdryCount + cellRank * _maxNodePerCell;
+			// apply tension force from right
+			if (_isActiveAddr[index_right]) {
+				rightPosX = _locXAddr[index_right];
+				rightPosY = _locYAddr[index_right];
+				rightDiffX = rightPosX - locX;
+				rightDiffY = rightPosY - locY;
+				lenRight = sqrt(
+						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
+				double forceVal = calMembrForce(lenRight);
+				if (longEnough(lenRight)) {
+					velX = velX + forceVal * rightDiffX / lenRight;
+					velY = velY + forceVal * rightDiffY / lenRight;
+					mag = forceVal + mag;
+					rightMag = forceVal;
+					midX = (rightPosX + locX) / 2;
+					midY = (rightPosY + locY) / 2;
+				}
+			}
+			// applies bending force.
+			if (_isActiveAddr[index_left] && _isActiveAddr[index_right]) {
+				if (longEnough(lenLeft) && longEnough(lenRight)) {
+					double dotP = -leftDiffX * rightDiffX
+							- leftDiffY * rightDiffY;
+					double vecP = dotP / (lenLeft * lenRight);
+
+					// because of numerical error, 1 - vecP*vecP could be less than 0, although it is not possible in mathematics.
+					// sqrt(negative number) would cause term0 to be nan.
+					// if an nan number is produced, it will not be accepted by bigEnough function.
+					// this is OK, because we know at that time bending energy should be 0.
+					double term0 = sqrt(1 - vecP * vecP);
+					// this if statement is required for numerical purpose only.
+					// Whole term would go to zero when term 0 close to zero, but the computation
+					// would cause numerical errors, so need to make sure term0 is big enough.
+					if (bigEnough(term0)) {
+						double angle;
+						// value of cross product in z direction: vecA_X * vecB_Y - vecA_Y * vecB_X
+						double crossZ = leftDiffY * rightDiffX
+								- leftDiffX * rightDiffY;
+						if (crossZ > 0) {
+							// means angle > PI (concave)
+							angle = PI + acos(vecP);
+						} else {
+							// means angle < PI (convex)
+							angle = PI - acos(vecP);
+						}
+						// leftDiffX = ax-bx
+						// rightDiffX = cx-bx
+						double term1x = -rightDiffX / (lenLeft * lenRight);
+						double term2x = leftDiffX / (lenLeft * lenRight);
+						double term3x = (dotP * leftDiffX)
+								/ (lenLeft * lenLeft * lenLeft * lenRight);
+						double term4x = (-dotP * rightDiffX)
+								/ (lenLeft * lenRight * lenRight * lenRight);
+						double term1y = -rightDiffY / (lenLeft * lenRight);
+						double term2y = leftDiffY / (lenLeft * lenRight);
+						double term3y = (dotP * leftDiffY)
+								/ (lenLeft * lenLeft * lenLeft * lenRight);
+						double term4y = (-dotP * rightDiffY)
+								/ (lenLeft * lenRight * lenRight * lenRight);
+
+						double bendMultiplier = -calBendMulti(angle,
+								activeMembrCount);
+						// because sign of angle formula would change if crossZ < 0
+						if (crossZ > 0) {
+							bendMultiplier = -bendMultiplier;
+						}
+
+						// following are values obtained from matlab: (derivative of angle to each coordinate:
+						//-((bx - cx)/(Lab*Lbc) - (DotP*(2*ax - 2*bx))/(2*Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((ax - 2*bx + cx)/(Lab*Lbc) + (DotP*(2*ax - 2*bx))/(2*Lab^3*Lbc) - (DotP*(2*bx - 2*cx))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//((ax - bx)/(Lab*Lbc) - (DotP*(2*bx - 2*cx))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((by - cy)/(Lab*Lbc) - (DotP*(2*ay - 2*by))/(2*Lab^3*Lbc))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//-((ay - 2*by + cy)/(Lab*Lbc) + (DotP*(2*ay - 2*by))/(2*Lab^3*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+						//((ay - by)/(Lab*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
+
+						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
+
+						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
+                                                if (locX > Cell_CenterX) {
+						velX = velX
+								+ bendMultiplier
+										* (term2x - term1x + term3x - term4x)
+										/ term0 +0.01*Cell_Time_F  ;
+                                                }
+                                                else {
+						velX = velX
+								+ bendMultiplier
+										* (term2x - term1x + term3x - term4x)
+										/ term0 -0.01*Cell_Time_F  ;
+                                                }
+
+						bendRightX = bendMultiplier * (term4x - term2x) / term0;
+
+						bendLeftY = bendMultiplier * (term1y - term3y) / term0;
+
+						velY = velY
+								+ bendMultiplier
+										* (term2y - term1y + term3y - term4y)
+										/ term0;
+
+						bendRightY = bendMultiplier * (term4y - term2y) / term0;
+
+					}
+				}
+			}
+			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
+					bendLeftX, bendLeftY, bendRightX, bendRightY);
+		}
+	}
+}; 
+
+//Ali
 
 struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 	uint _maxNodePerCell;
@@ -708,7 +912,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		double progress = thrust::get<1>(uidd); //Ali
                 double TensionMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>12.5 ) {
+		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>125 ) {
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
@@ -1515,7 +1719,10 @@ struct CellInfoVecs {
 	 * progress == 1 means ready to divide
 	 */
 	thrust::device_vector<double> growthProgress;
-
+//Ali
+	thrust::device_vector<double> Cell_Time;
+        
+//Ali
 	thrust::device_vector<double> expectedLength;
 //thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;

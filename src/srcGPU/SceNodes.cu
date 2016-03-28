@@ -248,7 +248,7 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	infoVecs.nodeCellType = hostTmpVector;
 	infoVecs.nodeIsActive = hostTmpVector2;
 	infoVecs.nodeCellRank = hostTmpVector3;
-
+       std::cout << " I am in SceNodes constructor with long input which includes copyParaToGPUConstMem function " << endl ; 
 	copyParaToGPUConstMem();
 }
 
@@ -318,6 +318,7 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	//std::cout << "copy finished!" << std::endl;
 	//std::cout.flush();
 	copyParaToGPUConstMem_M();
+        std::cout << " I am in SceNodes constructor with short input which includes copyParaToGPUConstMem_M  function " << endl ; 
 	//std::cout << "at the end" << std::endl;
 	//std::cout.flush();
 }

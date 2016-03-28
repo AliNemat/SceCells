@@ -24,7 +24,8 @@ ForReadingData_M2 ReadFile_M2() {
          {
           cout << "Error opening file";
           }
-          for (int i = 0; i < 7; i = i + 1) {
+          inputc >> ForReadingData1.CellNumber ; 
+          for (int i = 0; i <ForReadingData1.CellNumber; i = i + 1) {
 	    cout << "i=" << i << endl;		
 	    inputc >> ForReadingData1.TempSX[i] >> ForReadingData1.TempSY[i] >> ForReadingData1.TempSZ[i];	
             }     
@@ -558,7 +559,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 
          //Ali
         std::vector<GEOMETRY::Point2D> insideCenterCenters ; 
-        for (int ii = 0; ii <7; ii = ii + 1) {
+        for (int ii = 0; ii <ForReadingData2.CellNumber; ii = ii + 1) {
 		
 		Point2D1[ii].Assign_M2(ForReadingData2.TempSX[ii], ForReadingData2.TempSY[ii]);
 		cout << "x coordinate=" << Point2D1[ii].getX() << "y coordinate=" << Point2D1[ii].getY() << "Is on Boundary=" << Point2D1[ii].isIsOnBdry() << endl;
@@ -590,7 +591,9 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 	for (uint i = 0; i < initCellCt; i++) {
 		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart;
 		//std::cout << "rand init growth progress = " << randNum << std::endl;
-		rawData.cellGrowProgVec.push_back(randNum);
+//Ali to make the initial progree of all nodes zero 
+	//	rawData.cellGrowProgVec.push_back(randNum);
+		rawData.cellGrowProgVec.push_back(0.0);
 	}
 
 	std::cout << "Printing initial cell center positions ......" << std::endl;
@@ -792,9 +795,13 @@ vector<CVector> CellInitHelper::generateInitIntnlNodes(CVector& center,
 			globalConfigVars.getConfigValue("InitCellNodeCount").toInt();
 	uint maxInitNodeCount = globalConfigVars.getConfigValue(
 			"MaxIntnlNodeCountPerCell").toInt();
+//Ali
 
-	uint initIntnlNodeCt = minInitNodeCount
-			+ (maxInitNodeCount - minInitNodeCount) * initProg;
+	uint initIntnlNodeCt = minInitNodeCount ; 
+//Ali
+//Ali comment
+//	uint initIntnlNodeCt = minInitNodeCount
+//			+ (maxInitNodeCount - minInitNodeCount) * initProg;
 
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {
@@ -850,6 +857,9 @@ vector<CVector> CellInitHelper::tryGenInitCellNodes() {
 	double randX, randY;
 	while (foundCount < initCellNodeCount) {
 		bool isInCircle = false;
+               //Ali
+               cout << "I am in the wrong one" << endl ; 
+               //Ali
 		while (!isInCircle) {
 			randX = getRandomNum(-radius, radius);
 			randY = getRandomNum(-radius, radius);
@@ -867,15 +877,27 @@ vector<CVector> CellInitHelper::tryGenInitCellNodes(uint initNodeCt) {
 	vector<CVector> poss;
 	uint foundCount = 0;
 	double randX, randY;
+
+               //Ali
+               cout << "I am in the right one" << endl ; 
+               cout << "# of internal Nodes" << initNodeCt <<endl ; 
+               //Ali
 	while (foundCount < initNodeCt) {
 		bool isInCircle = false;
-		while (!isInCircle) {
+		//while (!isInCircle) {
 			randX = getRandomNum(-radius, radius);
 			randY = getRandomNum(-radius, radius);
 			isInCircle = (sqrt(randX * randX + randY * randY) < radius);
-		}
-		poss.push_back(CVector(randX, randY, 0));
-		foundCount++;
+	//	}
+                //Ali
+                 if (isInCircle) {
+                //Ali
+		 poss.push_back(CVector(randX, randY, 0));
+		 foundCount++;
+               cout << "#internal nodes location" << foundCount<<"isInCircle"<<isInCircle <<endl ; 
+               //Ali
+                 }
+               //Ali 
 	}
 	return poss;
 }
