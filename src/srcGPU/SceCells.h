@@ -359,13 +359,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 +0.5  ;
+										/ term0   ;
                                                 }
                                                 else {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 -0.5  ;
+										/ term0   ;
                                                 }
 
 						bendRightX = bendMultiplier * (term4x - term2x) / term0;
@@ -387,7 +387,9 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		}
 	}
 };
-**/ //Ali comment end
+*/ 
+//Ali comment end
+
 //Ali
 struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	uint _bdryCount;
@@ -548,13 +550,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 +0.01*Cell_Time_F  ;
+										/ term0 +0.00*Cell_Time_F  ;
                                                 }
                                                 else {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 -0.01*Cell_Time_F  ;
+										/ term0 -0.00*Cell_Time_F  ;
                                                 }
 
 						bendRightX = bendMultiplier * (term4x - term2x) / term0;

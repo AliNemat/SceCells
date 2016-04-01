@@ -21,11 +21,11 @@ __constant__ double grthPrgrCriEnd_M;
 
 __device__
 double calMembrForce(double& length) {
-	if (length < membrEquLen) {
-		return 0;
-	} else {
+//	if (length < membrEquLen) {
+//		return 0;
+//	} else {
 		return (length - membrEquLen) * membrStiff;
-	}
+//	}
 }
 
 __device__
@@ -1665,8 +1665,8 @@ void SceCells::applyMemForce_M() {
 			&(nodes->getInfoVecs().nodeLocY[0]));
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
-//Ali Comment start
-/*
+/**Ali Comment start
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1719,6 +1719,7 @@ void SceCells::applyMemForce_M() {
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
+
 **/
 // Ali comment end
 //Ali 
@@ -1792,7 +1793,6 @@ void SceCells::applyMemForce_M() {
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
-
 
 
 //Ali

@@ -1401,6 +1401,26 @@ void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+__device__
+void calAndAddInter_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes) {
+	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
+	double forceValue;
+	if (linkLength > sceInterBPara_M[4]) {
+		forceValue = 0;
+	} else {
+		forceValue =24*0.1/linkLength*pow((0.2/linkLength),6)*( 1.0-2*pow(0.2/linkLength,6) ) ;
+			
+				
+						
+		if (forceValue > 0) {
+			forceValue = 0;
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}
+
 
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,

@@ -456,6 +456,9 @@ double computeDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
 __device__
 void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& xRes, double& yRes);
+__device__
+void calAndAddInter_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& xRes, double& yRes);
 
 __device__
 void calAndAddIntraB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
@@ -621,13 +624,15 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 				continue;
 			}
 			if (bothMembrDiffCell(myValue, nodeRankOther)) {
-				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+//Ali
+				calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
 			//	if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
 							yPos, _nodeLocXAddress[nodeRankOther],
 							_nodeLocYAddress[nodeRankOther]);
 			//	}
+//Ali 
 			}
 		}
 		if (isSuccess) {
