@@ -985,6 +985,7 @@ void SimulationGlobalParameter::initFromConfig() {
 			globalConfigVars.getConfigValue("SimulationTotalTime").toDouble();
 
 	dt = globalConfigVars.getConfigValue("SimulationTimeStep").toDouble();
+	Damp_Coef= globalConfigVars.getConfigValue("DampingCoef").toDouble();
 
 	totalTimeSteps = totalSimuTime / dt;
 

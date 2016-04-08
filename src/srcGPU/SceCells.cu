@@ -1285,11 +1285,12 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 	//std::cerr << "after all components move." << std::endl;
 }
 
-void SceCells::runAllCellLogicsDisc_M(double dt) {
+//Ali void SceCells::runAllCellLogicsDisc_M(double dt) {
+void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
 	this->dt = dt;
-
+        this->Damp_Coef=Damp_Coef ; //Ali 
 	growthAuxData.prolifDecay = exp(-curTime * miscPara.prolifDecayCoeff);
 	growthAuxData.randomGrowthSpeedMin = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMin_Ori;
@@ -1648,7 +1649,8 @@ void SceCells::moveNodes_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin())),
-			SaxpyFunctorDim2(dt));
+//Ali		SaxpyFunctorDim2(dt));
+			SaxpyFunctorDim2_Damp(dt,Damp_Coef));   //Ali
 }
 
 void SceCells::applyMemForce_M() {

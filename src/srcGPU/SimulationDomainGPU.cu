@@ -113,7 +113,8 @@ void SimulationDomainGPU::runAllLogic(double dt) {
 	}
 }
 
-void SimulationDomainGPU::runAllLogic_M(double dt) {
+//Ali void SimulationDomainGPU::runAllLogic_M(double dt) {
+void SimulationDomainGPU::runAllLogic_M(double dt, double Damp_Coef) {                          //Ali
 #ifdef DebugModeDomain
 	cudaEvent_t start1, start2, stop;
 	float elapsedTime1, elapsedTime2;
@@ -134,7 +135,7 @@ void SimulationDomainGPU::runAllLogic_M(double dt) {
 #endif
 	cout << "--- 3 ---" << endl;
 	cout.flush();
-	cells.runAllCellLogicsDisc_M(dt);
+	cells.runAllCellLogicsDisc_M(dt,Damp_Coef);
 	cout << "--- 4 ---" << endl;
 	cout.flush();
 #ifdef DebugModeDomain

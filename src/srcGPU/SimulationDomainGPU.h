@@ -127,7 +127,8 @@ public:
 	 * Contains cell level logics and node level logics.
 	 * @param dt timestep
 	 */
-	void runAllLogic_M(double dt);
+//Ali 	void runAllLogic_M(double dt);
+	void runAllLogic_M(double dt,double Damp_Coef);
 
 	bool isDividing_ForAni();
 

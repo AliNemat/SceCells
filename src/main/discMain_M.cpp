@@ -152,7 +152,8 @@ int main(int argc, char* argv[]) {
 			std::cout << "substep 6 " << std::endl;
 			aniFrame++;
 		}
-		simuDomain.runAllLogic_M(mainPara.dt);
+//Ali		simuDomain.runAllLogic_M(mainPara.dt);
+		simuDomain.runAllLogic_M(mainPara.dt,mainPara.Damp_Coef);  //Ali
 	}
 
 	return 0;

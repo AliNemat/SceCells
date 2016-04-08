@@ -143,6 +143,8 @@ struct SceMechPara {
  */
 struct SceMechPara_M {
 	double sceInterBParaCPU_M[5];
+	double sceInterBParaCPU_Jones_M[3]; //Ali
+
 	double sceIntnlBParaCPU_M[5];
 	double sceIntraParaCPU_M[5];
 	double sceIntraParaDivCPU_M[5];

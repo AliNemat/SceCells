@@ -39,6 +39,7 @@ public:
 	std::string animationNameBase;
 	double totalSimuTime;
 	double dt;
+        double Damp_Coef ; 
 	int totalTimeSteps;
 	int totalFrameCount;
 	int aniAuxVar;

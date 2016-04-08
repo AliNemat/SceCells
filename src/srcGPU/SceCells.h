@@ -966,8 +966,44 @@ struct SaxpyFunctorDim2: public thrust::binary_function<CVec2, CVec2, CVec2> {
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
+/*/ Ali
+struct SaxpyFunctorDimDamp: public thrust::binary_function<CVec2, CVec2, CVec2> {
+	double _dt;
+        double _DampCoef ;
+        double Ali2 ;  
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ SaxpyFunctorDimDamp(double dt, double Damp_Coef) :
+			_dt(dt),_DmapCoef(Damp_Coef) {
+	}
+	__host__ __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+		double xRes = thrust::get<0>(vec1) * _dt + thrust::get<0>(vec2);
+		double yRes = thrust::get<1>(vec1) * _dt + thrust::get<1>(vec2);
+		return thrust::make_tuple(xRes, yRes);
+	}
+};
+
+*/
+
+struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2> {
+        double _dt;
+        double _DampCoef ; 
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ SaxpyFunctorDim2_Damp(double dt, double Damp_Coef) :
+                        _dt(dt), _DampCoef(Damp_Coef) 
+                        {
+	}
+	__host__ __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+		double xRes = thrust::get<0>(vec1) * _dt/_DampCoef + thrust::get<0>(vec2);
+		double yRes = thrust::get<1>(vec1) * _dt/_DampCoef + thrust::get<1>(vec2);
+		return thrust::make_tuple(xRes, yRes);
+	}
+};
+
+
 
 /**
+
+
  * Point condition operater, decide if cell is ready to add a new point.
  * @param _threshold threshold value for difference of current progress and last checkpoint.
  * if difference is bigger than threshold then the cell is ready for adding a new node.
@@ -1921,7 +1957,7 @@ class SceCells {
 	uint totalNodeCountForActiveCells;
 
 	double dt;
-
+        double Damp_Coef ;   //Ali  
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;
@@ -2193,7 +2229,8 @@ public:
 
 	void runAllCellLevelLogicsDisc(double dt);
 
-	void runAllCellLogicsDisc_M(double dt);
+//Ali	void runAllCellLogicsDisc_M(double dt);
+	void runAllCellLogicsDisc_M(double dt, double Damp_Coef);    //Ali 
 
 	void runStretchTest(double dt);
 

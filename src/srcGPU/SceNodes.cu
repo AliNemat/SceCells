@@ -22,6 +22,7 @@ __constant__ uint cellNodeBeginPos_M;
 __constant__ uint allNodeCountPerCell_M;
 __constant__ uint membrThreshold_M;
 __constant__ double sceInterBPara_M[5];
+__constant__ double sceInterBPara_Jones_M[3];  //Ali
 __constant__ double sceIntnlBPara_M[5];
 __constant__ double sceIntraPara_M[5];
 __constant__ double sceIntraParaDiv_M[5];
@@ -371,6 +372,8 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			sizeof(double));
 	cudaMemcpyToSymbol(sceInterBPara_M, mechPara_M.sceInterBParaCPU_M,
 			5 * sizeof(double));
+	cudaMemcpyToSymbol(sceInterBPara_Jones_M, mechPara_M.sceInterBParaCPU_Jones_M,
+			3 * sizeof(double)); //Ali 
 	cudaMemcpyToSymbol(sceIntnlBPara_M, mechPara_M.sceIntnlBParaCPU_M,
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIntraPara_M, mechPara_M.sceIntraParaCPU_M,
@@ -424,6 +427,8 @@ std::vector<std::pair<uint, uint> > SceNodes::obtainPossibleNeighborPairs() {
 }
 
 void SceNodes::readParas_M() {
+
+
 	//////////////////////
 	//// Block 1 /////////
 	//////////////////////
@@ -442,6 +447,23 @@ void SceNodes::readParas_M() {
 	mechPara_M.sceInterBParaCPU_M[2] = k1_InterB;
 	mechPara_M.sceInterBParaCPU_M[3] = k2_InterB;
 	mechPara_M.sceInterBParaCPU_M[4] = interBEffectiveRange;
+
+//Ali
+	//////////////////////
+	//// Block 1.5 /////////
+	//////////////////////
+	double eps_InterB_Jones =
+			globalConfigVars.getConfigValue("SceInterB_Jones_eps").toDouble();
+	double sig_InterB_Jones =
+			globalConfigVars.getConfigValue("SceInterB_Jones_sig").toDouble();
+	double interBEffectiveRange_Jones = globalConfigVars.getConfigValue(
+			"InterBEffectiveRange_Jones").toDouble();
+	mechPara_M.sceInterBParaCPU_Jones_M[0] = eps_InterB_Jones;
+	mechPara_M.sceInterBParaCPU_Jones_M[1] = sig_InterB_Jones;
+	mechPara_M.sceInterBParaCPU_Jones_M[2] = interBEffectiveRange_Jones;
+//Ali
+
+
 
 	//////////////////////
 	//// Block 2 /////////
@@ -1401,15 +1423,17 @@ void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+//Ali
 __device__
 void calAndAddInter_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& xRes, double& yRes) {
 	double linkLength = computeDist2D(xPos, yPos, xPos2, yPos2);
 	double forceValue;
-	if (linkLength > sceInterBPara_M[4]) {
+	if (linkLength > sceInterBPara_Jones_M[2]) {
 		forceValue = 0;
 	} else {
-		forceValue =24*0.1/linkLength*pow((0.2/linkLength),6)*( 1.0-2*pow(0.2/linkLength,6) ) ;
+		forceValue =24*sceInterBPara_Jones_M[0]/linkLength*pow(sceInterBPara_Jones_M[1]/linkLength,6)*
+                                                          ( 1.0-2 *pow(sceInterBPara_Jones_M[1]/linkLength,6) ) ;
 			
 				
 						
@@ -1420,7 +1444,7 @@ void calAndAddInter_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
-
+//Ali
 
 __device__
 void calculateAndAddInterForce(double &xPos, double &yPos, double &zPos,
