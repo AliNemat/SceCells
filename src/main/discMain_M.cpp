@@ -117,13 +117,28 @@ int main(int argc, char* argv[]) {
 			globalConfigVars.getConfigValue("MaxStepTraceBack").toInt();
 
 	// preparation.
+        //Ali
+        
+        CellsStatsData polyData ; 
+        //polyData2.FileName1.open("StressStrain.txt");
+        //polyData2.FileName1<<"Single cell data"<< "\n" ;
+       
+        std:: string FileName2= "StressStrain.CSV" ; 
+        polyData.printStressStrain_Ini( FileName2) ; 
+        //Ali
 	uint aniFrame = 0;
 	// main simulation steps.
 	for (uint i = 0; i <= (uint) (mainPara.totalTimeSteps); i++) {
 		if (i % mainPara.aniAuxVar == 0) {
 			std::cout << "substep 1 " << std::endl;
-			CellsStatsData polyData = simuDomain.outputPolyCountData();
 
+	 		//CellsStatsData polyData = simuDomain.outputPolyCountData();  //Ali comment
+	 		polyData = simuDomain.outputPolyCountData();
+                   
+                        double curTime=i*mainPara.dt ;  //Ali
+                        if (i !=0){ 
+                        polyData.printStressStrain( FileName2,curTime) ; 
+                        }
 			std::cout << "substep 2 " << std::endl;
 			//////// update division threshold //////
 			updateDivThres(curDivThred, i, mainPara.dt, decayCoeff,

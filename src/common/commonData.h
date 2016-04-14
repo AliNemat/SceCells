@@ -17,6 +17,7 @@
 #ifndef COMMONDATA_H_
 #define COMMONDATA_H_
 
+
 typedef unsigned int uint;
 typedef std::map<uint, uint> IndexMap;
 
@@ -641,8 +642,16 @@ struct CellStats {
 	double cellGrowthProgress;
 	bool isBdryCell;
 	uint numNeighbors;
-	double membrGrowthProgress;
+        double cellCenterX ;  //Ali	
+        double membrGrowthProgress;
+        //Ali
+        double membrMaxX ;
+        double membrMinX ;
+        double membrMaxY ;
+        double membrMinY ;
+        //Ali 
 	double cellArea;
+        
 	std::set<int> neighborVec;
 	uint currentActiveIntnlNodes;
 	uint currentActiveMembrNodes;
@@ -659,11 +668,16 @@ struct CountEntry {
 };
 
 class CellsStatsData {
+
+
 public:
+        double MaxDistanceX ; //Ali 
 	std::vector<CellStats> cellsStats;
 	void printPolyCountToFile(std::string fileName, double divThreshold);
 	void printDetailStatsToFile(std::string fileNameBase, int timestep);
 	vector<double> outputPolySides();
+        void printStressStrain(std::string FileName1,double curTime );   //Ali
+        void printStressStrain_Ini(std::string FileName1); // Ali
 };
 
 void insertCount(uint numNeighbor, std::map<uint, uint>& count);
@@ -673,5 +687,6 @@ void printCountsToFile(std::string fileName, std::map<uint, uint>& countNormal,
 std::vector<CountEntry> processCountMap(std::map<uint, uint>& countMap);
 
 void printEntriesToFile(ofstream& fs, std::vector<CountEntry>& countEntries);
-
+//Ali
+//Ali 
 #endif /* COMMONDATA_H_ */

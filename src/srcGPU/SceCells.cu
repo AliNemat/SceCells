@@ -3592,6 +3592,7 @@ CellsStatsData SceCells::outputPolyCountData() {
 					}
 				}
 			}
+
 		}
                  
                 
@@ -3642,6 +3643,13 @@ CellsStatsData SceCells::outputPolyCountData() {
             }
           }
         }
+        //Ali
+        cout << "I want to write data" << endl ;  
+       // ofstream  Stress_Strain_Single ; 
+        //Stress_Strain_Single.open("Stress_Strain_Single.txt"); 
+        //Stress_Strain_Single.close() ;
+       //Ali
+        result.MaxDistanceX=abs(centerCoordXHost[1]-centerCoordXHost[0]); //Ali
 	return result;
 }
 

@@ -487,3 +487,17 @@ vector<double> CellsStatsData::outputPolySides() {
 	}
 	return result;
 }
+
+//Ali
+void CellsStatsData::printStressStrain(std::string FileName1, double curTime) {
+  ofstream ofs1(FileName1.c_str(),ios::app); 
+  ofs1 << curTime<<"," << MaxDistanceX<<std::endl ; 
+
+}
+void CellsStatsData::printStressStrain_Ini(std::string FileName1) {
+  ofstream ofs1(FileName1.c_str(),ios::out); 
+  ofs1 << "Time"<<"," << "Displacement"<<std::endl ; 
+}
+
+    
+
