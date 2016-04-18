@@ -21,6 +21,7 @@ typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, d
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
+//typedef pair<device_vector<double>::iterator,device_vector<double>::iterator> MinMaxNode ; 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
 
 /*
@@ -1964,7 +1965,11 @@ class SceCells {
 	uint totalNodeCountForActiveCells;
 
 	double dt;
-        double Damp_Coef ;   //Ali  
+        double Damp_Coef ;   //Ali
+        double MinX ;  
+        double MaxX ;  
+        double MinY ;  
+        double MaxY ;  
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;

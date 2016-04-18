@@ -119,26 +119,43 @@ int main(int argc, char* argv[]) {
 	// preparation.
         //Ali
         
-        CellsStatsData polyData ; 
+        //CellsStatsData polyData ; 
         //polyData2.FileName1.open("StressStrain.txt");
         //polyData2.FileName1<<"Single cell data"<< "\n" ;
        
-        std:: string FileName2= "StressStrain.CSV" ; 
-        polyData.printStressStrain_Ini( FileName2) ; 
         //Ali
+         
+	double Init_Displace=0.0  ; 
+       std:: string FileName2= "StressStrain.CSV" ; 
 	uint aniFrame = 0;
 	// main simulation steps.
+       bool FirstData=false ; 
 	for (uint i = 0; i <= (uint) (mainPara.totalTimeSteps); i++) {
 		if (i % mainPara.aniAuxVar == 0) {
 			std::cout << "substep 1 " << std::endl;
+			std::cout << "substep 1_confirm " << std::flush;
 
-	 		//CellsStatsData polyData = simuDomain.outputPolyCountData();  //Ali comment
-	 		polyData = simuDomain.outputPolyCountData();
-                   
+	 		CellsStatsData polyData = simuDomain.outputPolyCountData();  //Ali comment
+	              //    CellsStatsData polyData = simuDomain.outputPolyCountData();
+                         
                         double curTime=i*mainPara.dt ;  //Ali
-                        if (i !=0){ 
-                        polyData.printStressStrain( FileName2,curTime) ; 
+                        //Ali
+                        if (FirstData==true) { 
+                          
+                          Init_Displace=polyData.Cells_Extrem_Loc[1]-polyData.Cells_Extrem_Loc[0] ;
+                          cout << "Init_Displace="<< Init_Displace<< endl ; 
+                          FirstData=false ;  
                         }
+                        if (i==0){
+                          polyData.printStressStrain_Ini( FileName2) ;
+                          FirstData=true ; 
+                          cout <<"I am in i=0"<< endl; 
+                        }
+                        if (i !=0 && FirstData==false){
+                          polyData.printStressStrain( FileName2,curTime,Init_Displace) ;
+                         cout<<"I am in writing and i is equal to"<<i<<endl ;  
+                        }
+ 
 			std::cout << "substep 2 " << std::endl;
 			//////// update division threshold //////
 			updateDivThres(curDivThred, i, mainPara.dt, decayCoeff,

@@ -1660,6 +1660,29 @@ void SceCells::applyMemForce_M() {
 	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
         //Ali
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
+        
+        
+       //Ali 
+        
+        thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        MinX= *MinX_Itr ; 
+        MaxX= *MaxX_Itr ; 
+        MinY= *MinY_Itr ; 
+        MaxY= *MaxY_Itr ;  
+        cout<< "# of boundary nodes"<< allocPara_m.bdryNodeCount<<endl ;
+        cout<< "# of total active nodes"<<totalNodeCountForActiveCells <<endl ;
+
+        cout<<"The minimum location in X is="<<MinX<< endl;  
+        cout<<"The maximum location in X is="<<MaxX<< endl;  
+        cout<<"The minimum location in Y is="<<MinY<< endl;  
+        cout<<"The maximum location in Y is="<<MaxY<< endl;  
         //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
@@ -3494,14 +3517,20 @@ void SceCells::calCellArea() {
 }
 
 CellsStatsData SceCells::outputPolyCountData() {
+       
+        cout << " I am at begining of outpolycount"<< std::flush  ; 
+	std::cout.flush();
        double sumX,sumY,cntr_X_Domain,cntr_Y_Domain ; 
        int BdryApproach ; 
        BdryApproach=2 ;  
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
+        cout << " I am before cells area"<< endl ; 
 	calCellArea();
+        cout << " I am after cells area" << endl ; 
 	CellsStatsData result;
 
+        cout << " I am after result" << endl ; 
 	uint bdryCriteria =
 			globalConfigVars.getConfigValue("BdryCellCriteria").toInt();
 	// already on host; no need to call thrust::copy
@@ -3650,6 +3679,14 @@ CellsStatsData SceCells::outputPolyCountData() {
         //Stress_Strain_Single.close() ;
        //Ali
         result.MaxDistanceX=abs(centerCoordXHost[1]-centerCoordXHost[0]); //Ali
+        result.Cells_Extrem_Loc[0]=MinX; 
+        result.Cells_Extrem_Loc[1]=MaxX; 
+        result.Cells_Extrem_Loc[2]=MinY;
+        result.Cells_Extrem_Loc[3]=MaxY ;
+        //if (dt==curTime) { 
+        //result.Init_Displace=MaxX-MinX ; 
+       // }
+       //Ali
 	return result;
 }
 

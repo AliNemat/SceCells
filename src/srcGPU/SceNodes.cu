@@ -2272,7 +2272,7 @@ void SceNodes::sceForcesDisc_M() {
 	cudaEventCreate(&stop);
 	cudaEventRecord(start1, 0);
 #endif
-	cout << "     --- 1 ---" << endl;
+	cout << " confirm   --- 1 ---" << endl;
 	cout.flush();
 	prepareSceForceComputation_M();
 
