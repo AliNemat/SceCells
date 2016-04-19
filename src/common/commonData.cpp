@@ -491,7 +491,7 @@ vector<double> CellsStatsData::outputPolySides() {
 //Ali
 void CellsStatsData::printStressStrain(std::string FileName1, double curTime,double Init_Displace) {
   ofstream ofs1(FileName1.c_str(),ios::app); 
-  ofs1 << curTime<<","<<50*0.01*curTime/(Cells_Extrem_Loc[3]-Cells_Extrem_Loc[2])<<","
+  ofs1 << curTime<<","<<60*0.00625/36.0*curTime/(Cells_Extrem_Loc[3]-Cells_Extrem_Loc[2])<<","
        <<((Cells_Extrem_Loc[1]-Cells_Extrem_Loc[0])-Init_Displace)/Init_Displace<<"," <<(MaxDistanceX-Init_Displace)/Init_Displace<<std::endl ; 
 
 }

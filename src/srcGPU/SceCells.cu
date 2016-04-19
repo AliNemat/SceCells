@@ -21,7 +21,7 @@ __constant__ double grthPrgrCriEnd_M;
 
 __device__
 double calMembrForce(double& length) {
-//	if (length < membrEquLen) {
+//Ali	if (length < membrEquLen) {
 //		return 0;
 //	} else {
 		return (length - membrEquLen) * membrStiff;
