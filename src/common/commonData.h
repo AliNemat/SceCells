@@ -667,13 +667,14 @@ class CellsStatsData {
 public:
         //Ali
         double Cells_Extrem_Loc[4] ;
+        double F_Ext_Out ; //Ali  
         //Ali 
         double MaxDistanceX ; //Ali 
 	std::vector<CellStats> cellsStats;
 	void printPolyCountToFile(std::string fileName, double divThreshold);
 	void printDetailStatsToFile(std::string fileNameBase, int timestep);
 	vector<double> outputPolySides();
-        void printStressStrain(std::string FileName1,double curTime, double Init_Displace );   //Ali
+        void printStressStrain(std::string FileName1,double curTime,double Init_Displace );   //Ali
         void printStressStrain_Ini(std::string FileName1); // Ali
 };
 

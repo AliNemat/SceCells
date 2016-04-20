@@ -18,6 +18,7 @@ __constant__ double sceIBDiv_M[5];
 __constant__ double sceII_M[5];
 __constant__ double sceIIDiv_M[5];
 __constant__ double grthPrgrCriEnd_M;
+__constant__ double F_Ext_Incline_M2 ;  //Ali
 
 __device__
 double calMembrForce(double& length) {
@@ -27,7 +28,12 @@ double calMembrForce(double& length) {
 		return (length - membrEquLen) * membrStiff;
 //	}
 }
-
+//Ali
+__device__
+double calExtForce(double& curTime) {
+		return curTime * F_Ext_Incline_M2;
+}
+//Ali
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed) {
 	thrust::default_random_engine rng(seed);
@@ -139,6 +145,10 @@ void MembrPara::initFromConfig() {
 			globalConfigVars.getConfigValue("MembrGrowLimit").toDouble();
 	membrGrowCoeff = membrGrowCoeff_Ori;
 	membrGrowLimit = membrGrowLimit_Ori;
+        //Ali
+        F_Ext_Incline = 
+			globalConfigVars.getConfigValue("FExtIncline").toDouble();
+        //Ali
 	membrBendCoeff =
 			globalConfigVars.getConfigValue("MembrBenCoeff").toDouble();
 	adjustLimit =
@@ -2925,6 +2935,9 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
 
 	cudaMemcpyToSymbol(bendCoeff, &membrPara.membrBendCoeff, sizeof(double));
+
+	cudaMemcpyToSymbol(F_Ext_Incline_M2, &membrPara.F_Ext_Incline, sizeof(double)); //Ali
+      
 	uint maxAllNodePerCellCPU = globalConfigVars.getConfigValue(
 			"MaxAllNodeCountPerCell").toInt();
 	uint maxMembrNodePerCellCPU = globalConfigVars.getConfigValue(
@@ -2956,6 +2969,9 @@ void SceCells::copyToGPUConstMem() {
 	sceIntnlBParaCPU_M[3] = k2_IntnlB;
 	sceIntnlBParaCPU_M[4] = intnlBEffectiveRange;
 
+
+        
+ 
 	//////////////////////
 	//// Block 3 /////////
 	//////////////////////
@@ -3683,6 +3699,7 @@ CellsStatsData SceCells::outputPolyCountData() {
         result.Cells_Extrem_Loc[1]=MaxX; 
         result.Cells_Extrem_Loc[2]=MinY;
         result.Cells_Extrem_Loc[3]=MaxY ;
+        result.F_Ext_Out=membrPara.F_Ext_Incline*curTime ; 
         //if (dt==curTime) { 
         //result.Init_Displace=MaxX-MinX ; 
        // }

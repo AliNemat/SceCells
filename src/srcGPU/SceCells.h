@@ -32,6 +32,9 @@ typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
  */
 
 __device__
+double calExtForce(double& curTime);
+
+__device__
 double calMembrForce(double& length);
 
 __device__
@@ -545,21 +548,21 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						//((ay - by)/(Lab*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
 
 						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
-
+                                                double  F_Ext=calExtForce (Cell_Time_F) ;  //Ali 
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
                                                 if (locX > Cell_CenterX && Cell_CenterX>23.53) {
                                                 //if (locX > Cell_CenterX) {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 +0.00625*Cell_Time_F/36.0  ;
+										/ term0 +F_Ext  ;
                                                 }
                                                 else if (locX < Cell_CenterX && Cell_CenterX<23.53) {
                                                 //else {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 -0.00625*Cell_Time_F/36.0  ;
+										/ term0 -F_Ext  ;
                                                 }
                                                 else {
 						velX = velX
@@ -1923,6 +1926,7 @@ struct MembrPara {
 	uint initMembrCt_N;
 	uint initIntnlCt_N;
 	void initFromConfig();
+        double F_Ext_Incline ; 
 };
 
 /**
@@ -2229,7 +2233,6 @@ class SceCells {
 	void calCellArea();
 	double curTime;
 public:
-
 	SceCells();
 
 	SceCells(SceNodes* nodesInput,

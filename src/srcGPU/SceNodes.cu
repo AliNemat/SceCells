@@ -380,6 +380,7 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIntraParaDiv_M, mechPara_M.sceIntraParaDivCPU_M,
 			5 * sizeof(double));
+
 }
 
 void SceNodes::initDimension(double domainMinX, double domainMaxX,
@@ -458,6 +459,7 @@ void SceNodes::readParas_M() {
 			globalConfigVars.getConfigValue("SceInterB_Jones_sig").toDouble();
 	double interBEffectiveRange_Jones = globalConfigVars.getConfigValue(
 			"InterBEffectiveRange_Jones").toDouble();
+        
 	mechPara_M.sceInterBParaCPU_Jones_M[0] = eps_InterB_Jones;
 	mechPara_M.sceInterBParaCPU_Jones_M[1] = sig_InterB_Jones;
 	mechPara_M.sceInterBParaCPU_Jones_M[2] = interBEffectiveRange_Jones;

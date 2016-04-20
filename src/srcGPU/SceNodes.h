@@ -873,7 +873,7 @@ class SceNodes {
 	ControlPara controlPara;
 
 	NodeAllocPara_M allocPara_M;
-	SceMechPara_M mechPara_M;
+	SceMechPara_M mechPara_M;  
 	/**
 	 * reads domain related parameters.
 	 */
