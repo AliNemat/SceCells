@@ -625,7 +625,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 			}
 			if (bothMembrDiffCell(myValue, nodeRankOther)) {
 //Ali
-				calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
 			//	if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
