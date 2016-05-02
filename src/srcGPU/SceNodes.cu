@@ -22,7 +22,8 @@ __constant__ uint cellNodeBeginPos_M;
 __constant__ uint allNodeCountPerCell_M;
 __constant__ uint membrThreshold_M;
 __constant__ double sceInterBPara_M[5];
-__constant__ double sceInterBPara_Jones_M[3];  //Ali
+__constant__ int    sceInterBPara_Jones_On_M ;  //Ali
+__constant__ double sceInterBPara_Jones_M[3] ;  //Ali
 __constant__ double sceIntnlBPara_M[5];
 __constant__ double sceIntraPara_M[5];
 __constant__ double sceIntraParaDiv_M[5];
@@ -372,7 +373,9 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			sizeof(double));
 	cudaMemcpyToSymbol(sceInterBPara_M, mechPara_M.sceInterBParaCPU_M,
 			5 * sizeof(double));
-	cudaMemcpyToSymbol(sceInterBPara_Jones_M, mechPara_M.sceInterBParaCPU_Jones_M,
+	cudaMemcpyToSymbol(sceInterBPara_Jones_On_M, &mechPara_M.sceInterBParaCPU_Jones_On_M,
+			    sizeof(int)); //Ali 
+	cudaMemcpyToSymbol(sceInterBPara_Jones_M,    mechPara_M.sceInterBParaCPU_Jones_M,
 			3 * sizeof(double)); //Ali 
 	cudaMemcpyToSymbol(sceIntnlBPara_M, mechPara_M.sceIntnlBParaCPU_M,
 			5 * sizeof(double));
@@ -453,6 +456,8 @@ void SceNodes::readParas_M() {
 	//////////////////////
 	//// Block 1.5 /////////
 	//////////////////////
+	int     On_InterB_Jones =
+			globalConfigVars.getConfigValue("SceInterB_Jones_On").toDouble();
 	double eps_InterB_Jones =
 			globalConfigVars.getConfigValue("SceInterB_Jones_eps").toDouble();
 	double sig_InterB_Jones =
@@ -460,6 +465,7 @@ void SceNodes::readParas_M() {
 	double interBEffectiveRange_Jones = globalConfigVars.getConfigValue(
 			"InterBEffectiveRange_Jones").toDouble();
         
+	mechPara_M.sceInterBParaCPU_Jones_On_M = On_InterB_Jones;
 	mechPara_M.sceInterBParaCPU_Jones_M[0] = eps_InterB_Jones;
 	mechPara_M.sceInterBParaCPU_Jones_M[1] = sig_InterB_Jones;
 	mechPara_M.sceInterBParaCPU_Jones_M[2] = interBEffectiveRange_Jones;
@@ -1863,8 +1869,14 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		}
 	} else {
 		if (bothMembr(nodeRank1, nodeRank2)) {
+                  if (sceInterBPara_Jones_On_M==1) {
+			calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRank2],
+					_nodeLocYAddress[nodeRank2], xRes, yRes);
+                     }
+                  else {
 			calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
 					_nodeLocYAddress[nodeRank2], xRes, yRes);
+                      }  
 		}
 	}
 }
