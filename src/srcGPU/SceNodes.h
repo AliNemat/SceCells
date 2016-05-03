@@ -107,6 +107,10 @@ bool bothMembrDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2);
 __device__
 bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2);
 
+//Ali
+__device__
+bool Is_Lennard_Jones();
+//Ali
 /**
  * Functor predicate see if a boolean varible is true(seems unnecessary but still required).
  */
@@ -616,7 +620,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		bool isSuccess = false;
 		uint index;
 		double dist;
-
+                bool  Lennard_Jones =Is_Lennard_Jones() ; 
 		_nodeAdhereIndex[myValue] = -1 ; 
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOther = _extendedValuesAddress[i];
@@ -624,9 +628,14 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 				continue;
 			}
 			if (bothMembrDiffCell(myValue, nodeRankOther)) {
-//Ali
+                            if (Lennard_Jones) {
+				calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+						_nodeLocYAddress[nodeRankOther], xRes, yRes);
+                                               }
+                            else               {    
 				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
+                                               }
 			//	if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
 							yPos, _nodeLocXAddress[nodeRankOther],

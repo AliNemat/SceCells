@@ -1604,6 +1604,18 @@ __device__ bool isSameCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+//Ali
+__device__
+
+bool Is_Lennard_Jones() {
+            if (sceInterBPara_Jones_On_M==1) {
+                 return true ; 
+                     }
+            else    {
+                  return false ; 
+                    }
+ }
+
 __device__
 bool isSameCell_m(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeGlobalRank1 < cellNodeBeginPos_M
@@ -1869,14 +1881,8 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 		}
 	} else {
 		if (bothMembr(nodeRank1, nodeRank2)) {
-                  if (sceInterBPara_Jones_On_M==1) {
-			calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRank2],
-					_nodeLocYAddress[nodeRank2], xRes, yRes);
-                     }
-                  else {
 			calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRank2],
 					_nodeLocYAddress[nodeRank2], xRes, yRes);
-                      }  
 		}
 	}
 }
