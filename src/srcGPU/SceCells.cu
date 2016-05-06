@@ -2596,11 +2596,15 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	}
 
 	for (uint i = 0; i < activeCellCount; i++) {
+	//	for (uint j = 0; j < allocPara_m.maxAllNodePerCell; j++) {
 		for (uint j = 0; j < allocPara_m.maxIntnlNodePerCell; j++) {
-			for (uint k = j + 1; k < allocPara_m.maxIntnlNodePerCell; k++) {
+			for (uint k = 0; k < allocPara_m.maxAllNodePerCell; k++) {   //Ali
+			//for (uint k = j + 1; k < allocPara_m.maxIntnlNodePerCell; k++) {  //Ali comment 
 				index1 = i * maxNodePerCell + maxMemNodePerCell + j;
-				index2 = i * maxNodePerCell + maxMemNodePerCell + k;
-				if (hostIsActiveVec[index1] && hostIsActiveVec[index2]) {
+				index2 = i * maxNodePerCell  + k;         //Ali
+			//	index2 = i * maxNodePerCell + maxMemNodePerCell + k;   //Ali comment
+			//	if (hostIsActiveVec[index1] && hostIsActiveVec[index2]) {
+				if (hostIsActiveVec[index1] && hostIsActiveVec[index2]&& index1 !=index2 ) {
 					node1X = hostTmpVectorLocX[index1];
 					node1Y = hostTmpVectorLocY[index1];
 					node2X = hostTmpVectorLocX[index2];
