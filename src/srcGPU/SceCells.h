@@ -45,9 +45,18 @@ double obtainRandAngle(uint& cellRank, uint& seed);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 __device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__ uint obtainLastIntnlNodeIndex(uint& cellRank, uint& curActiveCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+bool isAllIntnlEmptied(uint& currentIntnlCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 __device__
 bool longEnough(double& length);
 
@@ -1046,6 +1055,33 @@ struct PtCondiOp: public thrust::unary_function<CVec2, bool> {
 	}
 };
 
+
+
+//AAMIRI May5
+
+struct isDelOp: public thrust::unary_function<CVec2, bool> {
+	double _threshold;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ isDelOp(double threshold) :
+			_threshold(threshold) {
+	}
+	__host__ __device__
+	bool operator()(const CVec2 &d2) const {
+		double progress = thrust::get<0>(d2);
+		double lastCheckPoint = thrust::get<1>(d2);
+		bool resBool = true;
+	//	bool resBool = false;
+	//	if (progress == 1.0 && lastCheckPoint < 1.0) {
+	//		resBool = true;
+	//	}
+	//	if (progress - lastCheckPoint >= _threshold) {
+	//		resBool = true;
+	//	}
+		return resBool;
+	}
+};
+
+
 /**
  * return zero given a celltype
  */
@@ -1229,6 +1265,64 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 		if (lastCheckPoint > 1.0) {
 			lastCheckPoint = 1.0;
 		}
+
+		return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
+	}
+
+};
+
+
+
+//AAMIRI
+struct DelPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
+	uint _seed;
+	double _addNodeDistance;
+	double _growThreshold;
+	double* _nodeXPosAddress;
+	double* _nodeYPosAddress;
+	bool* _nodeIsActiveAddress;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ DelPtOp_M(uint seed, double addNodeDistance,
+			double growThreshold, double* nodeXPosAddress,
+			double* nodeYPosAddress, bool* nodeIsActiveAddress) :
+			_seed(seed), _addNodeDistance(addNodeDistance), _growThreshold(
+					growThreshold), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
+					nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ DUi operator()(const BoolUIDDUID &biddi) {
+		bool isScheduledToShrink = thrust::get<0>(biddi);
+		uint activeMembrNodeThis = thrust::get<1>(biddi);
+		double lastCheckPoint = thrust::get<5>(biddi);
+
+		bool isFull = isAllIntnlFilled(activeMembrNodeThis);
+		bool isEmptied = isAllIntnlEmptied(activeMembrNodeThis);//AAMIRI
+
+		
+		if (!isScheduledToShrink || isEmptied) {
+			return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
+		}
+		
+		double cellCenterXCoord = thrust::get<2>(biddi);
+		double cellCenterYCoord = thrust::get<3>(biddi);
+		uint cellRank = thrust::get<4>(biddi);
+		double randomAngle = obtainRandAngle(cellRank, _seed);
+		double xOffset = _addNodeDistance * cos(randomAngle);
+		double yOffset = _addNodeDistance * sin(randomAngle);
+		double xCoordNewPt = cellCenterXCoord + xOffset;
+		double yCoordNewPt = cellCenterYCoord + yOffset;
+
+		uint cellNodeEndPos = obtainLastIntnlNodeIndex(cellRank,
+				activeMembrNodeThis);
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
+		_nodeIsActiveAddress[cellNodeEndPos-1] = false;
+		activeMembrNodeThis = activeMembrNodeThis - 1;
+		/*lastCheckPoint = lastCheckPoint + _growThreshold;
+		if (lastCheckPoint > 1.0) {
+			lastCheckPoint = 1.0;
+		}*/
 
 		return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
 	}
@@ -1790,6 +1884,7 @@ struct CellInfoVecs {
 // This cell type array should be initialized together with the host class.
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
+	thrust::device_vector<bool> isScheduledToShrink;//AAMIRI
 	thrust::device_vector<double> centerCoordX;
 	thrust::device_vector<double> centerCoordY;
 	thrust::device_vector<double> centerCoordZ;
@@ -2164,6 +2259,8 @@ class SceCells {
 
 	void decideIsScheduleToGrow_M();
 
+	void decideIsScheduleToShrink_M();//AAMIRI
+
 	void computeCellTargetLength_M();
 
 	void computeDistToCellCenter_M();
@@ -2175,6 +2272,8 @@ class SceCells {
 	void stretchCellGivenLenDiff_M();
 
 	void addPointIfScheduledToGrow_M();
+
+	void delPointIfScheduledToGrow_M();//AAMIRI
 
 	/**
 	 * It is possible for cells to have node number that is less than expect after division.
