@@ -927,7 +927,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		double progress = thrust::get<1>(uidd); //Ali
                 double TensionMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>4.0 ) {
+		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>7.0 ) {
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
