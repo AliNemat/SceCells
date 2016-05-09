@@ -1294,19 +1294,19 @@ struct DelPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 	__device__ DUi operator()(const BoolUIDDUID &biddi) {
 		bool isScheduledToShrink = thrust::get<0>(biddi);
 		uint activeMembrNodeThis = thrust::get<1>(biddi);
+		uint cellRank = thrust::get<4>(biddi);
 		double lastCheckPoint = thrust::get<5>(biddi);
 
 		bool isFull = isAllIntnlFilled(activeMembrNodeThis);
 		bool isEmptied = isAllIntnlEmptied(activeMembrNodeThis);//AAMIRI
 
 		
-		if (!isScheduledToShrink || isEmptied) {
+		if (!isScheduledToShrink || isEmptied || cellRank != 0) {
 			return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
 		}
 		
 		double cellCenterXCoord = thrust::get<2>(biddi);
 		double cellCenterYCoord = thrust::get<3>(biddi);
-		uint cellRank = thrust::get<4>(biddi);
 		double randomAngle = obtainRandAngle(cellRank, _seed);
 		double xOffset = _addNodeDistance * cos(randomAngle);
 		double yOffset = _addNodeDistance * sin(randomAngle);
@@ -1634,6 +1634,27 @@ struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
 	}
 };
 
+//AAMIRI
+/*
+struct CompuIsRemoving_M: thrust::unary_function<DUi, bool> {
+	uint _maxIntnlNodePerCell;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CompuIsDivide_M(uint maxIntnlNodePerCell) :
+			_maxIntnlNodePerCell(maxIntnlNodePerCell) {
+	}
+	__host__ __device__
+	bool operator()(const DUi &vec) {
+		double growthProgress = thrust::get<0>(vec);
+		uint nodeCount = thrust::get<1>(vec);
+		if ( nodeCount == _maxIntnlNodePerCell - _maxIntnlNodePerCell) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+*/
+
 /**
  * Functor for modify veolcities of all nodes given node type and isActive
  * @param input1: take velocity , type and isActive info of node
@@ -1881,6 +1902,9 @@ struct CellInfoVecs {
 	thrust::device_vector<uint> activeNodeCountOfThisCell;
 	thrust::device_vector<double> lastCheckPoint;
 	thrust::device_vector<bool> isDividing;
+
+	//thrust::device_vector<bool> isRemoving;//AAMIRI
+
 // This cell type array should be initialized together with the host class.
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
@@ -1962,6 +1986,9 @@ struct CellDivAuxData {
 // toBeDivideCount is the total number of cells going to divide.
 	uint toBeDivideCount;
 	uint nodeStorageCount;
+
+	//uint toBeRemovedCount;//AAMIRI
+
 	thrust::device_vector<bool> tmpIsActiveHold1;
 	thrust::device_vector<double> tmpDistToCenter1;
 	thrust::device_vector<uint> tmpCellRankHold1;
@@ -2288,6 +2315,9 @@ class SceCells {
 	void updateActiveCellCount_M();
 	void markIsDivideFalse_M();
 
+	//void removeCellArr_M();//AAMIRI
+	//void updateActiveCellCountAfterRemoval_M();//AAMIRI
+
 	void adjustNodeVel_M();
 	void moveNodes_M();
 
@@ -2315,6 +2345,8 @@ class SceCells {
 	bool tmpDebug;
 
 	bool decideIfGoingToDivide_M();
+
+//	bool decideIfGoingToRemove_M();//AAMIRI
 
 	void assembleVecForTwoCells(uint i);
 	void shiftIntnlNodesByCellCenter(CVector cell1Center, CVector cell2Center);

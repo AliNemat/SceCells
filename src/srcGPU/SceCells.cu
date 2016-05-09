@@ -639,6 +639,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.isDividing.resize(allocPara_m.maxCellCount);
+	//cellInfoVecs.isRemoving.resize(allocPara.maxCellCount);//AAMIRI
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.isScheduledToShrink.resize(allocPara.maxCellCount, false);//AAMIRI
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
@@ -1633,11 +1634,64 @@ void SceCells::copySecondCellArr_M() {
 	}
 }
 
+//AAMIRI
+/*
+void SceCells::removeCellArr_M() {
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
+		uint cellRank = divAuxData.tmpCellRank_M[i];
+		uint nodeStartIndx = cellRank * maxAllNodePerCell
+				+ allocPara_m.bdryNodeCount;
+		uint tmpStartIndx = i * maxAllNodePerCell;
+		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
+		thrust::constant_iterator<int> noAdhesion(-1), noAdhesion2(-1);
+		thrust::copy(
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
+								divAuxData.tmpYPos1_M.begin(),
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpStartIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
+								divAuxData.tmpYPos1_M.begin(),
+								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
+								noAdhesion2)) + tmpEndIndx,
+				thrust::make_zip_iterator(
+						thrust::make_tuple(
+								nodes->getInfoVecs().nodeLocX.begin(),
+								nodes->getInfoVecs().nodeLocY.begin(),
+								nodes->getInfoVecs().nodeIsActive.begin(),
+								nodes->getInfoVecs().nodeAdhereIndex.begin(),
+								nodes->getInfoVecs().membrIntnlIndex.begin()))
+						+ nodeStartIndx);
+		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
+				divAuxData.tmp1InternalActiveCounts[i];
+		cellInfoVecs.activeMembrNodeCounts[cellRank] =
+				divAuxData.tmp1MemActiveCounts[i];
+		cellInfoVecs.growthProgress[cellRank] = 0;
+		cellInfoVecs.membrGrowProgress[cellRank] = 0.0;
+		cellInfoVecs.isRandGrowInited[cellRank] = false;
+		cellInfoVecs.lastCheckPoint[cellRank] = 0;
+	}
+}
+
+*/
+
 void SceCells::updateActiveCellCount_M() {
 	allocPara_m.currentActiveCellCount = allocPara_m.currentActiveCellCount
 			+ divAuxData.toBeDivideCount;
 	nodes->setActiveCellCount(allocPara_m.currentActiveCellCount);
 }
+
+//AAMIRI
+/*
+void SceCells::updateActiveCellCountAfterRemoval_M() {
+	allocPara_m.currentActiveCellCount = allocPara_m.currentActiveCellCount
+			+ divAuxData.toBeDivideCount;
+	nodes->setActiveCellCount(allocPara_m.currentActiveCellCount);
+}
+
+*/
 
 void SceCells::markIsDivideFalse_M() {
 	thrust::fill(cellInfoVecs.isDividing.begin(),
@@ -2308,6 +2362,13 @@ void SceCells::delPointIfScheduledToGrow_M() {
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> iEnd(activeCellCount);
+        cout << "     curTime  is   equal    to:   " << curTime << endl;
+
+	int st;
+	st = curTime / dt; 
+	if (st%200==0 && st < 10000)
+	  	cellInfoVecs.activeMembrNodeCounts[0] = cellInfoVecs.activeMembrNodeCounts[0] - 1; 
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToShrink.begin(),
@@ -2359,6 +2420,33 @@ bool SceCells::decideIfGoingToDivide_M() {
 		return false;
 	}
 }
+
+//AAMIRI
+/*
+bool SceCells::decideIfGoingToRemove_M() {
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.isRemoving.begin(),
+			CompuIsRemoving_M(allocPara_m.maxIntnlNodePerCell));
+	// sum all bool values which indicate whether the cell is going to divide.
+	// toBeDivideCount is the total number of cells going to divide.
+	divAuxData.toBeRemovingCount = thrust::reduce(cellInfoVecs.isRemoving.begin(),
+			cellInfoVecs.isRemoving.begin()
+					+ allocPara_m.currentActiveCellCount, (uint) (0));
+	if (divAuxData.toBeRemovingCount > 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+*/
 
 AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
