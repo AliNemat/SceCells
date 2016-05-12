@@ -44,16 +44,15 @@ Location of configuration files:
  ./resources
 *******************************************
 To run simulation on CRC clusters "acms.crc.nd.edu" which are based on SGE (Sun Grid Engine) cluster software :
-   (0) git clone https://github.com/ali1363/scecells.git
-   (0) git clone https://github.com/ali1363/scecells.git
-   (1) module load cmake 
-   (2) module load gcc/4.9.2
-   (3) module load cuda/7.0
-   (4) module load bertini     # it is used for boost libraries#
-   (5) In the directory  ~/SceCells write the command "ccmake ." 
-   (6) Add the address of CGAL library, required for compiling the code, to the ccmake. The address is the following: /afs/crc.nd.edu/x86_64_linux/c/cgal/4.7/build/lib/CGAL
-   (7) In the directory ~/SceCells write the command "cmake ."
-   (8) In the directory ~/SceCells write the command "make"
-   (9) submit your simulation with the command "qsub EpiScale.sh"  # Note: Other .sh files in ~/script are not active anymore#
-   (10)In this setup, the .vtk animation files are in the directory ~/SceCells/animation. You may changed it to ~/SceCells/animation/machine* in the disc_M.cfg file.
+   (1) git clone https://github.com/ali1363/scecells.git
+   (2) module load cmake 
+   (3) module load gcc/4.9.2
+   (4) module load cuda/7.0
+   (5) module load bertini     # it is used for boost libraries#
+   (6) In the directory  ~/SceCells write the command "ccmake ." 
+   (7) Add the address of CGAL library, required for compiling the code, to the ccmake. The address is the following: /afs/crc.nd.edu/x86_64_linux/c/cgal/4.7/build/lib/CGAL
+   (8) In the directory ~/SceCells write the command "cmake ."
+   (9) In the directory ~/SceCells write the command "make"
+   (10 submit your simulation with the command "qsub EpiScale.sh"  # Note: Other .sh files in ~/script are not active anymore#
+   (11)In this setup, the .vtk animation files are in the directory ~/SceCells/animation. You may changed it to ~/SceCells/animation/machine* in the disc_M.cfg file.
 
