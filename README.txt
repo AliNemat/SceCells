@@ -11,7 +11,8 @@ Thrust ---- Build-in library of cuda, similar to STL of C++
 Paraview -- (Optional) Visualization software for animation purpose. 
 
 To obtain source code copy: 
-git clone https://github.com/laosunhust/SceCells.git
+git clone https://github.com/laosunhust/SceCells.git (original version)
+git clone https://github.com/ali1363/scecells.git    (updated  version)
 
 To compile:
  (1) In project root folder, type "cmake ." ("sudo cmake ." preferred)
@@ -29,7 +30,9 @@ To run simulation:
  In project root folder, type "./bin/run***Simulation"
  Currently, two simulations are available: Beak and Disc.
 
-To run simulation on slurm cluster (acms-gpu is powered by slurm)
+
+************************
+To run simulation on slurm cluster (acms-gpu is powered by slurm) 
  (1) In project root folder, cd ./scripts
  (2) sbatch *.sh, for example, sbatch discN01G02.sh means take 
      the first configuration file and then submit it to gpu02 compute node 
@@ -39,5 +42,18 @@ To run simulation on slurm cluster (acms-gpu is powered by slurm)
 
 Location of configuration files:
  ./resources
-
+*******************************************
+To run simulation on CRC clusters "acms.crc.nd.edu" which are based on SGE (Sun Grid Engine) cluster software :
+   (0) git clone https://github.com/ali1363/scecells.git
+   (0) git clone https://github.com/ali1363/scecells.git
+   (1) module load cmake 
+   (2) module load gcc/4.9.2
+   (3) module load cuda/7.0
+   (4) module load bertini     # it is used for boost libraries#
+   (5) In the directory  ~/SceCells write the command "ccmake ." 
+   (6) Add the address of CGAL library, required for compiling the code, to the ccmake. The address is the following: /afs/crc.nd.edu/x86_64_linux/c/cgal/4.7/build/lib/CGAL
+   (7) In the directory ~/SceCells write the command "cmake ."
+   (8) In the directory ~/SceCells write the command "make"
+   (9) submit your simulation with the command "qsub EpiScale.sh"  # Note: Other .sh files in ~/script are not active anymore#
+   (10)In this setup, the .vtk animation files are in the directory ~/SceCells/animation. You may changed it to ~/SceCells/animation/machine* in the disc_M.cfg file.
 
