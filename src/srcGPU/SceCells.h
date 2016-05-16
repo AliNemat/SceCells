@@ -43,6 +43,15 @@ double calBendMulti(double& angle, uint activeMembrCt);
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+int obtainRemovingMembrNodeID(uint &cellRank, uint& activeMembrNodes, uint& seed);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+uint obtainMembEndNode(uint &cellRank, uint& activeMembrNodes);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 __device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 
@@ -56,6 +65,11 @@ bool isAllIntnlFilled(uint& currentIntnlCount);
 __device__
 bool isAllIntnlEmptied(uint& currentIntnlCount);//AAMIRI
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+bool isAllMembrEmptied(uint& currentMembrCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 
 __device__
 bool longEnough(double& length);
@@ -1274,57 +1288,81 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 
 
 //AAMIRI
-struct DelPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
+struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 	uint _seed;
-	double _addNodeDistance;
+	double _curTime;
 	double _growThreshold;
 	double* _nodeXPosAddress;
 	double* _nodeYPosAddress;
 	bool* _nodeIsActiveAddress;
-
+	int* _adhIndxAddr;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ DelPtOp_M(uint seed, double addNodeDistance,
-			double growThreshold, double* nodeXPosAddress,
+	__host__ __device__ DelPtOp_M(uint seed, double curTime,
+			int* adhIndxAddr, double* nodeXPosAddress,
 			double* nodeYPosAddress, bool* nodeIsActiveAddress) :
-			_seed(seed), _addNodeDistance(addNodeDistance), _growThreshold(
-					growThreshold), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
+			_seed(seed), _curTime(curTime), _adhIndxAddr(
+					adhIndxAddr), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
 					nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ DUi operator()(const BoolUIDDUID &biddi) {
+	__device__ UiUiBD operator()(const BoolUIDDUIUIBoolD &biddi) {
 		bool isScheduledToShrink = thrust::get<0>(biddi);
-		uint activeMembrNodeThis = thrust::get<1>(biddi);
+		uint activeIntnlNodeThis = thrust::get<1>(biddi);
 		uint cellRank = thrust::get<4>(biddi);
-		double lastCheckPoint = thrust::get<5>(biddi);
+		uint activeMembrNodeThis = thrust::get<5>(biddi);
 
-		bool isFull = isAllIntnlFilled(activeMembrNodeThis);
-		bool isEmptied = isAllIntnlEmptied(activeMembrNodeThis);//AAMIRI
+		//bool isFull = isAllIntnlFilled(activeIntnlNodeThis);
+		bool isIntnlEmptied = isAllIntnlEmptied(activeIntnlNodeThis);//AAMIRI
+		bool isMembrEmptied = isAllMembrEmptied(activeMembrNodeThis);
 
-		
-		if (!isScheduledToShrink || isEmptied || cellRank != 0) {
-			return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
+
+		bool isCellActive = thrust::get<6>(biddi);
+		double growthSpeed = thrust::get<7>(biddi);
+
+		if (!isScheduledToShrink || (isIntnlEmptied && isMembrEmptied) || cellRank != 0 ) {
+			return thrust::make_tuple(activeMembrNodeThis, activeIntnlNodeThis, isCellActive, growthSpeed);
 		}
 		
 		double cellCenterXCoord = thrust::get<2>(biddi);
 		double cellCenterYCoord = thrust::get<3>(biddi);
-		double randomAngle = obtainRandAngle(cellRank, _seed);
-		double xOffset = _addNodeDistance * cos(randomAngle);
-		double yOffset = _addNodeDistance * sin(randomAngle);
-		double xCoordNewPt = cellCenterXCoord + xOffset;
-		double yCoordNewPt = cellCenterYCoord + yOffset;
+		int randMembID = obtainRemovingMembrNodeID(cellRank, activeMembrNodeThis, _seed);
+		int membEndNode = obtainMembEndNode(cellRank, activeMembrNodeThis);
 
 		uint cellNodeEndPos = obtainLastIntnlNodeIndex(cellRank,
-				activeMembrNodeThis);
+				activeIntnlNodeThis);
+		if (!isIntnlEmptied){
 		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
 		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
 		_nodeIsActiveAddress[cellNodeEndPos-1] = false;
-		activeMembrNodeThis = activeMembrNodeThis - 1;
-		/*lastCheckPoint = lastCheckPoint + _growThreshold;
-		if (lastCheckPoint > 1.0) {
-			lastCheckPoint = 1.0;
-		}*/
+		activeIntnlNodeThis = activeIntnlNodeThis - 1;
+		}
 
-		return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
+		if (!isMembrEmptied){
+		    for (int m=randMembID; m<membEndNode; m++){
+			_nodeXPosAddress[m] = _nodeXPosAddress[m+1];
+			_nodeYPosAddress[m] = _nodeYPosAddress[m+1];
+			_adhIndxAddr[m] = _adhIndxAddr[m+1];
+			_nodeIsActiveAddress[m] = _nodeIsActiveAddress[m+1];}
+		
+//			_nodeXPosAddress[randMembID] = _nodeXPosAddress[membEndNode];
+//			_nodeYPosAddress[randMembID] = _nodeYPosAddress[membEndNode];
+//			_adhIndxAddr[randMembID] = _adhIndxAddr[membEndNode];
+//			_nodeIsActiveAddress[randMembID] = _nodeIsActiveAddress[membEndNode];
+
+		_nodeXPosAddress[membEndNode] = 0.0;
+		_nodeYPosAddress[membEndNode] = 0.0;
+		_nodeIsActiveAddress[membEndNode] = false;
+		_adhIndxAddr[membEndNode] = -1;
+		activeMembrNodeThis = activeMembrNodeThis - 1;
+		}
+
+		if ( (activeIntnlNodeThis+activeMembrNodeThis) ==0 ){
+		isCellActive = false;
+		growthSpeed = 0.0;
+		}
+
+
+		return thrust::make_tuple(activeMembrNodeThis, activeIntnlNodeThis, isCellActive, growthSpeed);
 	}
 
 };
@@ -1909,6 +1947,7 @@ struct CellInfoVecs {
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
 	thrust::device_vector<bool> isScheduledToShrink;//AAMIRI
+	thrust::device_vector<bool> isCellActive;//AAMIRI
 	thrust::device_vector<double> centerCoordX;
 	thrust::device_vector<double> centerCoordY;
 	thrust::device_vector<double> centerCoordZ;

@@ -53,6 +53,12 @@ __device__ uint obtainLastIntnlNodeIndex(uint& cellRank, uint& curActiveCount) {
 	return (cellRank * maxAllNodePerCell + maxMembrPerCell + curActiveCount );
 }
 
+//AAMIRI
+__device__ uint obtainMembEndNode(uint& cellRank, uint& activeMembrNodeThis) {
+	return (cellRank * maxAllNodePerCell + activeMembrNodeThis - 1 );
+}
+
+
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount) {
 	if (currentIntnlCount < maxIntnlPerCell) {
@@ -63,9 +69,33 @@ bool isAllIntnlFilled(uint& currentIntnlCount) {
 }
 
 //AAMIRI
+
+__device__
+int obtainRemovingMembrNodeID(uint &cellRank, uint& activeMembrNodes, uint& seed) {
+	thrust::default_random_engine rng(seed);
+	// discard n numbers to avoid correlation
+	rng.discard(activeMembrNodes);
+	thrust::uniform_int_distribution<double> dist(0, activeMembrNodes-1);
+	int randomNode = dist(rng);
+	return (cellRank * maxAllNodePerCell + randomNode);
+}
+
+
+//AAMIRI
 __device__
 bool isAllIntnlEmptied(uint& currentIntnlCount) {
 	if (currentIntnlCount > 0) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+
+//AAMIRI
+__device__
+bool isAllMembrEmptied(uint& currentMembrCount) {
+	if (currentMembrCount > 0) {
 		return false;
 	} else {
 		return true;
@@ -641,7 +671,8 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.isDividing.resize(allocPara_m.maxCellCount);
 	//cellInfoVecs.isRemoving.resize(allocPara.maxCellCount);//AAMIRI
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
-	cellInfoVecs.isScheduledToShrink.resize(allocPara.maxCellCount, false);//AAMIRI
+	cellInfoVecs.isScheduledToShrink.resize(allocPara_m.maxCellCount, false);//AAMIRI
+	cellInfoVecs.isCellActive.resize(allocPara_m.maxCellCount, false);//AAMIRI
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordZ.resize(allocPara_m.maxCellCount);
@@ -2362,20 +2393,19 @@ void SceCells::delPointIfScheduledToGrow_M() {
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> iEnd(activeCellCount);
-        cout << "     curTime  is   equal    to:   " << curTime << endl;
 
-	int st;
-	st = curTime / dt; 
-	if (st%200==0 && st < 10000)
-	  	cellInfoVecs.activeMembrNodeCounts[0] = cellInfoVecs.activeMembrNodeCounts[0] - 1; 
+	int st = curTime/dt;
 
+if (st%100 == 0)
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToShrink.begin(),
 							cellInfoVecs.activeIntnlNodeCounts.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(), iBegin,
-							cellInfoVecs.lastCheckPoint.begin())),
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.isCellActive.begin(),
+							cellInfoVecs.growthSpeed.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							cellInfoVecs.isScheduledToShrink.begin()
@@ -2385,12 +2415,17 @@ void SceCells::delPointIfScheduledToGrow_M() {
 							cellInfoVecs.centerCoordX.begin() + activeCellCount,
 							cellInfoVecs.centerCoordY.begin() + activeCellCount,
 							iEnd,
-							cellInfoVecs.lastCheckPoint.begin()
+							cellInfoVecs.activeMembrNodeCounts.begin()
+									+ activeCellCount,
+							cellInfoVecs.isCellActive.begin()
+									+ activeCellCount,
+							cellInfoVecs.growthSpeed.begin()
 									+ activeCellCount)),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.lastCheckPoint.begin(),
-							cellInfoVecs.activeIntnlNodeCounts.begin())),
-			DelPtOp_M(seed, miscPara.addNodeDistance, miscPara.growThreshold,
+					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.activeIntnlNodeCounts.begin(),												 cellInfoVecs.isCellActive.begin(),
+							cellInfoVecs.growthSpeed.begin())),
+			DelPtOp_M(seed, curTime, growthAuxData.adhIndxAddr,
 					growthAuxData.nodeXPosAddress,
 					growthAuxData.nodeYPosAddress,
 					growthAuxData.nodeIsActiveAddress));
