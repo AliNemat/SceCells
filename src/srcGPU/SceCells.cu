@@ -31,7 +31,12 @@ double calMembrForce(double& length) {
 //Ali
 __device__
 double calExtForce(double& curTime) {
-		return curTime * F_Ext_Incline_M2;
+                if (curTime>100){
+		return min( (curTime-100) * F_Ext_Incline_M2,0.3);
+                }
+                else {return 0.0 ; 
+                }
+
 }
 //Ali
 __device__

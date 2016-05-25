@@ -1785,6 +1785,32 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 }
 
 __device__
+void attemptToAdhere3Pts(bool& isSuccess,int& index1, int& index2, int& index3, double& dist1,
+	        double& dist2, double& dist3, uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2) {
+
+	double length = computeDist2D(xPos1, yPos1, xPos2, yPos2);
+
+	if (length <= bondAdhCriLen_M) {
+                        isSuccess=true ; 
+			if (length <= dist1 ) {
+				dist1 = length;
+				index1 = nodeRank2;
+			}
+			else if (length <= dist2 ) {
+				dist2 = length;
+				index2 = nodeRank2;
+			}
+			else if (length <= dist3 ) {
+				dist3 = length;
+				index3 = nodeRank2;
+			}
+                                       }
+}
+
+
+
+__device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
 		double& yRes) {

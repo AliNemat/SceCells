@@ -529,6 +529,11 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 		double& yPos2);
 
 __device__
+void attemptToAdhere3Pts(bool& isSuccess,int& index1, int& index2, int& index3, double& dist1,
+	        double& dist2, double& dist3, uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
+		double& yPos2);  
+
+__device__
 void calculateForceBetweenLinkNodes(double &xLoc, double &yLoc, double &zLoc,
 		double &xLocLeft, double &yLocLeft, double &zLocLeft, double &xLocRight,
 		double &yLocRight, double &zLocRight, double &xVel, double &yVel,
@@ -589,6 +594,7 @@ struct AddSceForceDisc: public thrust::unary_function<Tuuuddd, CVec6> {
 /**
  * A compute functor designed for computing SceForce for Disc project.
  */
+/**
 struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	uint* _extendedValuesAddress;
 	double* _nodeLocXAddress;
@@ -651,6 +657,104 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
+
+**/
+
+
+struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
+	uint* _extendedValuesAddress;
+	double* _nodeLocXAddress;
+	double* _nodeLocYAddress;
+	int* _nodeAdhereIndex;
+	int* _membrIntnlIndex;
+	double* _nodeGroProAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__
+	AddForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
+			double* nodeLocYAddress, int* nodeAdhereIndex, int* membrIntnlIndex,
+			double* nodeGrowProAddr) :
+			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
+					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeAdhereIndex(
+					nodeAdhereIndex), _membrIntnlIndex(membrIntnlIndex), _nodeGroProAddr(
+					nodeGrowProAddr) {
+	}
+	__device__
+	CVec2 operator()(const Tuuudd &u3d2) const {
+		double xRes = 0.0;
+		double yRes = 0.0;
+
+		uint begin = thrust::get<0>(u3d2);
+		uint end = thrust::get<1>(u3d2);
+		uint myValue = thrust::get<2>(u3d2);
+		double xPos = thrust::get<3>(u3d2);
+		double yPos = thrust::get<4>(u3d2);
+
+		//uint index;
+		//double dist;
+
+		bool isSuccess = false;
+		double dist1=1000.0, dist2=2000.0, dist3=3000.0;
+		int  index1=-1, index2=-1, index3=-1; 
+
+                bool  Lennard_Jones =Is_Lennard_Jones() ; 
+                      _nodeAdhereIndex[myValue] = -1 ; 
+		for (uint i = begin; i < end; i++) {
+			uint nodeRankOther = _extendedValuesAddress[i];
+			if (nodeRankOther == myValue) {
+				continue;
+			}
+			if (bothMembrDiffCell(myValue, nodeRankOther)) {
+                            if (Lennard_Jones) {
+				calAndAddInter_M2(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+						_nodeLocYAddress[nodeRankOther], xRes, yRes);
+                                               }
+                            else               {    
+				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
+						_nodeLocYAddress[nodeRankOther], xRes, yRes);
+                                               }
+			//	if (_nodeAdhereIndex[myValue] == -1) {
+					attemptToAdhere3Pts(isSuccess,index1, index2, index3, dist1, dist2, dist3,
+ 							nodeRankOther, xPos, yPos, _nodeLocXAddress[nodeRankOther],
+							_nodeLocYAddress[nodeRankOther]);
+			//	}
+//Ali 
+			}
+		}
+                if (isSuccess && index2!=-1 &&index3!=-1) {
+		    double uv1x, uv1y, uv2x, uv2y, uv3x, uv3y;
+                    uv1x = (_nodeLocXAddress[index1] - _nodeLocXAddress[myValue]) / dist1;
+		    uv1y = (_nodeLocYAddress[index1] - _nodeLocYAddress[myValue]) / dist1;
+		    uv2x = (_nodeLocXAddress[index2] - _nodeLocXAddress[myValue]) / dist2;
+		    uv2y = (_nodeLocYAddress[index2] - _nodeLocYAddress[myValue]) / dist2;
+		    uv3x = (_nodeLocXAddress[index3] - _nodeLocXAddress[myValue]) / dist3;
+		    uv3y = (_nodeLocYAddress[index3] - _nodeLocYAddress[myValue]) / dist3;
+		    double dot12 = uv1x*uv2x + uv1y*uv2y;
+		    double dot13 = uv1x*uv3x + uv1y*uv3y;
+		    double dot23 = uv3x*uv2x + uv3y*uv2y;
+
+		    if      (dot12 >= dot13 && dot12 >= dot23 && index3!=-1)
+			_nodeAdhereIndex[myValue] = index3;
+		    else if (dot13 >= dot12 && dot13 >= dot23 && index2!=-1)
+			_nodeAdhereIndex[myValue] = index2;
+		    else
+			_nodeAdhereIndex[myValue] = index1;
+
+                }else if (isSuccess) {
+                
+			_nodeAdhereIndex[myValue] = index1;
+                }
+                    
+		return thrust::make_tuple(xRes, yRes);
+	}
+};
+
+
+
+
+
+
+
+
 
 /**
  * a complicated data structure for adding subcellular element force to cell nodes.
