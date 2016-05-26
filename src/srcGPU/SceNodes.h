@@ -733,9 +733,11 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		    double dot23 = uv3x*uv2x + uv3y*uv2y;
 
 		    if      (dot12 >= dot13 && dot12 >= dot23 && index3!=-1)
-			_nodeAdhereIndex[myValue] = index3;
+			//_nodeAdhereIndex[myValue] = index3;
+			_nodeAdhereIndex[myValue] = index1;
 		    else if (dot13 >= dot12 && dot13 >= dot23 && index2!=-1)
-			_nodeAdhereIndex[myValue] = index2;
+		//	_nodeAdhereIndex[myValue] = index2;
+			_nodeAdhereIndex[myValue] = index1;
 		    else
 			_nodeAdhereIndex[myValue] = index1;
 
