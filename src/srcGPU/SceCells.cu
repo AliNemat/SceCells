@@ -32,7 +32,7 @@ double calMembrForce(double& length) {
 __device__
 double calExtForce(double& curTime) {
                 if (curTime>50){
-		return min( (curTime-50) * F_Ext_Incline_M2,0.4);
+		return min( (curTime-50) * F_Ext_Incline_M2,0.2);
                 }
                 else {return 0.0 ; 
                 }

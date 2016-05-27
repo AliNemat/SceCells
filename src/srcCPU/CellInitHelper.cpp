@@ -797,11 +797,11 @@ vector<CVector> CellInitHelper::generateInitIntnlNodes(CVector& center,
 			"MaxIntnlNodeCountPerCell").toInt();
 //Ali
 
-	uint initIntnlNodeCt = minInitNodeCount ; 
+//	uint initIntnlNodeCt = minInitNodeCount ; 
 //Ali
 //Ali comment
-//	uint initIntnlNodeCt = minInitNodeCount
-//			+ (maxInitNodeCount - minInitNodeCount) * initProg;
+	uint initIntnlNodeCt = minInitNodeCount
+			+ (maxInitNodeCount - minInitNodeCount) * initProg;
 
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {
