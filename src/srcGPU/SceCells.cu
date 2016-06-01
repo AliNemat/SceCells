@@ -1369,6 +1369,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	applyMemForce_M();
 	std::cout << "     *** 4 ***" << endl;
 	std::cout.flush();
+
+	findTangentAndNormal_M();//AAMIRI ADDED May29
+
      //Ali cmment //
 //	computeCenterPos_M();
 	std::cout << "     *** 5 ***" << endl;
@@ -1377,6 +1380,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	growAtRandom_M(dt);
 	std::cout << "     *** 6 ***" << endl;
 	std::cout.flush();
+	//if (curTime<3300.0)
 	divide2D_M();
 	std::cout << "     *** 7 ***" << endl;
 	std::cout.flush();
@@ -1977,6 +1981,69 @@ void SceCells::applyMemForce_M() {
 					bendLeftYAddr, bendRightXAddr, bendRightYAddr));
 }
 
+
+//AAMIRI
+
+void SceCells::findTangentAndNormal_M() {
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+
+	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
+
+	double* nodeLocXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[0]));
+	double* nodeLocYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[0]));
+	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[0]));
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin1,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin1,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin1,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin(),
+ 							nodes->getInfoVecs().nodeVelTangent.begin(),
+							nodes->getInfoVecs().nodeVelNormal.begin(),
+							nodes->getInfoVecs().nodeCurvature.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin1,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin1,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin1,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin(),
+ 							nodes->getInfoVecs().nodeVelTangent.begin(),
+							nodes->getInfoVecs().nodeVelNormal.begin(), 
+							nodes->getInfoVecs().nodeCurvature.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelTangent.begin(),
+							nodes->getInfoVecs().nodeVelNormal.begin(), 
+							nodes->getInfoVecs().nodeCurvature.begin())),
+			CalCurvatures(maxAllNodePerCell, nodeIsActiveAddr, nodeLocXAddr, nodeLocYAddr));
+
+}
+
+
+
+
+
 void SceCells::runAblationTest(AblationEvent& ablEvent) {
 	for (uint i = 0; i < ablEvent.ablationCells.size(); i++) {
 		int cellRank = ablEvent.ablationCells[i].cellNum;
@@ -2174,16 +2241,28 @@ void SceCells::decideIsScheduleToGrow_M() {
 
 //AAMIRI May5
 void SceCells::decideIsScheduleToShrink_M() {
+
+	double laserCenterX = 25.0;
+	double laserCenterY = 25.0;
+	double laserRadius = 5.0; 
+
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> iEnd(allocPara_m.currentActiveCellCount);
+
+
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
-							cellInfoVecs.lastCheckPoint.begin())),
+					thrust::make_tuple(iBegin, 
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(), 
+							cellInfoVecs.isScheduledToShrink.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
-							cellInfoVecs.lastCheckPoint.begin()))
-					+ allocPara_m.currentActiveCellCount,
+					thrust::make_tuple(iEnd, 
+							cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount,
+							cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount,
+							cellInfoVecs.isScheduledToShrink.begin()+allocPara_m.currentActiveCellCount)),
 			cellInfoVecs.isScheduledToShrink.begin(),
-			isDelOp(miscPara.growThreshold));
+			isDelOp(laserCenterX, laserCenterY, laserRadius));
 }
 
 
@@ -2394,9 +2473,9 @@ void SceCells::delPointIfScheduledToGrow_M() {
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> iEnd(activeCellCount);
 
-	int st = curTime/dt;
+	int timeStep = curTime/dt;
 
-if (st%100 == 0)
+	if (curTime>60000.0)
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToShrink.begin(),
@@ -2425,7 +2504,7 @@ if (st%100 == 0)
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
 							cellInfoVecs.activeIntnlNodeCounts.begin(),												 cellInfoVecs.isCellActive.begin(),
 							cellInfoVecs.growthSpeed.begin())),
-			DelPtOp_M(seed, curTime, growthAuxData.adhIndxAddr,
+			DelPtOp_M(seed, timeStep, growthAuxData.adhIndxAddr,
 					growthAuxData.nodeXPosAddress,
 					growthAuxData.nodeYPosAddress,
 					growthAuxData.nodeIsActiveAddress));
@@ -2519,7 +2598,8 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 					+ maxActiveNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(hostTmpVectorLocX.begin(),
-							hostTmpVectorLocY.begin(), hostIsActiveVec.begin(),
+							hostTmpVectorLocY.begin(),
+							hostIsActiveVec.begin(),
 							hostBondVec.begin(), hostTmpVectorTenMag.begin())));
 
 	thrust::host_vector<uint> curActiveMemNodeCounts =
@@ -2684,30 +2764,45 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	thrust::host_vector<bool> hostIsActiveVec(maxActiveNode);
 	thrust::host_vector<int> hostBondVec(maxActiveNode);
 	thrust::host_vector<double> hostTmpVectorTenMag(maxActiveNode);
+	thrust::host_vector<double> hostTmpVectorTensionTangent(maxActiveNode);//AAMIRI
+	thrust::host_vector<double> hostTmpVectorTensionNormal(maxActiveNode);//AAMIRI
+	thrust::host_vector<double> hostTmpVectorNodeCurvature(maxActiveNode);//AAMIRI
+
+
 
 	thrust::copy(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelTangent.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeVelNormal.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeCurvature.begin(),//AAMIRI
 							nodes->getInfoVecs().nodeIsActive.begin(),
 							nodes->getInfoVecs().nodeAdhereIndex.begin(),
 							nodes->getInfoVecs().membrTensionMag.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelTangent.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeVelNormal.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeCurvature.begin(),//AAMIRI
 							nodes->getInfoVecs().nodeIsActive.begin(),
 							nodes->getInfoVecs().nodeAdhereIndex.begin(),
 							nodes->getInfoVecs().membrTensionMag.begin()))
 					+ maxActiveNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(hostTmpVectorLocX.begin(),
-							hostTmpVectorLocY.begin(), hostIsActiveVec.begin(),
+							hostTmpVectorLocY.begin(), 
+							hostTmpVectorTensionTangent.begin(), hostTmpVectorTensionNormal.begin(),//AAMIRI
+							hostTmpVectorNodeCurvature.begin(), //AAMIRI
+							hostIsActiveVec.begin(),
 							hostBondVec.begin(), hostTmpVectorTenMag.begin())));
 
 	thrust::host_vector<uint> curActiveMemNodeCounts =
 			cellInfoVecs.activeMembrNodeCounts;
 
 	CVector tmpPos;
+	double tmpCurv;
 	uint index1;
 	int index2;
 	std::vector<BondInfo> bondInfoVec;
@@ -2715,6 +2810,21 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	double node1X, node1Y;
 	double node2X, node2Y;
 	double aniVal;
+
+
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < maxMemNodePerCell; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if (hostIsActiveVec[index1] == true) {
+				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
+				rawAniData.aniNodeCurvature.push_back(tmpCurv);}//AAMIRI
+			else {
+				tmpCurv = 0.0;//AAMIRI
+				rawAniData.aniNodeCurvature.push_back(tmpCurv);}//AAMIRI
+			}
+	}
+
+
 
 	for (uint i = 0; i < activeCellCount; i++) {
 		for (uint j = 0; j < maxMemNodePerCell; j++) {
@@ -3107,6 +3217,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		PointAniData ptAniData;
 		ptAniData.pos = rawAniData.aniNodePosArr[i];
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
+//		ptAniData.colorScale = rawAniData.aniNodeCurvature[i];//AAMIRI
 		vtkData.pointsAniData.push_back(ptAniData);
 	}
 	for (uint i = 0; i < rawAniData.internalLinks.size(); i++) {

@@ -10,6 +10,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
@@ -20,6 +21,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, double> TensionData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
+typedef thrust::tuple<uint, uint, uint, double, double, double, double, double> CurvatureData;//AAMIRI
 typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 //typedef pair<device_vector<double>::iterator,device_vector<double>::iterator> MinMaxNode ; 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
@@ -615,8 +617,121 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	}
 }; 
 
-//Ali
 
+//AAMIRI
+
+struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
+
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _locXAddr;
+	double* _locYAddr;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CalCurvatures(uint maxNodePerCell, bool* isActiveAddr,
+			double* locXAddr, double* locYAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _locXAddr(
+					locXAddr), _locYAddr(locYAddr) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec3 operator()(const CurvatureData &bData) const {
+		uint activeMembrCount = thrust::get<0>(bData);
+		uint cellRank = thrust::get<1>(bData);
+		uint nodeRank = thrust::get<2>(bData);
+		double oriVelX = thrust::get<3>(bData);
+		double oriVelY = thrust::get<4>(bData);
+		double oriVelT = thrust::get<5>(bData);
+		double oriVelN = thrust::get<6>(bData);
+		double curvature = thrust::get<7>(bData);
+
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			oriVelT = 0.0;
+			oriVelN = 0.0;
+			curvature = 0.0;
+			return thrust::make_tuple(oriVelT, oriVelN, curvature);
+		}
+
+		int index_left = nodeRank - 1;
+		if (index_left == -1) {
+			index_left = activeMembrCount - 1;
+		}
+		index_left = index_left + cellRank * _maxNodePerCell;
+
+		int index_right = nodeRank + 1;
+		if (index_right == (int) activeMembrCount) {
+			index_right = 0;
+		}
+		index_right = index_right + cellRank * _maxNodePerCell;
+
+		double locX_left = _locXAddr[index_left];
+		double locY_left = _locYAddr[index_left];
+
+		double locX_this = _locXAddr[index];
+		double locY_this = _locYAddr[index];
+
+		double locX_right = _locXAddr[index_right];
+		double locY_right = _locYAddr[index_right];
+
+	double sdelta = 0.00000001;
+//finding the tangent vector
+		double Tx_lt = locX_this - locX_left;
+		double Ty_lt = locY_this - locY_left;
+		double S_lt = sqrt( Tx_lt * Tx_lt + Ty_lt * Ty_lt );
+		if (S_lt < sdelta){
+		 	Tx_lt = 0.0;
+			Ty_lt = 0.0;}
+		else {
+ 			Tx_lt = Tx_lt / S_lt;
+			Ty_lt = Ty_lt / S_lt;}
+
+		double Tx_tr = locX_right - locX_this;
+		double Ty_tr = locY_right - locY_this;
+		double S_tr = sqrt( Tx_tr * Tx_tr + Ty_tr * Ty_tr );
+		if (S_tr < sdelta){
+			Tx_tr = 0.0;
+			Ty_tr = 0.0;}
+		else {	
+ 			Tx_tr = Tx_tr / S_tr;
+			Ty_tr = Ty_tr / S_tr;}
+
+		double avgT_x = (Tx_lt + Tx_tr) / 2.0;
+		double avgT_y = (Ty_lt + Ty_tr) / 2.0;
+		double avgSize = sqrt( avgT_x*avgT_x + avgT_y*avgT_y );
+		if (avgSize < sdelta){
+			avgT_x = 0.0;
+			avgT_y = 0.0;}
+		else {
+			avgT_x = avgT_x / avgSize;
+			avgT_y = avgT_y / avgSize;}
+
+//finding the Normal Vector
+		double Nx = Tx_tr - Tx_lt;
+		double Ny = Ty_tr - Ty_lt;
+		double sizeN = sqrt( Nx*Nx + Ny*Ny );
+		if (sizeN < sdelta){
+			Nx = 0.0;
+			Ny = 0.0;}
+		else {
+			Nx = Nx / sizeN;
+			Ny = Ny / sizeN;}
+
+//calculating the Tangent and Normal Tensions
+		oriVelT = oriVelX * avgT_x + oriVelY * avgT_y;
+		oriVelN = oriVelX * Nx + oriVelY * Ny;
+
+//finding the curvature at this node
+		curvature = sizeN;
+
+		return thrust::make_tuple(oriVelT, oriVelN, curvature);
+	}
+};
+
+
+
+
+
+//Ali
 struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
@@ -950,7 +1065,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		double progress = thrust::get<1>(uidd); //Ali
                 double TensionMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>4.0 ) {
+		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>7.0 ) {
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
@@ -1073,24 +1188,29 @@ struct PtCondiOp: public thrust::unary_function<CVec2, bool> {
 
 //AAMIRI May5
 
-struct isDelOp: public thrust::unary_function<CVec2, bool> {
-	double _threshold;
+struct isDelOp: public thrust::unary_function<UiDDBool, bool> {
+	double _laserCenterX;
+	double _laserCenterY;
+	double _ablationRadius;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__ isDelOp(double threshold) :
-			_threshold(threshold) {
+	__host__ __device__ isDelOp(double laserCenterX, double laserCenterY, double ablationRadius) :
+			_laserCenterX(laserCenterX), _laserCenterY(laserCenterY), _ablationRadius(ablationRadius) {
 	}
 	__host__ __device__
-	bool operator()(const CVec2 &d2) const {
-		double progress = thrust::get<0>(d2);
-		double lastCheckPoint = thrust::get<1>(d2);
-		bool resBool = true;
-	//	bool resBool = false;
-	//	if (progress == 1.0 && lastCheckPoint < 1.0) {
-	//		resBool = true;
-	//	}
-	//	if (progress - lastCheckPoint >= _threshold) {
-	//		resBool = true;
-	//	}
+	bool operator()(const UiDDBool &d2) const {
+
+		uint cellRank = thrust::get<0>(d2);
+		double CellCenterX = thrust::get<1>(d2);
+		double CellCenterY = thrust::get<2>(d2);
+		bool resBool = thrust::get<3>(d2);
+
+		if (resBool == true){
+			return resBool;}
+
+		double distToLaser = sqrt( (_laserCenterX-CellCenterX)*(_laserCenterX-CellCenterX) + (_laserCenterY-CellCenterY)*(_laserCenterY-CellCenterY) );
+		if (distToLaser < _ablationRadius){
+		    resBool = true;}
+
 		return resBool;
 	}
 };
@@ -1290,19 +1410,20 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 //AAMIRI
 struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 	uint _seed;
-	double _curTime;
+	int _timeStep;
 	double _growThreshold;
 	double* _nodeXPosAddress;
 	double* _nodeYPosAddress;
 	bool* _nodeIsActiveAddress;
 	int* _adhIndxAddr;
+	
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ DelPtOp_M(uint seed, double curTime,
+	__host__ __device__ DelPtOp_M(uint seed, int timeStep,
 			int* adhIndxAddr, double* nodeXPosAddress,
 			double* nodeYPosAddress, bool* nodeIsActiveAddress) :
-			_seed(seed), _curTime(curTime), _adhIndxAddr(
-					adhIndxAddr), _nodeXPosAddress(nodeXPosAddress), _nodeYPosAddress(
-					nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
+			_seed(seed), _timeStep(timeStep), _adhIndxAddr(
+					adhIndxAddr), _nodeXPosAddress(nodeXPosAddress),
+					 _nodeYPosAddress(nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ UiUiBD operator()(const BoolUIDDUIUIBoolD &biddi) {
@@ -1319,7 +1440,7 @@ struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 		bool isCellActive = thrust::get<6>(biddi);
 		double growthSpeed = thrust::get<7>(biddi);
 
-		if (!isScheduledToShrink || (isIntnlEmptied && isMembrEmptied) || cellRank != 0 ) {
+		if (!isScheduledToShrink || (isIntnlEmptied && isMembrEmptied) /*|| cellRank != 0*/ ) {
 			return thrust::make_tuple(activeMembrNodeThis, activeIntnlNodeThis, isCellActive, growthSpeed);
 		}
 		
@@ -1330,33 +1451,48 @@ struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 
 		uint cellNodeEndPos = obtainLastIntnlNodeIndex(cellRank,
 				activeIntnlNodeThis);
-		if (!isIntnlEmptied){
+		if (/*!isIntnlEmptied*/activeIntnlNodeThis>1 && _timeStep%80==0){
 		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
 		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
 		_nodeIsActiveAddress[cellNodeEndPos-1] = false;
+		_adhIndxAddr[cellNodeEndPos-1] = -1;
+	//	_membrIntnlIndex[cellNodeEndPos-1] = -1;
 		activeIntnlNodeThis = activeIntnlNodeThis - 1;
 		}
 
-		if (!isMembrEmptied){
+		if (/*!isMembrEmptied*/activeMembrNodeThis>1 && _timeStep%50==0){
 		    for (int m=randMembID; m<membEndNode; m++){
 			_nodeXPosAddress[m] = _nodeXPosAddress[m+1];
 			_nodeYPosAddress[m] = _nodeYPosAddress[m+1];
 			_adhIndxAddr[m] = _adhIndxAddr[m+1];
 			_nodeIsActiveAddress[m] = _nodeIsActiveAddress[m+1];}
 		
-//			_nodeXPosAddress[randMembID] = _nodeXPosAddress[membEndNode];
-//			_nodeYPosAddress[randMembID] = _nodeYPosAddress[membEndNode];
-//			_adhIndxAddr[randMembID] = _adhIndxAddr[membEndNode];
-//			_nodeIsActiveAddress[randMembID] = _nodeIsActiveAddress[membEndNode];
+/*			_nodeXPosAddress[randMembID] = _nodeXPosAddress[membEndNode];
+			_nodeYPosAddress[randMembID] = _nodeYPosAddress[membEndNode];
+			_adhIndxAddr[randMembID] = _adhIndxAddr[membEndNode];
+			_nodeIsActiveAddress[randMembID] = _nodeIsActiveAddress[membEndNode];*/
 
 		_nodeXPosAddress[membEndNode] = 0.0;
 		_nodeYPosAddress[membEndNode] = 0.0;
 		_nodeIsActiveAddress[membEndNode] = false;
 		_adhIndxAddr[membEndNode] = -1;
+	//	_membrIntnlIndex[membEndNode] = -1;
 		activeMembrNodeThis = activeMembrNodeThis - 1;
 		}
 
-		if ( (activeIntnlNodeThis+activeMembrNodeThis) ==0 ){
+		if (activeMembrNodeThis == 1){
+		_nodeXPosAddress[membEndNode] = 0.0;
+		_nodeYPosAddress[membEndNode] = 0.0;
+		_adhIndxAddr[membEndNode] = -1;
+		}
+
+		if (activeIntnlNodeThis == 1){
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
+		_adhIndxAddr[cellNodeEndPos-1] = -1; 	
+		}
+
+		if ( (activeIntnlNodeThis+activeMembrNodeThis) == 2 ){
 		isCellActive = false;
 		growthSpeed = 0.0;
 		}
@@ -2340,6 +2476,8 @@ class SceCells {
 	void addPointIfScheduledToGrow_M();
 
 	void delPointIfScheduledToGrow_M();//AAMIRI
+
+	void findTangentAndNormal_M();//AAMIRI
 
 	/**
 	 * It is possible for cells to have node number that is less than expect after division.

@@ -1688,6 +1688,23 @@ bool bothMembrDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+//AAMIRI
+/*
+__device__
+bool isNodeOnMembrane(uint nodeGlobalRank) {
+
+	uint nodeRank = (nodeGlobalRank - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+
+	if (nodeGlobalRank >= cellNodeBeginPos_M && nodeRank < membrThreshold_M){
+		return true;
+	} else{
+		return false;
+	}
+
+}
+*/
+
 __device__
 bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeGlobalRank1 < cellNodeBeginPos_M
@@ -2305,6 +2322,8 @@ void SceNodes::sceForcesDisc_M() {
 	cout.flush();
 	applySceForcesDisc_M();
 
+	//findTangentAndNormal_M();//AAMIRI
+
 #ifdef DebugMode
 	cudaEventRecord(start3, 0);
 	cudaEventSynchronize(start3);
@@ -2386,6 +2405,9 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeVelX.resize(maxTotalNodeCount);
 	infoVecs.nodeVelY.resize(maxTotalNodeCount);
 	infoVecs.nodeVelZ.resize(maxTotalNodeCount);
+	infoVecs.nodeVelTangent.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeVelNormal.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeCurvature.resize(maxTotalNodeCount, 0.0);//AAMIRI
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);

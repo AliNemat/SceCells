@@ -622,6 +622,7 @@ AblationEvent readAblationEvent(std::string inputName);
 struct AniRawData {
 	std::vector<CVector> aniNodePosArr;
 	std::vector<double> aniNodeVal;
+	std::vector<double> aniNodeCurvature;//AAMIRI
 	std::vector<LinkAniData> memLinks;
 	std::vector<LinkAniData> internalLinks;
 	std::vector<BondInfo> bondsArr;

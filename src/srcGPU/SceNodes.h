@@ -68,6 +68,7 @@ typedef thrust::tuple<double, double, bool> CVec2Bool;
 typedef thrust::tuple<double, uint> DUi;
 typedef thrust::tuple<double, uint, double, double> DUiDD;
 typedef thrust::tuple<bool, double> BoolD;
+typedef thrust::tuple<double, double, double, uint> DDDUi;//AAMIRI
 typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
@@ -809,6 +810,12 @@ public:
 	thrust::device_vector<double> nodeVelY;
 // Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
+// Tangent to the nodes
+	thrust::device_vector<double> nodeVelTangent;//AAMIRI
+// Normal to the nodes
+	thrust::device_vector<double> nodeVelNormal;//AAMIRI
+// Curvature at the nodes
+	thrust::device_vector<double> nodeCurvature;//AAMIRI
 // represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
 
