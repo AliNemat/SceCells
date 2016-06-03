@@ -2147,7 +2147,7 @@ void SceCells::growAtRandom_M(double dt) {
 
 	addPointIfScheduledToGrow_M();
 
-	decideIsScheduleToShrink_M();// AAMIRI May5
+	//decideIsScheduleToShrink_M();// AAMIRI May5
 
 	delPointIfScheduledToGrow_M();//AAMIRI
 
@@ -2242,9 +2242,9 @@ void SceCells::decideIsScheduleToGrow_M() {
 //AAMIRI May5
 void SceCells::decideIsScheduleToShrink_M() {
 
-	double laserCenterX = 25.0;
+	double laserCenterX = 26.0;
 	double laserCenterY = 25.0;
-	double laserRadius = 5.0; 
+	double laserRadius = 4.0; 
 
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> iEnd(allocPara_m.currentActiveCellCount);
@@ -2475,7 +2475,13 @@ void SceCells::delPointIfScheduledToGrow_M() {
 
 	int timeStep = curTime/dt;
 
-	if (curTime>60000.0)
+	if (curTime>40000.0 && curTime<40000.1){
+
+	decideIsScheduleToShrink_M();// AAMIRI
+	}
+
+ 
+	if (curTime > 40000.0)
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToShrink.begin(),

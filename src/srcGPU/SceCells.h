@@ -1451,16 +1451,18 @@ struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 
 		uint cellNodeEndPos = obtainLastIntnlNodeIndex(cellRank,
 				activeIntnlNodeThis);
+
+		double delta = 0.000001;
 		if (/*!isIntnlEmptied*/activeIntnlNodeThis>1 && _timeStep%80==0){
-		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
-		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0 + delta;
 		_nodeIsActiveAddress[cellNodeEndPos-1] = false;
 		_adhIndxAddr[cellNodeEndPos-1] = -1;
 	//	_membrIntnlIndex[cellNodeEndPos-1] = -1;
 		activeIntnlNodeThis = activeIntnlNodeThis - 1;
 		}
 
-		if (/*!isMembrEmptied*/activeMembrNodeThis>1 && _timeStep%50==0){
+		if (/*!isMembrEmptied*/activeMembrNodeThis>2 && _timeStep%50==0){
 		    for (int m=randMembID; m<membEndNode; m++){
 			_nodeXPosAddress[m] = _nodeXPosAddress[m+1];
 			_nodeYPosAddress[m] = _nodeYPosAddress[m+1];
@@ -1472,23 +1474,28 @@ struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
 			_adhIndxAddr[randMembID] = _adhIndxAddr[membEndNode];
 			_nodeIsActiveAddress[randMembID] = _nodeIsActiveAddress[membEndNode];*/
 
-		_nodeXPosAddress[membEndNode] = 0.0;
-		_nodeYPosAddress[membEndNode] = 0.0;
+		_nodeXPosAddress[membEndNode] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode] = 0.0 + delta;
 		_nodeIsActiveAddress[membEndNode] = false;
 		_adhIndxAddr[membEndNode] = -1;
 	//	_membrIntnlIndex[membEndNode] = -1;
 		activeMembrNodeThis = activeMembrNodeThis - 1;
 		}
 
-		if (activeMembrNodeThis == 1){
-		_nodeXPosAddress[membEndNode] = 0.0;
-		_nodeYPosAddress[membEndNode] = 0.0;
+		if (activeMembrNodeThis == 2){
+		_nodeXPosAddress[membEndNode] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode] = 0.0 + delta;
+		_nodeXPosAddress[membEndNode - 1] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode - 1] = 0.0 + delta;
+
 		_adhIndxAddr[membEndNode] = -1;
+		_adhIndxAddr[membEndNode - 1] = -1;
+
 		}
 
 		if (activeIntnlNodeThis == 1){
-		_nodeXPosAddress[cellNodeEndPos-1] = 0.0;
-		_nodeYPosAddress[cellNodeEndPos-1] = 0.0;
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0 + delta;
 		_adhIndxAddr[cellNodeEndPos-1] = -1; 	
 		}
 
@@ -2026,7 +2033,7 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 		double centerY = thrust::get<4>(inputData);
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount ) {
 			return 0.0;
 		} else {
 			int index_right = nodeRank + 1;
@@ -2045,7 +2052,7 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 				double result = fabs(vec1X * vec2Y - vec2X * vec1Y) / 2.0;
 				return result;
 			} else {
-				return 0;
+				return 0.0;
 			}
 		}
 	}
