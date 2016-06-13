@@ -191,6 +191,50 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	}
 
 	fs << std::endl;
+
+	//AAMIR wrote the curvature data here
+	fs << "SCALARS curvature float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		std::cout << "****************      SIZE IS:     " << pointsAniData.size() << std::endl;
+//		if (pointsAniData[i].colorScale2 < 0.000001 || pointsAniData[i].colorScale2>1.0){
+//			pointsAniData[i].colorScale2 = 0.0;}
+		fs << pointsAniData[i].colorScale2 << endl;
+	}
+
+	fs << std::endl;
+	//AAMIRI finished writing the Node Curvature
+
+
+	//AAMIR wrote the cell rank information data here
+	fs << "SCALARS cellRank int" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].rankScale << endl;
+	}
+	//AAMIRI finished writing the cell rank of each node
+
+
+	//AAMIRI starts writing tension vector data
+	fs << "VECTORS tension float" << endl;
+		for (uint i = 0; i < pointsAniData.size(); i++) {
+//			if ( pointsAniData[i].tens.z != 0.0 ){
+//			pointsAniData[i].tens.z = 0.0;
+//			pointsAniData[i].tens.x = 0.0;
+//			pointsAniData[i].tens.y = 0.0; 
+//			}
+//			if ( pointsAniData[i].tens.x*pointsAniData[i].tens.x < 0.0000001 || pointsAniData[i].tens.x*pointsAniData[i].tens.x >100.0 ){
+//				pointsAniData[i].tens.x = 0.0; }
+//
+//			if (  pointsAniData[i].tens.y*pointsAniData[i].tens.y < 0.0000001 ||  pointsAniData[i].tens.y*pointsAniData[i].tens.y >100.0 ){
+//				pointsAniData[i].tens.y = 0.0;} 
+			fs << pointsAniData[i].tens.x << " " << pointsAniData[i].tens.y << " "
+					<< pointsAniData[i].tens.z << endl;
+		}
+	//AAMIRI finished writing the node tension vector
+
+
 	if (isArrowIncluded) {
 		fs << "VECTORS vectors float" << endl;
 		for (uint i = 0; i < pointsAniData.size(); i++) {

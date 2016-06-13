@@ -644,11 +644,12 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
 		double oriVelN = thrust::get<6>(bData);
 		double curvature = thrust::get<7>(bData);
 
+		curvature = 0.0;
+		oriVelT = 0.0;
+		oriVelN = 0.0;
+
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			oriVelT = 0.0;
-			oriVelN = 0.0;
-			curvature = 0.0;
 			return thrust::make_tuple(oriVelT, oriVelN, curvature);
 		}
 
@@ -673,7 +674,7 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
 		double locX_right = _locXAddr[index_right];
 		double locY_right = _locYAddr[index_right];
 
-	double sdelta = 0.00000001;
+	double sdelta = 0.000000000001;
 //finding the tangent vector
 		double Tx_lt = locX_this - locX_left;
 		double Ty_lt = locY_this - locY_left;

@@ -594,7 +594,9 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 //Ali to make the initial progree of all nodes zero
 
 		if (randNum < 0.6)//AAMIRI
-			randNum = randNum +0.3;
+			randNum = randNum +0.2;
+
+		randNum = 0.0;//AAMIRI
  
 		rawData.cellGrowProgVec.push_back(randNum);
 	//	rawData.cellGrowProgVec.push_back(0.0);

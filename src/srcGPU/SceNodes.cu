@@ -998,6 +998,7 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 				//ptAniData.colorScale = nodeTypeToScale(
 				//		hostTmpVectorNodeType[node1Index]);
 				ptAniData.colorScale = -1;
+				ptAniData.colorScale2 = -1;//AAMIRI
 				ptAniData.pos = CVector(node1X, node1Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -1010,6 +1011,7 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 				//ptAniData.colorScale = nodeTypeToScale(
 				//		hostTmpVectorNodeType[node1Index]);
 				ptAniData.colorScale = -1;
+				ptAniData.colorScale2 = -1;//AAMIRI
 				ptAniData.pos = CVector(node2X, node2Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
