@@ -1800,7 +1800,7 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		return;
 	} else {
 		if (curLen > minAdhBondLen_M) {
-			double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M * alpha;
+			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
 			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
@@ -1814,16 +1814,17 @@ __device__
 double getMitoticAdhCoef(double& growProg, double& growProgNeigh){
 	double alpha = 1.0;
 
-	if (growProg > 0.92 && growProgNeigh > 0.92){
-			alpha = 1.0 - ( 0.5*(growProg+growProgNeigh)-0.92 )/(1.0 - 0.92);
+
+	if (growProg > growthPrgrCriVal_M && growProgNeigh > growthPrgrCriVal_M){
+			alpha = 1.0 - ( 0.5*(growProg+growProgNeigh)-growthPrgrCriVal_M )/(1.0 - growthPrgrCriVal_M);
 		//	adhSkipped = true;
 		}
-	else if (growProg > 0.92){
-			alpha = 1.0 - (growProg-0.92)/(1.0 - 0.92);
+	else if (growProg > growthPrgrCriVal_M){
+			alpha = 1.0 - (growProg-growthPrgrCriVal_M)/(1.0 - growthPrgrCriVal_M);
 		//	adhSkipped = true;
 		}
-	else if (growProgNeigh > 0.92){
-			alpha = 1.0 - (growProgNeigh-0.92)/(1.0 - 0.92);
+	else if (growProgNeigh > growthPrgrCriVal_M){
+			alpha = 1.0 - (growProgNeigh-growthPrgrCriVal_M)/(1.0 - growthPrgrCriVal_M);
 		//	adhSkipped = true;
 		}
 
