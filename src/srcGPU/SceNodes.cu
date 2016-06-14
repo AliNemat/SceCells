@@ -1787,14 +1787,14 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 __device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
-		double& yRes) {
+		double& yRes, double& alpha) {
 	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
 	if (curLen > maxAdhBondLen_M) {
 		adhereIndex = -1;
 		return;
 	} else {
 		if (curLen > minAdhBondLen_M) {
-			double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
+			double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M * alpha;
 			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
@@ -2555,21 +2555,22 @@ void SceNodes::applyMembrAdh_M() {
 			* allocPara_M.maxAllNodePerCell;
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	double* nodeGrowProAddr = thrust::raw_pointer_cast(
+			&infoVecs.nodeGrowPro[0]);
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
 							infoVecs.nodeAdhereIndex.begin(), iBegin,
 							infoVecs.nodeVelX.begin(),
-							infoVecs.nodeVelY.begin(),
-							infoVecs.nodeGrowPro.begin())),
+							infoVecs.nodeVelY.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
 							infoVecs.nodeAdhereIndex.begin(), iBegin,
 							infoVecs.nodeVelX.begin(),
-							infoVecs.nodeVelY.begin(),
-							infoVecs.nodeGrowPro.begin())) + maxTotalNode,
+							infoVecs.nodeVelY.begin())) + maxTotalNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
-			ApplyAdh(nodeLocXAddress, nodeLocYAddress));
+			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
 }
