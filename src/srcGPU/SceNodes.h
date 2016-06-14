@@ -524,6 +524,9 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& yRes, double& alpha);
 
 __device__
+double getMitoticAdhCoef(double& growProg, double& growProgNeigh);
+
+__device__
 void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 		uint& nodeRank2, double& xPos1, double& yPos1, double& xPos2,
 		double& yPos2);
@@ -718,12 +721,9 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		double growProg = _nodeGrowProAddr[nodeIndx];
 		double growProgNeigh = _nodeGrowProAddr[adhIndx];
 		//bool adhSkipped = false;	
-		double alpha = 1;//to adjust the mitotic values of stiffness
+		double alpha = getMitoticAdhCoef(growProg, growProgNeigh);//to adjust the mitotic values of stiffness
+ 
 
-	if (growProg > 0.92 || growProgNeigh > 0.92){
-			alpha = 1.0 - (growProg-0.92)/(1.0 - 0.92);
-		//	adhSkipped = true;
-		}
 	
 		if (adhIndx == -1 || !isActive /*|| adhSkipped*/) {//Ali June16
 			return thrust::make_tuple(oriVelX, oriVelY);

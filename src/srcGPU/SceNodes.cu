@@ -31,6 +31,7 @@ __constant__ double growthPrgrCriVal_M;
 __constant__ double maxAdhBondLen_M;
 __constant__ double minAdhBondLen_M;
 __constant__ double bondStiff_M;
+__constant__ double bondStiff_Mitotic;
 __constant__ double bondAdhCriLen_M;
 
 // #define DebugMode
@@ -365,6 +366,7 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			sizeof(double));
 
 	cudaMemcpyToSymbol(bondStiff_M, &mechPara_M.bondStiffCPU_M, sizeof(double));
+	cudaMemcpyToSymbol(bondStiff_Mitotic, &mechPara_M.bondStiffCPU_Mitotic, sizeof(double));//Ali June 16
 	cudaMemcpyToSymbol(growthPrgrCriVal_M, &mechPara_M.growthPrgrCriValCPU_M,
 			sizeof(double));
 	cudaMemcpyToSymbol(maxAdhBondLen_M, &mechPara_M.maxAdhBondLenCPU_M,
@@ -539,6 +541,10 @@ void SceNodes::readParas_M() {
 
 	double bondStiff = globalConfigVars.getConfigValue("BondStiff").toDouble();
 	mechPara_M.bondStiffCPU_M = bondStiff;
+
+	//Ali June 16
+	double bondStiff_Mitotic = globalConfigVars.getConfigValue("BondStiff_Mitotic").toDouble();
+	mechPara_M.bondStiffCPU_Mitotic = bondStiff_Mitotic;
 
 	double growthPrgrCriVal = globalConfigVars.getConfigValue(
 			"GrowthPrgrCriVal").toDouble();
@@ -1800,6 +1806,29 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		}
 
 	}
+}
+
+
+//Ali June 16
+__device__
+double getMitoticAdhCoef(double& growProg, double& growProgNeigh){
+	double alpha = 1.0;
+
+	if (growProg > 0.92 && growProgNeigh > 0.92){
+			alpha = 1.0 - ( 0.5*(growProg+growProgNeigh)-0.92 )/(1.0 - 0.92);
+		//	adhSkipped = true;
+		}
+	else if (growProg > 0.92){
+			alpha = 1.0 - (growProg-0.92)/(1.0 - 0.92);
+		//	adhSkipped = true;
+		}
+	else if (growProgNeigh > 0.92){
+			alpha = 1.0 - (growProgNeigh-0.92)/(1.0 - 0.92);
+		//	adhSkipped = true;
+		}
+
+
+	return alpha;
 }
 
 __device__

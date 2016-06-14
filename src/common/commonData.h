@@ -154,6 +154,7 @@ struct SceMechPara_M {
 	double maxAdhBondLenCPU_M;
 	double minAdhBondLenCPU_M;
 	double bondStiffCPU_M;
+	double bondStiffCPU_Mitotic;//Ali June 16
 	double bondAdhCriLenCPU_M;
 };
 
