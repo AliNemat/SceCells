@@ -72,6 +72,7 @@ typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, int, int, double, double> BoolIUiDD;
+typedef thrust::tuple<bool, int, int, double, double, double> BoolIUiDDD;//Ali June 16
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<double, double, double> CVec3;
 typedef thrust::tuple<double, double, double, uint> CVec3Int;
@@ -699,7 +700,7 @@ struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
 	}
 };
 
-struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
+struct ApplyAdh: public thrust::unary_function<BoolIUiDDD, CVec2> {
 	double* _nodeLocXArrAddr;
 	double* _nodeLocYArrAddr;
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -708,13 +709,14 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr) {
 	}
 	__device__
-	CVec2 operator()(const BoolIUiDD& adhInput) const {
+	CVec2 operator()(const BoolIUiDDD& adhInput) const {
 		bool isActive = thrust::get<0>(adhInput);
 		int adhIndx = thrust::get<1>(adhInput);
 		uint nodeIndx = thrust::get<2>(adhInput);
 		double oriVelX = thrust::get<3>(adhInput);
 		double oriVelY = thrust::get<4>(adhInput);
-		if (adhIndx == -1 || !isActive) {
+		double growProg = thrust::get<5>(adhInput);
+		if (adhIndx == -1 || !isActive || growProg > 0.92) {//Ali June16
 			return thrust::make_tuple(oriVelX, oriVelY);
 		} else {
 			double locX = _nodeLocXArrAddr[nodeIndx];

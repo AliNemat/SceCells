@@ -2560,12 +2560,14 @@ void SceNodes::applyMembrAdh_M() {
 					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
 							infoVecs.nodeAdhereIndex.begin(), iBegin,
 							infoVecs.nodeVelX.begin(),
-							infoVecs.nodeVelY.begin())),
+							infoVecs.nodeVelY.begin(),
+							infoVecs.nodeGrowPro.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
 							infoVecs.nodeAdhereIndex.begin(), iBegin,
 							infoVecs.nodeVelX.begin(),
-							infoVecs.nodeVelY.begin())) + maxTotalNode,
+							infoVecs.nodeVelY.begin(),
+							infoVecs.nodeGrowPro.begin())) + maxTotalNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
