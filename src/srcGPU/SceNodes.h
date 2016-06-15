@@ -524,7 +524,10 @@ void handleSceForceNodesDisc_M(uint& nodeRank1, uint& nodeRank2, double& xPos,
 __device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
-		double& yRes);
+		double& yRes, double& alpha);
+
+__device__
+double getMitoticAdhCoef(double& growProg, double& growProgNeigh);
 
 __device__
 void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
@@ -705,10 +708,11 @@ struct AddSceForceBasic: public thrust::unary_function<Tuuuddd, CVec3> {
 struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 	double* _nodeLocXArrAddr;
 	double* _nodeLocYArrAddr;
+	double* _nodeGrowProAddr;
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
-	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr) :
-			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr) {
+	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr, double* nodeGrowProAddr) :
+			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr), _nodeGrowProAddr(nodeGrowProAddr) {
 	}
 	__device__
 	CVec2 operator()(const BoolIUiDD& adhInput) const {
@@ -717,6 +721,12 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		uint nodeIndx = thrust::get<2>(adhInput);
 		double oriVelX = thrust::get<3>(adhInput);
 		double oriVelY = thrust::get<4>(adhInput);
+		double growProg = _nodeGrowProAddr[nodeIndx];
+		double growProgNeigh = _nodeGrowProAddr[adhIndx];
+		//bool adhSkipped = false;	
+		double alpha = getMitoticAdhCoef(growProg, growProgNeigh);//to adjust the mitotic values of stiffness
+
+
 		if (adhIndx == -1 || !isActive) {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		} else {
@@ -725,7 +735,7 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 			double adhLocX = _nodeLocXArrAddr[adhIndx];
 			double adhLocY = _nodeLocYArrAddr[adhIndx];
 			handleAdhesionForce_M(adhIndx, locX, locY, adhLocX, adhLocY,
-					oriVelX, oriVelY);
+					oriVelX, oriVelY, alpha);
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 	}

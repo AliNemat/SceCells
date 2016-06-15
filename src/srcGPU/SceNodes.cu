@@ -31,6 +31,7 @@ __constant__ double growthPrgrCriVal_M;
 __constant__ double maxAdhBondLen_M;
 __constant__ double minAdhBondLen_M;
 __constant__ double bondStiff_M;
+__constant__ double bondStiff_Mitotic;
 __constant__ double bondAdhCriLen_M;
 
 // #define DebugMode
@@ -365,6 +366,7 @@ void SceNodes::copyParaToGPUConstMem_M() {
 			sizeof(double));
 
 	cudaMemcpyToSymbol(bondStiff_M, &mechPara_M.bondStiffCPU_M, sizeof(double));
+	cudaMemcpyToSymbol(bondStiff_Mitotic, &mechPara_M.bondStiffCPU_Mitotic, sizeof(double));//Ali June 16
 	cudaMemcpyToSymbol(growthPrgrCriVal_M, &mechPara_M.growthPrgrCriValCPU_M,
 			sizeof(double));
 	cudaMemcpyToSymbol(maxAdhBondLen_M, &mechPara_M.maxAdhBondLenCPU_M,
@@ -539,6 +541,10 @@ void SceNodes::readParas_M() {
 
 	double bondStiff = globalConfigVars.getConfigValue("BondStiff").toDouble();
 	mechPara_M.bondStiffCPU_M = bondStiff;
+
+	//Ali June 16
+	double bondStiff_Mitotic = globalConfigVars.getConfigValue("BondStiff_Mitotic").toDouble();
+	mechPara_M.bondStiffCPU_Mitotic = bondStiff_Mitotic;
 
 	double growthPrgrCriVal = globalConfigVars.getConfigValue(
 			"GrowthPrgrCriVal").toDouble();
@@ -1806,19 +1812,42 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 __device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
-		double& yRes) {
+		double& yRes, double& alpha) {
 	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
 	if (curLen > maxAdhBondLen_M) {
 		adhereIndex = -1;
 		return;
 	} else {
 		if (curLen > minAdhBondLen_M) {
-			double forceValue = (curLen - minAdhBondLen_M) * bondStiff_M;
+			double forceValue = (curLen - minAdhBondLen_M)  * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
 			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
 
 	}
+}
+
+//Ali June 16
+__device__
+double getMitoticAdhCoef(double& growProg, double& growProgNeigh){
+	double alpha = 1.0;
+
+
+	if (growProg > growthPrgrCriVal_M && growProgNeigh > growthPrgrCriVal_M){
+			alpha = 1.0 - ( 0.5*(growProg+growProgNeigh)-growthPrgrCriVal_M )/(1.0 - growthPrgrCriVal_M);
+		//	adhSkipped = true;
+		}
+	else if (growProg > growthPrgrCriVal_M){
+			alpha = 1.0 - (growProg-growthPrgrCriVal_M)/(1.0 - growthPrgrCriVal_M);
+		//	adhSkipped = true;
+		}
+	else if (growProgNeigh > growthPrgrCriVal_M){
+			alpha = 1.0 - (growProgNeigh-growthPrgrCriVal_M)/(1.0 - growthPrgrCriVal_M);
+		//	adhSkipped = true;
+		}
+
+
+	return alpha;
 }
 
 __device__
@@ -2579,6 +2608,9 @@ void SceNodes::applyMembrAdh_M() {
 			* allocPara_M.maxAllNodePerCell;
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
+	double* nodeGrowProAddr = thrust::raw_pointer_cast(
+			&infoVecs.nodeGrowPro[0]);
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
@@ -2593,5 +2625,5 @@ void SceNodes::applyMembrAdh_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
-			ApplyAdh(nodeLocXAddress, nodeLocYAddress));
+			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
 }
