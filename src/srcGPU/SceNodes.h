@@ -826,6 +826,20 @@ public:
 	thrust::device_vector<double> nodeVelNormal;//AAMIRI
 // Curvature at the nodes
 	thrust::device_vector<double> nodeCurvature;//AAMIRI
+
+//External forces on nodes in x dir
+	thrust::device_vector<double> nodeExtForceX;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceY;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceTangent;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceNormal;//AAMIRI
+
+
 // represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
 
@@ -984,6 +998,8 @@ class SceNodes {
 	void processMembrAdh_M();
 	void removeInvalidPairs_M();
 	void applyMembrAdh_M();
+
+	void copyExtForces_M();//AAMIRI
 
 	uint endIndx_M;
 	uint endIndxExt_M;

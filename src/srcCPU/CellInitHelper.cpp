@@ -596,7 +596,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 		if (randNum < 0.6)//AAMIRI
 			randNum = randNum +0.2;
 
-		randNum = 0.0;//AAMIRI
+
  
 		rawData.cellGrowProgVec.push_back(randNum);
 	//	rawData.cellGrowProgVec.push_back(0.0);

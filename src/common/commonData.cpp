@@ -219,20 +219,20 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	//AAMIRI starts writing tension vector data
 	fs << "VECTORS tension float" << endl;
 		for (uint i = 0; i < pointsAniData.size(); i++) {
-//			if ( pointsAniData[i].tens.z != 0.0 ){
-//			pointsAniData[i].tens.z = 0.0;
-//			pointsAniData[i].tens.x = 0.0;
-//			pointsAniData[i].tens.y = 0.0; 
-//			}
-//			if ( pointsAniData[i].tens.x*pointsAniData[i].tens.x < 0.0000001 || pointsAniData[i].tens.x*pointsAniData[i].tens.x >100.0 ){
-//				pointsAniData[i].tens.x = 0.0; }
-//
-//			if (  pointsAniData[i].tens.y*pointsAniData[i].tens.y < 0.0000001 ||  pointsAniData[i].tens.y*pointsAniData[i].tens.y >100.0 ){
-//				pointsAniData[i].tens.y = 0.0;} 
+
 			fs << pointsAniData[i].tens.x << " " << pointsAniData[i].tens.y << " "
 					<< pointsAniData[i].tens.z << endl;
 		}
 	//AAMIRI finished writing the node tension vector
+
+	//AAMIRI starts writing external force vector
+ 	fs << "VECTORS ExternalForce float" << endl;
+		for (uint i = 0; i < pointsAniData.size(); i++) {
+
+			fs << pointsAniData[i].extForce.x << " " << pointsAniData[i].extForce.y << " "
+					<< pointsAniData[i].extForce.z << endl;
+		}
+	//AAMIRI finished writing the node ext force vector
 
 
 	if (isArrowIncluded) {

@@ -21,7 +21,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, double> TensionData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
-typedef thrust::tuple<uint, uint, uint, double, double, double, double, double> CurvatureData;//AAMIRI
+typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
 typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 //typedef pair<device_vector<double>::iterator,device_vector<double>::iterator> MinMaxNode ; 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
@@ -620,7 +620,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 
 //AAMIRI
 
-struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
+struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
 
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
@@ -634,7 +634,7 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
 					locXAddr), _locYAddr(locYAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec3 operator()(const CurvatureData &bData) const {
+	__device__ CVec5 operator()(const CurvatureData &bData) const {
 		uint activeMembrCount = thrust::get<0>(bData);
 		uint cellRank = thrust::get<1>(bData);
 		uint nodeRank = thrust::get<2>(bData);
@@ -643,14 +643,20 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
 		double oriVelT = thrust::get<5>(bData);
 		double oriVelN = thrust::get<6>(bData);
 		double curvature = thrust::get<7>(bData);
+		double extForceX = thrust::get<8>(bData);
+		double extForceY = thrust::get<9>(bData);
+		//double extForceT = thrust::get<10>(bData);
+		//double extForceN = thrust::get<11>(bData);
 
 		curvature = 0.0;
 		oriVelT = 0.0;
 		oriVelN = 0.0;
+		double extForceT = 0.0;
+		double extForceN = 0.0;
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			return thrust::make_tuple(oriVelT, oriVelN, curvature);
+			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
 		}
 
 		int index_left = nodeRank - 1;
@@ -724,7 +730,12 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec3> {
 //finding the curvature at this node
 		curvature = sizeN;
 
-		return thrust::make_tuple(oriVelT, oriVelN, curvature);
+//calculating the Tangent and Normal Ext Forces
+		extForceT = extForceX * avgT_x + extForceY * avgT_y;
+		extForceN = extForceX * Nx + extForceY * Ny;
+
+
+		return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
 	}
 };
 
@@ -1136,6 +1147,7 @@ struct SaxpyFunctorDimDamp: public thrust::binary_function<CVec2, CVec2, CVec2> 
 
 */
 
+//Ali
 struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2> {
         double _dt;
         double _DampCoef ; 

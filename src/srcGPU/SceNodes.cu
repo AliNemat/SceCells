@@ -2353,7 +2353,6 @@ void SceNodes::sceForcesDisc_M() {
 	cout.flush();
 	applySceForcesDisc_M();
 
-	//findTangentAndNormal_M();//AAMIRI
 
 #ifdef DebugMode
 	cudaEventRecord(start3, 0);
@@ -2366,6 +2365,9 @@ void SceNodes::sceForcesDisc_M() {
 
 	cout << "     --- 4 ---" << endl;
 	cout.flush();
+
+	copyExtForces_M();//AAMIRI	
+
 
 #ifdef DebugMode
 	cudaEventRecord(stop, 0);
@@ -2439,6 +2441,10 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeVelTangent.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeVelNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeCurvature.resize(maxTotalNodeCount, 0.0);//AAMIRI
+	infoVecs.nodeExtForceX.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceY.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceTangent.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
@@ -2626,4 +2632,15 @@ void SceNodes::applyMembrAdh_M() {
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
 			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
+}
+
+//AAMIRI
+void SceNodes::copyExtForces_M(){
+
+	thrust::copy(infoVecs.nodeVelX.begin(), infoVecs.nodeVelX.end(),
+			infoVecs.nodeExtForceX.begin());
+
+	thrust::copy(infoVecs.nodeVelY.begin(), infoVecs.nodeVelY.end(),
+			infoVecs.nodeExtForceY.begin());
+
 }
