@@ -68,11 +68,14 @@ typedef thrust::tuple<double, double, bool> CVec2Bool;
 typedef thrust::tuple<double, uint> DUi;
 typedef thrust::tuple<double, uint, double, double> DUiDD;
 typedef thrust::tuple<bool, double> BoolD;
+typedef thrust::tuple<double, double, double, uint> DDDUi;//AAMIRI
 typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
 typedef thrust::tuple<bool, int, int, double, double> BoolIUiDD;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
+typedef thrust::tuple<bool, uint, double, double, uint, uint, bool, double> BoolUIDDUIUIBoolD;//AAMIRI
+typedef thrust::tuple<uint, uint, bool, double> UiUiBD;//AAMIRI
 typedef thrust::tuple<double, double, double> CVec3;
 typedef thrust::tuple<double, double, double, uint> CVec3Int;
 typedef thrust::tuple<double, double, double, bool> CVec3Bool;
@@ -722,10 +725,9 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		double growProgNeigh = _nodeGrowProAddr[adhIndx];
 		//bool adhSkipped = false;	
 		double alpha = getMitoticAdhCoef(growProg, growProgNeigh);//to adjust the mitotic values of stiffness
- 
 
-	
-		if (adhIndx == -1 || !isActive /*|| adhSkipped*/) {//Ali June16
+
+		if (adhIndx == -1 || !isActive) {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		} else {
 			double locX = _nodeLocXArrAddr[nodeIndx];
@@ -818,6 +820,26 @@ public:
 	thrust::device_vector<double> nodeVelY;
 // Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
+// Tangent to the nodes
+	thrust::device_vector<double> nodeVelTangent;//AAMIRI
+// Normal to the nodes
+	thrust::device_vector<double> nodeVelNormal;//AAMIRI
+// Curvature at the nodes
+	thrust::device_vector<double> nodeCurvature;//AAMIRI
+
+//External forces on nodes in x dir
+	thrust::device_vector<double> nodeExtForceX;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceY;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceTangent;//AAMIRI
+
+//External forces on nodes in y dir
+	thrust::device_vector<double> nodeExtForceNormal;//AAMIRI
+
+
 // represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;
 
@@ -976,6 +998,8 @@ class SceNodes {
 	void processMembrAdh_M();
 	void removeInvalidPairs_M();
 	void applyMembrAdh_M();
+
+	void copyExtForces_M();//AAMIRI
 
 	uint endIndx_M;
 	uint endIndxExt_M;

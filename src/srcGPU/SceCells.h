@@ -10,6 +10,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
@@ -20,6 +21,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, double> TensionData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
+typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
 typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 //typedef pair<device_vector<double>::iterator,device_vector<double>::iterator> MinMaxNode ; 
 // maxMemThres, cellRank, nodeRank , locX, locY, velX, velY
@@ -43,11 +45,34 @@ double calBendMulti(double& angle, uint activeMembrCt);
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+int obtainRemovingMembrNodeID(uint &cellRank, uint& activeMembrNodes, uint& seed);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+uint obtainMembEndNode(uint &cellRank, uint& activeMembrNodes);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 __device__ uint obtainNewIntnlNodeIndex(uint& cellRank, uint& curActiveCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__ uint obtainLastIntnlNodeIndex(uint& cellRank, uint& curActiveCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
 __device__
 bool isAllIntnlFilled(uint& currentIntnlCount);
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+bool isAllIntnlEmptied(uint& currentIntnlCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+__device__
+bool isAllMembrEmptied(uint& currentMembrCount);//AAMIRI
+// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+
+
 __device__
 bool longEnough(double& length);
 
@@ -592,8 +617,133 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	}
 }; 
 
-//Ali
 
+//AAMIRI
+
+struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
+
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _locXAddr;
+	double* _locYAddr;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CalCurvatures(uint maxNodePerCell, bool* isActiveAddr,
+			double* locXAddr, double* locYAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _locXAddr(
+					locXAddr), _locYAddr(locYAddr) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec5 operator()(const CurvatureData &bData) const {
+		uint activeMembrCount = thrust::get<0>(bData);
+		uint cellRank = thrust::get<1>(bData);
+		uint nodeRank = thrust::get<2>(bData);
+		double oriVelX = thrust::get<3>(bData);
+		double oriVelY = thrust::get<4>(bData);
+		double oriVelT = thrust::get<5>(bData);
+		double oriVelN = thrust::get<6>(bData);
+		double curvature = thrust::get<7>(bData);
+		double extForceX = thrust::get<8>(bData);
+		double extForceY = thrust::get<9>(bData);
+		//double extForceT = thrust::get<10>(bData);
+		//double extForceN = thrust::get<11>(bData);
+
+		curvature = 0.0;
+		oriVelT = 0.0;
+		oriVelN = 0.0;
+		double extForceT = 0.0;
+		double extForceN = 0.0;
+
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
+		}
+
+		int index_left = nodeRank - 1;
+		if (index_left == -1) {
+			index_left = activeMembrCount - 1;
+		}
+		index_left = index_left + cellRank * _maxNodePerCell;
+
+		int index_right = nodeRank + 1;
+		if (index_right == (int) activeMembrCount) {
+			index_right = 0;
+		}
+		index_right = index_right + cellRank * _maxNodePerCell;
+
+		double locX_left = _locXAddr[index_left];
+		double locY_left = _locYAddr[index_left];
+
+		double locX_this = _locXAddr[index];
+		double locY_this = _locYAddr[index];
+
+		double locX_right = _locXAddr[index_right];
+		double locY_right = _locYAddr[index_right];
+
+	double sdelta = 0.000000000001;
+//finding the tangent vector
+		double Tx_lt = locX_this - locX_left;
+		double Ty_lt = locY_this - locY_left;
+		double S_lt = sqrt( Tx_lt * Tx_lt + Ty_lt * Ty_lt );
+		if (S_lt < sdelta){
+		 	Tx_lt = 0.0;
+			Ty_lt = 0.0;}
+		else {
+ 			Tx_lt = Tx_lt / S_lt;
+			Ty_lt = Ty_lt / S_lt;}
+
+		double Tx_tr = locX_right - locX_this;
+		double Ty_tr = locY_right - locY_this;
+		double S_tr = sqrt( Tx_tr * Tx_tr + Ty_tr * Ty_tr );
+		if (S_tr < sdelta){
+			Tx_tr = 0.0;
+			Ty_tr = 0.0;}
+		else {	
+ 			Tx_tr = Tx_tr / S_tr;
+			Ty_tr = Ty_tr / S_tr;}
+
+		double avgT_x = (Tx_lt + Tx_tr) / 2.0;
+		double avgT_y = (Ty_lt + Ty_tr) / 2.0;
+		double avgSize = sqrt( avgT_x*avgT_x + avgT_y*avgT_y );
+		if (avgSize < sdelta){
+			avgT_x = 0.0;
+			avgT_y = 0.0;}
+		else {
+			avgT_x = avgT_x / avgSize;
+			avgT_y = avgT_y / avgSize;}
+
+//finding the Normal Vector
+		double Nx = Tx_tr - Tx_lt;
+		double Ny = Ty_tr - Ty_lt;
+		double sizeN = sqrt( Nx*Nx + Ny*Ny );
+		if (sizeN < sdelta){
+			Nx = 0.0;
+			Ny = 0.0;}
+		else {
+			Nx = Nx / sizeN;
+			Ny = Ny / sizeN;}
+
+//calculating the Tangent and Normal Tensions
+		oriVelT = oriVelX * avgT_x + oriVelY * avgT_y;
+		oriVelN = oriVelX * Nx + oriVelY * Ny;
+
+//finding the curvature at this node
+		curvature = sizeN;
+
+//calculating the Tangent and Normal Ext Forces
+		extForceT = extForceX * avgT_x + extForceY * avgT_y;
+		extForceN = extForceX * Nx + extForceY * Ny;
+
+
+		return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
+	}
+};
+
+
+
+
+
+//Ali
 struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
@@ -997,6 +1147,7 @@ struct SaxpyFunctorDimDamp: public thrust::binary_function<CVec2, CVec2, CVec2> 
 
 */
 
+//Ali
 struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2> {
         double _dt;
         double _DampCoef ; 
@@ -1045,6 +1196,38 @@ struct PtCondiOp: public thrust::unary_function<CVec2, bool> {
 		return resBool;
 	}
 };
+
+
+
+//AAMIRI May5
+
+struct isDelOp: public thrust::unary_function<UiDDBool, bool> {
+	double _laserCenterX;
+	double _laserCenterY;
+	double _ablationRadius;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ isDelOp(double laserCenterX, double laserCenterY, double ablationRadius) :
+			_laserCenterX(laserCenterX), _laserCenterY(laserCenterY), _ablationRadius(ablationRadius) {
+	}
+	__host__ __device__
+	bool operator()(const UiDDBool &d2) const {
+
+		uint cellRank = thrust::get<0>(d2);
+		double CellCenterX = thrust::get<1>(d2);
+		double CellCenterY = thrust::get<2>(d2);
+		bool resBool = thrust::get<3>(d2);
+
+		if (resBool == true){
+			return resBool;}
+
+		double distToLaser = sqrt( (_laserCenterX-CellCenterX)*(_laserCenterX-CellCenterX) + (_laserCenterY-CellCenterY)*(_laserCenterY-CellCenterY) );
+		if (distToLaser < _ablationRadius){
+		    resBool = true;}
+
+		return resBool;
+	}
+};
+
 
 /**
  * return zero given a celltype
@@ -1231,6 +1414,111 @@ struct AddPtOp_M: thrust::unary_function<BoolUIDDUID, DUi> {
 		}
 
 		return thrust::make_tuple(lastCheckPoint, activeMembrNodeThis);
+	}
+
+};
+
+
+
+//AAMIRI
+struct DelPtOp_M: thrust::unary_function<BoolUIDDUIUIBoolD, UiUiBD> {
+	uint _seed;
+	int _timeStep;
+	double _growThreshold;
+	double* _nodeXPosAddress;
+	double* _nodeYPosAddress;
+	bool* _nodeIsActiveAddress;
+	int* _adhIndxAddr;
+	
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ DelPtOp_M(uint seed, int timeStep,
+			int* adhIndxAddr, double* nodeXPosAddress,
+			double* nodeYPosAddress, bool* nodeIsActiveAddress) :
+			_seed(seed), _timeStep(timeStep), _adhIndxAddr(
+					adhIndxAddr), _nodeXPosAddress(nodeXPosAddress),
+					 _nodeYPosAddress(nodeYPosAddress), _nodeIsActiveAddress(nodeIsActiveAddress) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ UiUiBD operator()(const BoolUIDDUIUIBoolD &biddi) {
+		bool isScheduledToShrink = thrust::get<0>(biddi);
+		uint activeIntnlNodeThis = thrust::get<1>(biddi);
+		uint cellRank = thrust::get<4>(biddi);
+		uint activeMembrNodeThis = thrust::get<5>(biddi);
+
+		//bool isFull = isAllIntnlFilled(activeIntnlNodeThis);
+		bool isIntnlEmptied = isAllIntnlEmptied(activeIntnlNodeThis);//AAMIRI
+		bool isMembrEmptied = isAllMembrEmptied(activeMembrNodeThis);
+
+
+		bool isCellActive = thrust::get<6>(biddi);
+		double growthSpeed = thrust::get<7>(biddi);
+
+		if (!isScheduledToShrink || (isIntnlEmptied && isMembrEmptied) /*|| cellRank != 0*/ ) {
+			return thrust::make_tuple(activeMembrNodeThis, activeIntnlNodeThis, isCellActive, growthSpeed);
+		}
+		
+		double cellCenterXCoord = thrust::get<2>(biddi);
+		double cellCenterYCoord = thrust::get<3>(biddi);
+		int randMembID = obtainRemovingMembrNodeID(cellRank, activeMembrNodeThis, _seed);
+		int membEndNode = obtainMembEndNode(cellRank, activeMembrNodeThis);
+
+		uint cellNodeEndPos = obtainLastIntnlNodeIndex(cellRank,
+				activeIntnlNodeThis);
+
+		double delta = 0.000001;
+		if (/*!isIntnlEmptied*/activeIntnlNodeThis>1 && _timeStep%80==0){
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_nodeIsActiveAddress[cellNodeEndPos-1] = false;
+		_adhIndxAddr[cellNodeEndPos-1] = -1;
+	//	_membrIntnlIndex[cellNodeEndPos-1] = -1;
+		activeIntnlNodeThis = activeIntnlNodeThis - 1;
+		}
+
+		if (/*!isMembrEmptied*/activeMembrNodeThis>2 && _timeStep%50==0){
+		    for (int m=randMembID; m<membEndNode; m++){
+			_nodeXPosAddress[m] = _nodeXPosAddress[m+1];
+			_nodeYPosAddress[m] = _nodeYPosAddress[m+1];
+			_adhIndxAddr[m] = _adhIndxAddr[m+1];
+			_nodeIsActiveAddress[m] = _nodeIsActiveAddress[m+1];}
+		
+/*			_nodeXPosAddress[randMembID] = _nodeXPosAddress[membEndNode];
+			_nodeYPosAddress[randMembID] = _nodeYPosAddress[membEndNode];
+			_adhIndxAddr[randMembID] = _adhIndxAddr[membEndNode];
+			_nodeIsActiveAddress[randMembID] = _nodeIsActiveAddress[membEndNode];*/
+
+		_nodeXPosAddress[membEndNode] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode] = 0.0 + delta;
+		_nodeIsActiveAddress[membEndNode] = false;
+		_adhIndxAddr[membEndNode] = -1;
+	//	_membrIntnlIndex[membEndNode] = -1;
+		activeMembrNodeThis = activeMembrNodeThis - 1;
+		}
+
+		if (activeMembrNodeThis == 2){
+		_nodeXPosAddress[membEndNode] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode] = 0.0 + delta;
+		_nodeXPosAddress[membEndNode - 1] = 0.0 + delta;
+		_nodeYPosAddress[membEndNode - 1] = 0.0 + delta;
+
+		_adhIndxAddr[membEndNode] = -1;
+		_adhIndxAddr[membEndNode - 1] = -1;
+
+		}
+
+		if (activeIntnlNodeThis == 1){
+		_nodeXPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_nodeYPosAddress[cellNodeEndPos-1] = 0.0 + delta;
+		_adhIndxAddr[cellNodeEndPos-1] = -1; 	
+		}
+
+		if ( (activeIntnlNodeThis+activeMembrNodeThis) == 2 ){
+		isCellActive = false;
+		growthSpeed = 0.0;
+		}
+
+
+		return thrust::make_tuple(activeMembrNodeThis, activeIntnlNodeThis, isCellActive, growthSpeed);
 	}
 
 };
@@ -1540,6 +1828,27 @@ struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
 	}
 };
 
+//AAMIRI
+/*
+struct CompuIsRemoving_M: thrust::unary_function<DUi, bool> {
+	uint _maxIntnlNodePerCell;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CompuIsDivide_M(uint maxIntnlNodePerCell) :
+			_maxIntnlNodePerCell(maxIntnlNodePerCell) {
+	}
+	__host__ __device__
+	bool operator()(const DUi &vec) {
+		double growthProgress = thrust::get<0>(vec);
+		uint nodeCount = thrust::get<1>(vec);
+		if ( nodeCount == _maxIntnlNodePerCell - _maxIntnlNodePerCell) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+*/
+
 /**
  * Functor for modify veolcities of all nodes given node type and isActive
  * @param input1: take velocity , type and isActive info of node
@@ -1737,7 +2046,7 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 		double centerY = thrust::get<4>(inputData);
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount ) {
 			return 0.0;
 		} else {
 			int index_right = nodeRank + 1;
@@ -1756,7 +2065,7 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 				double result = fabs(vec1X * vec2Y - vec2X * vec1Y) / 2.0;
 				return result;
 			} else {
-				return 0;
+				return 0.0;
 			}
 		}
 	}
@@ -1787,9 +2096,14 @@ struct CellInfoVecs {
 	thrust::device_vector<uint> activeNodeCountOfThisCell;
 	thrust::device_vector<double> lastCheckPoint;
 	thrust::device_vector<bool> isDividing;
+
+	//thrust::device_vector<bool> isRemoving;//AAMIRI
+
 // This cell type array should be initialized together with the host class.
 	thrust::device_vector<SceNodeType> cellTypes;
 	thrust::device_vector<bool> isScheduledToGrow;
+	thrust::device_vector<bool> isScheduledToShrink;//AAMIRI
+	thrust::device_vector<bool> isCellActive;//AAMIRI
 	thrust::device_vector<double> centerCoordX;
 	thrust::device_vector<double> centerCoordY;
 	thrust::device_vector<double> centerCoordZ;
@@ -1867,6 +2181,9 @@ struct CellDivAuxData {
 // toBeDivideCount is the total number of cells going to divide.
 	uint toBeDivideCount;
 	uint nodeStorageCount;
+
+	//uint toBeRemovedCount;//AAMIRI
+
 	thrust::device_vector<bool> tmpIsActiveHold1;
 	thrust::device_vector<double> tmpDistToCenter1;
 	thrust::device_vector<uint> tmpCellRankHold1;
@@ -2164,6 +2481,8 @@ class SceCells {
 
 	void decideIsScheduleToGrow_M();
 
+	void decideIsScheduleToShrink_M();//AAMIRI
+
 	void computeCellTargetLength_M();
 
 	void computeDistToCellCenter_M();
@@ -2175,6 +2494,10 @@ class SceCells {
 	void stretchCellGivenLenDiff_M();
 
 	void addPointIfScheduledToGrow_M();
+
+	void delPointIfScheduledToGrow_M();//AAMIRI
+
+	void findTangentAndNormal_M();//AAMIRI
 
 	/**
 	 * It is possible for cells to have node number that is less than expect after division.
@@ -2188,6 +2511,9 @@ class SceCells {
 	void copySecondCellArr_M();
 	void updateActiveCellCount_M();
 	void markIsDivideFalse_M();
+
+	//void removeCellArr_M();//AAMIRI
+	//void updateActiveCellCountAfterRemoval_M();//AAMIRI
 
 	void adjustNodeVel_M();
 	void moveNodes_M();
@@ -2216,6 +2542,8 @@ class SceCells {
 	bool tmpDebug;
 
 	bool decideIfGoingToDivide_M();
+
+//	bool decideIfGoingToRemove_M();//AAMIRI
 
 	void assembleVecForTwoCells(uint i);
 	void shiftIntnlNodesByCellCenter(CVector cell1Center, CVector cell2Center);

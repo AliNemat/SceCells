@@ -1004,6 +1004,7 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 				//ptAniData.colorScale = nodeTypeToScale(
 				//		hostTmpVectorNodeType[node1Index]);
 				ptAniData.colorScale = -1;
+				ptAniData.colorScale2 = -1;//AAMIRI
 				ptAniData.pos = CVector(node1X, node1Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -1016,6 +1017,7 @@ VtkAnimationData SceNodes::obtainAnimationData_M(AnimationCriteria aniCri) {
 				//ptAniData.colorScale = nodeTypeToScale(
 				//		hostTmpVectorNodeType[node1Index]);
 				ptAniData.colorScale = -1;
+				ptAniData.colorScale2 = -1;//AAMIRI
 				ptAniData.pos = CVector(node2X, node2Y, 0);
 				vtkData.pointsAniData.push_back(ptAniData);
 			}
@@ -1694,6 +1696,23 @@ bool bothMembrDiffCell(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	}
 }
 
+//AAMIRI
+/*
+__device__
+bool isNodeOnMembrane(uint nodeGlobalRank) {
+
+	uint nodeRank = (nodeGlobalRank - cellNodeBeginPos_M)
+			% allNodeCountPerCell_M;
+
+	if (nodeGlobalRank >= cellNodeBeginPos_M && nodeRank < membrThreshold_M){
+		return true;
+	} else{
+		return false;
+	}
+
+}
+*/
+
 __device__
 bool sameCellMemIntnl(uint nodeGlobalRank1, uint nodeGlobalRank2) {
 	if (nodeGlobalRank1 < cellNodeBeginPos_M
@@ -2335,6 +2354,7 @@ void SceNodes::sceForcesDisc_M() {
 	cout.flush();
 	applySceForcesDisc_M();
 
+
 #ifdef DebugMode
 	cudaEventRecord(start3, 0);
 	cudaEventSynchronize(start3);
@@ -2346,6 +2366,9 @@ void SceNodes::sceForcesDisc_M() {
 
 	cout << "     --- 4 ---" << endl;
 	cout.flush();
+
+	copyExtForces_M();//AAMIRI	
+
 
 #ifdef DebugMode
 	cudaEventRecord(stop, 0);
@@ -2416,6 +2439,13 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeVelX.resize(maxTotalNodeCount);
 	infoVecs.nodeVelY.resize(maxTotalNodeCount);
 	infoVecs.nodeVelZ.resize(maxTotalNodeCount);
+	infoVecs.nodeVelTangent.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeVelNormal.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeCurvature.resize(maxTotalNodeCount, 0.0);//AAMIRI
+	infoVecs.nodeExtForceX.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceY.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceTangent.resize(maxTotalNodeCount);//AAMIRI
+	infoVecs.nodeExtForceNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
@@ -2603,4 +2633,14 @@ void SceNodes::applyMembrAdh_M() {
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
 			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
+
+//AAMIRI
+void SceNodes::copyExtForces_M(){
+
+	thrust::copy(infoVecs.nodeVelX.begin(), infoVecs.nodeVelX.end(),
+			infoVecs.nodeExtForceX.begin());
+
+	thrust::copy(infoVecs.nodeVelY.begin(), infoVecs.nodeVelY.end(),
+			infoVecs.nodeExtForceY.begin());
+
 }

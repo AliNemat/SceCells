@@ -591,7 +591,13 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 	for (uint i = 0; i < initCellCt; i++) {
 		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart;
 		//std::cout << "rand init growth progress = " << randNum << std::endl;
-//Ali to make the initial progree of all nodes zero 
+//Ali to make the initial progree of all nodes zero
+
+		if (randNum < 0.6)//AAMIRI
+			randNum = randNum +0.2;
+
+
+ 
 		rawData.cellGrowProgVec.push_back(randNum);
 	//	rawData.cellGrowProgVec.push_back(0.0);
 	}
@@ -797,11 +803,11 @@ vector<CVector> CellInitHelper::generateInitIntnlNodes(CVector& center,
 			"MaxIntnlNodeCountPerCell").toInt();
 //Ali
 
-	uint initIntnlNodeCt = minInitNodeCount ; 
+//	uint initIntnlNodeCt = minInitNodeCount ; 
 //Ali
 //Ali comment
-//	uint initIntnlNodeCt = minInitNodeCount
-//			+ (maxInitNodeCount - minInitNodeCount) * initProg;
+	uint initIntnlNodeCt = minInitNodeCount
+			+ (maxInitNodeCount - minInitNodeCount) * initProg;
 
 	vector<CVector> attemptedPoss;
 	while (!isSuccess) {

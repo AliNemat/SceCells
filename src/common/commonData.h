@@ -566,7 +566,11 @@ struct PointAniData {
 	// In VTK animation software, color scale represents the relative distance to red and blue;
 	// bigger value means close to red. smaller value means close to blue.
 	CVector dir;
+	CVector tens;
+	CVector extForce;//AAMIRI
 	double colorScale;
+	double colorScale2;//AAMIRI
+	int rankScale;//AAMIRI
 };
 
 /**
@@ -622,7 +626,11 @@ AblationEvent readAblationEvent(std::string inputName);
 
 struct AniRawData {
 	std::vector<CVector> aniNodePosArr;
+	std::vector<CVector> aniNodeTensArr;//AAMIRI
+	std::vector<CVector> aniNodeExtForceArr;//AAMIRI
 	std::vector<double> aniNodeVal;
+	std::vector<double> aniNodeCurvature;//AAMIRI
+	std::vector<int> aniNodeRank;//AAMIRI
 	std::vector<LinkAniData> memLinks;
 	std::vector<LinkAniData> internalLinks;
 	std::vector<BondInfo> bondsArr;
