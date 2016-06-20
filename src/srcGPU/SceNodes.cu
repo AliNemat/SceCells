@@ -1819,13 +1819,14 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		return;
 	} else {
 		if (curLen > minAdhBondLen_M) {
-			double forceValue = (curLen - minAdhBondLen_M)  * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
+			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
 			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
 
 	}
 }
+
 
 //Ali June 16
 __device__
@@ -2632,7 +2633,6 @@ void SceNodes::applyMembrAdh_M() {
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
 			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
-}
 
 //AAMIRI
 void SceNodes::copyExtForces_M(){
