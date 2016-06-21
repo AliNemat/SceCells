@@ -2633,6 +2633,7 @@ void SceNodes::applyMembrAdh_M() {
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
 			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
+}
 
 //AAMIRI
 void SceNodes::copyExtForces_M(){

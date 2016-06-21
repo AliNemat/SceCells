@@ -2156,7 +2156,7 @@ void SceCells::growAtRandom_M(double dt) {
 
 	//decideIsScheduleToShrink_M();// AAMIRI May5
 
-	delPointIfScheduledToGrow_M();//AAMIRI
+	//delPointIfScheduledToGrow_M();//AAMIRI - commented out June 20
 
 	adjustGrowthInfo_M();
 }
