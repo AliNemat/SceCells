@@ -18,7 +18,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 //Ali comment
 //Ali
-typedef thrust::tuple<uint, double, double,uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> TensionData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -41,6 +41,10 @@ double calMembrForce(double& length);
 
 __device__
 double calBendMulti(double& angle, uint activeMembrCt);
+
+//AAMIRI
+__device__
+double calBendMulti_Mitotic(double& angle, uint activeMembrCt, double& progress, double mitoticCri);
 
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
@@ -426,24 +430,27 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	double* _locXAddr;
 	double* _locYAddr;
 	bool* _isActiveAddr;
+	double _mitoticCri;
+
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr) :
+			double* locXAddr, double* locYAddr, bool* isActiveAddr, double mitoticCri) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
-					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr) {
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr), _mitoticCri(mitoticCri) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ CVec10 operator()(const TensionData &tData) const {
 
-		uint activeMembrCount = thrust::get<0>(tData);
-		double Cell_CenterX = thrust::get<1>(tData);
-		double Cell_Time_F  = thrust::get<2>(tData);
-		uint   cellRank = thrust::get<3>(tData);
-		uint   nodeRank = thrust::get<4>(tData);
-		double locX = thrust::get<5>(tData);
-		double locY = thrust::get<6>(tData);
-		double velX = thrust::get<7>(tData);
-		double velY = thrust::get<8>(tData);
+		double progress = thrust::get<0>(tData);
+		uint activeMembrCount = thrust::get<1>(tData);
+		double Cell_CenterX = thrust::get<2>(tData);
+		double Cell_Time_F  = thrust::get<3>(tData);
+		uint   cellRank = thrust::get<4>(tData);
+		uint   nodeRank = thrust::get<5>(tData);
+		double locX = thrust::get<6>(tData);
+		double locY = thrust::get<7>(tData);
+		double velX = thrust::get<8>(tData);
+		double velY = thrust::get<9>(tData);
 
 		uint index = _bdryCount + cellRank * _maxNodePerCell + nodeRank;
 
@@ -557,8 +564,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						double term4y = (-dotP * rightDiffY)
 								/ (lenLeft * lenRight * lenRight * lenRight);
 
-						double bendMultiplier = -calBendMulti(angle,
-								activeMembrCount);
+						double bendMultiplier = -calBendMulti_Mitotic(angle,
+								activeMembrCount, progress, _mitoticCri);//AAMIRI modified the arguments
 						// because sign of angle formula would change if crossZ < 0
 						if (crossZ > 0) {
 							bendMultiplier = -bendMultiplier;
@@ -2236,6 +2243,7 @@ struct MembrPara {
 	double membrGrowCoeff;
 	double membrGrowLimit;
 	double membrBendCoeff;
+	double membrBendCoeff_Mitotic;
 	double adjustLimit;
 	double adjustCoeff;
 
