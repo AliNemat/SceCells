@@ -3943,7 +3943,7 @@ CellsStatsData SceCells::outputPolyCountData() {
 	std::cout.flush();
        double sumX,sumY,cntr_X_Domain,cntr_Y_Domain ; 
        int BdryApproach ; 
-       BdryApproach=2 ;  
+       BdryApproach=1 ; 
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
         cout << " I am before cells area"<< endl ; 
