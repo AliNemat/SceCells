@@ -10,6 +10,7 @@
 module load gcc/4.9.2
 module load cuda/7.0
 module load bertini 
+module load boost/1.58
 echo -n "It is currently: ";date
 echo -n "I am logged on as ";who am i
 echo -n "This computer is called ";hostname

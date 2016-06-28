@@ -49,9 +49,10 @@ To run simulation on CRC clusters "acms.crc.nd.edu" which are based on SGE (Sun 
    (3) module load gcc/4.9.2
    (4) module load cuda/7.0
    (5) module load bertini     # it is used for boost libraries#
-   (6) In the directory  ~/SceCells write the command "ccmake . -DCGAL_DIR:PATH=/afs/crc.nd.edu/x86_64_linux/c/cgal/4.7/gcc/4.9.2/build/lib/CGAL
-   (7) In the directory ~/SceCells write the command "cmake ."
-   (8) In the directory ~/SceCells write the command "make"
-   (9) submit your simulation with the command "qsub EpiScale.sh"  # Note: Other .sh files in ~/script are not active anymore#
-   (10)In this setup, the .vtk animation files are in the directory ~/SceCells/animation. You may change it to ~/SceCells/animation/machine* in the disc_M.cfg file.
+   (6) module load boos/1.58   
+   (7) In the directory  ~/SceCells write the command "ccmake . -DCGAL_DIR:PATH=/afs/crc.nd.edu/x86_64_linux/c/cgal/4.7/gcc/4.9.2/build/lib/CGAL
+   (8) In the directory ~/SceCells write the command "cmake ."
+   (9) In the directory ~/SceCells write the command "make"
+   (10)Submit your simulation with the command "qsub EpiScale.sh"  # Note: Other .sh files in ~/script are not active anymore#
+   (11)In this setup, the .vtk animation files are in the directory ~/SceCells/animation. You may change it to ~/SceCells/animation/machine* in the disc_M.cfg file.
 
