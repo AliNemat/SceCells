@@ -5,6 +5,7 @@ double epsilon = 1.0e-12;
 
 __constant__ double membrEquLen;
 __constant__ double membrStiff;
+__constant__ double membrStiff_Mitotic; //Ali June 30
 __constant__ double pI;
 __constant__ double minLength;
 __constant__ double minDivisor;
@@ -21,14 +22,17 @@ __constant__ double sceIIDiv_M[5];
 __constant__ double grthPrgrCriEnd_M;
 __constant__ double F_Ext_Incline_M2 ;  //Ali
 
+//Ali &  Abu June 30th
 __device__
-double calMembrForce(double& length) {
-//Ali	if (length < membrEquLen) {
-//		return 0;
-//	} else {
+double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri ) {
+	if (progress <= mitoticCri) {
 		return (length - membrEquLen) * membrStiff;
-//	}
+	} else {
+		return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
+
+        }
 }
+//
 //Ali
 __device__
 double calExtForce(double& curTime) {
@@ -185,6 +189,7 @@ void SceCells::distributeCellGrowthProgress() {
 void MembrPara::initFromConfig() {
 	membrEquLenCPU = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
 	membrStiffCPU = globalConfigVars.getConfigValue("MembrStiff").toDouble();
+	membrStiff_Mitotic = globalConfigVars.getConfigValue("MembrStiff_Mitotic").toDouble();  //Ali June30
 	membrGrowCoeff_Ori =
 			globalConfigVars.getConfigValue("MembrGrowCoeff").toDouble();
 	membrGrowLimit_Ori =
@@ -3335,6 +3340,7 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(minDivisor, &minDivisorCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrEquLen, &membrPara.membrEquLenCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrStiff, &membrPara.membrStiffCPU, sizeof(double));
+	cudaMemcpyToSymbol(membrStiff_Mitotic, &membrPara.membrStiff_Mitotic, sizeof(double)); // Ali June 30
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
 
 	cudaMemcpyToSymbol(bendCoeff, &membrPara.membrBendCoeff, sizeof(double));

@@ -36,9 +36,13 @@ typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 __device__
 double calExtForce(double& curTime);
 
-__device__
-double calMembrForce(double& length);
+//Ali comment 
+//__device__
+//double calMembrForce(double& length);
 
+//Ali & Abu June 30th
+__device__
+double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri);
 __device__
 double calBendMulti(double& angle, uint activeMembrCt);
 
@@ -491,7 +495,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				leftDiffX = leftPosX - locX;
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
-				double forceVal = calMembrForce(lenLeft);
+				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
 				if (longEnough(lenLeft)) {
 					velX = velX + forceVal * leftDiffX / lenLeft;
 					velY = velY + forceVal * leftDiffY / lenLeft;
@@ -512,7 +516,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = calMembrForce(lenRight);
+				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri); // Ali & June 30th 
 				if (longEnough(lenRight)) {
 					velX = velX + forceVal * rightDiffX / lenRight;
 					velY = velY + forceVal * rightDiffY / lenRight;
@@ -2237,6 +2241,7 @@ struct CellDivAuxData {
 
 struct MembrPara {
 	double membrStiffCPU;
+	double membrStiff_Mitotic;
 	double membrEquLenCPU;
 	double membrGrowCoeff_Ori;
 	double membrGrowLimit_Ori;
