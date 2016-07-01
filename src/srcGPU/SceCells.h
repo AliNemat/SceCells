@@ -160,9 +160,9 @@ struct isActiveNoneBdry {
 	}
 };
 
-struct MaxWInfo: public thrust::binary_function<DUiDD, DUiDD, DUiDD> {
-	__host__ __device__ DUiDD operator()(const DUiDD& data1,
-			const DUiDD& data2) {
+struct MaxWInfo: public thrust::binary_function<DUiDDD, DUiDDD, DUiDDD> {
+	__host__ __device__ DUiDDD operator()(const DUiDDD& data1,
+			const DUiDDD& data2) {
 		double num1 = thrust::get<0>(data1);
 		double num2 = thrust::get<0>(data2);
 		if (num1 > num2) {
@@ -631,7 +631,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 
 //AAMIRI
 
-struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
+struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
@@ -645,7 +645,7 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
 					locXAddr), _locYAddr(locYAddr) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec5 operator()(const CurvatureData &bData) const {
+	__device__ CVec6 operator()(const CurvatureData &bData) const {
 		uint activeMembrCount = thrust::get<0>(bData);
 		uint cellRank = thrust::get<1>(bData);
 		uint nodeRank = thrust::get<2>(bData);
@@ -664,10 +664,10 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
 		oriVelN = 0.0;
 		double extForceT = 0.0;
 		double extForceN = 0.0;
-
+                double DistToRi=0.0 ; 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
+			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN,DistToRi);
 		}
 
 		int index_left = nodeRank - 1;
@@ -745,8 +745,8 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec5> {
 		extForceT = extForceX * avgT_x + extForceY * avgT_y;
 		extForceN = extForceX * Nx + extForceY * Ny;
 
-
-		return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN);
+                DistToRi=S_tr ; 
+		return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN,DistToRi);
 	}
 };
 
@@ -1086,9 +1086,9 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		//Ali double progress = thrust::get<0>(dui);
 		uint   curActiveMembrNode = thrust::get<0>(uidd); //Ali
 		double progress = thrust::get<1>(uidd); //Ali
-                double TensionMax=thrust::get<2>(uidd); //Ali
+                double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && TensionMax>7.0 ) {
+		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
@@ -2132,6 +2132,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> membrGrowProgress;
 	thrust::device_vector<double> membrGrowSpeed;
 	thrust::device_vector<double> maxTenRiVec;
+	thrust::device_vector<double> maxDistToRiVec;  //Ali 
 	thrust::device_vector<double> maxTenRiMidXVec;
 	thrust::device_vector<double> maxTenRiMidYVec;
 	thrust::device_vector<double> aveTension;

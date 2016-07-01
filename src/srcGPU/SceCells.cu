@@ -695,6 +695,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.isMembrAddingNode.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.maxTenIndxVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.maxDistToRiVec.resize(allocPara_m.maxCellCount); //Ali
 	cellInfoVecs.maxTenRiMidXVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.aveTension.resize(allocPara_m.maxCellCount);
@@ -1376,6 +1377,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	computeCenterPos_M();
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
+	
 //Ali 
 	applyMemForce_M();
 	std::cout << "     *** 4 ***" << endl;
@@ -1397,8 +1399,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	std::cout << "     *** 8 ***" << endl;
 	std::cout.flush();
 
-	findTangentAndNormal_M();//AAMIRI ADDED May29
-
+        findTangentAndNormal_M();//AAMIRI ADDED May29
 	allComponentsMove_M();
 	std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
@@ -2068,7 +2069,8 @@ void SceCells::findTangentAndNormal_M() {
 							nodes->getInfoVecs().nodeVelNormal.begin(), 
 							nodes->getInfoVecs().nodeCurvature.begin(),
 							nodes->getInfoVecs().nodeExtForceTangent.begin(),
-							nodes->getInfoVecs().nodeExtForceNormal.begin())),
+							nodes->getInfoVecs().nodeExtForceNormal.begin(),
+							nodes->getInfoVecs().membrDistToRi.begin())),
 			CalCurvatures(maxAllNodePerCell, nodeIsActiveAddr, nodeLocXAddr, nodeLocYAddr));
 
 }
@@ -3455,6 +3457,10 @@ void SceCells::handleMembrGrowth_M() {
 	//membrDebug();
 }
 
+
+
+
+
 void SceCells::calMembrGrowSpeed_M() {
 	membrPara.membrGrowCoeff = growthAuxData.prolifDecay
 			* membrPara.membrGrowCoeff_Ori;
@@ -3473,13 +3479,15 @@ void SceCells::calMembrGrowSpeed_M() {
 							make_transform_iterator(iBegin,
 									ModuloFunctor(maxNPerCell)),
 							nodes->getInfoVecs().membrLinkRiMidX.begin(),
-							nodes->getInfoVecs().membrLinkRiMidY.begin())),
+							nodes->getInfoVecs().membrLinkRiMidY.begin(),
+							nodes->getInfoVecs().membrDistToRi.begin())),
 			cellInfoVecs.cellRanksTmpStorage.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.maxTenRiVec.begin(),
 							cellInfoVecs.maxTenIndxVec.begin(),
 							cellInfoVecs.maxTenRiMidXVec.begin(),
-							cellInfoVecs.maxTenRiMidYVec.begin())),
+							cellInfoVecs.maxTenRiMidYVec.begin(),
+							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
 	thrust::reduce_by_key(
@@ -3547,10 +3555,10 @@ void SceCells::decideIfAddMembrNode_M() {
          thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin())),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin()))
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin()))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),

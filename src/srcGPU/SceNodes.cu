@@ -2465,6 +2465,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
 		infoVecs.membrTenMagRi.resize(maxTotalNodeCount, 0);
+		infoVecs.membrDistToRi.resize(maxTotalNodeCount, 0);//AAMIRI
 		infoVecs.membrLinkRiMidX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidY.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendLeftX.resize(maxTotalNodeCount, 0);
