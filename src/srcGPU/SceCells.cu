@@ -2220,6 +2220,13 @@ void SceCells::distributeCellGrowthProgress_M() {
 							DivideFunctor(allocPara_m.maxAllNodePerCell))),
 			nodes->getInfoVecs().nodeGrowPro.begin()
 					+ allocPara_m.bdryNodeCount);
+
+			if (curTime <= dt)//AAMIRI
+				thrust::copy(
+					cellInfoVecs.growthProgress.begin(),
+					cellInfoVecs.growthProgress.end(),
+					cellInfoVecs.lastCheckPoint.begin()
+				);
 }
 
 void SceCells::allComponentsMove_M() {
