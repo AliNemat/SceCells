@@ -5,6 +5,7 @@ double epsilon = 1.0e-12;
 
 __constant__ double membrEquLen;
 __constant__ double membrStiff;
+__constant__ double membrStiff_Mitotic; //Ali June 30
 __constant__ double pI;
 __constant__ double minLength;
 __constant__ double minDivisor;
@@ -22,12 +23,14 @@ __constant__ double grthPrgrCriEnd_M;
 __constant__ double F_Ext_Incline_M2 ;  //Ali
 
 __device__
-double calMembrForce(double& length) {
-//Ali	if (length < membrEquLen) {
-//		return 0;
-//	} else {
+double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri) {
+	if (progress <= mitoticCri) {
 		return (length - membrEquLen) * membrStiff;
-//	}
+		} else {
+ 		return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
+ 
+         }
+
 }
 //Ali
 __device__
@@ -185,6 +188,7 @@ void SceCells::distributeCellGrowthProgress() {
 void MembrPara::initFromConfig() {
 	membrEquLenCPU = globalConfigVars.getConfigValue("MembrEquLen").toDouble();
 	membrStiffCPU = globalConfigVars.getConfigValue("MembrStiff").toDouble();
+	membrStiff_Mitotic = globalConfigVars.getConfigValue("MembrStiff_Mitotic").toDouble();  //Ali June30
 	membrGrowCoeff_Ori =
 			globalConfigVars.getConfigValue("MembrGrowCoeff").toDouble();
 	membrGrowLimit_Ori =
@@ -690,6 +694,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.isMembrAddingNode.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.maxTenIndxVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.maxDistToRiVec.resize(allocPara_m.maxCellCount); //Ali
 	cellInfoVecs.maxTenRiMidXVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.aveTension.resize(allocPara_m.maxCellCount);
@@ -2063,7 +2068,8 @@ void SceCells::findTangentAndNormal_M() {
 							nodes->getInfoVecs().nodeVelNormal.begin(), 
 							nodes->getInfoVecs().nodeCurvature.begin(),
 							nodes->getInfoVecs().nodeExtForceTangent.begin(),
-							nodes->getInfoVecs().nodeExtForceNormal.begin())),
+							nodes->getInfoVecs().nodeExtForceNormal.begin(),
+							nodes->getInfoVecs().membrDistToRi.begin())),
 			CalCurvatures(maxAllNodePerCell, nodeIsActiveAddr, nodeLocXAddr, nodeLocYAddr));
 
 }
@@ -3335,6 +3341,7 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(minDivisor, &minDivisorCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrEquLen, &membrPara.membrEquLenCPU, sizeof(double));
 	cudaMemcpyToSymbol(membrStiff, &membrPara.membrStiffCPU, sizeof(double));
+	cudaMemcpyToSymbol(membrStiff_Mitotic, &membrPara.membrStiff_Mitotic, sizeof(double)); // Ali June 30
 	cudaMemcpyToSymbol(pI, &pI_CPU, sizeof(double));
 
 	cudaMemcpyToSymbol(bendCoeff, &membrPara.membrBendCoeff, sizeof(double));
@@ -3467,13 +3474,15 @@ void SceCells::calMembrGrowSpeed_M() {
 							make_transform_iterator(iBegin,
 									ModuloFunctor(maxNPerCell)),
 							nodes->getInfoVecs().membrLinkRiMidX.begin(),
-							nodes->getInfoVecs().membrLinkRiMidY.begin())),
+							nodes->getInfoVecs().membrLinkRiMidY.begin(),
+							nodes->getInfoVecs().membrDistToRi.begin())),
 			cellInfoVecs.cellRanksTmpStorage.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.maxTenRiVec.begin(),
 							cellInfoVecs.maxTenIndxVec.begin(),
 							cellInfoVecs.maxTenRiMidXVec.begin(),
-							cellInfoVecs.maxTenRiMidYVec.begin())),
+							cellInfoVecs.maxTenRiMidYVec.begin(),
+							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
 	thrust::reduce_by_key(
@@ -3541,10 +3550,10 @@ void SceCells::decideIfAddMembrNode_M() {
          thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin())),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxTenRiVec.begin()))
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin()))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
