@@ -1378,6 +1378,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
 	
+        findTangentAndNormal_M();//AAMIRI ADDED May29
 //Ali 
 	applyMemForce_M();
 	std::cout << "     *** 4 ***" << endl;
@@ -1399,7 +1400,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	std::cout << "     *** 8 ***" << endl;
 	std::cout.flush();
 
-        findTangentAndNormal_M();//AAMIRI ADDED May29
+        //findTangentAndNormal_M();//AAMIRI ADDED May29
 	allComponentsMove_M();
 	std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
