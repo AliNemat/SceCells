@@ -28,7 +28,8 @@ double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri
 	if (progress <= mitoticCri) {
 		return (length - membrEquLen) * membrStiff;
 	} else {
-		return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
+		//return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
+		return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (1.0 -mitoticCri)/(1.0-mitoticCri));
 
         }
 }
@@ -4154,7 +4155,8 @@ __device__ double calBendMulti_Mitotic(double& angle, uint activeMembrCt, double
 	if (progress <= mitoticCri){
 		return bendCoeff * (angle - equAngle);}
 	else{
-		return (angle - equAngle)*(bendCoeff + (bendCoeff_Mitotic - bendCoeff) * (progress - mitoticCri)/(1.0 - mitoticCri));
+		//return (angle - equAngle)*(bendCoeff + (bendCoeff_Mitotic - bendCoeff) * (progress - mitoticCri)/(1.0 - mitoticCri));
+		return (angle - equAngle)*(bendCoeff + (bendCoeff_Mitotic - bendCoeff) * (1.0 - mitoticCri)/(1.0 - mitoticCri));
 	}
 }
 
@@ -4240,8 +4242,8 @@ void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 							* exp(-linkLength / sceIBDiv_M[3]);
 		}
 	} else if (growPro > grthPrgrCriVal_M) {
-		double percent = (growPro - grthPrgrCriVal_M)
-				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double percent =1.0 ;  // (growPro - grthPrgrCriVal_M)
+				/// (grthPrgrCriEnd_M - grthPrgrCriVal_M);  //Ali
 		double lenLimit = percent * (sceIBDiv_M[4])
 				+ (1.0 - percent) * sceIB_M[4];
 		if (linkLength < lenLimit) {
@@ -4283,8 +4285,8 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 							* exp(-linkLength / sceIIDiv_M[3]);
 		}
 	} else if (growPro > grthPrgrCriVal_M) {
-		double percent = (growPro - grthPrgrCriVal_M)
-				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double percent =1.0 ; // (growPro - grthPrgrCriVal_M)
+				/// (grthPrgrCriEnd_M - grthPrgrCriVal_M);
 		double lenLimit = percent * (sceIIDiv_M[4])
 				+ (1.0 - percent) * sceII_M[4];
 		if (linkLength < lenLimit) {
