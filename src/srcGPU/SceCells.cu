@@ -2238,7 +2238,7 @@ void SceCells::BC_Imp_M() {
 
 
 **/
-
+        int  NumActCells=allocPara_m.currentActiveCellCount ; 
 
         //Ali 
 	thrust::transform(
@@ -2254,7 +2254,7 @@ void SceCells::BC_Imp_M() {
 			thrust::make_zip_iterator(   
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
                                                            cellInfoVecs.Cell_Damp.begin())),
-			BC_Tissue_Damp(MinX,MaxX,MinY,MaxY,Damp_Coef)) ; 
+			BC_Tissue_Damp(MinX,MaxX,MinY,MaxY,Damp_Coef,NumActCells)) ; 
 
 
 /**void SceCells::randomizeGrowth() {

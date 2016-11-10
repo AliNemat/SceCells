@@ -2081,12 +2081,13 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 
 struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
 	double _TMinX, _TMaxX,_TMinY,_TMaxY,_Damp_Coef ; 
+        int    _NumActCells ; 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__  BC_Tissue_Damp(double InputFunctor1, double InputFunctor2, double InputFunctor3
-                                          ,double InputFunctor4, double InputFunctor5
+                                          , double InputFunctor4, double InputFunctor5, int InputFunctor6
 			) :
 			_TMinX(InputFunctor1), _TMaxX(InputFunctor2)
-                       ,_TMinY(InputFunctor3), _TMaxY(InputFunctor4), _Damp_Coef(InputFunctor5) {
+                       ,_TMinY(InputFunctor3), _TMaxY(InputFunctor4), _Damp_Coef(InputFunctor5),_NumActCells(InputFunctor6) {
 	}
 	__host__ __device__ CVec2 operator()(const CVec3 &inputInfo) {
 		double CenterCellX = thrust::get<0>(inputInfo);
@@ -2094,14 +2095,21 @@ struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
                 double TCenterX= 0.5*(_TMinX+_TMaxX);
                 double TCenterY= 0.5*(_TMinY+_TMaxY); 
                 double TRadius=0.5*( 0.5*(_TMaxX-_TMinX) +0.5*(_TMaxY-_TMinY)) ; 
+                
+                if (_NumActCells>50) {                  
 
                 double Dist=sqrt (
                             (CenterCellX-TCenterX)*(CenterCellX-TCenterX)+
                            (CenterCellY-TCenterY)*(CenterCellY-TCenterY)) ; 
-                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*200*_Damp_Coef     ;              
+                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*20*_Damp_Coef     ;              
                         
 			return thrust::make_tuple(CenterCellX,Damp);
 		}
+                else { 
+                        return thrust::make_tuple(CenterCellX,_Damp_Coef);
+                     }
+
+}
 }; 
 
 
