@@ -1140,23 +1140,6 @@ struct SaxpyFunctorDim2: public thrust::binary_function<CVec2, CVec2, CVec2> {
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
-/*/ Ali
-struct SaxpyFunctorDimDamp: public thrust::binary_function<CVec2, CVec2, CVec2> {
-	double _dt;
-        double _DampCoef ;
-        double Ali2 ;  
-	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__ SaxpyFunctorDimDamp(double dt, double Damp_Coef) :
-			_dt(dt),_DmapCoef(Damp_Coef) {
-	}
-	__host__ __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
-		double xRes = thrust::get<0>(vec1) * _dt + thrust::get<0>(vec2);
-		double yRes = thrust::get<1>(vec1) * _dt + thrust::get<1>(vec2);
-		return thrust::make_tuple(xRes, yRes);
-	}
-};
-
-*/
 
 //Ali
 struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2> {
@@ -1173,7 +1156,20 @@ struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
-
+//Ali 
+struct SaxpyFunctorDim2_BC_Damp: public thrust::binary_function<CVec3, CVec2, CVec2> {
+        double _dt;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ SaxpyFunctorDim2_BC_Damp(double dt) :
+                        _dt(dt) 
+                        {
+	}
+	__host__ __device__ CVec2 operator()(const CVec3 &vec1, const CVec2 &vec2) {
+		double xRes = thrust::get<1>(vec1) * _dt/thrust::get<0>(vec1) + thrust::get<0>(vec2);
+		double yRes = thrust::get<2>(vec1) * _dt/thrust::get<0>(vec1) + thrust::get<1>(vec2);
+		return thrust::make_tuple(xRes, yRes);
+	}
+};
 
 
 /**
@@ -2082,6 +2078,61 @@ struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 	}
 };
 
+
+struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
+	double _TMinX, _TMaxX,_TMinY,_TMaxY,_Damp_Coef ; 
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__  BC_Tissue_Damp(double InputFunctor1, double InputFunctor2, double InputFunctor3
+                                          ,double InputFunctor4, double InputFunctor5
+			) :
+			_TMinX(InputFunctor1), _TMaxX(InputFunctor2)
+                       ,_TMinY(InputFunctor3), _TMaxY(InputFunctor4), _Damp_Coef(InputFunctor5) {
+	}
+	__host__ __device__ CVec2 operator()(const CVec3 &inputInfo) {
+		double CenterCellX = thrust::get<0>(inputInfo);
+		double CenterCellY = thrust::get<1>(inputInfo);
+                double TCenterX= 0.5*(_TMinX+_TMaxX);
+                double TCenterY= 0.5*(_TMinY+_TMaxY); 
+                double TRadius=0.5*( 0.5*(_TMaxX-_TMinX) +0.5*(_TMaxY-_TMinY)) ; 
+
+                double Dist=sqrt (
+                            (CenterCellX-TCenterX)*(CenterCellX-TCenterX)+
+                           (CenterCellY-TCenterY)*(CenterCellY-TCenterY)) ; 
+                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*200*_Damp_Coef     ;              
+                        
+			return thrust::make_tuple(CenterCellX,Damp);
+		}
+}; 
+
+
+/**struct BC_Tissue_Damp: public thrust::unary_function<CVec2,CVec2> {
+	double _Damp_Coef ; 
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__  BC_Tissue_Damp(double InputFunctor1
+			) :
+			 _Damp_Coef(InputFunctor1) {
+	}
+	__host__ __device__ CVec2 operator()(const CVec2 &inputInfo) {
+		double CenterCellX = thrust::get<0>(inputInfo);
+		double CenterCellY = thrust::get<1>(inputInfo);
+         //       double TCenterX= 0.5*(_TMinX+_TMaxX);
+           //     double TCenterY= 0.5*(_TMinY+_TMaxY); 
+             //   double TRadius=0.5*( 0.5*(_TMaxX-_TMinX) +0.5*(_TMaxY-_TMinY)) ; 
+
+               // double Dist=sqrt (
+                 //           (CenterCellX-TCenterX)*(CenterCellX-TCenterX)+
+                   //        (CenterCellY-TCenterY)*(CenterCellY-TCenterY)) ; 
+                //double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*200*_Damp_Coef     ;              
+                        
+			return thrust::make_tuple(CenterCellX,CenterCellY);
+		}
+}; 
+
+**/
+
+
+
+
 struct CellInfoVecs {
 	/**
 	 * @param growthProgress is a vector of size maxCellCount.
@@ -2089,11 +2140,10 @@ struct CellInfoVecs {
 	 * progress == 0 means recently divided
 	 * progress == 1 means ready to divide
 	 */
-	thrust::device_vector<double> growthProgress;
-//Ali
-	thrust::device_vector<double> Cell_Time;
-        
-//Ali
+	thrust::device_vector<double> growthProgress; //Ali
+	thrust::device_vector<double> Cell_Time;//Ali
+	thrust::device_vector<double> Cell_Damp;//Ali
+       
 	thrust::device_vector<double> expectedLength;
 //thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;
@@ -2348,7 +2398,7 @@ class SceCells {
 	void setGrowthDirXAxis();
 
 	void computeCenterPos();
-
+        void BC_Imp_M() ; 
 	void divide2DSimplified();
 
 	/**
@@ -2531,6 +2581,7 @@ class SceCells {
 
 	void adjustNodeVel_M();
 	void moveNodes_M();
+	void moveNodes_BC_M();
 
 	void readMiscPara_M();
 	void initCellInfoVecs_M();

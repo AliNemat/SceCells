@@ -667,10 +667,9 @@ void SceCells::initCellInfoVecs() {
 
 void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
-	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0);
-        //Ali
-	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0);
-        //Ali
+	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //Ali
+	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0);   //Ali
+	cellInfoVecs.Cell_Damp.resize(allocPara_m.maxCellCount, 36.0);   //Ali
 	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
 			bioPara.cellInitLength);
 	cellInfoVecs.lengthDifference.resize(allocPara_m.maxCellCount, 0.0);
@@ -1375,6 +1374,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
 	std::cout.flush();
 //Ali        
 	computeCenterPos_M();
+        BC_Imp_M() ; 
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
 	
@@ -1780,15 +1780,55 @@ void SceCells::moveNodes_M() {
 //Ali		SaxpyFunctorDim2(dt));
 			SaxpyFunctorDim2_Damp(dt,Damp_Coef));   //Ali
 }
+//Ali      // This function is written to assigned different damping coefficients to cells, therefore the boundary cells can have more damping
+
+void SceCells::moveNodes_BC_M() {
+	thrust::counting_iterator<uint> iBegin2(0); 
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Damp.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Damp.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells + allocPara_m.bdryNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
+			SaxpyFunctorDim2_BC_Damp(dt));  
+}
+
+//Ali
+
+
+
+
+
+
+
 
 void SceCells::applyMemForce_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	thrust::counting_iterator<uint> iBegin(0), iBegin1(0);
-        //Ali
+	thrust::counting_iterator<uint> iBegin(0), iBegin1(0); 
+ //Ali
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
-        
         
        //Ali 
         
@@ -2160,6 +2200,99 @@ void SceCells::computeCenterPos_M() {
 							cellInfoVecs.centerCoordY.begin())), CVec2Divide());
 }
 
+
+void SceCells::BC_Imp_M() {
+
+        thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
+                                       cellInfoVecs.centerCoordX.begin(),
+                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount ) ;
+
+        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(
+                                       cellInfoVecs.centerCoordX.begin(),
+                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount ) ;
+
+        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(
+                                       cellInfoVecs.centerCoordY.begin(),
+                                       cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
+
+        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(
+                                       cellInfoVecs.centerCoordY.begin(),
+                                       cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
+        MinX= *MinX_Itr ; 
+        MaxX= *MaxX_Itr ; 
+        MinY= *MinY_Itr ; 
+        MaxY= *MaxY_Itr ;
+  
+/**	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							   cellInfoVecs.centerCoordY.begin())
+						           ),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							   cellInfoVecs.centerCoordY.begin())) + allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(   
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+                                                           cellInfoVecs.centerCoordY.begin())),
+			BC_Tissue_Damp(Damp_Coef)) ; 
+
+
+**/
+
+
+        //Ali 
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							   cellInfoVecs.centerCoordY.begin(),
+                                                           cellInfoVecs.Cell_Damp.begin())
+						           ),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							   cellInfoVecs.centerCoordY.begin(),
+							   cellInfoVecs.Cell_Damp.begin())) + allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(   
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+                                                           cellInfoVecs.Cell_Damp.begin())),
+			BC_Tissue_Damp(MinX,MaxX,MinY,MaxY,Damp_Coef)) ; 
+
+
+/**void SceCells::randomizeGrowth() {
+	thrust::counting_iterator<uint> countingBegin(0);
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin(),
+							countingBegin)) + allocPara.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+							cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.isRandGrowInited.begin())),
+			AssignRandIfNotInit(growthAuxData.randomGrowthSpeedMin,
+					growthAuxData.randomGrowthSpeedMax,
+					allocPara.currentActiveCellCount,
+					growthAuxData.randGenAuxPara));
+}
+
+
+
+**/
+
+
+}
+
+
+
+
 void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
@@ -2224,7 +2357,8 @@ void SceCells::distributeCellGrowthProgress_M() {
 }
 
 void SceCells::allComponentsMove_M() {
-	moveNodes_M();
+	//moveNodes_M();  //Ali 
+        moveNodes_BC_M();      //Ali
 }
 
 void SceCells::randomizeGrowth_M() {

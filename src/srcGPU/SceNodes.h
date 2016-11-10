@@ -821,6 +821,7 @@ public:
 	thrust::device_vector<double> nodeVelY;
 // Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
+
 // Tangent to the nodes
 	thrust::device_vector<double> nodeVelTangent;//AAMIRI
 // Normal to the nodes
