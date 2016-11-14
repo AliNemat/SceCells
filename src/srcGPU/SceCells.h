@@ -2101,7 +2101,7 @@ struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
                 double Dist=sqrt (
                             (CenterCellX-TCenterX)*(CenterCellX-TCenterX)+
                            (CenterCellY-TCenterY)*(CenterCellY-TCenterY)) ; 
-                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*20*_Damp_Coef     ;              
+                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*10*_Damp_Coef     ;              
                         
 			return thrust::make_tuple(CenterCellX,Damp);
 		}
