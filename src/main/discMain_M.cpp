@@ -71,7 +71,7 @@ void initializeSlurmConfig(int argc, char* argv[]) {
 
 void updateDivThres(double& curDivThred, uint& i, double& dt,
 		double& decayCoeff, double& divThreshold) {
-	double curTime = i * dt;
+	double curTime = i * dt + 55800.0;//AAMIRI
 	double decay = exp(-curTime * decayCoeff);
 	curDivThred = 1.0 - (1.0 - divThreshold) * decay;
 	//curDivThred = divThreshold ;
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
 	 		CellsStatsData polyData = simuDomain.outputPolyCountData();  //Ali comment
 	              //    CellsStatsData polyData = simuDomain.outputPolyCountData();
                          
-                        double curTime=i*mainPara.dt ;  //Ali
+                        double curTime=i*mainPara.dt + 55800.0;  //Ali - Abu
                         //Ali
                         if (FirstData==true) { 
                           

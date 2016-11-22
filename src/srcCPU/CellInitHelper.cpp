@@ -14,7 +14,7 @@ ForReadingData_M2 ReadFile_M2() {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
 
-          inputc.open("./resources/CellCenters2.txt");
+          inputc.open("./resources/CellCenters3.txt");
 
           if (inputc.is_open())
           {
@@ -547,7 +547,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 			"Bdry_InputFileName").toString();
 
          //Ali 
-        GEOMETRY::Point2D Point2D1[7];
+        GEOMETRY::Point2D Point2D1[100];
         ForReadingData_M2 ForReadingData2 = ReadFile_M2();
         //Ali 
 
@@ -592,10 +592,6 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart;
 		//std::cout << "rand init growth progress = " << randNum << std::endl;
 //Ali to make the initial progree of all nodes zero
-
-		if (randNum < 0.6)//AAMIRI
-			randNum = randNum +0.2;
-
 
  
 		rawData.cellGrowProgVec.push_back(randNum);

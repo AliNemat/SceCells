@@ -665,6 +665,7 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 		double extForceT = 0.0;
 		double extForceN = 0.0;
                 double DistToRi=0.0 ; 
+
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN,DistToRi);
