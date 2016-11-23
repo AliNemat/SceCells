@@ -128,7 +128,7 @@ public:
 	 * @param dt timestep
 	 */
 //Ali 	void runAllLogic_M(double dt);
-	void runAllLogic_M(double dt,double Damp_Coef);
+	void runAllLogic_M(double dt,double Damp_Coef,double InitTimeStage);
 
 	bool isDividing_ForAni();
 

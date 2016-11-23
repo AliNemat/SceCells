@@ -2362,6 +2362,7 @@ class SceCells {
 
 	double dt;
         double Damp_Coef ;   //Ali
+        double InitTimeStage ;  //A & A 
         double MinX ;  
         double MaxX ;  
         double MinY ;  
@@ -2649,7 +2650,7 @@ public:
 	void runAllCellLevelLogicsDisc(double dt);
 
 //Ali	void runAllCellLogicsDisc_M(double dt);
-	void runAllCellLogicsDisc_M(double dt, double Damp_Coef);    //Ali 
+	void runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage);    //Ali 
 
 	void runStretchTest(double dt);
 

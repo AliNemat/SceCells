@@ -37,6 +37,7 @@ ForReadingData_M2  ReadFile_M2();
 struct SimulationGlobalParameter {
 public:
 	std::string animationNameBase;
+        double InitTimeStage ; 
 	double totalSimuTime;
 	double dt;
         double Damp_Coef ; 

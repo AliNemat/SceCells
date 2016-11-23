@@ -138,8 +138,11 @@ int main(int argc, char* argv[]) {
 	 		CellsStatsData polyData = simuDomain.outputPolyCountData();  //Ali comment
 	              //    CellsStatsData polyData = simuDomain.outputPolyCountData();
                          
-                        double curTime=i*mainPara.dt + 55800.0;  //Ali - Abu
+                        double curTime=i*mainPara.dt + mainPara.InitTimeStage;  //Ali - Abu
                         //Ali
+
+                         cout<<"Th value of initial time stage is"<<mainPara.InitTimeStage<<endl ;  
+
                         if (FirstData==true) { 
                           
                           Init_Displace=polyData.Cells_Extrem_Loc[1]-polyData.Cells_Extrem_Loc[0] ;
@@ -185,7 +188,7 @@ int main(int argc, char* argv[]) {
 			aniFrame++;
 		}
 //Ali		simuDomain.runAllLogic_M(mainPara.dt);
-		simuDomain.runAllLogic_M(mainPara.dt,mainPara.Damp_Coef);  //Ali
+		simuDomain.runAllLogic_M(mainPara.dt,mainPara.Damp_Coef,mainPara.InitTimeStage);  //Ali
 	}
 
 	return 0;

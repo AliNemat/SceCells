@@ -985,7 +985,10 @@ void SimulationGlobalParameter::initFromConfig() {
 			globalConfigVars.getConfigValue("AnimationFolder").toString()
 					+ globalConfigVars.getConfigValue("AnimationName").toString()
 					+ globalConfigVars.getConfigValue("UniqueSymbol").toString();
-
+        //A & A 
+	InitTimeStage=
+			globalConfigVars.getConfigValue("InitTimeStage").toDouble();
+        //A & A 
 	totalSimuTime =
 			globalConfigVars.getConfigValue("SimulationTotalTime").toDouble();
 

@@ -223,6 +223,7 @@ void MembrPara::initFromConfig() {
 
 SceCells::SceCells() {
 	curTime = 0 + 55800.0;//AAMIRI
+        std ::cout << "I am looking for time stage 1 "<<InitTimeStage<<std::endl ; 
 }
 
 void SceCells::growAtRandom(double d_t) {
@@ -614,6 +615,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 				0.0) {
 	curTime = 0.0 + 55800.0;//AAMIRI
 
+        std ::cout << "I am looking for time stage 2 "<<InitTimeStage<<std::endl ; 
 	initialize(nodesInput);
 
 	copyInitActiveNodeCount(numOfInitActiveNodesOfCells);
@@ -629,6 +631,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveIntnlNodeCounts,
 		std::vector<double> &initGrowProgVec) {
 	curTime = 0.0 + 55800.0;//AAMIRI
+ 
+        std ::cout << "I am looking for time stage 3 "<<InitTimeStage<<std::endl ; 
 	tmpDebug = false;
 	aniDebug = false;
 	membrPara.initFromConfig();
@@ -1356,11 +1360,12 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 }
 
 //Ali void SceCells::runAllCellLogicsDisc_M(double dt) {
-void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef) {   //Ali
+void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage) {   //Ali
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
 	this->dt = dt;
         this->Damp_Coef=Damp_Coef ; //Ali 
+        this->InitTimeStage=InitTimeStage   ;  //A & A 
 	growthAuxData.prolifDecay = exp(-curTime * miscPara.prolifDecayCoeff);
 	growthAuxData.randomGrowthSpeedMin = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMin_Ori;
@@ -2355,8 +2360,8 @@ void SceCells::distributeCellGrowthProgress_M() {
 							DivideFunctor(allocPara_m.maxAllNodePerCell))),
 			nodes->getInfoVecs().nodeGrowPro.begin()
 					+ allocPara_m.bdryNodeCount);
-
-			if (curTime <= 55800.0+dt)//AAMIRI
+                        std::cout << "the vlaue of init time stage in distributeCellGrowthProgress_M is"<< InitTimeStage << std:: endl ; 
+			if (curTime <= InitTimeStage+dt)//AAMIRI   /A & A 
 				thrust::copy(
 					cellInfoVecs.growthProgress.begin(),
 					cellInfoVecs.growthProgress.end(),
