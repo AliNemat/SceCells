@@ -24,13 +24,6 @@ __constant__ double F_Ext_Incline_M2 ;  //Ali
 
 //Ali &  Abu June 30th
 __device__
-double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri ) {
-	if (progress <= mitoticCri) {
-		return (length - membrEquLen) * membrStiff;
-	} else {
-		return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
-
-        }
 double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri) {
 	if (progress <= mitoticCri) {
 		return (length - membrEquLen) * membrStiff;
