@@ -6,15 +6,14 @@
  */
 #include <fstream>
 #include "CellInitHelper.h"
-
 //Ali 
 ForReadingData_M2 ReadFile_M2() {
 
           std::vector<GEOMETRY::Point2D> result;
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
-
-          inputc.open("./resources/CellCenters3.txt");
+          double TempPos_X,TempPos_Y,TempPos_Z ; 
+          inputc.open("./resources/CellCenters_General.txt");
 
           if (inputc.is_open())
           {
@@ -27,8 +26,12 @@ ForReadingData_M2 ReadFile_M2() {
           inputc >> ForReadingData1.CellNumber ; 
           for (int i = 0; i <ForReadingData1.CellNumber; i = i + 1) {
 	    cout << "i=" << i << endl;		
-	    inputc >> ForReadingData1.TempSX[i] >> ForReadingData1.TempSY[i] >> ForReadingData1.TempSZ[i];	
+	    inputc >> TempPos_X >> TempPos_Y >> TempPos_Z ;	
+	    ForReadingData1.TempSX.push_back(TempPos_X);
+	    ForReadingData1.TempSY.push_back(TempPos_Y);
+	    ForReadingData1.TempSZ.push_back(TempPos_Z);
             }     
+         cout << "Cell center positions read successfully";
 
 return ForReadingData1; 
 }
@@ -547,8 +550,8 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 			"Bdry_InputFileName").toString();
 
          //Ali 
-        GEOMETRY::Point2D Point2D1[100];
         ForReadingData_M2 ForReadingData2 = ReadFile_M2();
+        GEOMETRY::Point2D Point2D1[ForReadingData2.CellNumber];
         //Ali 
 
 	GEOMETRY::MeshGen meshGen;

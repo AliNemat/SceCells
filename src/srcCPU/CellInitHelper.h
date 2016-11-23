@@ -27,7 +27,7 @@ using namespace std;
 //Ali
 struct ForReadingData_M2 {
       public: 
-       double TempSX[100],TempSY[100],TempSZ[100]; 
+      vector <double> TempSX,TempSY,TempSZ; 
        int    CellNumber ; 
 }; 
 
