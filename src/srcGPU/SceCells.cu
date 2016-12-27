@@ -1735,7 +1735,7 @@ void SceCells::findHertwigAxis() {
 
 	//divDebug();
 
-	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
+	for (uint i = 0; i < divAuxData.toEnterMitoticCount; i++) {
                 uint cellRank = divAuxData.tmpCellRank_M[i];
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
