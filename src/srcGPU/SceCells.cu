@@ -682,7 +682,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.isDividing.resize(allocPara_m.maxCellCount);
-	cellInfoVecs.isEnteringMitotic.resize(allocPara_m.maxCellCount);  //A&A
+	cellInfoVecs.isEnteringMitotic.resize(allocPara_m.maxCellCount, false);  //A&A
 	//cellInfoVecs.isRemoving.resize(allocPara.maxCellCount);//AAMIRI
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.isScheduledToShrink.resize(allocPara_m.maxCellCount, false);//AAMIRI
@@ -1750,8 +1750,12 @@ void SceCells::findHertwigAxis() {
 
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
                cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
- 
+               
+               std::cout<<cellInfoVecs.HertwigXdir[cellRank]<<"HertwigXdir Thrust" <<std::endl;  
+               std::cout<<cellInfoVecs.HertwigYdir[cellRank]<<"HertwigYdir Thrust" <<std::endl;  
 
+               std::cout<<divDir.x<<"HertwigXdir " <<std::endl;  
+               std::cout<<divDir.y<<"HertwigYdir " <<std::endl;  
 
 
 	}
@@ -2349,6 +2353,7 @@ void SceCells::divide2D_M() {
         
         //A&A
 	if (isEnteringMitotic){
+        std::cout<< "I am in EnteringMitotic"<< std::endl; 
 	copyCellsEnterMitotic();
 	findHertwigAxis();
 	}
@@ -2746,6 +2751,12 @@ bool SceCells::decideIfGoingToDivide_M() {
 }
 //A&A
 bool SceCells::decideIfAnyCellEnteringMitotic() {
+
+        double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+			- growthAuxData.prolifDecay
+					* (growthAuxData.grthProgrEndCPU
+							- growthAuxData.grthPrgrCriVal_M_Ori);
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
@@ -2755,7 +2766,7 @@ bool SceCells::decideIfAnyCellEnteringMitotic() {
 							cellInfoVecs.growthProgressOld.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.isEnteringMitotic.begin(),
-			CompuIsEnteringMitotic_M(allocPara_m.maxIntnlNodePerCell));
+			CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toEnterMitoticCount = thrust::reduce(cellInfoVecs.isEnteringMitotic.begin(),
@@ -4049,22 +4060,27 @@ double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,
 	CVector divDirUnit = divDir.getUnitVector();
 
 
-	double min = 0, max = 0;
+	double minUnit = 0, maxUnit = 0;
+	double minOveral = 0, maxOveral = 0;
 	for (uint i = 0; i < membrNodes.size(); i++) {
 		CVector tmpDir = membrNodes[i] - center;
 		CVector tmpUnitDir = tmpDir.getUnitVector();
-			double tmpVecProduct = divDirUnit * tmpUnitDir;
-			if (tmpVecProduct < min) {
-				min = tmpVecProduct;
+			double tmpVecProductUnit = divDirUnit * tmpUnitDir;
+			double tmpVecProductOveral = divDirUnit * tmpDir;
+			if (tmpVecProductUnit < minUnit) {
+				minUnit = tmpVecProductUnit;
+				minOveral = tmpVecProductOveral;
 			}
-			if (tmpVecProduct > max) {
-				max = tmpVecProduct;
+			if (tmpVecProductUnit > maxUnit) {
+				maxUnit = tmpVecProductUnit;
+				maxOveral = tmpVecProductOveral;
 			}
 	}
 	
-		double lenAlongHertwigAxis = max - min;
+		double lenAlongHertwigAxis = maxOveral - minOveral;
 	return lenAlongHertwigAxis;
 }
+
 
 void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 		double len_MajorAxis, CVector& centerNew1, CVector& centerNew2) {

@@ -72,7 +72,7 @@ void initializeSlurmConfig(int argc, char* argv[]) {
 void updateDivThres(double& curDivThred, uint& i, double& dt,
 		double& decayCoeff, double& divThreshold) {
 	double curTime = i * dt;
-	double decay = exp(-curTime * decayCoeff);
+	double decay =exp(-curTime * decayCoeff);
 	curDivThred = 1.0 - (1.0 - divThreshold) * decay;
 	//curDivThred = divThreshold ;
 }
