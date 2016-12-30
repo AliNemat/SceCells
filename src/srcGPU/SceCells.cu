@@ -31,8 +31,8 @@ double calMembrForce(double& length) {
 //Ali
 __device__
 double calExtForce(double& curTime) {
-                if (curTime>50) {
-		return min((curTime-50) * F_Ext_Incline_M2,0.2);
+                if (curTime>50) {              //If we change 50 here it needs to be changed in SceCells::outputPolyCountData
+		return ((curTime-50) * F_Ext_Incline_M2);
                 }
                 else {
                 return (0.0); 
@@ -3708,7 +3708,7 @@ CellsStatsData SceCells::outputPolyCountData() {
         result.Cells_Extrem_Loc[1]=MaxX; 
         result.Cells_Extrem_Loc[2]=MinY;
         result.Cells_Extrem_Loc[3]=MaxY ;
-        result.F_Ext_Out=membrPara.F_Ext_Incline*curTime ; 
+        result.F_Ext_Out=max(membrPara.F_Ext_Incline*(curTime-50),0.0) ; 
         //if (dt==curTime) { 
         //result.Init_Displace=MaxX-MinX ; 
        // }
