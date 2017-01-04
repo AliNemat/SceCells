@@ -14,7 +14,7 @@ ForReadingData_M2 ReadFile_M2() {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
 
-          inputc.open("./resources/CellCenters2.txt");
+          inputc.open("./resources/CellCenters3.txt");
 
           if (inputc.is_open())
           {
@@ -547,7 +547,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 			"Bdry_InputFileName").toString();
 
          //Ali 
-        GEOMETRY::Point2D Point2D1[7];
+        GEOMETRY::Point2D Point2D1[100];
         ForReadingData_M2 ForReadingData2 = ReadFile_M2();
         //Ali 
 
