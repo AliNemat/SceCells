@@ -821,6 +821,10 @@ public:
 	thrust::device_vector<double> nodeVelY;
 // Z velocities of nodes
 	thrust::device_vector<double> nodeVelZ;
+// For between membrane and internal for pressure calculation
+	thrust::device_vector<double> nodeMemIntForceMembX; //Ali
+	
+        thrust::device_vector<double> nodeMemIntForceMembY; //Ali 
 // Tangent to the nodes
 	thrust::device_vector<double> nodeVelTangent;//AAMIRI
 // Normal to the nodes

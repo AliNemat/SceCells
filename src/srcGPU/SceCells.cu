@@ -2168,7 +2168,7 @@ void SceCells::applyMemForce_M() {
 }
 
 
-//AAMIRI
+//AAMIRI 
 
 void SceCells::findTangentAndNormal_M() {
 
@@ -2197,8 +2197,8 @@ void SceCells::findTangentAndNormal_M() {
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin1,
 									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().nodeMemIntForceMembX.begin(),
+							nodes->getInfoVecs().nodeMemIntForceMembY.begin(),
  							nodes->getInfoVecs().nodeVelTangent.begin(),
 							nodes->getInfoVecs().nodeVelNormal.begin(),
 							nodes->getInfoVecs().nodeCurvature.begin(),
@@ -2214,8 +2214,8 @@ void SceCells::findTangentAndNormal_M() {
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin1,
 									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().nodeMemIntForceMembX.begin(),
+							nodes->getInfoVecs().nodeMemIntForceMembY.begin(),
  							nodes->getInfoVecs().nodeVelTangent.begin(),
 							nodes->getInfoVecs().nodeVelNormal.begin(), 
 							nodes->getInfoVecs().nodeCurvature.begin(),
@@ -4407,8 +4407,60 @@ void SceCells::applySceCellDisc_M() {
 	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+						- growthAuxData.grthPrgrCriVal_M_Ori);
 
+		thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeIntnlNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeIntnlNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+							   nodes->getInfoVecs().nodeVelY.begin(),
+							   nodes->getInfoVecs().nodeMemIntForceMembX.begin(),
+							   nodes->getInfoVecs().nodeMemIntForceMembY.begin())),
+			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
+					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+// Ali comment
+
+/**
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -4456,6 +4508,7 @@ void SceCells::applySceCellDisc_M() {
 							nodes->getInfoVecs().nodeVelY.begin())),
 			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
 					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+**/
 }
 
 __device__
@@ -4500,6 +4553,52 @@ void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+
+__device__
+void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, double& ForceMI_Memb_X,double& ForceMI_Memb_Y,double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceIBDiv_M[4]) {
+			forceValue = -sceIBDiv_M[0] / sceIBDiv_M[2]
+					* exp(-linkLength / sceIBDiv_M[2])
+					+ sceIBDiv_M[1] / sceIBDiv_M[3]
+							* exp(-linkLength / sceIBDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIBDiv_M[4])
+				+ (1.0 - percent) * sceIB_M[4];
+		if (linkLength < lenLimit) {
+			double intnlBPara0 = percent * (sceIBDiv_M[0])
+					+ (1.0 - percent) * sceIB_M[0];
+			double intnlBPara1 = percent * (sceIBDiv_M[1])
+					+ (1.0 - percent) * sceIB_M[1];
+			double intnlBPara2 = percent * (sceIBDiv_M[2])
+					+ (1.0 - percent) * sceIB_M[2];
+			double intnlBPara3 = percent * (sceIBDiv_M[3])
+					+ (1.0 - percent) * sceIB_M[3];
+			forceValue = -intnlBPara0 / intnlBPara2
+					* exp(-linkLength / intnlBPara2)
+					+ intnlBPara1 / intnlBPara3
+							* exp(-linkLength / intnlBPara3);
+		}
+	} else {
+		if (linkLength < sceIB_M[4]) {
+			forceValue = -sceIB_M[0] / sceIB_M[2]
+					* exp(-linkLength / sceIB_M[2])
+					+ sceIB_M[1] / sceIB_M[3] * exp(-linkLength / sceIB_M[3]);
+		}
+	}
+        ForceMI_Memb_X=ForceMI_Memb_X+forceValue * (xPos2 - xPos)  ; 
+        ForceMI_Memb_Y=ForceMI_Memb_Y+forceValue * (yPos2 - yPos) ; 
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}
+
 
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,

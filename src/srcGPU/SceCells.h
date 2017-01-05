@@ -93,7 +93,10 @@ double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
-
+//Ali
+__device__
+void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, double & ForceMI_Memb_X,double & ForceMI_Memb_Y, double grthPrgrCriVal_M);
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
@@ -735,8 +738,10 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 			Ny = Ny / sizeN;}
 
 //calculating the Tangent and Normal Tensions
-		oriVelT = oriVelX * avgT_x + oriVelY * avgT_y;
-		oriVelN = oriVelX * Nx + oriVelY * Ny;
+		//oriVelT = oriVelX * avgT_x + oriVelY * avgT_y;
+		//oriVelN = oriVelX * Nx + oriVelY * Ny;
+		oriVelT = oriVelX ; 
+		oriVelN = oriVelY ; 
 
 //finding the curvature at this node
 		curvature = sizeN;
@@ -807,8 +812,8 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 		return thrust::make_tuple(oriVelX, oriVelY);
 	}
 };
-
-struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
+// Ali changed 
+struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 	uint _maxNodePerCell;
 	uint _maxMemNodePerCell;
 	double* _locXAddr;
@@ -825,7 +830,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec2 operator()(const CellData &cData) const {
+	__device__ CVec4  operator()(const CellData &cData) const {
 		uint activeMembrCount = thrust::get<0>(cData);
 		uint activeIntnlCount = thrust::get<1>(cData);
 		uint cellRank = thrust::get<2>(cData);
@@ -834,9 +839,12 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 		double oriVelX = thrust::get<5>(cData);
 		double oriVelY = thrust::get<6>(cData);
 		uint index = cellRank * _maxNodePerCell + nodeRank;
+                double ForceMI_Memb_X=0.0 ; 
+                double ForceMI_Memb_Y=0.0 ; 
 
 		if (_isActiveAddr[index] == false) {
-			return thrust::make_tuple(oriVelX, oriVelY);
+			//return thrust::make_tuple(oriVelX, oriVelY);
+		        return thrust::make_tuple(oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y);
 		}
 		uint intnlIndxMemBegin = cellRank * _maxNodePerCell;
 		uint intnlIndxBegin = cellRank * _maxNodePerCell + _maxMemNodePerCell;
@@ -851,8 +859,12 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 					index_other++) {
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
+                                /** Ali comment
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
+                                **/
+				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y, _grthPrgrCriVal_M);// Ali 
 			}
 		} else {
 			// means internal node
@@ -862,7 +874,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY, _grthPrgrCriVal_M);
+						oriVelX, oriVelY,_grthPrgrCriVal_M);
 			}
 			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
 					index_other++) {
@@ -875,7 +887,8 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec2> {
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
 			}
 		}
-		return thrust::make_tuple(oriVelX, oriVelY);
+		return thrust::make_tuple(oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y);
+	//	return thrust::make_tuple(oriVelX, oriVelY);
 	}
 };
 
