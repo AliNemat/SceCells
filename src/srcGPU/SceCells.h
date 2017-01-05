@@ -842,6 +842,8 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
                 double ForceMI_Memb_X=0.0 ; 
                 double ForceMI_Memb_Y=0.0 ; 
 
+		double oriVelXOld = oriVelX;
+		double oriVelYOld = oriVelY;
 		if (_isActiveAddr[index] == false) {
 			//return thrust::make_tuple(oriVelX, oriVelY);
 		        return thrust::make_tuple(oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y);
@@ -864,7 +866,12 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
                                 **/
 				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y, _grthPrgrCriVal_M);// Ali 
+						oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y, _grthPrgrCriVal_M);// Ali
+                                if (progress >_grthPrgrCriVal_M)
+                                   {
+                                     oriVelX=oriVelXOld ; 
+                                     oriVelY=oriVelYOld ; 
+                                   }
 			}
 		} else {
 			// means internal node
