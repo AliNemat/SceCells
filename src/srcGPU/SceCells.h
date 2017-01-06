@@ -482,6 +482,10 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		double rightDiffY;
 		double lenRight;
 
+		double velXOld = velX;
+		double velYOld = velY;
+
+
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
@@ -625,8 +629,16 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 					}
 				}
 			}
+                        if (  progress< _mitoticCri )
+                        {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
+                        }
+                        else
+                        {
+			return thrust::make_tuple(velXOld, velYOld, mag, rightMag, midX, midY,
+					0.0, 0.0, 0.0, 0.0);
+                        }
 		}
 	}
 }; 
