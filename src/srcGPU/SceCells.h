@@ -482,8 +482,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		double rightDiffY;
 		double lenRight;
 
-		double velXOld = velX;
-		double velYOld = velY;
+	//	double velXOld = velX;
+	//	double velYOld = velY;
 
 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
@@ -629,16 +629,16 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 					}
 				}
 			}
-                        if (  progress< _mitoticCri )
-                        {
+          //              if (  progress< _mitoticCri )
+            //            {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
-                        }
-                        else
-                        {
-			return thrust::make_tuple(velXOld, velYOld, mag, rightMag, midX, midY,
-					0.0, 0.0, 0.0, 0.0);
-                        }
+              //          }
+                //        else
+                 //       {
+		//	return thrust::make_tuple(velXOld, velYOld, mag, rightMag, midX, midY,
+	//				0.0, 0.0, 0.0, 0.0);
+                  //      }
 		}
 	}
 }; 
@@ -854,8 +854,8 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
                 double ForceMI_Memb_X=0.0 ; 
                 double ForceMI_Memb_Y=0.0 ; 
 
-		double oriVelXOld = oriVelX;
-		double oriVelYOld = oriVelY;
+		//double oriVelXOld = oriVelX;
+		//double oriVelYOld = oriVelY;
 		if (_isActiveAddr[index] == false) {
 			//return thrust::make_tuple(oriVelX, oriVelY);
 		        return thrust::make_tuple(oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y);
@@ -879,11 +879,11 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
                                 **/
 				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY,ForceMI_Memb_X,ForceMI_Memb_Y, _grthPrgrCriVal_M);// Ali
-                                if (progress >_grthPrgrCriVal_M)
-                                   {
-                                     oriVelX=oriVelXOld ; 
-                                     oriVelY=oriVelYOld ; 
-                                   }
+                                //if (progress >_grthPrgrCriVal_M)
+                                  // {
+                                    // oriVelX=oriVelXOld ; 
+                                    // oriVelY=oriVelYOld ; 
+                                  // }
 			}
 		} else {
 			// means internal node
@@ -1202,6 +1202,14 @@ struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2
 	__host__ __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
 		double xRes = thrust::get<0>(vec1) * _dt/_DampCoef + thrust::get<0>(vec2);
 		double yRes = thrust::get<1>(vec1) * _dt/_DampCoef + thrust::get<1>(vec2);
+                if (yRes>26.5) {
+                      yRes=26.5 ; 
+                      }
+                else if (yRes<23.5){
+                      yRes=23.5 ; 
+                      }
+                else {
+                 }
 		return thrust::make_tuple(xRes, yRes);
 	}
 };

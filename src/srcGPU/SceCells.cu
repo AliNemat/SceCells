@@ -4593,8 +4593,8 @@ void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
 					+ sceIB_M[1] / sceIB_M[3] * exp(-linkLength / sceIB_M[3]);
 		}
 	}
-        ForceMI_Memb_X=ForceMI_Memb_X+forceValue * (xPos2 - xPos)  ; 
-        ForceMI_Memb_Y=ForceMI_Memb_Y+forceValue * (yPos2 - yPos) ; 
+        ForceMI_Memb_X=ForceMI_Memb_X+forceValue * (xPos2 - xPos)/ linkLength  ; 
+        ForceMI_Memb_Y=ForceMI_Memb_Y+forceValue * (yPos2 - yPos)/ linkLength ; 
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
