@@ -13,7 +13,9 @@ ForReadingData_M2 ReadFile_M2() {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
           double TempPos_X,TempPos_Y,TempPos_Z ; 
-          inputc.open("./resources/CellCenters_General.txt");
+          //inputc.open("./resources/CellCenters_General.txt");
+          //inputc.open("./resources/CellCenters_General.txt");
+          inputc.open("./resources/CellCenters2.txt");
 
           if (inputc.is_open())
           {
