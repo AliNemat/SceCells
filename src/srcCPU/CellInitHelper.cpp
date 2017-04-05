@@ -7,7 +7,7 @@
 #include <fstream>
 #include "CellInitHelper.h"
 //Ali 
-ForReadingData_M2 ReadFile_M2() {
+ForReadingData_M2 ReadFile_M2(std::string CellCentersFileName) {
 
           std::vector<GEOMETRY::Point2D> result;
           std::fstream inputc;
@@ -15,7 +15,8 @@ ForReadingData_M2 ReadFile_M2() {
           double TempPos_X,TempPos_Y,TempPos_Z ; 
           //inputc.open("./resources/CellCenters_General.txt");
           //inputc.open("./resources/CellCenters_General.txt");
-          inputc.open("./resources/CellCenters2.txt");
+          //inputc.open("./resources/CellCenters2.txt");
+          inputc.open("CellCentersFileName.c_str()");
 
           if (inputc.is_open())
           {
@@ -551,8 +552,10 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 	std::string bdryInputFileName = globalConfigVars.getConfigValue(
 			"Bdry_InputFileName").toString();
 
+	std::string CellCentersFileName = globalConfigVars.getConfigValue(
+			"CellCenters_FileName").toString() ;
          //Ali 
-        ForReadingData_M2 ForReadingData2 = ReadFile_M2();
+        ForReadingData_M2 ForReadingData2 = ReadFile_M2(CellCentersFileName);
         GEOMETRY::Point2D Point2D1[ForReadingData2.CellNumber];
         //Ali 
 

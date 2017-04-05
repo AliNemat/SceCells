@@ -222,8 +222,8 @@ void MembrPara::initFromConfig() {
 }
 
 SceCells::SceCells() {
-	curTime = 0 + 55800.0;//AAMIRI
-        std ::cout << "I am looking for time stage 1 "<<InitTimeStage<<std::endl ; 
+	//curTime = 0 + 55800.0;//AAMIRI // Ali I comment that our safely on 04/04/2017
+        std ::cout << "I am in SceCells constructor with zero element "<<InitTimeStage<<std::endl ; 
 }
 
 void SceCells::growAtRandom(double d_t) {
@@ -606,7 +606,7 @@ void SceCells::addPointIfScheduledToGrow() {
 					growthAuxData.nodeYPosAddress, time(NULL),
 					miscPara.growThreshold));
 }
-
+//Ali commented this constructor in 04/04/2017
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& numOfInitActiveNodesOfCells,
 		std::vector<SceNodeType>& cellTypes) :
@@ -615,7 +615,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 				0.0) {
 	curTime = 0.0 + 55800.0;//AAMIRI
 
-        std ::cout << "I am looking for time stage 2 "<<InitTimeStage<<std::endl ; 
+        std ::cout << "I am in SceCells constructor with polymorphism shape "<<InitTimeStage<<std::endl ; 
 	initialize(nodesInput);
 
 	copyInitActiveNodeCount(numOfInitActiveNodesOfCells);
@@ -626,13 +626,14 @@ SceCells::SceCells(SceNodes* nodesInput,
 	distributeIsActiveInfo();
 }
 
+
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts,
-		std::vector<double> &initGrowProgVec) {
-	curTime = 0.0 + 55800.0;//AAMIRI
- 
-        std ::cout << "I am looking for time stage 3 "<<InitTimeStage<<std::endl ; 
+		std::vector<double> &initGrowProgVec, double InitTimeStage) {
+//	curTime = 0.0 + 55800.0;//AAMIRIi
+        curTime=InitTimeStage ; 
+        std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
 	tmpDebug = false;
 	aniDebug = false;
 	membrPara.initFromConfig();

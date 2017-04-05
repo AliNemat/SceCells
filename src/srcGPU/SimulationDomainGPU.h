@@ -91,7 +91,7 @@ class SimulationDomainGPU {
 			std::vector<bool> &nodeIsActive, std::vector<CVector> &initNodesVec,
 			std::vector<uint> &numOfInitActiveEpiNodeCounts,
 			std::vector<uint> &numOfInitActiveInternalNodeCounts,
-			std::vector<double> &initGrowProgVec);
+			std::vector<double> &initGrowProgVec, double InitTimeStage);
 
 	NetworkInfo buildNetInfo(CellsStatsData &polyData);
 	std::set<int> findT1Transition();
@@ -113,7 +113,7 @@ public:
 	 * Assigns values to the data fields in simulation domain.
 	 * @param initData initial data set for simulation domain
 	 */
-	void initialize_v2_M(SimulationInitData_V2_M &initData);
+	void initialize_v2_M(SimulationInitData_V2_M &initData, double InitTimeStage);
 
 	/**
 	 * Run one step of simulation in the domain.

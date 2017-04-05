@@ -31,7 +31,7 @@ struct ForReadingData_M2 {
        int    CellNumber ; 
 }; 
 
-ForReadingData_M2  ReadFile_M2();
+ForReadingData_M2  ReadFile_M2(std::string CellCentersFileName);
 //Ali 
 
 struct SimulationGlobalParameter {

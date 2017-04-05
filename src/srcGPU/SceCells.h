@@ -2370,6 +2370,7 @@ class SceCells {
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;
+	double curTime;
 
 	void readMiscPara();
 	void readBioPara();
@@ -2634,7 +2635,6 @@ class SceCells {
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
 	void calCellArea();
-	double curTime;
 public:
 	SceCells();
 
@@ -2645,7 +2645,7 @@ public:
 	SceCells(SceNodes* nodesInput,
 			std::vector<uint> &numOfInitActiveMembrNodeCounts,
 			std::vector<uint> &numOfInitActiveIntnlNodeCounts,
-			std::vector<double> &initGrowProgVec);
+			std::vector<double> &initGrowProgVec, double InitTimeStage);
 
 	void runAllCellLevelLogicsDisc(double dt);
 

@@ -87,19 +87,28 @@ int main(int argc, char* argv[]) {
 	// Slurm is computer-cluster management system.
 	initializeSlurmConfig(argc, argv);
 
+        cout<< "I am in main file after slurm "<<endl; 
 	// initialize simulation control related parameters from config file.
 	SimulationGlobalParameter mainPara;
+
+        cout<< "I am in main file after simulation global parameter "<<endl; 
 	mainPara.initFromConfig();
 
+        cout<< "I am in main file before Cell IniHelper instance creation"<<endl; 
 	// initialize simulation initialization helper.
 	CellInitHelper initHelper;
+        cout<< "I am in main file after Cell IniHelper instance creation"<<endl; 
 
 	// initialize simulation domain.
 	SimulationDomainGPU simuDomain;
 
+        cout<< "I am in main file after simulationDomainGPU instance creation"<<endl; 
 	SimulationInitData_V2_M initData = initHelper.initInput_M();
-	simuDomain.initialize_v2_M(initData);
 
+        cout<< "I am in main file after initInput_M creation"<<endl; 
+	simuDomain.initialize_v2_M(initData,mainPara.InitTimeStage);
+
+        cout<< "I am in main file after initInput_v2_M creation"<<endl; 
 	std::string polyStatFileNameBase = globalConfigVars.getConfigValue(
 			"PolygonStatFileName").toString();
 	std::string uniqueSymbol =

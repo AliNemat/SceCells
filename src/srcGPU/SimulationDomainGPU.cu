@@ -23,7 +23,7 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 		std::vector<bool> &nodeIsActive, std::vector<CVector> &initNodesVec,
 		std::vector<uint> &initActiveMembrNodeCounts,
 		std::vector<uint> &initActiveIntnlNodeCounts,
-		std::vector<double> &initGrowProgVec) {
+		std::vector<double> &initGrowProgVec, double InitTimeStage) {  //Ali
 	/*
 	 * Initialize SceNodes by constructor. first two parameters come from input parameters
 	 * while the last four parameters come from Config file.
@@ -71,18 +71,18 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	//}
 	//std::cout << std::endl;
 	cells = SceCells(&nodes, initActiveMembrNodeCounts,
-			initActiveIntnlNodeCounts, initGrowProgVec);
+			initActiveIntnlNodeCounts, initGrowProgVec, InitTimeStage);  //Ali
 
 	//std::cout << "break point 5 " << std::endl;
 	//std::cout.flush();
 }
 
-void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData) {
+void SimulationDomainGPU::initialize_v2_M(SimulationInitData_V2_M& initData, double  InitTimeStage) {   //Ali 
 	std::cout << "Start initializing simulation domain ......" << std::endl;
 	memPara.isStab = initData.isStab;
 	initializeNodes_M(initData.nodeTypes, initData.initIsActive,
 			initData.initNodeVec, initData.initActiveMembrNodeCounts,
-			initData.initActiveIntnlNodeCounts, initData.initGrowProgVec);
+			initData.initActiveIntnlNodeCounts, initData.initGrowProgVec, InitTimeStage);  // Ali
 	std::cout << "Finished initializing nodes positions" << std::endl;
 	nodes.initDimension(domainPara.minX, domainPara.maxX, domainPara.minY,
 			domainPara.maxY, domainPara.gridSpacing);
@@ -175,6 +175,8 @@ void SimulationDomainGPU::readMemPara() {
 				memPara.maxMembrNodePerCell + memPara.maxIntnlNodePerCell
 						== memPara.maxAllNodePerCell);
 	}
+
+     cout << "I am in readMemPara"<< endl ; 
 }
 
 void SimulationDomainGPU::readDomainPara() {
@@ -189,11 +191,14 @@ void SimulationDomainGPU::readDomainPara() {
 			/ domainPara.gridSpacing + 1;
 	domainPara.YBucketSize = (domainPara.maxY - domainPara.minY)
 			/ domainPara.gridSpacing + 1;
+
+     cout << "I am in readDomainPara"<< endl ; 
 }
 
 void SimulationDomainGPU::readAllParameters() {
 	readMemPara();
 	readDomainPara();
+cout<< "I am in SimulationDomainGPU constructor" << endl ; 
 }
 
 void SimulationDomainGPU::outputVtkFilesWithCri(std::string scriptNameBase,
