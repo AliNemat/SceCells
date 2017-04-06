@@ -74,8 +74,6 @@ void updateDivThres(double& curDivThred, uint& i, double& curTime,  //Ali
         
         cout<<"The value of initial time stage in updateDivThres is"<<curTime<<endl ;  
 	double decay = exp(-curTime * decayCoeff);
-	double curTime = i * dt;
-	double decay =exp(-curTime * decayCoeff);
 	curDivThred = 1.0 - (1.0 - divThreshold) * decay;
 	//curDivThred = divThreshold ;
 }
