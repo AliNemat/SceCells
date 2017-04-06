@@ -673,9 +673,10 @@ void SceCells::initCellInfoVecs() {
 
 void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
-	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //Ali
-	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0);   //Ali
 	cellInfoVecs.Cell_Damp.resize(allocPara_m.maxCellCount, 36.0);   //Ali
+	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //A&A
+        cellInfoVecs.growthProgressOld.resize(allocPara_m.maxCellCount, 0.0);//Ali
+	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0); //Ali
 	cellInfoVecs.expectedLength.resize(allocPara_m.maxCellCount,
 			bioPara.cellInitLength);
 	cellInfoVecs.lengthDifference.resize(allocPara_m.maxCellCount, 0.0);
@@ -685,6 +686,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.activeIntnlNodeCounts.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.lastCheckPoint.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.isDividing.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.isEnteringMitotic.resize(allocPara_m.maxCellCount, false);  //A&A
 	//cellInfoVecs.isRemoving.resize(allocPara.maxCellCount);//AAMIRI
 	cellInfoVecs.isScheduledToGrow.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.isScheduledToShrink.resize(allocPara_m.maxCellCount, false);//AAMIRI
@@ -692,6 +694,10 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordZ.resize(allocPara_m.maxCellCount);
+
+        cellInfoVecs.HertwigXdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
+	cellInfoVecs.HertwigYdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
+
 	cellInfoVecs.cellRanksTmpStorage.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.growthSpeed.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.growthXDir.resize(allocPara_m.maxCellCount);
@@ -1523,8 +1529,14 @@ void SceCells::copyCellsPreDivision_M() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpYPos2_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
+        //A&A
+        divAuxData.tmpHertwigXdir = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+        divAuxData.tmpHertwigYdir = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+        //A&A
 
-// step 2 , continued
+// step 2 , continued // copy node info values ready for division /comment A&A
 	thrust::counting_iterator<uint> iStart(0);
 	thrust::copy_if(
 			thrust::make_zip_iterator(
@@ -1551,7 +1563,102 @@ void SceCells::copyCellsPreDivision_M() {
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
 							divAuxData.tmpNodePosY_M.begin())), isTrue());
-// step 3 , continued
+// step 3 , continued  //copy cell info values ready for division /comment A&A
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin, cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.HertwigXdir.begin(),
+							cellInfoVecs.HertwigYdir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin, cellInfoVecs.growthXDir.begin(),
+							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.HertwigXdir.begin(),
+							cellInfoVecs.HertwigYdir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.isDividing.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(divAuxData.tmpCellRank_M.begin(),
+							divAuxData.tmpDivDirX_M.begin(),
+							divAuxData.tmpDivDirY_M.begin(),
+                                                        divAuxData.tmpHertwigXdir.begin(),
+                                                        divAuxData.tmpHertwigYdir.begin(),
+							divAuxData.tmpCenterPosX_M.begin(),
+							divAuxData.tmpCenterPosY_M.begin())), isTrue());
+}
+
+void SceCells::copyCellsEnterMitotic() {
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+	divAuxData.nodeStorageCount = divAuxData.toEnterMitoticCount
+			* allocPara_m.maxAllNodePerCell;
+
+	divAuxData.tmpIsActive_M = thrust::device_vector<bool>(
+			divAuxData.nodeStorageCount, true);
+	divAuxData.tmpNodePosX_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpNodePosY_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+
+	divAuxData.tmpCellRank_M = thrust::device_vector<uint>(
+			divAuxData.toEnterMitoticCount, 0);
+	divAuxData.tmpDivDirX_M = thrust::device_vector<double>(
+			divAuxData.toEnterMitoticCount, 0);
+	divAuxData.tmpDivDirY_M = thrust::device_vector<double>(
+			divAuxData.toEnterMitoticCount, 0);
+	divAuxData.tmpCenterPosX_M = thrust::device_vector<double>(
+			divAuxData.toEnterMitoticCount, 0);
+	divAuxData.tmpCenterPosY_M = thrust::device_vector<double>(
+			divAuxData.toEnterMitoticCount, 0);
+
+	divAuxData.tmpIsActive1_M = thrust::device_vector<bool>(
+			divAuxData.nodeStorageCount, false);
+	divAuxData.tmpXPos1_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpYPos1_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+
+	divAuxData.tmpIsActive2_M = thrust::device_vector<bool>(
+			divAuxData.nodeStorageCount, false);
+	divAuxData.tmpXPos2_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpYPos2_M = thrust::device_vector<double>(
+			divAuxData.nodeStorageCount, 0.0);
+
+// step 2 , continued // copy node info values ready for division /comment A&A
+	thrust::counting_iterator<uint> iStart(0);
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeIsActive.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeIsActive.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocX.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount))
+					+ totalNodeCountForActiveCells,
+			thrust::make_permutation_iterator(cellInfoVecs.isEnteringMitotic.begin(),
+					make_transform_iterator(iStart,
+							DivideFunctor(allocPara_m.maxAllNodePerCell))),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
+							divAuxData.tmpNodePosX_M.begin(),
+							divAuxData.tmpNodePosY_M.begin())), isTrue());
+// step 3 , continued  //copy cell info values ready for division /comment A&A
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::copy_if(
 			thrust::make_zip_iterator(
@@ -1565,7 +1672,7 @@ void SceCells::copyCellsPreDivision_M() {
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin()))
 					+ allocPara_m.currentActiveCellCount,
-			cellInfoVecs.isDividing.begin(),
+			cellInfoVecs.isEnteringMitotic.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpCellRank_M.begin(),
 							divAuxData.tmpDivDirX_M.begin(),
@@ -1573,6 +1680,9 @@ void SceCells::copyCellsPreDivision_M() {
 							divAuxData.tmpCenterPosX_M.begin(),
 							divAuxData.tmpCenterPosY_M.begin())), isTrue());
 }
+
+
+
 
 void SceCells::createTwoNewCellArr_M() {
 	divAuxData.tmp1MemActiveCounts.clear();
@@ -1591,14 +1701,26 @@ void SceCells::createTwoNewCellArr_M() {
 		obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 
 		CVector oldCenter = obtainCenter(i);
-		double lenAlongMajorAxis;
-		CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
-				lenAlongMajorAxis);
 
+                //A&A commented
+		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+		//		lenAlongMajorAxis);
+                                              
+		/*CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+				lenAlongMajorAxis);*/
+
+
+		CVector divDir;
+		divDir.x = divAuxData.tmpHertwigXdir[i] ; //A&A
+		divDir.y = divAuxData.tmpHertwigYdir[i] ; //A&A 
+		
+		double lenAlongHertwigAxis = calLengthAlongHertwigAxis(divDir, oldCenter, membrNodes);//A&A added
+
+ 
 		std::vector<VecVal> tmp1Membr, tmp2Membr;
 		CVector cell1Center, cell2Center;
 
-		obtainTwoNewCenters(oldCenter, divDir, lenAlongMajorAxis, cell1Center,
+		obtainTwoNewCenters(oldCenter, divDir, lenAlongHertwigAxis, cell1Center,
 				cell2Center);
 
 		prepareTmpVec(i, divDir, oldCenter, tmp1Membr, tmp2Membr);
@@ -1608,6 +1730,41 @@ void SceCells::createTwoNewCellArr_M() {
 		shiftIntnlNodesByCellCenter(cell1Center, cell2Center);
 
 		assembleVecForTwoCells(i);
+	}
+	//divDebug();
+}
+//A&A
+void SceCells::findHertwigAxis() {
+	divAuxData.tmp1MemActiveCounts.clear();
+	divAuxData.tmp1InternalActiveCounts.clear();
+	divAuxData.tmp2MemActiveCounts.clear();
+	divAuxData.tmp2InternalActiveCounts.clear();
+
+	//divDebug();
+
+	for (uint i = 0; i < divAuxData.toEnterMitoticCount; i++) {
+                uint cellRank = divAuxData.tmpCellRank_M[i];
+		vector<CVector> membrNodes;
+		vector<CVector> intnlNodes;
+
+		obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
+
+		CVector oldCenter = obtainCenter(i);
+		double lenAlongMajorAxis;
+		CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+				lenAlongMajorAxis);
+
+
+               cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
+               cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
+               
+               std::cout<<cellInfoVecs.HertwigXdir[cellRank]<<"HertwigXdir Thrust" <<std::endl;  
+               std::cout<<cellInfoVecs.HertwigYdir[cellRank]<<"HertwigYdir Thrust" <<std::endl;  
+
+               std::cout<<divDir.x<<"HertwigXdir " <<std::endl;  
+               std::cout<<divDir.y<<"HertwigYdir " <<std::endl;  
+
+
 	}
 	//divDebug();
 }
@@ -2332,6 +2489,16 @@ void SceCells::growAtRandom_M(double dt) {
 
 void SceCells::divide2D_M() {
 	bool isDivisionPresent = decideIfGoingToDivide_M();
+        bool isEnteringMitotic = decideIfAnyCellEnteringMitotic() ; //A&A
+        
+        //A&A
+	if (isEnteringMitotic){
+        std::cout<< "I am in EnteringMitotic"<< std::endl; 
+	copyCellsEnterMitotic();
+	findHertwigAxis();
+	}
+        //A&A
+
 	if (!isDivisionPresent) {
 		return;
 	}
@@ -2403,6 +2570,12 @@ void SceCells::randomizeGrowth_M() {
 }
 
 void SceCells::updateGrowthProgress_M() {
+        thrust::copy(cellInfoVecs.growthProgress.begin(),
+			cellInfoVecs.growthProgress.begin()
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.growthProgressOld.begin());
+
+        
 	thrust::transform(cellInfoVecs.growthSpeed.begin(),
 			cellInfoVecs.growthSpeed.begin()
 					+ allocPara_m.currentActiveCellCount,
@@ -2719,6 +2892,35 @@ bool SceCells::decideIfGoingToDivide_M() {
 			cellInfoVecs.isDividing.begin()
 					+ allocPara_m.currentActiveCellCount, (uint) (0));
 	if (divAuxData.toBeDivideCount > 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+//A&A
+bool SceCells::decideIfAnyCellEnteringMitotic() {
+
+        double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+			- growthAuxData.prolifDecay
+					* (growthAuxData.grthProgrEndCPU
+							- growthAuxData.grthPrgrCriVal_M_Ori);
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.growthProgressOld.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							cellInfoVecs.growthProgressOld.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.isEnteringMitotic.begin(),
+			CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
+	// sum all bool values which indicate whether the cell is going to divide.
+	// toBeDivideCount is the total number of cells going to divide.
+	divAuxData.toEnterMitoticCount = thrust::reduce(cellInfoVecs.isEnteringMitotic.begin(),
+			cellInfoVecs.isEnteringMitotic.begin()
+					+ allocPara_m.currentActiveCellCount, (uint) (0));
+	if (divAuxData.toEnterMitoticCount > 0) {
 		return true;
 	} else {
 		return false;
@@ -3997,6 +4199,36 @@ CVector SceCells::calDivDir_MajorAxis(CVector center,
 	lenAlongMajorAxis = maxDiff;
 	return majorAxisDir;
 }
+
+
+//A&A
+double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,
+		vector<CVector>& membrNodes) {
+
+	CVector divDirUnit = divDir.getUnitVector();
+
+
+	double minUnit = 0, maxUnit = 0;
+	double minOveral = 0, maxOveral = 0;
+	for (uint i = 0; i < membrNodes.size(); i++) {
+		CVector tmpDir = membrNodes[i] - center;
+		CVector tmpUnitDir = tmpDir.getUnitVector();
+			double tmpVecProductUnit = divDirUnit * tmpUnitDir;
+			double tmpVecProductOveral = divDirUnit * tmpDir;
+			if (tmpVecProductUnit < minUnit) {
+				minUnit = tmpVecProductUnit;
+				minOveral = tmpVecProductOveral;
+			}
+			if (tmpVecProductUnit > maxUnit) {
+				maxUnit = tmpVecProductUnit;
+				maxOveral = tmpVecProductOveral;
+			}
+	}
+	
+		double lenAlongHertwigAxis = maxOveral - minOveral;
+	return lenAlongHertwigAxis;
+}
+
 
 void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 		double len_MajorAxis, CVector& centerNew1, CVector& centerNew2) {

@@ -1836,6 +1836,26 @@ struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
 	}
 };
 
+//A&A
+struct CompuIsEnteringMitotic_M: thrust::unary_function<CVec2, bool> {
+	double _grthprgCriVal ; 
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CompuIsEnteringMitotic_M(double grthprgCriVal_M) :
+			_grthprgCriVal(grthprgCriVal_M) {
+	}
+	__host__ __device__
+	bool operator()(const CVec2 &vec) {
+		double growthProgress = thrust::get<0>(vec);
+		double growthProgressOld = thrust::get<1>(vec);
+		
+		if (growthProgress >= _grthprgCriVal &&  growthProgressOld <= _grthprgCriVal) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
 //AAMIRI
 /*
 struct CompuIsRemoving_M: thrust::unary_function<DUi, bool> {
@@ -2153,6 +2173,10 @@ struct CellInfoVecs {
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
        
+	thrust::device_vector<double> growthProgressOld;  //A&A
+//Ali
+        
+//Ali
 	thrust::device_vector<double> expectedLength;
 //thrust::device_vector<double> currentLength;
 	thrust::device_vector<double> lengthDifference;
@@ -2166,6 +2190,7 @@ struct CellInfoVecs {
 	thrust::device_vector<uint> activeNodeCountOfThisCell;
 	thrust::device_vector<double> lastCheckPoint;
 	thrust::device_vector<bool> isDividing;
+	thrust::device_vector<bool> isEnteringMitotic; //A&A
 
 	//thrust::device_vector<bool> isRemoving;//AAMIRI
 
@@ -2177,6 +2202,10 @@ struct CellInfoVecs {
 	thrust::device_vector<double> centerCoordX;
 	thrust::device_vector<double> centerCoordY;
 	thrust::device_vector<double> centerCoordZ;
+
+	thrust::device_vector<double> HertwigXdir; //A&A
+	thrust::device_vector<double> HertwigYdir; //A&A
+
 
 	thrust::device_vector<bool> isRandGrowInited;
 	thrust::device_vector<double> growthSpeed;
@@ -2250,6 +2279,7 @@ struct CellDivAuxData {
 // ************************ these parameters are used for cell division *************************
 // sum all bool values which indicate whether the cell is going to divide.
 // toBeDivideCount is the total number of cells going to divide.
+        uint toEnterMitoticCount ; //A&A
 	uint toBeDivideCount;
 	uint nodeStorageCount;
 
@@ -2292,6 +2322,9 @@ struct CellDivAuxData {
 	thrust::device_vector<bool> tmpIsActive2_M;
 	thrust::device_vector<double> tmpXPos2_M;
 	thrust::device_vector<double> tmpYPos2_M;
+
+	thrust::device_vector<double> tmpHertwigXdir;  //A&A
+	thrust::device_vector<double> tmpHertwigYdir;  //A&A
 
 	std::vector<CVector> tmp1IntnlVec, tmp2IntnlVec;
 	std::vector<CVector> tmp1VecMem, tmp2VecMem;
@@ -2581,6 +2614,8 @@ class SceCells {
 	void adjustGrowthInfo_M();
 
 	void copyCellsPreDivision_M();
+	void copyCellsEnterMitotic(); //A&A
+        void findHertwigAxis(); //A&A 
 	void createTwoNewCellArr_M();
 	void copyFirstCellArr_M();
 	void copySecondCellArr_M();
@@ -2618,7 +2653,7 @@ class SceCells {
 	bool tmpDebug;
 
 	bool decideIfGoingToDivide_M();
-
+        bool decideIfAnyCellEnteringMitotic();//A&A 
 //	bool decideIfGoingToRemove_M();//AAMIRI
 
 	void assembleVecForTwoCells(uint i);
@@ -2629,8 +2664,11 @@ class SceCells {
 	CVector obtainCenter(uint i);
 	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis);
+
+	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCenter, vector<CVector>& membrNodes); //A&A
+
 	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
-			double len_MajorAxis, CVector& centerNew1, CVector& centerNew2);
+			double lenAlongHertwigAxis, CVector& centerNew1, CVector& centerNew2); //A& A  modified
 	void prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
