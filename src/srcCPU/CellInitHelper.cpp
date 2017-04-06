@@ -15,8 +15,8 @@ ForReadingData_M2 ReadFile_M2(std::string CellCentersFileName) {
           double TempPos_X,TempPos_Y,TempPos_Z ; 
           //inputc.open("./resources/CellCenters_General.txt");
           //inputc.open("./resources/CellCenters_General.txt");
-          //inputc.open("./resources/CellCenters2.txt");
-          inputc.open("CellCentersFileName.c_str()");
+//          inputc.open("./resources/CellCenters2.txt");
+          inputc.open(CellCentersFileName.c_str());
 
           if (inputc.is_open())
           {

@@ -1368,6 +1368,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         this->Damp_Coef=Damp_Coef ; //Ali 
         this->InitTimeStage=InitTimeStage   ;  //A & A 
 	growthAuxData.prolifDecay = exp(-curTime * miscPara.prolifDecayCoeff);
+        cout<< "The important curTime used in simulation is here which is"<<curTime <<endl; 
 	growthAuxData.randomGrowthSpeedMin = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMin_Ori;
 	growthAuxData.randomGrowthSpeedMax = growthAuxData.prolifDecay
