@@ -3157,8 +3157,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	thrust::host_vector<bool> hostIsActiveVec(maxActiveNode);
 	thrust::host_vector<int> hostBondVec(maxActiveNode);
 	thrust::host_vector<double> hostTmpVectorTenMag(maxActiveNode);
-	thrust::host_vector<double> hostTmpVectorTensionTangent(maxActiveNode);//AAMIRI
-	thrust::host_vector<double> hostTmpVectorTensionNormal(maxActiveNode);//AAMIRI
+	thrust::host_vector<double> hostTmpVectorF_MI_M_x(maxActiveNode);//AAMIRI //AliE
+	thrust::host_vector<double> hostTmpVectorF_MI_M_y(maxActiveNode);//AAMIRI //AliE
 	thrust::host_vector<double> hostTmpVectorNodeCurvature(maxActiveNode);//AAMIRI
 	thrust::host_vector<double> hostTmpVectorExtForceTangent(maxActiveNode);//AAMIRI
 	thrust::host_vector<double> hostTmpVectorExtForceNormal(maxActiveNode);//AAMIRI
@@ -3169,8 +3169,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
-							nodes->getInfoVecs().nodeVelTangent.begin(),//AAMIRI
-							nodes->getInfoVecs().nodeVelNormal.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeF_MI_M_x.begin(),//AAMIRI //AliE
+							nodes->getInfoVecs().nodeF_MI_M_y.begin(),//AAMIRI //AliE
 							nodes->getInfoVecs().nodeCurvature.begin(),//AAMIRI
 							nodes->getInfoVecs().nodeIsActive.begin(),
 							nodes->getInfoVecs().nodeAdhereIndex.begin(),
@@ -3180,8 +3180,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
-							nodes->getInfoVecs().nodeVelTangent.begin(),//AAMIRI
-							nodes->getInfoVecs().nodeVelNormal.begin(),//AAMIRI
+							nodes->getInfoVecs().nodeF_MI_M_x.begin(),//AAMIRI //AliE
+							nodes->getInfoVecs().nodeF_MI_M_y.begin(),//AAMIRI //AliE
 							nodes->getInfoVecs().nodeCurvature.begin(),//AAMIRI
 							nodes->getInfoVecs().nodeIsActive.begin(),
 							nodes->getInfoVecs().nodeAdhereIndex.begin(),
@@ -3192,7 +3192,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(hostTmpVectorLocX.begin(),
 							hostTmpVectorLocY.begin(), 
-							hostTmpVectorTensionTangent.begin(), hostTmpVectorTensionNormal.begin(),//AAMIRI
+							hostTmpVectorF_MI_M_x.begin(), hostTmpVectorF_MI_M_y.begin(),//AAMIRI
 							hostTmpVectorNodeCurvature.begin(), //AAMIRI
 							hostIsActiveVec.begin(),
 							hostBondVec.begin(), hostTmpVectorTenMag.begin(),
@@ -3206,7 +3206,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 
 
 	CVector tmpPos;
-	CVector tmpTens;//AAmiri
+	CVector tmpF_MI_M ;//AAmiri
 	CVector tmpExtForce;//AAMIRI
 	double tmpCurv;
 	uint index1;
@@ -3215,8 +3215,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 
 	double node1X, node1Y;
 	double node2X, node2Y;
-	double nodeTensT, nodeTensN;//AAMIRI
-	double nodeExtForceT, nodeExtForceN;//AAMIRI
+	double node1F_MI_M_x, node1F_MI_M_y;//AAMIRI //AliE
+	double nodeExtForceT, nodeExtForceN;//AAMIRI 
 	double aniVal;
 
 
@@ -3227,16 +3227,16 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 
-				nodeTensT = hostTmpVectorTensionTangent[index1];
-				nodeTensN = hostTmpVectorTensionNormal[index1];
+				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
+				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
-				tmpTens = CVector(nodeTensT, nodeTensN, 0.0);
+				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
 
 				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 
-				rawAniData.aniNodeTensArr.push_back(tmpTens);
+				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
 
 				rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
@@ -3253,16 +3253,15 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 
-				nodeTensT = hostTmpVectorTensionTangent[index1];
-				nodeTensN = hostTmpVectorTensionNormal[index1];
-				tmpTens = CVector(nodeTensT, nodeTensN, 0.0);
+				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
+				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
-				tmpTens = CVector(nodeTensT, nodeTensN, 0.0);
+				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
 				
 				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
-				rawAniData.aniNodeTensArr.push_back(tmpTens);
+				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M);
 				rawAniData.aniNodeRank.push_back(i);//AAMIRI
 				}
 			
@@ -3664,7 +3663,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 	for (uint i = 0; i < rawAniData.aniNodePosArr.size(); i++) {
 		PointAniData ptAniData;
 		ptAniData.pos = rawAniData.aniNodePosArr[i];
-		ptAniData.tens = rawAniData.aniNodeTensArr[i];//AAMIRI
+		ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
 		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
 		ptAniData.rankScale = rawAniData.aniNodeRank[i];//AAMIRI

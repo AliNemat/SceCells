@@ -217,11 +217,11 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 
 
 	//AAMIRI starts writing tension vector data
-	fs << "VECTORS tension float" << endl;
+	fs << "VECTORS F_MI_M float" << endl;
 		for (uint i = 0; i < pointsAniData.size(); i++) {
 
-			fs << pointsAniData[i].tens.x << " " << pointsAniData[i].tens.y << " "
-					<< pointsAniData[i].tens.z << endl;
+			fs << pointsAniData[i].F_MI_M.x << " " << pointsAniData[i].F_MI_M.y << " "
+					<< pointsAniData[i].F_MI_M.z << endl;
 		}
 	//AAMIRI finished writing the node tension vector
 
