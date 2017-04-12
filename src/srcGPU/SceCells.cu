@@ -3258,7 +3258,6 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
-				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
 				
