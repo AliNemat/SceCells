@@ -193,14 +193,14 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	fs << std::endl;
 
 	//AAMIR wrote the curvature data here
-	fs << "SCALARS curvature float" << endl;
-	fs << "LOOKUP_TABLE default" << endl;
+	fs << "SCALARS Stress float" << endl;
+	fs << "LOOKUP_TABLE default" << endl; //AliE
 
 	for (uint i = 0; i < pointsAniData.size(); i++) {
 		std::cout << "****************      SIZE IS:     " << pointsAniData.size() << std::endl;
 //		if (pointsAniData[i].colorScale2 < 0.000001 || pointsAniData[i].colorScale2>1.0){
 //			pointsAniData[i].colorScale2 = 0.0;}
-		fs << pointsAniData[i].colorScale2 << endl;
+		fs << pointsAniData[i].F_MI_M_MagN_Int << endl;  //AliE
 	}
 
 	fs << std::endl;

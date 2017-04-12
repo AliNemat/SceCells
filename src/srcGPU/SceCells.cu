@@ -3218,22 +3218,24 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	double node1F_MI_M_x, node1F_MI_M_y;//AAMIRI //AliE
 	double nodeExtForceT, nodeExtForceN;//AAMIRI 
 	double aniVal;
+        double tmpF_MI_M_MagN_Int[activeCellCount-1] ; //AliE
 
-
+         //This is how the VTK file is intended to be written. First the memmbraen nodes are going to be written and then internal nodes.
+        //loop on membrane nodes
 	for (uint i = 0; i < activeCellCount; i++) {
+		tmpF_MI_M_MagN_Int[i]=0.0   ;   
 		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
 			index1 = beginIndx + i * maxNodePerCell + j;
 			if ( hostIsActiveVec[index1]==true) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
-
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
-
+                                tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
 				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 
 				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
@@ -3245,18 +3247,18 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			}
 
 	}
-
+        //loop on internal nodes
 	for (uint i=0; i<activeCellCount; i++){
 			for (uint j = maxMemNodePerCell; j < maxNodePerCell; j++) {
 			index1 = beginIndx + i * maxNodePerCell + j;
 			if ( hostIsActiveVec[index1]==true ) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
-
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
+				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
 				
@@ -3268,7 +3270,27 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			}
 
 	}
-
+//Ali start
+        double tmp; //AliE to be able to push back 
+	for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if ( hostIsActiveVec[index1]==true) {
+ 				tmp=tmpF_MI_M_MagN_Int[i] ; 
+                                rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
+                                }
+			}
+		}
+	for (uint i=0; i<activeCellCount; i++){
+			for (uint j = maxMemNodePerCell; j < maxNodePerCell; j++) {
+			index1 = beginIndx + i * maxNodePerCell + j;
+			if ( hostIsActiveVec[index1]==true ) {
+ 				tmp=tmpF_MI_M_MagN_Int[i] ; 
+                                rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
+				}
+                         }
+		}
+//Ali End
 
 	for (uint i = 0; i < activeCellCount; i++) {
 		for (uint j = 0; j < maxMemNodePerCell; j++) {
@@ -3663,6 +3685,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 	for (uint i = 0; i < rawAniData.aniNodePosArr.size(); i++) {
 		PointAniData ptAniData;
 		ptAniData.pos = rawAniData.aniNodePosArr[i];
+		ptAniData.F_MI_M_MagN_Int= rawAniData.aniNodeF_MI_M_MagN_Int[i]; //AliE
 		ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
 		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
