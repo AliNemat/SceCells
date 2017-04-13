@@ -656,6 +656,7 @@ struct CellStats {
 	uint numNeighbors;
         double cellCenterX ;  //Ali	
         double membrGrowthProgress;
+        double cellPerim;//AAMIRI
 	double cellArea;
         
 	std::set<int> neighborVec;

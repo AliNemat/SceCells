@@ -2136,7 +2136,7 @@ struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
                 double Dist=sqrt (
                             (CenterCellX-TCenterX)*(CenterCellX-TCenterX)+
                            (CenterCellY-TCenterY)*(CenterCellY-TCenterY)) ; 
-                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*10*_Damp_Coef     ;              
+                double Damp=_Damp_Coef + max(0.0,Dist/TRadius-0.8)*1.0/(1.0-0.8)*5*_Damp_Coef     ;              
                         
 			return thrust::make_tuple(CenterCellX,Damp);
 		}
@@ -2174,7 +2174,51 @@ struct BC_Tissue_Damp: public thrust::unary_function<CVec3,CVec2> {
 **/
 
 
-
+struct CalPerim: public thrust::unary_function<Tuuudd, double> {
+ 	uint _maxNodePerCell;
+ 	bool* _isActiveAddr;
+ 	double* _locXAddr;
+ 	double* _locYAddr;
+ 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+ 	__host__ __device__ CalPerim(uint maxNodePerCell, bool* isActiveAddr,
+ 			double* locXAddr, double* locYAddr) :
+ 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _locXAddr(
+ 					locXAddr), _locYAddr(locYAddr) {
+ 	}
+ 	__device__
+ 	double operator()(const Tuuudd &inputData) const {
+ 		uint activeMembrCount = thrust::get<0>(inputData);
+ 		uint cellRank = thrust::get<1>(inputData);
+ 		uint nodeRank = thrust::get<2>(inputData);
+ 		double centerX = thrust::get<3>(inputData);
+ 		double centerY = thrust::get<4>(inputData);
+ 		uint index = cellRank * _maxNodePerCell + nodeRank;
+ 
+ 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount ) {
+ 			return 0.0;
+ 		} else {
+ 			int index_right = nodeRank + 1;
+ 			if (index_right == (int) activeMembrCount) {
+ 				index_right = 0;
+ 			}
+ 			index_right = index_right + cellRank * _maxNodePerCell;
+ 			// apply tension force from right
+ 			if (_isActiveAddr[index_right]) {
+ 				double posX = _locXAddr[index];
+ 				double posY = _locYAddr[index];
+ 				double vec1X = _locXAddr[index_right] - posX;
+ 				double vec1Y = _locYAddr[index_right] - posY;
+ 				//double vec2X = centerX - posX;
+ 				//double vec2Y = centerY - posY;
+ 				double result = sqrt(vec1X * vec1X + vec1Y * vec1Y);
+ 				return result;
+ 			} else {
+ 				return 0.0;
+ 			}
+ 		}
+ 	}
+ };
+ 
 
 struct CellInfoVecs {
 	/**
@@ -2242,6 +2286,7 @@ struct CellInfoVecs {
 	thrust::device_vector<bool> isMembrAddingNode;
 
 	thrust::device_vector<double> cellAreaVec;
+        thrust::device_vector<double> cellPerimVec;//AAMIRI
 };
 
 struct CellNodeInfoVecs {
@@ -2687,6 +2732,7 @@ class SceCells {
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
 	void calCellArea();
+        void calCellPerim();//AAMIRI
 public:
 	SceCells();
 
