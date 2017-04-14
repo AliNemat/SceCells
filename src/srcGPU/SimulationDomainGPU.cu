@@ -221,10 +221,10 @@ void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 }
 
 void SimulationDomainGPU::outputVtkGivenCellColor(std::string scriptNameBase,
-		int rank, AnimationCriteria aniCri, std::vector<double>& cellColorVal) {
+		int rank, AnimationCriteria aniCri, std::vector<double>& cellColorVal,std::vector<double>& cellsPerimeter) {
 	nodes.prepareSceForceComputation();
 	AniRawData rawAni = cells.obtainAniRawDataGivenCellColor(cellColorVal,
-			aniCri);
+			aniCri,cellsPerimeter); //AliE
 	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
@@ -233,7 +233,7 @@ void SimulationDomainGPU::outputVtkColorByCell_T1(std::string scriptNameBase,
 		int rank, AnimationCriteria aniCri) {
 	assert(aniCri.animationType == T1Tran);
 	std::vector<double> t1ColorVec = processT1Color();
-	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, t1ColorVec);
+	//outputVtkGivenCellColor(scriptNameBase, rank, aniCri, t1ColorVec);  //Ali comment node uing now so no need for modification
 }
 
 std::vector<double> SimulationDomainGPU::processT1Color() {
@@ -251,14 +251,24 @@ std::vector<double> SimulationDomainGPU::processT1Color() {
 
 void SimulationDomainGPU::outputVtkColorByCell_polySide(
 		std::string scriptNameBase, int rank, AnimationCriteria aniCri) {
-	assert(aniCri.animationType == PolySide);
-	std::vector<double> polySideColorVec = processPolySideColor();
-	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, polySideColorVec);
-}
 
-std::vector<double> SimulationDomainGPU::processPolySideColor() {
+        std::cout  <<"I am in modified function" <<std:: endl; 
+	assert(aniCri.animationType == PolySide);
+        std:: vector<double> cellsPerimeter ; 
+	std::vector<double> polySideColorVec = processPolySideColor(cellsPerimeter);
+	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, polySideColorVec,cellsPerimeter);
+        cellsPerimeter.clear(); 
+}
+std::vector<double> SimulationDomainGPU::processPolySideColor(std:: vector<double> & cellsPerimeter) {
 	CellsStatsData cellStatsVec = cells.outputPolyCountData();
-	std::vector<double> result = cellStatsVec.outputPolySides();
+        for (int i=0; i< int (cellStatsVec.cellsStats.size());  i++) {
+
+        std::cout << cellStatsVec.cellsStats.size() <<"cellsStatsvec vector size is" <<std:: endl; 
+        cellsPerimeter.push_back(cellStatsVec.cellsStats[i].cellPerim) ;
+        }
+
+         //AliE        
+	std::vector<double> result = cellStatsVec.outputPolySides(); 
 	return result;
 }
 

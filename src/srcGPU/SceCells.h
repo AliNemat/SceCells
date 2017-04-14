@@ -2768,7 +2768,7 @@ public:
 	AniRawData obtainAniRawData(AnimationCriteria& aniCri);
 
 	AniRawData obtainAniRawDataGivenCellColor(vector<double>& cellColors,
-			AnimationCriteria& aniCri);
+			AnimationCriteria& aniCri,vector<double>& cellsPerimeter);
 
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);

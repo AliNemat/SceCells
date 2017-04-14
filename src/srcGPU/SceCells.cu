@@ -3135,7 +3135,7 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 }
 
 AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
-		AnimationCriteria& aniCri) {
+		AnimationCriteria& aniCri, vector<double>& cellsPerimeter) {   //AliE
 
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
@@ -3143,6 +3143,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	uint beginIndx = allocPara_m.bdryNodeCount;
 
 	assert(cellColors.size() >= activeCellCount);
+	assert(cellsPerimeter.size() == activeCellCount); //AliE
 
 	AniRawData rawAniData;
 	//cout << "size of potential pairs = " << pairs.size() << endl;
@@ -3230,16 +3231,18 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			if ( hostIsActiveVec[index1]==true) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
+
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
+				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
+				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
+                                tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
+
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
-				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
-                                tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
 				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 
-				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
 
 				rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
@@ -3257,26 +3260,29 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
+				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
+				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M);
+
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
-				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
 				
 				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
-				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M);
 				rawAniData.aniNodeRank.push_back(i);//AAMIRI
 				}
 			
 			}
 
 	}
+
+
 //Ali start
         double tmp; //AliE to be able to push back 
 	for (uint i = 0; i < activeCellCount; i++) {
 		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
 			index1 = beginIndx + i * maxNodePerCell + j;
 			if ( hostIsActiveVec[index1]==true) {
- 				tmp=tmpF_MI_M_MagN_Int[i] ; 
+ 				tmp=tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i] ; 
                                 rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
                                 }
 			}
@@ -3285,7 +3291,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			for (uint j = maxMemNodePerCell; j < maxNodePerCell; j++) {
 			index1 = beginIndx + i * maxNodePerCell + j;
 			if ( hostIsActiveVec[index1]==true ) {
- 				tmp=tmpF_MI_M_MagN_Int[i] ; 
+ 				tmp=tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i] ; 
                                 rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
 				}
                          }
