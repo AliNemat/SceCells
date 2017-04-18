@@ -653,10 +653,10 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 		uint activeMembrCount = thrust::get<0>(bData);
 		uint cellRank = thrust::get<1>(bData);
 		uint nodeRank = thrust::get<2>(bData);
-		double oriVelX = thrust::get<3>(bData);
-		double oriVelY = thrust::get<4>(bData);
-		double oriVelT = thrust::get<5>(bData);
-		double oriVelN = thrust::get<6>(bData);
+		double f_MI_M_X = thrust::get<3>(bData);
+		double f_MI_M_Y = thrust::get<4>(bData);
+		double f_MI_M_T= thrust::get<5>(bData);
+		double f_MI_M_N = thrust::get<6>(bData);
 		double curvature = thrust::get<7>(bData);
 		double extForceX = thrust::get<8>(bData);
 		double extForceY = thrust::get<9>(bData);
@@ -664,15 +664,15 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 		//double extForceN = thrust::get<11>(bData);
 
 		curvature = 0.0;
-		oriVelT = 0.0;
-		oriVelN = 0.0;
+		 f_MI_M_T= 0.0;
+		 f_MI_M_N= 0.0;
 		double extForceT = 0.0;
 		double extForceN = 0.0;
                 double DistToRi=0.0 ; 
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN,DistToRi);
+			return thrust::make_tuple(f_MI_M_T,f_MI_M_N, curvature, extForceT, extForceN,DistToRi);
 		}
 
 		int index_left = nodeRank - 1;
@@ -740,18 +740,18 @@ struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 			Ny = Ny / sizeN;}
 
 //calculating the Tangent and Normal Tensions
-		oriVelT = oriVelX * avgT_x + oriVelY * avgT_y;
-		oriVelN = oriVelX * Nx + oriVelY * Ny;
+		f_MI_M_T = f_MI_M_X * avgT_x + f_MI_M_Y * avgT_y;
+		f_MI_M_N = f_MI_M_X * Nx     + f_MI_M_Y * Ny;
 
 //finding the curvature at this node
 		curvature = sizeN;
 
 //calculating the Tangent and Normal Ext Forces
 		extForceT = extForceX * avgT_x + extForceY * avgT_y;
-		extForceN = extForceX * Nx + extForceY * Ny;
+		extForceN = extForceX * Nx     + extForceY * Ny;
 
                 DistToRi=S_tr ; 
-		return thrust::make_tuple(oriVelT, oriVelN, curvature, extForceT, extForceN,DistToRi);
+		return thrust::make_tuple(f_MI_M_T, f_MI_M_N, curvature, extForceT, extForceN,DistToRi);
 	}
 };
 

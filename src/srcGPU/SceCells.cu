@@ -2245,10 +2245,10 @@ void SceCells::findTangentAndNormal_M() {
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin1,
 									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin(),
- 							nodes->getInfoVecs().nodeVelTangent.begin(),
-							nodes->getInfoVecs().nodeVelNormal.begin(),
+							nodes->getInfoVecs().nodeF_MI_M_x.begin(), //AliE
+							nodes->getInfoVecs().nodeF_MI_M_y.begin(), //AliE
+ 							nodes->getInfoVecs().nodeF_MI_M_T.begin(), //AliE
+							nodes->getInfoVecs().nodeF_MI_M_N.begin(), //AliE
 							nodes->getInfoVecs().nodeCurvature.begin(),
 							nodes->getInfoVecs().nodeExtForceX.begin(),
 							nodes->getInfoVecs().nodeExtForceY.begin())),
@@ -2262,17 +2262,17 @@ void SceCells::findTangentAndNormal_M() {
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin1,
 									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin(),
- 							nodes->getInfoVecs().nodeVelTangent.begin(),
-							nodes->getInfoVecs().nodeVelNormal.begin(), 
+							nodes->getInfoVecs().nodeF_MI_M_x.begin(), //AliE
+							nodes->getInfoVecs().nodeF_MI_M_y.begin(), //AliE
+ 							nodes->getInfoVecs().nodeF_MI_M_T.begin(), //AliE
+							nodes->getInfoVecs().nodeF_MI_M_N.begin(), //AliE
 							nodes->getInfoVecs().nodeCurvature.begin(),
 							nodes->getInfoVecs().nodeExtForceX.begin(),
 							nodes->getInfoVecs().nodeExtForceY.begin()))
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes->getInfoVecs().nodeVelTangent.begin(),
-							nodes->getInfoVecs().nodeVelNormal.begin(), 
+					thrust::make_tuple(nodes->getInfoVecs().nodeF_MI_M_T.begin(),
+							nodes->getInfoVecs().nodeF_MI_M_N.begin(), 
 							nodes->getInfoVecs().nodeCurvature.begin(),
 							nodes->getInfoVecs().nodeExtForceTangent.begin(),
 							nodes->getInfoVecs().nodeExtForceNormal.begin(),
@@ -3161,6 +3161,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	thrust::host_vector<double> hostTmpVectorTenMag(maxActiveNode);
 	thrust::host_vector<double> hostTmpVectorF_MI_M_x(maxActiveNode);//AAMIRI //AliE
 	thrust::host_vector<double> hostTmpVectorF_MI_M_y(maxActiveNode);//AAMIRI //AliE
+	thrust::host_vector<double> hostTmpVectorF_MI_M_T(maxActiveNode); //AliE
+	thrust::host_vector<double> hostTmpVectorF_MI_M_N(maxActiveNode);//AliE
 	thrust::host_vector<double> hostTmpVectorNodeCurvature(maxActiveNode);//AAMIRI
 	thrust::host_vector<double> hostTmpVectorExtForceTangent(maxActiveNode);//AAMIRI
 	thrust::host_vector<double> hostTmpVectorExtForceNormal(maxActiveNode);//AAMIRI
@@ -3200,6 +3202,25 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							hostBondVec.begin(), hostTmpVectorTenMag.begin(),
 							hostTmpVectorExtForceTangent.begin(), hostTmpVectorExtForceNormal.begin())));//AAMIRI
 
+//Copy more than 10 elements is not allowed so, I separate it
+	thrust::copy(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeF_MI_M_T.begin(), //Ali
+							nodes->getInfoVecs().nodeF_MI_M_N.begin() //Ali
+							)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeF_MI_M_T.begin(),//AliE
+							nodes->getInfoVecs().nodeF_MI_M_N.begin() //AliE
+							))
+					+ maxActiveNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							hostTmpVectorF_MI_M_T.begin(), hostTmpVectorF_MI_M_N.begin()
+							)));
+
+
 	thrust::host_vector<uint> curActiveMemNodeCounts =
 			cellInfoVecs.activeMembrNodeCounts;
 
@@ -3236,7 +3257,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
 				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
-                                tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
+                               // tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
+                                tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+abs(hostTmpVectorF_MI_M_N[index1]) ; //AliE
 
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
@@ -3276,27 +3298,6 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	}
 
 
-//Ali start
-        double tmp; //AliE to be able to push back 
-	for (uint i = 0; i < activeCellCount; i++) {
-		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
-			index1 = beginIndx + i * maxNodePerCell + j;
-			if ( hostIsActiveVec[index1]==true) {
- 				tmp=tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i] ; 
-                                rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
-                                }
-			}
-		}
-	for (uint i=0; i<activeCellCount; i++){
-			for (uint j = maxMemNodePerCell; j < maxNodePerCell; j++) {
-			index1 = beginIndx + i * maxNodePerCell + j;
-			if ( hostIsActiveVec[index1]==true ) {
- 				tmp=tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i] ; 
-                                rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmp) ;
-				}
-                         }
-		}
-//Ali End
 
 	for (uint i = 0; i < activeCellCount; i++) {
 		for (uint j = 0; j < maxMemNodePerCell; j++) {
@@ -3320,7 +3321,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	rawAniData.bondsArr = bondInfoVec;
 
 	uint curIndex = 0;
-
+        //loop on membrane nodes
 	for (uint i = 0; i < activeCellCount; i++) {
 		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
 			index1 = beginIndx + i * maxNodePerCell + j;
@@ -3345,6 +3346,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					tmpPos = CVector(node1X, node1Y, 0);
 					//aniVal = hostTmpVectorNodeType[index1];
 					aniVal = cellColors[i];
+                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 
@@ -3357,6 +3359,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					tmpPos = CVector(node2X, node2Y, 0);
 					//aniVal = hostTmpVectorNodeType[index2];
 					aniVal = cellColors[i];
+                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 
@@ -3373,8 +3376,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				rawAniData.memLinks.push_back(linkData);
 			}
 		}
-	}
-
+	} 
+        //loop on internal nodes
 	for (uint i = 0; i < activeCellCount; i++) {
 	//	for (uint j = 0; j < allocPara_m.maxAllNodePerCell; j++) {
 		for (uint j = 0; j < allocPara_m.maxIntnlNodePerCell; j++) {
@@ -3400,6 +3403,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							tmpPos = CVector(node1X, node1Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
+                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
 						}
@@ -3411,6 +3415,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							tmpPos = CVector(node2X, node2Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
+                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
 						}

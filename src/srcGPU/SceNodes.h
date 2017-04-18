@@ -825,6 +825,12 @@ public:
 	thrust::device_vector<double> nodeF_MI_M_x; //Ali
 // For from internal ndoes to each membrane node in y  direction
 	thrust::device_vector<double> nodeF_MI_M_y; //Ali 
+
+// For from internal ndoes to each membrane node in Tangential  direction
+	thrust::device_vector<double> nodeF_MI_M_T; //Ali 
+
+// For from internal ndoes to each membrane node in Normal direction
+	thrust::device_vector<double> nodeF_MI_M_N; //Ali 
 // Tangent to the nodes
 	thrust::device_vector<double> nodeVelTangent;//AAMIRI
 // Normal to the nodes
