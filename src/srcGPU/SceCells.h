@@ -1990,35 +1990,37 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 		}
 	}
 };
-
+//Ali modified
 struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
+	double _CntrTisuX,_CntrTisuY ; 
+	double _RTisu ; 
 	double _lowerLimit, _upperLimit;
 	uint _seed;
 	thrust::default_random_engine rng;
 	thrust::uniform_real_distribution<double> dist;
-	thrust::uniform_real_distribution<double> dist2;
+//	thrust::uniform_real_distribution<double> dist2;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ RandomizeGrow_M(double low, double high, uint seed) :
-			_lowerLimit(low), _upperLimit(high), _seed(seed), dist(_lowerLimit,
-					_upperLimit), dist2(0, 2 * acos(-1.0)) {
+	__host__ __device__ RandomizeGrow_M(double CntrTisuX, double CntrTisuY,double RTisu,double low, double high, uint seed) :
+			_CntrTisuX(CntrTisuX),_CntrTisuY(CntrTisuY),_RTisu(RTisu),_lowerLimit(low), _upperLimit(high), _seed(seed),dist(_lowerLimit,_upperLimit)  {
 	}
 	__host__ __device__ CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
 		double curSpeed = thrust::get<0>(inputInfo);
-		double currentDirX = thrust::get<1>(inputInfo);
-		double currentDirY = thrust::get<2>(inputInfo);
+		double centerX = thrust::get<1>(inputInfo);
+		double centerY = thrust::get<2>(inputInfo);
 		bool isInitBefore = thrust::get<3>(inputInfo);
 		if (isInitBefore) {
-			return thrust::make_tuple(curSpeed, currentDirX, currentDirY, true);
+			return thrust::make_tuple(curSpeed,centerX,centerY,true);
 		} else {
 			uint cellRank = thrust::get<4>(inputInfo);
 			uint seedNew = _seed + cellRank;
 			rng.discard(seedNew);
-			double randomNum1 = dist(rng);
+			double distance=sqrt( (centerX-_CntrTisuX)*(centerX-_CntrTisuX)+(centerY-_CntrTisuY)*(centerY-_CntrTisuY)) ; 
+			double randomNum1 =1.89*exp(-distance/_RTisu)*dist(rng);
 			rng.discard(seedNew);
-			double randomNum2 = dist2(rng);
-			double xDir = cos(randomNum2);
-			double yDir = sin(randomNum2);
-			return thrust::make_tuple(randomNum1, xDir, yDir, true);
+//			double randomNum2 = dist2(rng);
+//			double xDir = cos(randomNum2);
+//			double yDir = sin(randomNum2);
+			return thrust::make_tuple(randomNum1,centerX,centerY,true);
 		}
 	}
 };
@@ -2458,7 +2460,8 @@ class SceCells {
         double MinX ;  
         double MaxX ;  
         double MinY ;  
-        double MaxY ;  
+        double MaxY ; 
+        double R_Tisu ; //Ali  
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;
