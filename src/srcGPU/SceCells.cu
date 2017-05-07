@@ -4510,17 +4510,17 @@ CellsStatsData SceCells::outputPolyCountData() {
 		bool isBdry = false;
 		std::set<int> neighbors;
 		std::vector<int> neighborsV; //Ali
-                int neighborStrength[10]; 
+                int neighborStrength[10]; //Ali
 		int continousNoAdh = 0;
-                map <int, int> cellAndNeighborRank ; 
+                map <int, int> cellAndNeighborRank ;  //Ali
 		//std::cout << "printing adhesion indicies ";
                 //for (int ii=0 ; ii<neighborStrength.size() ; ii++){
-                for (int ii=0 ; ii< 10; ii++){
+                for (int ii=0 ; ii< 10; ii++){ //Ali
                       
                   neighborStrength[ii]=0  ;
                 }
                           
-                cellAndNeighborRank.clear(); 
+                cellAndNeighborRank.clear();  //Ali
 
 		for (uint j = 0; j < activeMembrNodeCountHost[i]; j++) {
 			uint index = i * allocPara_m.maxAllNodePerCell + j;
@@ -4531,14 +4531,14 @@ CellsStatsData SceCells::outputPolyCountData() {
 						/ allocPara_m.maxAllNodePerCell;
 				//std::cout << adhCellRank << " ";
 				neighbors.insert(adhCellRank);
-                                 map <int, int>:: iterator iteratorMap=cellAndNeighborRank.find(adhCellRank); 
-                                 if (iteratorMap==cellAndNeighborRank.end()) {
-                                   int NewneighborRank= neighbors.size()-1;
-                                   cellAndNeighborRank[adhCellRank]=NewneighborRank; 
+                                 map <int, int>:: iterator iteratorMap=cellAndNeighborRank.find(adhCellRank); //Ali
+                                 if (iteratorMap==cellAndNeighborRank.end()) {  //Ali
+                                   int NewneighborRank= neighbors.size()-1; //Ali
+                                   cellAndNeighborRank[adhCellRank]=NewneighborRank; //Ali
                                    neighborStrength[NewneighborRank]=neighborStrength[NewneighborRank]+1 ; //Ali
-				   neighborsV.push_back(adhCellRank);
+				   neighborsV.push_back(adhCellRank); //Ali
                                    }
-                                 else {
+                                 else {   //Ali
                                    int oldNeighborRank=(*iteratorMap).second ; 
                                    neighborStrength[oldNeighborRank]=neighborStrength[oldNeighborRank]+1 ; //Ali
                                  }      
