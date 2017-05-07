@@ -658,8 +658,9 @@ struct CellStats {
         double membrGrowthProgress;
         double cellPerim;//AAMIRI
 	double cellArea;
-        
-	std::set<int> neighborVec;
+        int cellNeighborStrength[10]; //Ali
+	std::set<int> neighborVec; 
+	std::vector<int> neighborVecV; //Ali
 	uint currentActiveIntnlNodes;
 	uint currentActiveMembrNodes;
 	CVector cellCenter;

@@ -4509,16 +4509,39 @@ CellsStatsData SceCells::outputPolyCountData() {
 		cellStatsData.cellRank = i;
 		bool isBdry = false;
 		std::set<int> neighbors;
+		std::vector<int> neighborsV; //Ali
+                int neighborStrength[10]; 
 		int continousNoAdh = 0;
+                map <int, int> cellAndNeighborRank ; 
 		//std::cout << "printing adhesion indicies ";
+                //for (int ii=0 ; ii<neighborStrength.size() ; ii++){
+                for (int ii=0 ; ii< 10; ii++){
+                      
+                  neighborStrength[ii]=0  ;
+                }
+                          
+                cellAndNeighborRank.clear(); 
+
 		for (uint j = 0; j < activeMembrNodeCountHost[i]; j++) {
 			uint index = i * allocPara_m.maxAllNodePerCell + j;
 			//std::cout << adhIndxHost[index] << ",";
+                        
 			if (adhIndxHost[index] != -1) {
 				uint adhCellRank = adhIndxHost[index]
 						/ allocPara_m.maxAllNodePerCell;
 				//std::cout << adhCellRank << " ";
 				neighbors.insert(adhCellRank);
+                                 map <int, int>:: iterator iteratorMap=cellAndNeighborRank.find(adhCellRank); 
+                                 if (iteratorMap==cellAndNeighborRank.end()) {
+                                   int NewneighborRank= neighbors.size()-1;
+                                   cellAndNeighborRank[adhCellRank]=NewneighborRank; 
+                                   neighborStrength[NewneighborRank]=neighborStrength[NewneighborRank]+1 ; //Ali
+				   neighborsV.push_back(adhCellRank);
+                                   }
+                                 else {
+                                   int oldNeighborRank=(*iteratorMap).second ; 
+                                   neighborStrength[oldNeighborRank]=neighborStrength[oldNeighborRank]+1 ; //Ali
+                                 }      
 				continousNoAdh = 0;
 			} else {
 				continousNoAdh = continousNoAdh + 1;
@@ -4552,6 +4575,10 @@ CellsStatsData SceCells::outputPolyCountData() {
 		cellStatsData.currentActiveMembrNodes = activeMembrNodeCountHost[i];
 		cellStatsData.currentActiveIntnlNodes = activeIntnlNodeCountHost[i];
 		cellStatsData.neighborVec = neighbors;
+		cellStatsData.neighborVecV = neighborsV; //Ali
+                for (int iiii=0; iiii<10 ; iiii++){
+		cellStatsData.cellNeighborStrength[iiii] = neighborStrength[iiii];
+                 }    //Ali
 		cellStatsData.membrGrowthProgress = growthProMembrVecHost[i];
 		cellStatsData.cellCenter = CVector(centerCoordXHost[i],
 				centerCoordYHost[i], 0);

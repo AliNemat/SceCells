@@ -400,6 +400,7 @@ NetworkInfo SimulationDomainGPU::buildNetInfo(CellsStatsData &polyData) {
 	return result;
 }
 
+
 std::set<int> SimulationDomainGPU::findT1Transition() {
 	std::set<int> result;
 	for (uint i = 0; i < preT1Vec.size(); i++) {

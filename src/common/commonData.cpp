@@ -446,7 +446,7 @@ void CellsStatsData::printPolyCountToFile(std::string fileName,
 	}
 	printCountsToFile(fileName, countNormal, countDiv, countBdry);
 }
-
+// this function is to sum up the number of polygons in the tissue.
 void insertCount(uint numNeighbor, std::map<uint, uint>& count) {
 	std::map<uint, uint>::iterator it = count.find(numNeighbor);
 	if (it == count.end()) {
@@ -512,10 +512,20 @@ void CellStats::printToFile(ofstream& ofs) {
 	ofs << "    NumOfNeighbors:" << numNeighbors << std::endl;
 	ofs << "    CellArea:" << cellArea << std::endl;
         ofs << "    CellPerim:" << cellPerim << std::endl;//AAMIRI
-	ofs << "    NeighborCells:{ ";
-	for (std::set<int>::iterator it = neighborVec.begin();
-			it != neighborVec.end(); ++it) {
-		ofs << *it << " ";
+	ofs << "    NeighborCellsOrdered:{ ";
+	//for (std::set<int>::iterator it = neighborVec.begin();
+	//		it != neighborVec.end(); ++it) {
+	//	ofs << *it << " ";
+	//}
+	for (int i=0 ;  i <neighborVecV.size(); i++)
+			 {
+		ofs << neighborVecV[i] << " ";
+	}
+
+	ofs << "}" << std::endl;
+	ofs << "    NumberOfPointsInContactOrdered:{ ";
+	for (int i= 0; i<10; i++) {
+		ofs << cellNeighborStrength[i] << " ";
 	}
 	ofs << "}" << std::endl;
 	ofs << "    CurrentActiveIntnlNode:" << currentActiveIntnlNodes

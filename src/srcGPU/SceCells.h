@@ -4,7 +4,6 @@
 #include "SceNodes.h"
 #include <time.h>
 #include <thrust/tabulate.h>
-
 #define PI 3.14159265358979
 
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
