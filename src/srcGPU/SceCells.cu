@@ -1369,6 +1369,9 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 
 //Ali void SceCells::runAllCellLogicsDisc_M(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage) {   //Ali
+        
+        
+        vector<CVector> cellCentersHost ; 
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
 	this->dt = dt;
@@ -1389,10 +1392,14 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout.flush();
 //Ali        
 	computeCenterPos_M();
+
+        cellCentersHost=getAllCellCenters();  //Ali
+        //getAllCellCenters();  //Ali
+        dppLevels=updateSignal(cellCentersHost) ; //Ali
         BC_Imp_M() ; 
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
-	
+        	
 //Ali 
 	applyMemForce_M();
 	std::cout << "     *** 4 ***" << endl;
@@ -1460,15 +1467,46 @@ void SceCells::growWithStress(double d_t) {
 }
 
 std::vector<CVector> SceCells::getAllCellCenters() {
-	thrust::host_vector<double> centerX = cellInfoVecs.centerCoordX;
-	thrust::host_vector<double> centerY = cellInfoVecs.centerCoordY;
-	thrust::host_vector<double> centerZ = cellInfoVecs.centerCoordZ;
+//void SceCells::getAllCellCenters() {
+	//thrust::host_vector<double> centerX = cellInfoVecs.centerCoordX;
+	//thrust::host_vector<double> centerY = cellInfoVecs.centerCoordY;
+	//thrust::host_vector<double> centerZ = cellInfoVecs.centerCoordZ;
+
+	thrust::host_vector<double> centerX(
+			allocPara_m.currentActiveCellCount);
+	thrust::copy(cellInfoVecs.centerCoordX.begin(),
+			cellInfoVecs.centerCoordX.begin()
+					+ allocPara_m.currentActiveCellCount,
+			centerX.begin());
+ 
+        thrust::host_vector<double> centerY(
+			allocPara_m.currentActiveCellCount);
+	thrust::copy(cellInfoVecs.centerCoordY.begin(),
+			cellInfoVecs.centerCoordY.begin()
+					+ allocPara_m.currentActiveCellCount,
+			centerY.begin());
+
+	thrust::host_vector<double> centerZ(
+			allocPara_m.currentActiveCellCount);
+	thrust::copy(cellInfoVecs.centerCoordZ.begin(),
+			cellInfoVecs.centerCoordZ.begin()
+					+ allocPara_m.currentActiveCellCount,
+			centerZ.begin());
+
+        //infoForSignal.sCenterX=centerX[4] ; 
+        //infoForSignal.sCenterY=centerY[4] ; 
+        //infoForSignal.sCenterZ=centerZ[4] ; 
+
+
 	std::vector<CVector> result;
-	for (uint i = 0; i < allocPara.currentActiveCellCount; i++) {
+	for (uint i = 0; i < allocPara_m.currentActiveCellCount; i++) {
 		CVector pos = CVector(centerX[i], centerY[i], centerZ[i]);
+        //infoForSignal.sCenterX=centerX[i] ; 
+        //infoForSignal.sCenterY=centerY[i] ; 
+        //infoForSignal.sCenterZ=centerZ[i] ; 
 		result.push_back(pos);
 	}
-	return result;
+	return result; 
 }
 
 void SceCells::setGrowthDirXAxis() {
@@ -3136,7 +3174,7 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 
 AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 		AnimationCriteria& aniCri, vector<double>& cellsPerimeter) {   //AliE
-
+        cout << "I am in obtainAniRawDataGivenCellColor start"<<endl; 
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
@@ -3144,6 +3182,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 
 	assert(cellColors.size() >= activeCellCount);
 	assert(cellsPerimeter.size() == activeCellCount); //AliE
+	assert(dppLevels.size() == activeCellCount); //AliE
 
 	AniRawData rawAniData;
 	//cout << "size of potential pairs = " << pairs.size() << endl;
@@ -3241,6 +3280,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	double node1F_MI_M_x, node1F_MI_M_y;//AAMIRI //AliE
 	double nodeExtForceT, nodeExtForceN;//AAMIRI 
 	double aniVal;
+	double aniVal2;
         double tmpF_MI_M_MagN_Int[activeCellCount-1] ; //AliE
 
          //This is how the VTK file is intended to be written. First the memmbraen nodes are going to be written and then internal nodes.
@@ -3347,6 +3387,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index1];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali added 
+                                        aniVal2=dppLevels[i] ; 
+                                        rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 
@@ -3360,6 +3402,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index2];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
+					aniVal2=dppLevels[i]; 
+                                        rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
 
@@ -3403,7 +3447,10 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							tmpPos = CVector(node1X, node1Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
-                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
+                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
+						        aniVal2=dppLevels[i]; 
+                                                        rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
+	 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
 						}
@@ -3415,6 +3462,10 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							tmpPos = CVector(node2X, node2Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
+                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
+                                        		aniVal2=dppLevels[i]; 
+                                                        rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
+
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
@@ -3434,6 +3485,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			}
 		}
 	}
+
+        cout << "I am in obtainAniRawDataGivenCellColor end"<<endl; 
 	return rawAniData;
 }
 
@@ -3697,6 +3750,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		PointAniData ptAniData;
 		ptAniData.pos = rawAniData.aniNodePosArr[i];
 		ptAniData.F_MI_M_MagN_Int= rawAniData.aniNodeF_MI_M_MagN_Int[i]; //AliE
+		ptAniData.dppLevel1= rawAniData.dppLevel[i]; //AliE
 		ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
 		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI

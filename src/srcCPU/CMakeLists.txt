@@ -10,6 +10,8 @@ add_library(SceInit
         UnstructMesh2D.h
         CellInitHelper.h
         CellInitHelper.cpp
+        Signal2D.h
+	Signal2D.cpp
         ${COMMON_INCLUDES}/Point2D.cpp
         ${COMMON_INCLUDES}/Point2D.h
         ${COMMON_INCLUDES}/ConfigParser.h

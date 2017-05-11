@@ -195,14 +195,10 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	//AAMIR wrote the curvature data here
 	fs << "SCALARS Stress float" << endl;
 	fs << "LOOKUP_TABLE default" << endl; //AliE
-
 	for (uint i = 0; i < pointsAniData.size(); i++) {
-		std::cout << "****************      SIZE IS:     " << pointsAniData.size() << std::endl;
-//		if (pointsAniData[i].colorScale2 < 0.000001 || pointsAniData[i].colorScale2>1.0){
-//			pointsAniData[i].colorScale2 = 0.0;}
+		//std::cout << "****************      SIZE IS:     " << pointsAniData.size() << std::endl;
 		fs << pointsAniData[i].F_MI_M_MagN_Int << endl;  //AliE
 	}
-
 	fs << std::endl;
 	//AAMIRI finished writing the Node Curvature
 
@@ -213,6 +209,14 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	for (uint i = 0; i < pointsAniData.size(); i++) {
 		fs << pointsAniData[i].rankScale << endl;
 	}
+	fs << std::endl;
+
+	fs << "SCALARS dppLevel  float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].dppLevel1 << endl;
+	}
+	fs << std::endl;
 	//AAMIRI finished writing the cell rank of each node
 
 

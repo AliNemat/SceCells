@@ -568,6 +568,7 @@ struct PointAniData {
 	CVector dir;
 	CVector F_MI_M; //AliE
 	double F_MI_M_MagN_Int; //AliE
+        double dppLevel1;   //Ali
 	CVector extForce;//AAMIRI
 	double colorScale;
 	double colorScale2;//AAMIRI
@@ -636,6 +637,7 @@ struct AniRawData {
 	std::vector<LinkAniData> memLinks;
 	std::vector<LinkAniData> internalLinks;
 	std::vector<BondInfo> bondsArr;
+	std::vector<double> dppLevel; //Ali
 };
 
 struct VecVal {

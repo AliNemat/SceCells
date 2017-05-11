@@ -2,6 +2,7 @@
 #define SCECELLS_H_
 
 #include "SceNodes.h"
+#include "../srcCPU/Signal2D.h"
 #include <time.h>
 #include <thrust/tabulate.h>
 #define PI 3.14159265358979
@@ -2333,6 +2334,14 @@ struct CellGrowthAuxData {
 	int* adhIndxAddr;
 };
 
+struct InfoForSignal {    //Ali
+
+	double sCenterX; 
+	double sCenterY; 
+	double sCenterZ; 
+	
+}; 
+
 struct CellDivAuxData {
 // ************************ these parameters are used for cell division *************************
 // sum all bool values which indicate whether the cell is going to divide.
@@ -2439,7 +2448,7 @@ class SceCells {
 	CellGrowthAuxData growthAuxData;
 	CellDivAuxData divAuxData;
 	ControlPara controlPara;
-
+        InfoForSignal infoForSignal; //Ali
 	NodeAllocPara_M allocPara_m;
 	MembrPara membrPara;
 
@@ -2462,6 +2471,7 @@ class SceCells {
 	double shrinkRatio;
 	double memNewSpacing;
 	double curTime;
+        vector<double>  dppLevels ; 
 
 	void readMiscPara();
 	void readBioPara();
@@ -2752,6 +2762,7 @@ public:
 	void runStretchTest(double dt);
 
 	std::vector<CVector> getAllCellCenters();
+	//void getAllCellCenters();
 	std::vector<double> getGrowthProgressVec();
 
 	void runAblationTest(AblationEvent &ablEvent);
