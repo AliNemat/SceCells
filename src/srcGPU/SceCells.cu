@@ -674,6 +674,7 @@ void SceCells::initCellInfoVecs() {
 void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.Cell_Damp.resize(allocPara_m.maxCellCount, 36.0);   //Ali
+	cellInfoVecs.cell_Dpp.resize(allocPara_m.maxCellCount, 0.0);   //Ali
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //A&A
         cellInfoVecs.growthProgressOld.resize(allocPara_m.maxCellCount, 0.0);//Ali
 	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0); //Ali
@@ -1395,7 +1396,8 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
         cellCentersHost=getAllCellCenters();  //Ali
         //getAllCellCenters();  //Ali
-        dppLevels=updateSignal(cellCentersHost) ; //Ali
+        dppLevels=updateSignal(cellCentersHost,allocPara.maxCellCount) ; //Ali
+        cellInfoVecs.cell_Dpp=dppLevels ; 
         BC_Imp_M() ; 
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
@@ -3182,7 +3184,6 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 
 	assert(cellColors.size() >= activeCellCount);
 	assert(cellsPerimeter.size() == activeCellCount); //AliE
-	assert(dppLevels.size() == activeCellCount); //AliE
 
 	AniRawData rawAniData;
 	//cout << "size of potential pairs = " << pairs.size() << endl;

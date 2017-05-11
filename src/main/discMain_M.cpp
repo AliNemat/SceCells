@@ -191,10 +191,8 @@ int main(int argc, char* argv[]) {
 			//		aniFrame, mainPara.aniCri);
 			//simuDomain.outputVtkColorByCell_T1(mainPara.animationNameBase,
 			//		aniFrame, mainPara.aniCri);
-                        if (i !=0){
 			simuDomain.outputVtkColorByCell_polySide(mainPara.animationNameBase,
 					aniFrame, mainPara.aniCri);
-                        }
 			// std::cout << "in ani step " << aniFrame << std::endl;
 			std::cout << "substep 6 " << std::endl;
 			aniFrame++;

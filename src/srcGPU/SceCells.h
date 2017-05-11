@@ -2230,6 +2230,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthProgress; //Ali
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
+	thrust::device_vector<double> cell_Dpp;//Ali
        
 	thrust::device_vector<double> growthProgressOld;  //A&A
 //Ali
@@ -2448,7 +2449,6 @@ class SceCells {
 	CellGrowthAuxData growthAuxData;
 	CellDivAuxData divAuxData;
 	ControlPara controlPara;
-        InfoForSignal infoForSignal; //Ali
 	NodeAllocPara_M allocPara_m;
 	MembrPara membrPara;
 
