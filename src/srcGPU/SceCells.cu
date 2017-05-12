@@ -2584,30 +2584,56 @@ void SceCells::allComponentsMove_M() {
         moveNodes_BC_M();      //Ali
 }
 
+
+//Ali modified this function to introduce differential proliferation rates
 void SceCells::randomizeGrowth_M() {
+
+        thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
+				       cellInfoVecs.centerCoordX.begin(),
+                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(cellInfoVecs.centerCoordX.begin(),
+                                                                              cellInfoVecs.centerCoordX.begin()+ allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+        MinX= *MinX_Itr ; 
+        MaxX= *MaxX_Itr ; 
+        MinY= *MinY_Itr ; 
+        MaxY= *MaxY_Itr ;
+        R_Tisu=0.5*(0.5*(MaxX-MinX)+0.5*(MaxY-MinY)) ;   
+        double CntrTisuX=0.5*(MaxX-MinX) ; 
+        double CntrTisuY=0.5*(MaxY-MinY) ; 
+        
+        cout<<"The minimum location of cell cetners in X is="<<MinX<< endl;  
+        cout<<"The maximum location of cell centers in X is="<<MaxX<< endl;  
+        cout<<"The minimum location of cell centers in Y is="<<MinY<< endl;  
+        cout<<"The maximum location of cell centers in Y is="<<MaxY<< endl;  
+
+
 	uint seed = time(NULL);
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
-							cellInfoVecs.isRandGrowInited.begin(),
-							countingBegin)),
+						           cellInfoVecs.centerCoordX.begin(),
+							   cellInfoVecs.centerCoordY.begin(),
+							   cellInfoVecs.isRandGrowInited.begin(),
+							   countingBegin)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
 							countingBegin))
 					+ allocPara_m.currentActiveCellCount,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
-							cellInfoVecs.isRandGrowInited.begin())),
-			RandomizeGrow_M(growthAuxData.randomGrowthSpeedMin,
-					growthAuxData.randomGrowthSpeedMax, seed));
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
+							   cellInfoVecs.isRandGrowInited.begin())),
+			RandomizeGrow_M(CntrTisuX,CntrTisuY,R_Tisu,growthAuxData.randomGrowthSpeedMin,
+					growthAuxData.randomGrowthSpeedMax, seed));  
 }
 
 void SceCells::updateGrowthProgress_M() {

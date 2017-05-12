@@ -2,7 +2,7 @@
 !*/
 /CMakeFiles
 /bin
-/tst/googletest/
+tst/googletest/
 !*.cpp
 !*.cu
 !*.h
