@@ -14,7 +14,10 @@ for (int i=0 ; i<cellMax ; i++) {
    for (int i=0 ; i<CellCentersHost.size() ; i++) {
          DPPLevel[i]=5.0 ; 
         }
+   for (int i=0 ; i<2 ; i++) {
+         DPPLevel[i]=2.0 ; 
+        }
 
- 
+cout << "I finished update signal" << std::endl ; 
 return  DPPLevel ; 
 }

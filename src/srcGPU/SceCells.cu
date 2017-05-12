@@ -1396,7 +1396,8 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
         cellCentersHost=getAllCellCenters();  //Ali
         //getAllCellCenters();  //Ali
-        dppLevels=updateSignal(cellCentersHost,allocPara.maxCellCount) ; //Ali
+        dppLevels=updateSignal(cellCentersHost,allocPara_m.maxCellCount) ; //Ali
+        assert(cellInfoVecs.cell_Dpp.size()==dppLevels.size()); 
         cellInfoVecs.cell_Dpp=dppLevels ; 
         BC_Imp_M() ; 
 	std::cout << "     *** 5 ***" << endl;
