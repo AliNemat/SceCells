@@ -2465,11 +2465,11 @@ class SceCells {
 	double dt;
         double Damp_Coef ;   //Ali
         double InitTimeStage ;  //A & A 
-        double MinX ;  
-        double MaxX ;  
-        double MinY ;  
-        double MaxY ; 
-        double R_Tisu ; //Ali  
+        double Tisu_MinX ; //Ali 
+        double Tisu_MaxX ;  //Ali
+        double Tisu_MinY ;  //Ali
+        double Tisu_MaxY ; //Ali
+        double Tisu_R ; //Ali  
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;

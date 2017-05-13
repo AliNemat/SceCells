@@ -1396,7 +1396,24 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
         cellCentersHost=getAllCellCenters();  //Ali
         //getAllCellCenters();  //Ali
-        dppLevels=updateSignal(cellCentersHost,allocPara_m.maxCellCount) ; //Ali
+	thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
+				       cellInfoVecs.centerCoordX.begin(),
+                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(cellInfoVecs.centerCoordX.begin(),
+                                                                              cellInfoVecs.centerCoordX.begin()+ allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+        Tisu_MinX= *MinX_Itr ; 
+        Tisu_MaxX= *MaxX_Itr ; 
+        Tisu_MinY= *MinY_Itr ; 
+        Tisu_MaxY= *MaxY_Itr ;
+        
+        Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ;  
+
+
+        dppLevels=updateSignal(cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime) ; //Ali
         assert(cellInfoVecs.cell_Dpp.size()==dppLevels.size()); 
         cellInfoVecs.cell_Dpp=dppLevels ; 
         BC_Imp_M() ; 
@@ -2038,7 +2055,7 @@ void SceCells::applyMemForce_M() {
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
         
        //Ali 
-        
+        /*
         thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
                                               nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
         thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
@@ -2047,17 +2064,18 @@ void SceCells::applyMemForce_M() {
                                               nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
         thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount,
                                               nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
-        MinX= *MinX_Itr ; 
-        MaxX= *MaxX_Itr ; 
-        MinY= *MinY_Itr ; 
-        MaxY= *MaxY_Itr ;  
+        Tisu_MinX= *MinX_Itr ; 
+        Tisu_MaxX= *MaxX_Itr ; 
+        Tisu_MinY= *MinY_Itr ; 
+        Tisu_MaxY= *MaxY_Itr ;  
+        */
         cout<< "# of boundary nodes"<< allocPara_m.bdryNodeCount<<endl ;
         cout<< "# of total active nodes"<<totalNodeCountForActiveCells <<endl ;
 
-        cout<<"The minimum location in X is="<<MinX<< endl;  
-        cout<<"The maximum location in X is="<<MaxX<< endl;  
-        cout<<"The minimum location in Y is="<<MinY<< endl;  
-        cout<<"The maximum location in Y is="<<MaxY<< endl;  
+        cout<<"The minimum location in X in applyMemForce_M is="<<Tisu_MinX<< endl;  
+        cout<<"The maximum location in X in applyMemForce_M is="<<Tisu_MaxX<< endl;  
+        cout<<"The minimum location in Y in applyMemForce_M is="<<Tisu_MinY<< endl;  
+        cout<<"The maximum location in Y in applyMemForce_M is="<<Tisu_MaxY<< endl;  
         //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
@@ -2410,7 +2428,8 @@ void SceCells::computeCenterPos_M() {
 
 void SceCells::BC_Imp_M() {
 
-        thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
+        /*
+	thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
                                        cellInfoVecs.centerCoordX.begin(),
                                        cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount ) ;
 
@@ -2429,7 +2448,12 @@ void SceCells::BC_Imp_M() {
         MaxX= *MaxX_Itr ; 
         MinY= *MinY_Itr ; 
         MaxY= *MaxY_Itr ;
-  
+ */
+ 
+        cout<<"The minimum location of cell cetners in Y in  BC_Imp_M is="<<Tisu_MinX<< endl;  
+        cout<<"The maximum location of cell centers in Y in  BC_Imp_M is="<<Tisu_MaxX<< endl;  
+        cout<<"The minimum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MinY<< endl;  
+        cout<<"The maximum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MaxY<< endl;  
 /**	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
@@ -2461,7 +2485,7 @@ void SceCells::BC_Imp_M() {
 			thrust::make_zip_iterator(   
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
                                                            cellInfoVecs.Cell_Damp.begin())),
-			BC_Tissue_Damp(MinX,MaxX,MinY,MaxY,Damp_Coef,NumActCells)) ; 
+			BC_Tissue_Damp(Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,Damp_Coef,NumActCells)) ; 
 
 
 /**void SceCells::randomizeGrowth() {
@@ -2589,27 +2613,14 @@ void SceCells::allComponentsMove_M() {
 //Ali modified this function to introduce differential proliferation rates
 void SceCells::randomizeGrowth_M() {
 
-        thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
-				       cellInfoVecs.centerCoordX.begin(),
-                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(cellInfoVecs.centerCoordX.begin(),
-                                                                              cellInfoVecs.centerCoordX.begin()+ allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(cellInfoVecs.centerCoordY.begin(),
-                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(cellInfoVecs.centerCoordY.begin(),
-                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
-        MinX= *MinX_Itr ; 
-        MaxX= *MaxX_Itr ; 
-        MinY= *MinY_Itr ; 
-        MaxY= *MaxY_Itr ;
-        R_Tisu=0.5*(0.5*(MaxX-MinX)+0.5*(MaxY-MinY)) ;   
-        double CntrTisuX=0.5*(MaxX-MinX) ; 
-        double CntrTisuY=0.5*(MaxY-MinY) ; 
+                
+        double CntrTisuX=0.5*(Tisu_MaxX-Tisu_MinX) ; 
+        double CntrTisuY=0.5*(Tisu_MaxY-Tisu_MinY) ; 
         
-        cout<<"The minimum location of cell cetners in X is="<<MinX<< endl;  
-        cout<<"The maximum location of cell centers in X is="<<MaxX<< endl;  
-        cout<<"The minimum location of cell centers in Y is="<<MinY<< endl;  
-        cout<<"The maximum location of cell centers in Y is="<<MaxY<< endl;  
+        cout<<"The minimum location of cell cetners in Y in  randomizeGrowth_M is="<<Tisu_MinX<< endl;  
+        cout<<"The maximum location of cell centers in Y in  randomizeGrowth_M is="<<Tisu_MaxX<< endl;  
+        cout<<"The minimum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MinY<< endl;  
+        cout<<"The maximum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MaxY<< endl;  
 
 
 	uint seed = time(NULL);
@@ -2633,7 +2644,7 @@ void SceCells::randomizeGrowth_M() {
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(),
 							   cellInfoVecs.isRandGrowInited.begin())),
-			RandomizeGrow_M(CntrTisuX,CntrTisuY,R_Tisu,growthAuxData.randomGrowthSpeedMin,
+			RandomizeGrow_M(CntrTisuX,CntrTisuY,Tisu_R,growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax, seed));  
 }
 
@@ -4711,10 +4722,10 @@ CellsStatsData SceCells::outputPolyCountData() {
         //Stress_Strain_Single.close() ;
        //Ali
         result.MaxDistanceX=abs(centerCoordXHost[1]-centerCoordXHost[0]); //Ali
-        result.Cells_Extrem_Loc[0]=MinX; 
-        result.Cells_Extrem_Loc[1]=MaxX; 
-        result.Cells_Extrem_Loc[2]=MinY;
-        result.Cells_Extrem_Loc[3]=MaxY ;
+        result.Cells_Extrem_Loc[0]=Tisu_MinX; 
+        result.Cells_Extrem_Loc[1]=Tisu_MaxX; 
+        result.Cells_Extrem_Loc[2]=Tisu_MinY;
+        result.Cells_Extrem_Loc[3]=Tisu_MaxY ;
         result.F_Ext_Out=membrPara.F_Ext_Incline*curTime ; 
         //if (dt==curTime) { 
         //result.Init_Displace=MaxX-MinX ; 
