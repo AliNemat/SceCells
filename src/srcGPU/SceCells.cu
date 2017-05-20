@@ -644,6 +644,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 	memNewSpacing = globalConfigVars.getConfigValue("MembrLenDiv").toDouble();
 
 	initialize_M(nodesInput);
+
+        cout<< "size of dpp in constructor  is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
 	copyToGPUConstMem();
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
 			initActiveIntnlNodeCounts, initGrowProgVec);
@@ -675,6 +677,7 @@ void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.Cell_Damp.resize(allocPara_m.maxCellCount, 36.0);   //Ali
 	cellInfoVecs.cell_Dpp.resize(allocPara_m.maxCellCount, 0.0);   //Ali
+        cout<< "size of dpp in init is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //A&A
         cellInfoVecs.growthProgressOld.resize(allocPara_m.maxCellCount, 0.0);//Ali
 	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0); //Ali
@@ -815,6 +818,7 @@ void SceCells::initialize_M(SceNodes* nodesInput) {
 	//std::cout.flush();
 	initCellInfoVecs_M();
 
+        cout<< "size of dpp initilizie  is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
 	//std::cout << "break point 4 " << std::endl;
 	//std::cout.flush();
 	readBioPara();
@@ -1372,6 +1376,7 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage) {   //Ali
         
         
+        cout<< "size of dpp begining of runAll is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         vector<CVector> cellCentersHost ; 
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
@@ -1412,12 +1417,17 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ;  
 
-
-        dppLevels=updateSignal(cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime) ; //Ali
-        assert(cellInfoVecs.cell_Dpp.size()==dppLevels.size()); 
-        cellInfoVecs.cell_Dpp=dppLevels ; 
+        
+        dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime) ; //Ali
+        cout<< " I am right after signal function" << endl; 
+        cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
+        cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ;  
+        assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
+        thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ; 
+       // cellInfoVecs.cell_Dpp=dppLevels ; 
+        cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         BC_Imp_M() ; 
-	std::cout << "     *** 5 ***" << endl;
+	std::cout << "     *** 3.5 ***" << endl;
 	std::cout.flush();
         	
 //Ali 

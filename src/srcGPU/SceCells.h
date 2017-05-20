@@ -2475,6 +2475,7 @@ class SceCells {
 	double memNewSpacing;
 	double curTime;
         vector<double>  dppLevels ; 
+        vector<double>  dppLevels_Cell ; 
 
 	void readMiscPara();
 	void readBioPara();
