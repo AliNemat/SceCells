@@ -1,7 +1,18 @@
 #include <fstream>
+#include <sstream>
 #include "Signal2D.h"
 
+namespace patch
+{
+template  < typename T> std::string to_string (const T & n)
+{
+std::ostringstream stm ; 
+stm << n ; 
+return stm.str(); 
+}
 
+
+}
 vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal)  {
 
 cout << "I am in update signal started" << std::endl ; 
@@ -198,10 +209,12 @@ cout << "I am in update signal end-1 " << std::endl ;
 cout << "I am in update signal end " << std::endl ;
  double z[2]; 
  z[1]=1 ; //for output purpose
+ int nz=2 ; 
             plotSignal++ ; 
 	if (plotSignal == 50) {
-
-		std::string vtkFileName = "DPP_" + std::to_string(curTime) + ".vtk";
+                int curTimePlot=curTime*100 ; 
+		std::string vtkFileName = "DPP_" + patch::to_string(curTimePlot) + ".vtk";
+//		std::string vtkFileName = "DPP.vtk";
 		ofstream SignalOut;
 		SignalOut.open(vtkFileName.c_str());
 		SignalOut << "# vtk DataFile Version 2.0" << endl;

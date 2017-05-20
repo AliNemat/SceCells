@@ -1,6 +1,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <string>
 #include "GeoVector.h"
 using namespace std ; 
 
