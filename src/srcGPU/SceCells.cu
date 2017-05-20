@@ -1418,7 +1418,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ;  
 
         
-        dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime) ; //Ali
+        dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal) ; //Ali
         cout<< " I am right after signal function" << endl; 
         cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ;  

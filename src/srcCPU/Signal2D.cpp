@@ -2,7 +2,7 @@
 #include "Signal2D.h"
 
 
-vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime)  {
+vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal)  {
 
 cout << "I am in update signal started" << std::endl ; 
 
@@ -172,7 +172,7 @@ cout << "I am in loop for dppLevels_cell vector pushing " << std::endl ;
    }
 cout << "I am in update signal end-2 " << std::endl ; 
     if (curTime==(InitTimeStage+dt)){
-
+        plotSignal=0 ; 
       for (int i=0 ; i<=nx; i++)
       {
         for (int j=0 ; j<=ny ; j++)
@@ -195,6 +195,68 @@ cout << "I am in update signal end-1 " << std::endl ;
       }
 
 
-cout << "I am in update signal end " << std::endl ; 
+cout << "I am in update signal end " << std::endl ;
+ double z[2]; 
+ z[1]=1 ; //for output purpose
+            plotSignal++ ; 
+	if (plotSignal == 50) {
+
+		std::string vtkFileName = "DPP_" + std::to_string(curTime) + ".vtk";
+		ofstream SignalOut;
+		SignalOut.open(vtkFileName.c_str());
+		SignalOut << "# vtk DataFile Version 2.0" << endl;
+		SignalOut << "Result for paraview 2d code" << endl;
+		SignalOut << "ASCII" << endl;
+		SignalOut << "DATASET RECTILINEAR_GRID" << endl;
+		SignalOut << "DIMENSIONS" << " " << nx - 1 << " " << " " << ny - 1 << " " << nz - 1 << endl;
+
+			SignalOut << "X_COORDINATES " << nx - 1 << " float" << endl;
+			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
+ 			for (int i = 1; i <= nx - 1; i++) {
+ 				SignalOut << x[i] << endl;
+ 			}
+
+ 			SignalOut << "Y_COORDINATES " << ny - 1 << " float" << endl;
+ 			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
+ 			for (int j = 1; j <= ny - 1; j++) {
+ 				SignalOut << y[j] << endl;
+ 			}
+ 
+ 			SignalOut << "Z_COORDINATES " << nz - 1 << " float" << endl;
+ 			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
+ 			for (int k = 1; k <= nz - 1; k++) {
+ 				SignalOut << z[k] << endl;
+ 			}
+ 
+ 			SignalOut << "POINT_DATA " << (nx - 1)*(ny - 1)*(nz - 1) << endl;
+ 			SignalOut << "SCALARS DPP float 1" << endl;
+ 			SignalOut << "LOOKUP_TABLE default" << endl;
+ 
+ 			for (int k = 1; k <= nz - 1; k++) {
+ 				for (int j = 1; j <= ny - 1; j++) {
+ 					for (int i = 1; i <= nx - 1; i++) {
+ 						SignalOut << dppLevels[i][j] << endl;
+ 
+ 					}
+ 				}
+ 			}
+ 
+ 			SignalOut << "SCALARS Wing float 1" << endl;
+ 			SignalOut << "LOOKUP_TABLE default" << endl;
+ 
+ 			for (int k = 1; k <= nz - 1; k++) {
+ 				for (int j = 1; j <= ny - 1; j++) {
+ 					for (int i = 1; i <= nx - 1; i++) {
+ 						SignalOut << C_Tisu[i][j] << endl;
+ 
+ 					}
+ 				}
+ 			}
+ 
+ 			plotSignal = 0; 
+ 		}
+ 
+
+ 
 return  dppLevels_Cell ; 
 }
