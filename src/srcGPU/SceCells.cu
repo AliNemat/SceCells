@@ -3436,7 +3436,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index1];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali added 
-                                        aniVal2=dppLevels[i] ; 
+                                        aniVal2=dppLevels_Cell[i] ; 
                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
@@ -3451,7 +3451,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index2];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
-					aniVal2=dppLevels[i]; 
+					aniVal2=dppLevels_Cell[i]; 
                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
@@ -3497,7 +3497,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
-						        aniVal2=dppLevels[i]; 
+						        aniVal2=dppLevels_Cell[i]; 
                                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 	 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
@@ -3512,10 +3512,9 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
-                                        		aniVal2=dppLevels[i]; 
+                                        		aniVal2=dppLevels_Cell[i]; 
                                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 
-                                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
 						}

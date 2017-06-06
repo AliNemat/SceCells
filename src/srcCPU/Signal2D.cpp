@@ -44,11 +44,11 @@ cout << "I am in update signal started 2" << std::endl ;
 cout << "I am in update signal 0 " << std::endl ; 
  for (int i=0 ; i<=nx ; i++) 
      {
-	x[i]=0.5*dx+(i-1)*dx; 
+	x[i]=MinFinalX+0.5*dx+(i-1)*dx; 
      }
  for (int j=0 ; j<=ny ; j++)
      {
-	y[j]=0.5*dx+(j-1)*dy; 
+	y[j]=MinFinalY+0.5*dy+(j-1)*dy; 
      }
 
 cout << "I am in update signal 0.5  " << std::endl ; 
@@ -134,7 +134,6 @@ cout << "I am in update signal 1 " << std::endl ;
     }
   }
 
-cout << "I am in update signal 2 " << std::endl ; 
  // treating boundary
   for (int i=1 ; i<=nx-1; i++)
    {
@@ -147,10 +146,12 @@ cout << "I am in update signal 2 " << std::endl ;
     dppLevels[nx][j]=dppLevels[nx-1][j]; 
    }
 
-cout << "I am in update signal 3 " << std::endl ; 
 
   double AnyX; 
   double AnyY; 
+ 
+  //  if (curTime==(InitTimeStage+dt)){
+dppLevels_Cell.clear(); 
   for (int k=0; k<CellCentersHost.size(); k++)
    {
      AnyX=CellCentersHost[k].x; 
@@ -172,15 +173,55 @@ cout << "I am in update signal 3 " << std::endl ;
            break;  
         }
      }
-
-cout << "I am in loop for dppLevels_cell vector pushing " << std::endl ; 
+cout<< "stored I and J is"<<StoredI<<StoredJ<<endl; 
+cout<< "dpp level for stored I and J is"<<dppLevels[StoredI][StoredJ]<<endl; 
+cout << "I am in first time loop for dppLevels_cell vector pushing " << std::endl ; 
      dppLevels_Cell.push_back(dppLevels[StoredI][StoredJ]);
    }
 
+for (int k=CellCentersHost.size(); k<cellMax ; k++){
+     dppLevels_Cell.push_back(0.0) ;   //these cells are not active
+   }
+
+
+//}
+
+/**
+  for (int k=0; k<CellCentersHost.size(); k++)
+   {
+     AnyX=CellCentersHost[k].x; 
+     AnyY=CellCentersHost[k].y; 
+     int StoredI=-1 ;  //We will figure out that there is an error if stays -1  
+     int StoredJ=-1 ; 
+  
+     for (i=0 ; i<nx ; i++)
+     {
+       if (x[i]<=AnyX && x[i+1]>=AnyX)
+        {  StoredI=i ;
+           break;  
+        }
+     }  
+     for (j=0 ; j<ny ; j++)
+     {
+       if (y[j]<=AnyY && y[j+1]>=AnyY)
+        {  StoredJ=j ;
+           break;  
+        }
+     }
+cout<< "stored I and J is"<<StoredI<<StoredJ<<endl; 
+cout<< "dpp level for stored I and J is"<<dppLevels[StoredI][StoredJ]<<endl; 
+cout << "I am in loop for dppLevels_cell vector pushing " << std::endl ; 
+     dppLevels_Cell[k]=dppLevels[StoredI][StoredJ];
+   }
 
    for (int k=CellCentersHost.size(); k<cellMax ; k++){
-     dppLevels_Cell.push_back(0.0);  //these cells are not active
+     dppLevels_Cell[k]=0.0 ;   //these cells are not active
    }
+*/
+
+cout << "I cellmax is " <<cellMax <<std::endl ; 
+cout << "dppLevels_cell size is" << dppLevels_Cell.size()<<std::endl ; 
+
 cout << "I am in update signal end-2 " << std::endl ; 
     if (curTime==(InitTimeStage+dt)){
         plotSignal=0 ; 
@@ -211,7 +252,7 @@ cout << "I am in update signal end " << std::endl ;
  z[1]=1 ; //for output purpose
  int nz=2 ; 
             plotSignal++ ; 
-	if (plotSignal == 50) {
+	if (plotSignal == 7000) {
                 int curTimePlot=curTime*100 ; 
 		std::string vtkFileName = "DPP_" + patch::to_string(curTimePlot) + ".vtk";
 //		std::string vtkFileName = "DPP.vtk";
