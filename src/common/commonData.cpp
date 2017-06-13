@@ -217,6 +217,7 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 
 
 	//AAMIRI starts writing tension vector data
+        /*
 	fs << "VECTORS F_MI_M float" << endl;
 		for (uint i = 0; i < pointsAniData.size(); i++) {
 
@@ -242,6 +243,7 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 					<< pointsAniData[i].dir.z << endl;
 		}
 	}
+        */
 	fs.close();
 }
 

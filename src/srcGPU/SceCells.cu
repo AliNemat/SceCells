@@ -3003,7 +3003,7 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 	int index2;
 	std::vector<BondInfo> bondInfoVec;
 
-	double node1X, node1Y;
+	double node1X, node1Y ;
 	double node2X, node2Y;
 	double aniVal;
 
@@ -3238,6 +3238,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 
 	double node1X, node1Y;
 	double node2X, node2Y;
+	double node3X, node3Y;
 	double node1F_MI_M_x, node1F_MI_M_y;//AAMIRI //AliE
 	double nodeExtForceT, nodeExtForceN;//AAMIRI 
 	double aniVal;
@@ -3248,7 +3249,14 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	for (uint i = 0; i < activeCellCount; i++) {
 		tmpF_MI_M_MagN_Int[i]=0.0   ;   
 		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
+                        
+        //           if ( j <curActiveMemNodeCounts[i]) {
 			index1 = beginIndx + i * maxNodePerCell + j;
+          //              }
+            //       else {
+	//		index1 = beginIndx + i * maxNodePerCell + j-curActiveMemNodeCounts[i]; 
+          //         }
+
 			if ( hostIsActiveVec[index1]==true) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
@@ -3256,17 +3264,15 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
-				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
-                               // tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+sqrt(pow(hostTmpVectorF_MI_M_x[index1],2)+pow(hostTmpVectorF_MI_M_y[index1],2)) ; //AliE
+//				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M); //AliE
                                 tmpF_MI_M_MagN_Int[i]=tmpF_MI_M_MagN_Int[i]+abs(hostTmpVectorF_MI_M_N[index1]) ; //AliE
 
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
-				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
+//				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 
 
-				rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
 				}
 			
@@ -3279,18 +3285,16 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			index1 = beginIndx + i * maxNodePerCell + j;
 			if ( hostIsActiveVec[index1]==true ) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
-				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
+				//rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
-				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M);
+//				rawAniData.aniNodeF_MI_M.push_back(tmpF_MI_M);
 
 				nodeExtForceT = hostTmpVectorExtForceTangent[index1];//AAMIRI
 				nodeExtForceN = hostTmpVectorExtForceNormal[index1];//AAMIRI
 				tmpExtForce = CVector(nodeExtForceT, nodeExtForceN, 0.0);//AAMIRI
-				
-				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
-				rawAniData.aniNodeRank.push_back(i);//AAMIRI
+//				rawAniData.aniNodeExtForceArr.push_back(tmpExtForce);
 				}
 			
 			}
@@ -3318,87 +3322,209 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 		}
 	}
 
-	rawAniData.bondsArr = bondInfoVec;
+	//rawAniData.bondsArr = bondInfoVec;
 
 	uint curIndex = 0;
+        uint index1Mapped,index2Mapped,index3Mapped ; 
+        uint index1_3D,index2_3D, index3_3D ; 
+        bool ghostElement1,ghostElement2,ghostElement3 ;
+        bool Element3Active ;  
         //loop on membrane nodes
+	
+        uint maxNodePerCell_3D=maxNodePerCell+maxMemNodePerCell ; 
 	for (uint i = 0; i < activeCellCount; i++) {
-		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {
-			index1 = beginIndx + i * maxNodePerCell + j;
-			if (j == curActiveMemNodeCounts[i] - 1) {
-				index2 = beginIndx + i * maxNodePerCell;
-			} else {
-				index2 = beginIndx + i * maxNodePerCell + j + 1;
+		for (uint j = 0; j < 2*curActiveMemNodeCounts[i]; j++) {   // I multipliied by 2
+                        Element3Active=false ; 
+                        if (j < curActiveMemNodeCounts[i])
+                        {
+			 // index1 = beginIndx + i * maxNodePerCell + j;
+                          index1Mapped=  beginIndx + i * maxNodePerCell + j ; 
+			  index1_3D = beginIndx + i * maxNodePerCell_3D + j;
+                          ghostElement1=false ; 
+
+			  index3Mapped = beginIndx + i * maxNodePerCell + j   ; 
+			  index3_3D = beginIndx + i * maxNodePerCell_3D + j  +curActiveMemNodeCounts[i]; 
+                          ghostElement3=true ; 
+                          Element3Active=true ; 
+                              
+
+                        }
+                        else 
+                        {
+			  index1Mapped  = beginIndx + i * maxNodePerCell + j-curActiveMemNodeCounts[i] ; 
+                         // index1=  beginIndx + i * maxNodePerCell+ j ; 
+			  index1_3D = beginIndx + i * maxNodePerCell_3D + j;
+                          ghostElement1=true ; 
+                        }
+
+
+
+			if (j == curActiveMemNodeCounts[i] - 1){
+			//	index2 = beginIndx + i * maxNodePerCell;
+				index2Mapped = beginIndx + i * maxNodePerCell;
+			        index2_3D    = beginIndx + i * maxNodePerCell_3D ; 
+                                ghostElement2=false; 
+                          }
+			else if ( j==(2*curActiveMemNodeCounts[i]-1) ) {
+			//	index2 = beginIndx + i * maxNodePerCell+curActiveMemNodeCounts[i];
+				index2Mapped = beginIndx + i * maxNodePerCell;
+			        index2_3D = beginIndx + i * maxNodePerCell_3D+curActiveMemNodeCounts[i] ; 
+                                ghostElement2=true ; 
 			}
+                        else if (j < curActiveMemNodeCounts[i])
+                        {
+ 
+			//	index2 =       beginIndx + i * maxNodePerCell    + j + 1;
+				index2Mapped = beginIndx + i * maxNodePerCell    + j + 1;
+			        index2_3D    = beginIndx + i * maxNodePerCell_3D + j + 1 ; 
+                                ghostElement2=false ; 
+                        }
+                        else {
+                        
+			//	index2 =       beginIndx + i * maxNodePerCell + j + 1;
+				index2Mapped = beginIndx + i * maxNodePerCell + j + 1 -curActiveMemNodeCounts[i] ; 
+			        index2_3D = beginIndx + i * maxNodePerCell_3D + j + 1 ; 
+                                ghostElement2=true ; 
+                        }
 
-			if (hostIsActiveVec[index1] == true
-					&& hostIsActiveVec[index2] == true) {
-				node1X = hostTmpVectorLocX[index1];
-				node1Y = hostTmpVectorLocY[index1];
-				node2X = hostTmpVectorLocX[index2];
-				node2Y = hostTmpVectorLocY[index2];
 
-				IndexMap::iterator it = locIndexToAniIndexMap.find(index1);
+ 
+				
+			if (hostIsActiveVec[index1Mapped] == true
+					&& hostIsActiveVec[index2Mapped] == true) {
+				node1X = hostTmpVectorLocX[index1Mapped];
+				node1Y = hostTmpVectorLocY[index1Mapped];
+				node2X = hostTmpVectorLocX[index2Mapped];
+				node2Y = hostTmpVectorLocY[index2Mapped];
+                                if (Element3Active) {
+				  node3X = hostTmpVectorLocX[index3Mapped];
+				  node3Y = hostTmpVectorLocY[index3Mapped];
+				}
+
+				IndexMap::iterator it = locIndexToAniIndexMap.find(index1_3D);
 				if (it == locIndexToAniIndexMap.end()) {
 					locIndexToAniIndexMap.insert(
-							std::pair<uint, uint>(index1, curIndex));
+							std::pair<uint, uint>(index1_3D, curIndex));
 					curIndex++;
+                                        if (ghostElement1) {
+					tmpPos = CVector(node1X, node1Y, -5);
+                                        }
+                                        else {
 					tmpPos = CVector(node1X, node1Y, 0);
+                                        }
 					//aniVal = hostTmpVectorNodeType[index1];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
+				        rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
 				}
-				it = locIndexToAniIndexMap.find(index2);
+
+				it = locIndexToAniIndexMap.find(index2_3D);
 				if (it == locIndexToAniIndexMap.end()) {
 					locIndexToAniIndexMap.insert(
-							std::pair<uint, uint>(index2, curIndex));
+							std::pair<uint, uint>(index2_3D, curIndex));
 					curIndex++;
-					tmpPos = CVector(node2X, node2Y, 0);
+                                        if (ghostElement2) {
+					  tmpPos = CVector(node2X, node2Y, -5);
+                                        }
+                                        else {
+					  tmpPos = CVector(node2X, node2Y, 0);
+                                        }
 					//aniVal = hostTmpVectorNodeType[index2];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
+					rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
 				}
+				if (Element3Active) 
+                                {
+				   it = locIndexToAniIndexMap.find(index3_3D);
+				   if (it == locIndexToAniIndexMap.end()) {
+					locIndexToAniIndexMap.insert(
+							std::pair<uint, uint>(index3_3D, curIndex));
+					curIndex++;
+					tmpPos = CVector(node3X, node3Y, -5);
+					//aniVal = hostTmpVectorNodeType[index2];
+					aniVal = cellColors[i];
+                                        rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
+					rawAniData.aniNodePosArr.push_back(tmpPos);
+					rawAniData.aniNodeVal.push_back(aniVal);
+					rawAniData.aniNodeRank.push_back(i);//AAMIRI
 
-				it = locIndexToAniIndexMap.find(index1);
+				    }
+                                }
+
+				it = locIndexToAniIndexMap.find(index1_3D);
 				uint aniIndex1 = it->second;
-				it = locIndexToAniIndexMap.find(index2);
+				it = locIndexToAniIndexMap.find(index2_3D);
 				uint aniIndex2 = it->second;
+                              
+                                uint aniIndex3 ; 
+				if (Element3Active){ 
+				  it = locIndexToAniIndexMap.find(index3_3D);
+				  aniIndex3 = it->second;
+                                }
+				LinkAniData linkData1,linkData2 ; 
+
+
+				linkData1.node1Index = aniIndex1;  // just ids of each node. The ID starts from zero, and moves on even for internal nodes in the next loop.
+				linkData1.node2Index = aniIndex2;
+
+				rawAniData.memLinks.push_back(linkData1);
+
+				if (Element3Active){ 
+				  linkData2.node1Index = aniIndex1;  // ids of each node. The ID starts from zero, and moves on even for internal nodes in the next loop.
+				  linkData2.node2Index = aniIndex3;
+				  rawAniData.memLinks.push_back(linkData2);
+                                }
+			}
+		}
+	}
+/*
+ for (uint i = 0; i < activeCellCount; i++) {
+		for (uint j = 0; j < curActiveMemNodeCounts[i]; j++) {  
+                          index1Mapped = beginIndx + i * maxNodePerCell + j;
+			 if (hostIsActiveVec[index1Mapped] == true) {
+                          index1_3D  = beginIndx + i * maxNodePerCell_3D + j;
+			  index2_3D  = beginIndx + i * maxNodePerCell_3D + j+curActiveMemNodeCounts[i] ; 
 
 				LinkAniData linkData;
-				linkData.node1Index = aniIndex1;
-				linkData.node2Index = aniIndex2;
+				linkData.node1Index = index1_3D;  // these are just ids of each node. The ID starts from zero, and moves on even for internal nodes in the next loop.
+				linkData.node2Index = index2_3D;
 				rawAniData.memLinks.push_back(linkData);
 			}
 		}
 	} 
+*/
+
         //loop on internal nodes
 	for (uint i = 0; i < activeCellCount; i++) {
 	//	for (uint j = 0; j < allocPara_m.maxAllNodePerCell; j++) {
 		for (uint j = 0; j < allocPara_m.maxIntnlNodePerCell; j++) {
 			for (uint k = 0; k < allocPara_m.maxAllNodePerCell; k++) {   //Ali
 			//for (uint k = j + 1; k < allocPara_m.maxIntnlNodePerCell; k++) {  //Ali comment 
-				index1 = i * maxNodePerCell + maxMemNodePerCell + j;
-				index2 = i * maxNodePerCell  + k;         //Ali
+				index1_3D = i * maxNodePerCell_3D + 2*maxMemNodePerCell + j;
+				index1Mapped = i * maxNodePerCell + maxMemNodePerCell + j;
+				index2_3D = i * maxNodePerCell_3D  + k;         //Ali
+				index2Mapped = i * maxNodePerCell  + k;         //Ali
 			//	index2 = i * maxNodePerCell + maxMemNodePerCell + k;   //Ali comment
 			//	if (hostIsActiveVec[index1] && hostIsActiveVec[index2]) {
-				if (hostIsActiveVec[index1] && hostIsActiveVec[index2]&& index1 !=index2 ) {
-					node1X = hostTmpVectorLocX[index1];
-					node1Y = hostTmpVectorLocY[index1];
-					node2X = hostTmpVectorLocX[index2];
-					node2Y = hostTmpVectorLocY[index2];
+				if (hostIsActiveVec[index1Mapped] && hostIsActiveVec[index2Mapped]&& index1Mapped !=index2Mapped ) {
+					node1X = hostTmpVectorLocX[index1Mapped];
+					node1Y = hostTmpVectorLocY[index1Mapped];
+					node2X = hostTmpVectorLocX[index2Mapped];
+					node2Y = hostTmpVectorLocY[index2Mapped];
 					if (aniCri.isPairQualify_M(node1X, node1Y, node2X,
 							node2Y)) {
 						IndexMap::iterator it = locIndexToAniIndexMap.find(
-								index1);
+								index1_3D);
 						if (it == locIndexToAniIndexMap.end()) {
 							locIndexToAniIndexMap.insert(
-									std::pair<uint, uint>(index1, curIndex));
+									std::pair<uint, uint>(index1_3D, curIndex));
 							curIndex++;
 							tmpPos = CVector(node1X, node1Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
@@ -3406,11 +3532,12 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
+							rawAniData.aniNodeRank.push_back(i);//AAMIRI
 						}
-						it = locIndexToAniIndexMap.find(index2);
+						it = locIndexToAniIndexMap.find(index2_3D);
 						if (it == locIndexToAniIndexMap.end()) {
 							locIndexToAniIndexMap.insert(
-									std::pair<uint, uint>(index2, curIndex));
+									std::pair<uint, uint>(index2_3D, curIndex));
 							curIndex++;
 							tmpPos = CVector(node2X, node2Y, 0);
 							//aniVal = hostTmpVectorNodeType[index1];
@@ -3418,17 +3545,18 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
 							rawAniData.aniNodePosArr.push_back(tmpPos);
 							rawAniData.aniNodeVal.push_back(aniVal);
+							rawAniData.aniNodeRank.push_back(i);//AAMIRI
 						}
 
-						it = locIndexToAniIndexMap.find(index1);
+						it = locIndexToAniIndexMap.find(index1_3D);
 						uint aniIndex1 = it->second;
-						it = locIndexToAniIndexMap.find(index2);
+						it = locIndexToAniIndexMap.find(index2_3D);
 						uint aniIndex2 = it->second;
 
 						LinkAniData linkData;
 						linkData.node1Index = aniIndex1;
 						linkData.node2Index = aniIndex2;
-						rawAniData.internalLinks.push_back(linkData);
+				//		rawAniData.internalLinks.push_back(linkData);
 					}
 				}
 			}
@@ -3697,11 +3825,11 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		PointAniData ptAniData;
 		ptAniData.pos = rawAniData.aniNodePosArr[i];
 		ptAniData.F_MI_M_MagN_Int= rawAniData.aniNodeF_MI_M_MagN_Int[i]; //AliE
-		ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
+		//ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
-		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
+		//ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
 		ptAniData.rankScale = rawAniData.aniNodeRank[i];//AAMIRI
-		ptAniData.extForce = rawAniData.aniNodeExtForceArr[i];//AAMIRI
+		//ptAniData.extForce = rawAniData.aniNodeExtForceArr[i];//AAMIRI
 		vtkData.pointsAniData.push_back(ptAniData);
 	}
 	for (uint i = 0; i < rawAniData.internalLinks.size(); i++) {
