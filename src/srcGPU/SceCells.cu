@@ -4203,7 +4203,7 @@ CVector SceCells::obtainCenter(uint i) {
 	CVector centerPos(oldCenterX, oldCenterY, 0);
 	return centerPos;
 }
-
+/*
 CVector SceCells::calDivDir_MajorAxis(CVector center,
 		vector<CVector>& membrNodes, double& lenAlongMajorAxis) {
 // not the optimal algorithm but easy to code
@@ -4231,6 +4231,36 @@ CVector SceCells::calDivDir_MajorAxis(CVector center,
 	}
 	lenAlongMajorAxis = maxDiff;
 	return majorAxisDir;
+}
+*/
+
+CVector SceCells::calDivDir_MajorAxis(CVector center,
+		vector<CVector>& membrNodes, double& lenAlongMajorAxis) {
+// not the optimal algorithm but easy to code
+	double minDiff = 10000;
+	CVector minorAxisDir;
+	for (uint i = 0; i < membrNodes.size(); i++) {
+		CVector tmpDir = membrNodes[i] - center;
+		CVector tmpUnitDir = tmpDir.getUnitVector();
+		double min = 0, max = 0;
+		for (uint j = 0; j < membrNodes.size(); j++) {
+			CVector tmpDir2 = membrNodes[j] - center;
+			double tmpVecProduct = tmpDir2 * tmpUnitDir;
+			if (tmpVecProduct < min) {
+				min = tmpVecProduct;
+			}
+			if (tmpVecProduct > max) {
+				max = tmpVecProduct;
+			}
+		}
+		double diff = max - min;
+		if (diff < minDiff) {
+			minDiff = diff;
+			minorAxisDir = tmpUnitDir;
+		}
+	}
+	lenAlongMajorAxis = minDiff;
+	return minorAxisDir;
 }
 
 

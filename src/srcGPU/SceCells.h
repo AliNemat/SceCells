@@ -500,8 +500,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
 				if (longEnough(lenLeft)) {
-					velX = velX + forceVal * leftDiffX / lenLeft;
-					velY = velY + forceVal * leftDiffY / lenLeft;
+					velX = velX + 1.2*forceVal * leftDiffX / lenLeft;
+					velY = velY + 1.0*forceVal * leftDiffY / lenLeft;
 					mag = forceVal + mag;
 				}
 			}
