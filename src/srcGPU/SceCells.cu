@@ -2941,7 +2941,8 @@ bool SceCells::decideIfAnyCellEnteringMitotic() {
 							cellInfoVecs.growthProgressOld.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.isEnteringMitotic.begin(),
-			CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
+			//CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
+			CompuIsEnteringMitotic_M(0.98)); // Ali for cross ection modeling 
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toEnterMitoticCount = thrust::reduce(cellInfoVecs.isEnteringMitotic.begin(),
