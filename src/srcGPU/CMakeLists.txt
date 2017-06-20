@@ -8,8 +8,8 @@ MESSAGE(${GOOGLETEST_DIR}/include/)
 CUDA_ADD_LIBRARY(SceGPU
 	SceNodes.h
 	SceNodes.cu
-	ECM.h
-        ECM.cu
+	SceECM.h
+        SceECM.cu
 	SceCells.h
 	SceCells.cu
 	SimulationDomainGPU.h

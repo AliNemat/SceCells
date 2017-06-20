@@ -2,6 +2,8 @@
 #define SCECELLS_H_
 
 #include "SceNodes.h"
+#include "SceECM.h"
+//#include "SceECM.h"
 #include <time.h>
 #include <thrust/tabulate.h>
 #define PI 3.14159265358979
@@ -500,7 +502,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
 				if (longEnough(lenLeft)) {
-					velX = velX + 1.2*forceVal * leftDiffX / lenLeft;
+					velX = velX + 1.0*forceVal * leftDiffX / lenLeft;
 					velY = velY + 1.0*forceVal * leftDiffY / lenLeft;
 					mag = forceVal + mag;
 				}
@@ -2430,7 +2432,7 @@ struct MembrPara {
  */
 class SceCells {
 	SceNodes* nodes;
-
+	SceECM  eCM;
 	NodeAllocPara allocPara;
 	SceMiscPara miscPara;
 	SceBioPara bioPara;

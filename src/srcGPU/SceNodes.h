@@ -922,7 +922,7 @@ class SceNodes {
 	SceDomainPara domainPara;
 	SceMechPara mechPara;
 	NodeAllocPara allocPara;
-	NodeInfoVecs infoVecs;
+	//NodeInfoVecs infoVecs;
 	NodeAuxVecs auxVecs;
 	ControlPara controlPara;
 
@@ -1022,6 +1022,9 @@ class SceNodes {
 // friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, outputAnimationLinks);
 public:
+
+
+	NodeInfoVecs infoVecs; //Ali 
 	/**
 	 * Default constructor -- explicit usage is discouraged.
 	 */

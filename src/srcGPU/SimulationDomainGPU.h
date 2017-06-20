@@ -2,10 +2,10 @@
 #define SimulationDomainGPU_H_
 
 #include "SceNodes.h"
+//#include "SceECM.h"
 #include "SceCells.h"
 #include "commonData.h"
 #include "NetworkInfo.h"
-
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -40,7 +40,7 @@ class SimulationDomainGPU {
 	 * Handles cell level logics like growth and division.
 	 */
 	SceCells cells;
-
+//        SceECM   eCM ;  
 	NetworkInfo netInfo;
 
 	std::vector<std::vector<PreT1State> > preT1Vec;

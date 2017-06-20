@@ -1416,7 +1416,29 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
         findTangentAndNormal_M();//AAMIRI ADDED May29
 	allComponentsMove_M();
-	std::cout << "     *** 9 ***" << endl;
+                //thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
+        cout << " first writing for nodeDevice finished in SceCells before function "<< endl ;  
+        //thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
+        cout << " second writing for node info vecs finished in SceCells before functuion "<< endl ; 
+        int totalNodeCountForActiveCellsECM = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+	eCM.nodeDeviceLocX.resize(totalNodeCountForActiveCellsECM,0.0) ; 
+        eCM.nodeDeviceLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
+        //totalNodeCountForActiveCells=1680 ; 
+        thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocX.begin()) ; 
+        thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ; 
+
+ 
+	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM);
+
+        thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
+        thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
+	//thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
+        cout << " first writing for nodeDevice finished in SceCells after function "<< endl ;  
+        //thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
+        cout << " second writing for node info vecs finished in SceCells after functuion "<< endl ;  
+        std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
 	handleMembrGrowth_M();
 	std::cout << "     *** 10 ***" << endl;
@@ -1976,7 +1998,11 @@ void SceCells::moveNodes_BC_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin())),
-			SaxpyFunctorDim2_BC_Damp(dt));  
+			SaxpyFunctorDim2_BC_Damp(dt)); 
+
+cout << "I am in move_nodes and total nodes for active cells is" <<  totalNodeCountForActiveCells << endl ; 
+cout << "I am in move_nodes and bdry node count is" << allocPara_m.bdryNodeCount << endl ; 
+
 }
 
 //Ali
