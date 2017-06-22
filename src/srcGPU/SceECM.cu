@@ -42,9 +42,11 @@ void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM){
     //                             cells.getAllocParaM().maxAllNodePerCell ; 
             
 //int totalNodeCountForActiveCellsECM=1680;   
-
+thrust::counting_iterator<int> iBegin(0) ; 
+nodeDeviceTmpLocX.resize(totalNodeCountForActiveCellsECM,0.0) ;
 nodeDeviceTmpLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
  
+thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
 cout << "the temporary values are "<< endl ; 
@@ -60,12 +62,13 @@ cout << "the permanent values are "<< endl ;
 */
 
 double yBound=10 ;
- eCMY=23.5 ;  
-thrust:: transform(nodeDeviceTmpLocY.begin(),
+ eCMY=23.7 ;  
+/*thrust:: transform(nodeDeviceTmpLocY.begin(),
                     nodeDeviceTmpLocY.begin()+totalNodeCountForActiveCellsECM,
                     nodeDeviceLocY.begin(),
                     MyFunction(eCMY,yBound));   
 
+*/
 cout<< "I am after transform function  tmp value is "<< endl ; 
 //thrust::copy (nodeDeviceTmpLocY.begin(),nodeDeviceTmpLocY.begin()+160,std::ostream_iterator<double>(std::cout,"\n")) ; 
 cout<< "I am after transform function  permanent value is "<< endl ; 
@@ -84,6 +87,29 @@ cout<< "I am after transform function  permanent value is "<< endl ;
 			  nodeECMLocY.begin(),
 			  AddECMForce(eCMY));
 */
-cout << "I am in SceECM.cu"<< endl ; 
+cout << "I am in SceECM.cu"<< endl ;
+int maxAllNodePerCell=240 ;
+int maxMembrNodePerCell=200 ;  
+
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					make_transform_iterator (iBegin,
+							ModuloFunctor2(maxAllNodePerCell)),
+					nodeDeviceTmpLocX.begin(),
+					nodeDeviceTmpLocY.begin())), 
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					 make_transform_iterator (iBegin,
+							ModuloFunctor2(maxAllNodePerCell)),
+					 nodeDeviceTmpLocX.begin(),
+                                         nodeDeviceTmpLocY.begin()))+totalNodeCountForActiveCellsECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					nodeDeviceLocX.begin(),
+					nodeDeviceLocY.begin())),
+				MyFunctor2(eCMY,yBound,maxMembrNodePerCell)); 
+
+
 }
 
