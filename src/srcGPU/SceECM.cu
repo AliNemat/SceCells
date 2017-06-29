@@ -100,8 +100,8 @@ cout<< "I am after transform function  permanent value is "<< endl ;
 			  AddECMForce(eCMY));
 */
 cout << "I am in SceECM.cu"<< endl ;
-int maxAllNodePerCell=240 ;
-int maxMembrNodePerCell=200 ;  
+int maxAllNodePerCell=360 ;
+int maxMembrNodePerCell=280 ;  
 
 thrust:: transform (
 		thrust::make_zip_iterator (

@@ -602,7 +602,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 //Ali to make the initial progree of all nodes zero
 
  
-		rawData.cellGrowProgVec.push_back(randNum);
+		rawData.cellGrowProgVec.push_back(0.5);
 	//	rawData.cellGrowProgVec.push_back(0.0);
 	}
 
