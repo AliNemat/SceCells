@@ -2587,7 +2587,7 @@ void SceNodes::removeNodes(int cellRank, vector<uint> &removeSeq) {
 void SceNodes::processMembrAdh_M() {
 	keepAdhIndxCopyInHost_M();
 	applyMembrAdh_M();
-	removeInvalidPairs_M();
+	removeInvalidPairs_M();  //Ali changed position 
 }
 
 void SceNodes::keepAdhIndxCopyInHost_M() {

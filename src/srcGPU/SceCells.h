@@ -502,7 +502,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
 				if (longEnough(lenLeft)) {
-					velX = velX + 1.0*forceVal * leftDiffX / lenLeft;
+					velX = velX + 10.0*forceVal * leftDiffX / lenLeft;
 					velY = velY + 1.0*forceVal * leftDiffY / lenLeft;
 					mag = forceVal + mag;
 				}
@@ -523,8 +523,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
 				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri); // Ali & June 30th 
 				if (longEnough(lenRight)) {
-					velX = velX + forceVal * rightDiffX / lenRight;
-					velY = velY + forceVal * rightDiffY / lenRight;
+					velX = velX + 10.0*forceVal * rightDiffX / lenRight;
+					velY = velY + 1.0*forceVal * rightDiffY / lenRight;
 					mag = forceVal + mag;
 					rightMag = forceVal;
 					midX = (rightPosX + locX) / 2;
@@ -1105,7 +1105,8 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-			return thrust::make_tuple(true, 0);
+			//return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(false, progress); //No growth
 		} else {
 			return thrust::make_tuple(false, progress);
 		}

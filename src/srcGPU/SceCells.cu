@@ -1380,6 +1380,13 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			* growthAuxData.randomGrowthSpeedMin_Ori;
 	growthAuxData.randomGrowthSpeedMax = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMax_Ori;
+
+
+ 	if (curTime==InitTimeStage) {
+	cout<<"I am before ECM initialization"<< endl ; 
+	//eCM.Initialize();
+	cout<<"I am after ECM initialization"<< endl ; 
+	}
 	curTime = curTime + dt;
 
 	std::cout << "     *** 2 ***" << endl;

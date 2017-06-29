@@ -26,12 +26,24 @@ double eCMMinX= -50;
 double eCMMaxX= 50;
 // eCMY=24.0;
 double eCMMinDist=0.04;
+eCMY=23.7 ; 
 int  numNodesECM= (eCMMaxX-eCMMinX)/eCMMinDist ; 
 thrust:: device_vector<double> tmp ; 
-thrust::sequence (tmp.begin(),tmp.begin()+numNodesECM); 
-thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
-thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
-thrust::transform(tmp.begin(),tmp.begin()+numNodesECM,nodeECMLocX.begin(),nodeECMLocX.begin(),InitECMLocX(eCMMinX,eCMMinDist)); 
+cout<<" I am inside ECM initialization0  " << endl ; 
+tmp.resize(numNodesECM,0.0) ;
+nodeECMLocX.resize(numNodesECM,0.0) ;
+nodeECMLocY.resize(numNodesECM,eCMY) ;
+
+thrust::sequence (tmp.begin(),tmp.begin()+numNodesECM);
+
+cout<<" I am inside ECM initialization1 " << endl ; 
+cout<<" I am inside ECM initialization2 " << endl ; 
+ 
+cout<<" I am inside ECM initialization3 " << endl ; 
+//thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
+//thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
+thrust::transform(tmp.begin(),tmp.begin()+numNodesECM,nodeECMLocX.begin(),nodeECMLocX.begin(),InitECMLoc(eCMMinX,eCMMinDist)); 
+cout<<" I am inside ECM initialization4  " << endl ; 
 }
 
 void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM){   

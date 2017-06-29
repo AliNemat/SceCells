@@ -29,17 +29,17 @@ thrust::device_vector<double> nodeDeviceTmpLocY ;
 
 
 
-struct InitECMLocX
+struct InitECMLoc
 {
-    const double  MinLocX;
-    const double  MinDist;
+    const double  _MinLocX;
+    const double  _MinDist;
 
-    InitECMLocX(double _MinLocX, double _MinDist) : MinLocX(_MinLocX), MinDist(_MinDist) {}
+    InitECMLoc (double MinLocX, double MinDist) : _MinLocX(MinLocX), _MinDist(MinDist) {}
 
    __host__  __device__
 
         double operator()(const double & x, const double & y) const {
-        return (MinLocX+x*MinDist) ; 
+        return (_MinLocX+x*_MinDist) ; 
 
   }
 };
@@ -122,7 +122,7 @@ struct MyFunctor2: public thrust::unary_function<IDD,DD> {
 		return thrust::make_tuple (LocX,LocY) ; 
 		}
         	else {
-                	return thrust::make_tuple (LocX,(LocY-20.0*(LocY-_eCMY)*0.003/36.0))  ; 
+                	return thrust::make_tuple (LocX,(LocY-2.5*(LocY-_eCMY)*0.003/36.0))  ; 
 		}
 
 	}
