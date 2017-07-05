@@ -117,12 +117,12 @@ struct MyFunctor2: public thrust::unary_function<IDD,DD> {
 	else if (LocY<=_eCMY && LocY>_activeBound) {
 			return thrust::make_tuple (LocX,_eCMY) ; 
 	}	
-		else if (LocY>(_eCMY+0.4)){
+		else if (LocY>(_eCMY+0.5)){
 		
 		return thrust::make_tuple (LocX,LocY) ; 
 		}
         	else {
-                	return thrust::make_tuple (LocX,(LocY-2.5*(LocY-_eCMY)*0.003/36.0))  ; 
+                	return thrust::make_tuple (LocX,(LocY-10.25*(LocY-_eCMY)*0.005/36.0))  ; 
 		}
 
 	}

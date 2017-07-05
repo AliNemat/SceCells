@@ -2604,17 +2604,40 @@ void SceCells::randomizeGrowth_M() {
 }
 
 void SceCells::updateGrowthProgress_M() {
+
+
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> iEnd(allocPara_m.currentActiveCellCount);
+
         thrust::copy(cellInfoVecs.growthProgress.begin(),
 			cellInfoVecs.growthProgress.begin()
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.growthProgressOld.begin());
 
         
-	thrust::transform(cellInfoVecs.growthSpeed.begin(),
-			cellInfoVecs.growthSpeed.begin()
-					+ allocPara_m.currentActiveCellCount,
-			cellInfoVecs.growthProgress.begin(),
-			cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
+//	thrust::transform(cellInfoVecs.growthSpeed.begin(),
+  //            			cellInfoVecs.growthSpeed.begin()
+//					+ allocPara_m.currentActiveCellCount,
+//			cellInfoVecs.growthProgress.begin(),
+//			cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+							   cellInfoVecs.growthSpeed.begin(),
+							   iBegin)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.growthProgress.begin()+ allocPara_m.currentActiveCellCount,
+							cellInfoVecs.growthSpeed.begin()   + allocPara_m.currentActiveCellCount,
+							iEnd)),
+					cellInfoVecs.growthProgress.begin(),
+			progress_BCImp(dt));
+
+
+
+
+
 }
 
 void SceCells::decideIsScheduleToGrow_M() {

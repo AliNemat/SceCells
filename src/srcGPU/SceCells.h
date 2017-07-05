@@ -11,6 +11,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
@@ -1105,8 +1106,8 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-			//return thrust::make_tuple(true, 0);
-			return thrust::make_tuple(false, progress); //No growth
+			return thrust::make_tuple(true, 0);
+	//		return thrust::make_tuple(false, progress); //No growth
 		} else {
 			return thrust::make_tuple(false, progress);
 		}
@@ -1309,6 +1310,42 @@ struct IsBoundary: public thrust::unary_function<SceNodeType, bool> {
  * @param _nodeXPosAddress pointer to the begining of vector nodeLocX of SceNodes
  * @param _nodeYPosAddress pointer to the begining of vector nodeLocY of SceNodes
  */
+
+struct progress_BCImp: thrust::unary_function<DDUi, double> {
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	
+	double _dt;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ progress_BCImp(double dt) :
+			_dt(dt) {
+	}
+
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ double operator()(const DDUi &ddi) {
+		double growProgressOld = thrust::get<0>(ddi);
+		double growSpeed = thrust::get<1>(ddi);
+		uint    cellRank = thrust::get<2>(ddi);
+
+		double growProgress=growProgressOld+growSpeed*_dt;
+		
+                if (cellRank==5 || cellRank==6) {
+		return (growProgressOld);
+		}
+		else if (growProgress>1.0) {
+		return (1.0);
+                }
+		else {
+		return (growProgress) ; 
+		}
+	}
+
+
+};
+
+
+
 struct AddPtOp: thrust::unary_function<BoolUIDDUID, BoolUID> {
 	uint _maxNodeOfOneCell;
 	double _addNodeDistance;
