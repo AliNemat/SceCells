@@ -1384,7 +1384,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
  	if (curTime==InitTimeStage) {
 	cout<<"I am before ECM initialization"<< endl ; 
-	//eCM.Initialize();
+	eCM.Initialize();
 	cout<<"I am after ECM initialization"<< endl ; 
 	}
 	curTime = curTime + dt;

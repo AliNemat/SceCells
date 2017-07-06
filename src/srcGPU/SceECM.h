@@ -31,14 +31,14 @@ thrust::device_vector<double> nodeDeviceTmpLocY ;
 
 struct InitECMLoc
 {
-    const double  _MinLocX;
-    const double  _MinDist;
+     double  _MinLocX;
+     double  _MinDist;
 
     InitECMLoc (double MinLocX, double MinDist) : _MinLocX(MinLocX), _MinDist(MinDist) {}
 
    __host__  __device__
 
-        double operator()(const double & x, const double & y) const {
+        double operator()(const double & x, const double & y)  {
         return (_MinLocX+x*_MinDist) ; 
 
   }
