@@ -46,6 +46,17 @@ thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
 linSpringForceECMX.resize(numNodesECM,0.0); 
 linSpringForceECMY.resize(numNodesECM,0.0); 
 
+
+bendSpringForceECMX.resize(numNodesECM,0.0); 
+bendSpringForceECMY.resize(numNodesECM,0.0); 
+ 
+memMorseForceECMX.resize(numNodesECM,0.0); 
+memMorseForceECMY.resize(numNodesECM,0.0);
+ 
+totalForceECMX.resize(numNodesECM,0.0); 
+totalForceECMY.resize(numNodesECM,0.0);
+
+
  
 thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
 thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
@@ -124,6 +135,31 @@ thrust:: transform (
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
 				//LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff));
 
+double dummy=0.0 ;
+
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					linSpringForceECMX.begin(),
+					linSpringForceECMY.begin(),
+					bendSpringForceECMX.begin(),
+					bendSpringForceECMY.begin(),
+					memMorseForceECMX.begin(),
+					memMorseForceECMY.begin())),
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					linSpringForceECMX.begin(),
+					linSpringForceECMY.begin(),
+					bendSpringForceECMX.begin(),
+					bendSpringForceECMY.begin(),
+					memMorseForceECMX.begin(),
+					memMorseForceECMY.begin()))+numNodesECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					totalForceECMX.begin(),
+					totalForceECMY.begin())),
+				TotalECMForceCompute(dummy));
+
 
 
 
@@ -159,5 +195,8 @@ lastPrintECM=lastPrintECM+1 ;
 			}
 
 }
+
+
+
 
 

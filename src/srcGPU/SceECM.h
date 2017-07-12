@@ -7,6 +7,7 @@
 
 typedef thrust ::tuple<int,double,double> IDD ; 
 typedef thrust ::tuple<double,double> DD ; 
+typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 
 class SceECM {
 //	SceNodes* nodes;
@@ -35,6 +36,16 @@ thrust::device_vector<double> linSpringForceECMX ;
 thrust::device_vector<double> linSpringForceECMY ; 
  
  
+thrust::device_vector<double> bendSpringForceECMX ; 
+thrust::device_vector<double> bendSpringForceECMY ;
+
+ 
+thrust::device_vector<double> memMorseForceECMX ; 
+thrust::device_vector<double> memMorseForceECMY ;
+ 
+thrust::device_vector<double> totalForceECMX ; 
+thrust::device_vector<double> totalForceECMY ;
+
         void Initialize(); 
 }; 
 
@@ -214,7 +225,26 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	
 } ; 
  
+struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 
+	double _dummy ; 
+
+	__host__ __device__ TotalECMForceCompute(double dummy):_dummy(dummy) {
+	}
+
+	__host__ __device__ DD operator() (const DDDDDD & dDDDDD) const {
+
+	double fLinSpringX=  thrust:: get<0>(dDDDDD); 
+	double fLinSpringY=  thrust:: get<1>(dDDDDD); 
+	double fBendSpringX= thrust:: get<2>(dDDDDD); 
+	double fBendSpringY= thrust:: get<3>(dDDDDD); 
+	double fMembX       = thrust:: get<4>(dDDDDD); 
+	double fMembY       = thrust:: get<5>(dDDDDD); 
+
+
+	return (fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
+	}
+}; 
 
 
 
