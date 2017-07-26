@@ -8,6 +8,7 @@
 typedef thrust ::tuple<int,double,double> IDD ; 
 typedef thrust ::tuple<double,double> DD ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
+typedef thrust ::tuple<double,double,double,double> DDDD ; 
 
 class SceECM {
 //	SceNodes* nodes;
@@ -26,6 +27,8 @@ thrust::device_vector<double> nodeECMLocY ;
 thrust::device_vector<double> nodeECMVelX ; 
 thrust::device_vector<double> nodeECMVelY ;
 
+thrust::device_vector<double> nodeECMTmpLocX ; 
+thrust::device_vector<double> nodeECMTmpLocY ; 
 
 thrust::device_vector<double> nodeDeviceLocX ; 
 thrust::device_vector<double> nodeDeviceLocY ; 
@@ -242,10 +245,28 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 	double fMembY       = thrust:: get<5>(dDDDDD); 
 
 
-	return (fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
+	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
 	}
 }; 
 
 
 
+struct MoveNodeECM: public thrust::unary_function<DDDD,DD> {
 
+	double _dt ; 
+	double _damp ; 
+	__host__ __device__ MoveNodeECM (double dt, double damp): _dt(dt), _damp(damp) {
+	}
+
+	__host__ __device__ DD operator() (const DDDD & dDDD) const  {
+
+
+	double locXOld= thrust:: get <0> (dDDD) ;
+	double locYOld= thrust:: get <1> (dDDD) ;
+	double fx= 	thrust:: get <2> (dDDD) ;
+	double fy= 	thrust:: get <3> (dDDD) ;
+ 
+	return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
+ 
+	}
+}; 

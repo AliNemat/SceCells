@@ -27,7 +27,7 @@ double eCMMinDist=0.04;
 
 lastPrintECM=0 ; 
 outputFrameECM=0 ; 
-restLenECMSpring=eCMMinDist ;  
+restLenECMSpring=0.03 ; //eCMMinDist ;  
 eCMY=23.7 ; 
 numNodesECM= (eCMMaxX-eCMMinX)/eCMMinDist ; 
 //thrust:: device_vector<double> tmp ; 
@@ -133,7 +133,6 @@ thrust:: transform (
 					linSpringForceECMX.begin(),
 					linSpringForceECMY.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
-				//LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff));
 
 double dummy=0.0 ;
 
@@ -161,10 +160,40 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
+double dt=0.005; 
+double dampECM=36.0 ; 
+
+nodeECMTmpLocX.resize(numNodesECM,0.0) ;
+nodeECMTmpLocY.resize(numNodesECM,0.0) ;
+ 
+thrust::copy(nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,nodeECMTmpLocX.begin()) ; 
+thrust::copy(nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,nodeECMTmpLocY.begin()) ; 
+
+
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					nodeECMTmpLocX.begin(),
+					nodeECMTmpLocY.begin(),
+					totalForceECMX.begin(),
+					totalForceECMY.begin())),
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					nodeECMTmpLocX.begin(),
+					nodeECMTmpLocY.begin(),
+					totalForceECMX.begin(),
+					totalForceECMY.begin()))+numNodesECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					nodeECMLocX.begin(),
+					nodeECMLocY.begin())),
+				MoveNodeECM(dt,dampECM));
+
+
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM==1000) { 
+               if (lastPrintECM==10000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";
