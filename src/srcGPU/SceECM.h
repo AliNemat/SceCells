@@ -33,7 +33,9 @@ thrust::device_vector<double> nodeECMTmpLocY ;
 thrust::device_vector<double> nodeDeviceLocX ; 
 thrust::device_vector<double> nodeDeviceLocY ; 
 thrust::device_vector<double> nodeDeviceTmpLocX ; 
-thrust::device_vector<double> nodeDeviceTmpLocY ; 
+thrust::device_vector<double> nodeDeviceTmpLocY ;
+ 
+thrust::device_vector<bool> nodeIsActive_Cell ; 
 
 thrust::device_vector<double> linSpringForceECMX ; 
 thrust::device_vector<double> linSpringForceECMY ; 
@@ -188,7 +190,6 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	double forceRightX ; 
 	double forceRightY ; 
 
-
         if (index != 0) {
 
 		locXLeft=_locXAddr[index-1] ; 
@@ -226,8 +227,55 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 		}
 
 	
-} ; 
+} ;
+
  
+ struct MorseForceECM: public thrust::unary_function<IDD,DD> {
+         int  _numActiveNodes_Cell ; 	
+         int  _maxNodePerCell ; 	
+         int  _maxMembrNodePerCell ; 	
+         double  *_locXAddr_Cell; 
+         double  *_locYAddr_Cell; 
+	 bool    *_nodeIsActive_Cell ;  
+
+	__host__ __device__ MorseForceECM (int numActiveNodes_Cell, int maxNodePerCell, double maxMembrNodePerCell, double * locXAddr_Cell, double * locYAddr_Cell, bool * nodeIsActive_Cell) :
+	_numActiveNodes_Cell(numActiveNodes_Cell), _maxNodePerCell(maxNodePerCell), _maxMembrNodePerCell(maxMembrNodePerCell),_locXAddr_Cell(locXAddr_Cell),_locYAddr_Cell(locYAddr_Cell),_nodeIsActive_Cell(nodeIsActive_Cell) {
+	}
+	__host__ __device__ DD operator()(const IDD & iDD) const {
+	
+	int     index=    thrust::get<0>(iDD) ; 
+	double  locX=     thrust::get<1>(iDD) ; 
+	double  locY=     thrust::get<2>(iDD) ; 
+
+	double fMorse ; 
+	double locX_C, locY_C ; 
+	double dist ; 
+	double fTotalMorseX=0.0 ; 
+	double fTotalMorseY=0.0 ;
+	double kStiff=500 ; 
+	double restLen=0.03 ; 
+	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 
+        for (int i=0 ; i<_numActiveNodes_Cell ; i++) {
+		if (_nodeIsActive_Cell[i] && (i%_maxNodePerCell)<_maxMembrNodePerCell){
+				
+
+			locX_C=_locXAddr_Cell[i]; 
+			locY_C=_locYAddr_Cell[i];
+			dist=sqrt ((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ; 
+			fMorse=kStiff*(dist-restLen) ; 
+			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
+			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
+		}
+	}
+	return thrust::make_tuple(fTotalMorseX,fTotalMorseY) ; 
+
+	}
+
+}; 
+
+
+
+
 struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 
 	double _dummy ; 

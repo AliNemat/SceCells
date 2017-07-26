@@ -1432,9 +1432,13 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	eCM.nodeDeviceLocX.resize(totalNodeCountForActiveCellsECM,0.0) ; 
         eCM.nodeDeviceLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
+        eCM.nodeIsActive_Cell.resize(totalNodeCountForActiveCellsECM,false) ;
         //totalNodeCountForActiveCells=1680 ; 
         thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocX.begin()) ; 
-        thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ; 
+        thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ;
+//assuming no boundary node exist 
+thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeIsActive_Cell.begin()) ; 
+
 
  
 	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM);

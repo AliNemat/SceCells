@@ -87,7 +87,6 @@ int maxAllNodePerCell=360 ;
 int maxMembrNodePerCell=280 ;
 
 
-
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
 			&nodeECMLocX[0]) ; 
 double* nodeECMLocYAddr= thrust::raw_pointer_cast (
@@ -116,6 +115,11 @@ thrust:: transform (
 				MyFunctor2(eCMY,yBound,maxMembrNodePerCell));
  
 
+double* nodeCellLocXAddr= thrust::raw_pointer_cast (
+			&nodeDeviceTmpLocX[0]) ; 
+double* nodeCellLocYAddr= thrust::raw_pointer_cast (
+			&nodeDeviceTmpLocY[0]) ; 
+
 
 thrust:: transform (
 		thrust::make_zip_iterator (
@@ -133,6 +137,34 @@ thrust:: transform (
 					linSpringForceECMX.begin(),
 					linSpringForceECMY.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
+
+
+//double* nodeCellLocXAddr= thrust::raw_pointer_cast (
+//			&nodeDeviceTmpLocX[0]) ; 
+//double* nodeCellLocYAddr= thrust::raw_pointer_cast (
+//			&nodeDeviceTmpLocY[0]) ;
+
+bool* nodeIsActive_CellAddr= thrust::raw_pointer_cast (
+			&nodeIsActive_Cell[0]) ; 
+
+
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					indexECM.begin(),
+					nodeECMLocX.begin(),
+					nodeECMLocY.begin())), 
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					 indexECM.begin(),
+					 nodeECMLocX.begin(),
+                                         nodeECMLocY.begin()))+numNodesECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					memMorseForceECMX.begin(),
+					memMorseForceECMY.begin())),
+				MorseForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr));
+
 
 double dummy=0.0 ;
 
@@ -160,7 +192,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.005; 
+double dt=0.05; //0.005  
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
