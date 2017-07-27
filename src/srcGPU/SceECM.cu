@@ -1,5 +1,6 @@
 #include "SceECM.h"
 
+__constant__ double sceInterCell_ECM[5]; 
 
 namespace patch
 {
@@ -18,12 +19,42 @@ double Ali=5 ;
 } 
 
 
+__device__
+double calMorse_ECM(const double& linkLength ) {
+
+	double forceValue=0.0 ; 
+	if (linkLength > sceInterCell_ECM[4]) {
+		forceValue = 0;
+	} else {
+		forceValue = -sceInterCell_ECM[0] / sceInterCell_ECM[2]
+				* exp(-linkLength / sceInterCell_ECM[2])
+				+ sceInterCell_ECM[1] / sceInterCell_ECM[3]
+						* exp(-linkLength / sceInterCell_ECM[3]);
+		if (forceValue > 0) {
+			forceValue = 0;
+		}
+	}
+
+	return (forceValue) ; 
+}
+
+
+
 
 void SceECM::Initialize() {
 
 double eCMMinX= -50;
 double eCMMaxX= 50;
 double eCMMinDist=0.04;
+
+mechPara_ECM.sceInterCellCPU_ECM[0]=39.0 ; 
+mechPara_ECM.sceInterCellCPU_ECM[1]=3.90 ;
+mechPara_ECM.sceInterCellCPU_ECM[2]=0.125 ; 
+mechPara_ECM.sceInterCellCPU_ECM[3]=1.5625 ;
+mechPara_ECM.sceInterCellCPU_ECM[4]=0.78125 ;
+
+cudaMemcpyToSymbol(sceInterCell_ECM,mechPara_ECM.sceInterCellCPU_ECM
+			,5*sizeof(double)); 
 
 lastPrintECM=0 ; 
 outputFrameECM=0 ; 
@@ -227,7 +258,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM==1) { 
+               if (lastPrintECM==1000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";

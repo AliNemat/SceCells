@@ -11,6 +11,14 @@ typedef thrust ::tuple<double,double> DD ;
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 typedef thrust ::tuple<double,double,double,double> DDDD ; 
 
+
+struct MechPara_ECM {
+	double sceInterCellCPU_ECM[5] ;
+	double linSpringCPU_ECM ; 
+	double linSpringRestLenCPU_ECM ; 
+}; 
+
+
 class SceECM {
 //	SceNodes* nodes;
 
@@ -21,7 +29,10 @@ public:
 double restLenECMSpring ; 
 int outputFrameECM ;  
 int lastPrintECM ;
-int numNodesECM ; 
+int numNodesECM ;
+
+MechPara_ECM mechPara_ECM ; 
+ 
 thrust::device_vector<int> indexECM ;
 thrust::device_vector<double> nodeECMLocX ; 
 thrust::device_vector<double> nodeECMLocY ; 
@@ -53,7 +64,11 @@ thrust::device_vector<double> totalForceECMX ;
 thrust::device_vector<double> totalForceECMY ;
 
         void Initialize(); 
-}; 
+};
+ 
+__device__
+double calMorse_ECM (const double & linkLength); 
+
 
 
 
@@ -244,7 +259,8 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	__host__ __device__ MorseForceECM (int numActiveNodes_Cell, int maxNodePerCell, double maxMembrNodePerCell, double * locXAddr_Cell, double * locYAddr_Cell, bool * nodeIsActive_Cell) :
 	_numActiveNodes_Cell(numActiveNodes_Cell), _maxNodePerCell(maxNodePerCell), _maxMembrNodePerCell(maxMembrNodePerCell),_locXAddr_Cell(locXAddr_Cell),_locYAddr_Cell(locYAddr_Cell),_nodeIsActive_Cell(nodeIsActive_Cell) {
 	}
-	__host__ __device__ DD operator()(const IDD & iDD) const {
+	 __device__ 
+	DD operator()(const IDD & iDD) const {
 	
 	int     index=    thrust::get<0>(iDD) ; 
 	double  locX=     thrust::get<1>(iDD) ; 
@@ -268,12 +284,13 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 			locY_C=_locYAddr_Cell[i];
 		//	if (locY_C>10 && locY_C<30) {
 			dist=sqrt((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ;
-			if (0.0001<dist<2.0) { 
-				fMorse=kStiff*(dist-restLen) ;
-			}
-			else {
-				fMorse=0.0 ; 
-			} 
+		//	if (0.0001<dist<2.0) { 
+		//		fMorse=kStiff*(dist-restLen) ;
+		//	}
+		///	else {
+		//		fMorse=0.0 ; 
+		//	}
+			fMorse=calMorse_ECM(dist);  
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
 			fTotalMorse=fTotalMorse+fMorse ; 
