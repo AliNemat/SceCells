@@ -101,18 +101,20 @@ thrust:: transform (
 					make_transform_iterator (iBegin,
 							ModuloFunctor2(maxAllNodePerCell)),
 					nodeDeviceTmpLocX.begin(),
-					nodeDeviceTmpLocY.begin())), 
+					nodeDeviceTmpLocY.begin(), 
+					nodeIsActive_Cell.begin())), 
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
 					 make_transform_iterator (iBegin,
 							ModuloFunctor2(maxAllNodePerCell)),
 					 nodeDeviceTmpLocX.begin(),
-                                         nodeDeviceTmpLocY.begin()))+totalNodeCountForActiveCellsECM,
+                                         nodeDeviceTmpLocY.begin(),
+					 nodeIsActive_Cell.begin()))+totalNodeCountForActiveCellsECM,
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin())),
-				MyFunctor2(eCMY,yBound,maxMembrNodePerCell));
+				MoveNodes_Cell(eCMY,yBound,maxMembrNodePerCell));
  
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
@@ -192,7 +194,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.05; //0.005  
+double dt=0.005 ;   
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
@@ -225,7 +227,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM==10000) { 
+               if (lastPrintECM==1) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";

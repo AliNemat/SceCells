@@ -6,6 +6,7 @@
 
 
 typedef thrust ::tuple<int,double,double> IDD ; 
+typedef thrust ::tuple<int,double,double,bool> IDDB ; 
 typedef thrust ::tuple<double,double> DD ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 typedef thrust ::tuple<double,double,double,double> DDDD ; 
@@ -123,26 +124,27 @@ struct ModuloFunctor2: public thrust::unary_function <int,int>{
 	} ; 
 
 
-struct MyFunctor2: public thrust::unary_function<IDD,DD> {
+struct MoveNodes_Cell: public thrust::unary_function<IDDB,DD> {
 
 	 double  _eCMY, _activeBound ;
          int _maxMembrNodePerCell ; 
 
-	__host__ __device__ MyFunctor2 (double eCMY , double activeBound, int maxMembrNodePerCell) :
+	__host__ __device__ MoveNodes_Cell (double eCMY , double activeBound, int maxMembrNodePerCell) :
 				_eCMY(eCMY),_activeBound(activeBound),_maxMembrNodePerCell(maxMembrNodePerCell) {
 	}
-	__host__ __device__ DD operator()(const IDD & iDD) const {
+	__host__ __device__ DD operator()(const IDDB & iDDB) const {
 	
-	int nodeRank= thrust::get<0>(iDD) ; 
-	double  LocX=     thrust::get<1>(iDD) ; 
-	double  LocY=     thrust::get<2>(iDD) ; 
+	int nodeRank=     thrust::get<0>(iDDB) ; 
+	double  LocX=     thrust::get<1>(iDDB) ; 
+	double  LocY=     thrust::get<2>(iDDB) ; 
+	bool    nodeIsActive= thrust::get<3>(iDDB) ; 
 
-	if (nodeRank> _maxMembrNodePerCell) {
-		return thrust::make_tuple (LocX,LocY) ; 
-	}
+//	if (nodeRank> _maxMembrNodePerCell) {
+//		return thrust::make_tuple (LocX,LocY) ; 
+//	}
 
-	else if (LocY<=_eCMY && LocY>_activeBound) {
-			return thrust::make_tuple (LocX,_eCMY) ; 
+	 if (LocY<=_eCMY && nodeIsActive) {
+			return thrust::make_tuple (LocX,_eCMY+0.1) ; 
 	}	
 		else if (LocY>(_eCMY+0.5)){
 		
@@ -222,6 +224,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	}
 
 	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY) ; 
+	//return thrust::make_tuple(0.0,0.0) ; 
         
 
 		}
@@ -252,22 +255,32 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	double dist ; 
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
-	double kStiff=500 ; 
+	double fTotalMorse=0.0 ;
+	double kStiff=1.0 ; 
 	double restLen=0.03 ; 
 	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 
         for (int i=0 ; i<_numActiveNodes_Cell ; i++) {
 		if (_nodeIsActive_Cell[i] && (i%_maxNodePerCell)<_maxMembrNodePerCell){
+		//if (_nodeIsActive_Cell[i]){
 				
-
+		 
 			locX_C=_locXAddr_Cell[i]; 
 			locY_C=_locYAddr_Cell[i];
-			dist=sqrt ((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ; 
-			fMorse=kStiff*(dist-restLen) ; 
+		//	if (locY_C>10 && locY_C<30) {
+			dist=sqrt((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ;
+			if (0.0001<dist<2.0) { 
+				fMorse=kStiff*(dist-restLen) ;
+			}
+			else {
+				fMorse=0.0 ; 
+			} 
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
+			fTotalMorse=fTotalMorse+fMorse ; 
 		}
 	}
 	return thrust::make_tuple(fTotalMorseX,fTotalMorseY) ; 
+	//return thrust::make_tuple(5,5) ; 
 
 	}
 
