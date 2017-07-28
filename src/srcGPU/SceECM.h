@@ -1,7 +1,8 @@
 #include "commonData.h" 
 #include "SceNodes.h" 
 #include <string>
-#include <sstream> 
+#include <sstream>
+#include <fstream>  
 //#include "SimulationDomainGPU.h"
 
 
@@ -173,6 +174,62 @@ struct MoveNodes_Cell: public thrust::unary_function<IDDB,DD> {
 
 	
 } ;
+
+struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DD> {
+	 double  *_locXAddr_ECM; 
+         double  *_locYAddr_ECM; 
+         int _maxMembrNodePerCell ; 
+
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell) :
+				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell) {
+	}
+	__device__ DD operator()(const IDDB & iDDB) const {
+	
+	int nodeRankInOneCell=     thrust::get<0>(iDDB) ; 
+	double  locX=     thrust::get<1>(iDDB) ; 
+	double  locY=     thrust::get<2>(iDDB) ; 
+	bool    nodeIsActive= thrust::get<3>(iDDB) ; 
+	
+	double locX_ECM, locY_ECM ; 
+	double dist ;
+	double fMorse ;  
+	double fTotalMorseX=0.0 ; 
+	double fTotalMorseY=0.0 ;
+	double fTotalMorse=0.0 ;
+	int _numNodes_ECM=2500 ;  
+
+
+
+
+	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
+
+		for (int i=0 ; i<_numNodes_ECM ; i++) {
+			locX_ECM=_locXAddr_ECM[i]; 
+			locY_ECM=_locYAddr_ECM[i];
+			dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
+			fMorse=calMorse_ECM(dist);  
+			fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
+			fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
+			fTotalMorse=fTotalMorse+fMorse ; 
+		}
+	
+                return thrust::make_tuple ((locX+fTotalMorseX*0.005/36.0),(locY+fTotalMorseY*0.005/36.0))  ; 
+	}
+		
+	else {
+		return thrust::make_tuple (locX,locY) ; 
+	}
+        	
+		
+}
+	
+
+	
+} ;
+
+        
+
+
 
 struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
          double  _numNodes ; 	

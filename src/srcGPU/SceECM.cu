@@ -47,6 +47,35 @@ double eCMMinX= -50;
 double eCMMaxX= 50;
 double eCMMinDist=0.04;
 
+
+std::fstream readCoord_ECM ; 
+int numberNodes_ECM ; 
+double tmpPosX_ECM,tmpPosY_ECM ; 
+vector<double> posXIni_ECM,posYIni_ECM ;
+ 
+readCoord_ECM.open("./resources/coordinate_ECM.txt") ;
+if (readCoord_ECM.is_open()) {
+	cout << "ECM coordinates file opened successfully" <<endl ; 
+}
+else {
+	cout << "ECM coordinates file is not opened successfully" << endl ; 
+}
+readCoord_ECM>>numberNodes_ECM ;
+cout<< "numer of ECM nodes is"<< numberNodes_ECM <<endl ; 
+for (int i=0 ; i<numberNodes_ECM ; i++){
+	readCoord_ECM>>tmpPosX_ECM>>tmpPosY_ECM ; 
+	posXIni_ECM.push_back(tmpPosX_ECM) ; 
+	posYIni_ECM.push_back(tmpPosY_ECM) ; 
+}
+
+for (int i=0 ; i<posXIni_ECM.size() ; i++){
+	cout << "ECM nodes read in cpu"<<endl; 
+	cout << posXIni_ECM[i] <<posYIni_ECM[i]<<endl;  ; 
+}
+
+
+
+
 mechPara_ECM.sceInterCellCPU_ECM[0]=39.0 ; 
 mechPara_ECM.sceInterCellCPU_ECM[1]=3.90 ;
 mechPara_ECM.sceInterCellCPU_ECM[2]=0.125 ; 
@@ -59,20 +88,20 @@ cudaMemcpyToSymbol(sceInterCell_ECM,mechPara_ECM.sceInterCellCPU_ECM
 lastPrintECM=0 ; 
 outputFrameECM=0 ; 
 restLenECMSpring=0.03 ; //eCMMinDist ;  
-eCMY=23.7 ; 
-numNodesECM= (eCMMaxX-eCMMinX)/eCMMinDist ; 
+eCMY=23.1 ; 
+numNodesECM= numberNodes_ECM ; //(eCMMaxX-eCMMinX)/eCMMinDist ; 
 //thrust:: device_vector<double> tmp ; 
 cout<<" I am inside ECM initialization0  " << endl ; 
-nodeECMLocX.resize(numNodesECM,0.0) ;
-nodeECMLocY.resize(numNodesECM,eCMY) ;
 
-indexECM.resize(numNodesECM,0) ;
 //tmp.resize(numNodesECM,0.0) ;
 
 //thrust::sequence (tmp.begin(),tmp.begin()+numNodesECM);
-thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
 
 
+indexECM.resize(numNodesECM,0) ;
+
+nodeECMLocX.resize(numNodesECM,0.0) ;
+nodeECMLocY.resize(numNodesECM,0.0) ;
 
 linSpringForceECMX.resize(numNodesECM,0.0); 
 linSpringForceECMY.resize(numNodesECM,0.0); 
@@ -88,11 +117,13 @@ totalForceECMX.resize(numNodesECM,0.0);
 totalForceECMY.resize(numNodesECM,0.0);
 
 
+thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
  
-thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
-thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
-thrust::transform(indexECM.begin(),indexECM.begin()+numNodesECM,nodeECMLocY.begin(),nodeECMLocX.begin(),InitECMLoc(eCMMinX,eCMMinDist));
-
+//thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
+//thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
+//thrust::transform(indexECM.begin(),indexECM.begin()+numNodesECM,nodeECMLocY.begin(),nodeECMLocX.begin(),InitECMLoc(eCMMinX,eCMMinDist));
+thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ; 
+thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
 for (int i=0;  i<nodeECMLocX.size() ;  i++) {
 cout<< nodeECMLocX[i]<<endl; 
 } 
@@ -125,7 +156,7 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 
 
 double eCMLinSpringStiff=200 ;   
-
+/*
 thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
@@ -146,12 +177,38 @@ thrust:: transform (
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin())),
 				MoveNodes_Cell(eCMY,yBound,maxMembrNodePerCell));
- 
+*/
+
+
+ thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					make_transform_iterator (iBegin,
+							ModuloFunctor2(maxAllNodePerCell)),
+					nodeDeviceTmpLocX.begin(),
+					nodeDeviceTmpLocY.begin(), 
+					nodeIsActive_Cell.begin())), 
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					 make_transform_iterator (iBegin,
+							ModuloFunctor2(maxAllNodePerCell)),
+					 nodeDeviceTmpLocX.begin(),
+                                         nodeDeviceTmpLocY.begin(),
+					 nodeIsActive_Cell.begin()))+totalNodeCountForActiveCellsECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					nodeDeviceLocX.begin(),
+					nodeDeviceLocY.begin())),
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell));
+
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
 			&nodeDeviceTmpLocX[0]) ; 
 double* nodeCellLocYAddr= thrust::raw_pointer_cast (
-			&nodeDeviceTmpLocY[0]) ; 
+			&nodeDeviceTmpLocY[0]) ;
+ 
+bool* nodeIsActive_CellAddr= thrust::raw_pointer_cast (
+			&nodeIsActive_Cell[0]) ; 
 
 
 thrust:: transform (
@@ -177,8 +234,6 @@ thrust:: transform (
 //double* nodeCellLocYAddr= thrust::raw_pointer_cast (
 //			&nodeDeviceTmpLocY[0]) ;
 
-bool* nodeIsActive_CellAddr= thrust::raw_pointer_cast (
-			&nodeIsActive_Cell[0]) ; 
 
 
 thrust:: transform (
