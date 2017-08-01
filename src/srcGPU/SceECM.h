@@ -232,7 +232,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DD> {
 
 
 struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
-         double  _numNodes ; 	
+         int   _numNodes ; 	
 	 double  _restLen ; 
 	 double  _linSpringStiff ;
          double  *_locXAddr; 
@@ -268,32 +268,32 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 
 		locXLeft=_locXAddr[index-1] ; 
 		locYLeft=_locYAddr[index-1] ;
-		distLeft=sqrt( ( locX-locXLeft )*(locX-locXLeft) +( locY-locYLeft )*(locY-locYLeft) ) ;
+		}
+	else {
+		locXLeft=_locXAddr[_numNodes-1] ;
+		locYLeft=_locYAddr[_numNodes-1] ;
+	}
+
+	distLeft=sqrt( ( locX-locXLeft )*(locX-locXLeft) +( locY-locYLeft )*(locY-locYLeft) ) ;
 		forceLeft=_linSpringStiff*(distLeft-_restLen) ; 
 		forceLeftX=forceLeft*(locXLeft-locX)/distLeft ; 
 		forceLeftY=forceLeft*(locYLeft-locY)/distLeft ; 
-	}
-	else {
-		forceLeftX=0.0 ; 
-		forceLeftY=0.0 ; 
-	}
 
 	if (index != _numNodes-1) {
 
 		
 		locXRight=_locXAddr[index+1] ; 
 		locYRight=_locYAddr[index+1] ;
-		distRight=sqrt( ( locX-locXRight )*(locX-locXRight) +( locY-locYRight )*(locY-locYRight) ) ; 
+		}
+	else {
+
+		locXRight=_locXAddr[0] ; 
+		locYRight=_locYAddr[0] ;
+	}
+	distRight=sqrt( ( locX-locXRight )*(locX-locXRight) +( locY-locYRight )*(locY-locYRight) ) ; 
 		forceRight=_linSpringStiff*(distRight-_restLen) ; 
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
-	}
-	else {
-
-		 forceRightX=0.0 ; 
-		 forceRightY=0.0 ; 
-		
-	}
 
 	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY) ; 
 	//return thrust::make_tuple(0.0,0.0) ; 
