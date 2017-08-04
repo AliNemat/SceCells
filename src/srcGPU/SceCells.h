@@ -44,7 +44,7 @@ double calExtForce(double& curTime);
 
 //Ali & Abu June 30th
 __device__
-double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri);
+double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri, double adhereIndex);
 __device__
 double calBendMulti(double& angle, uint activeMembrCt);
 
@@ -504,7 +504,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				leftDiffX = leftPosX - locX;
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
-				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
+				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri,adhereIndex); //Ali & Abu June 30th
 			        //if (adhereIndex==-1 && _adhereIndexAddr[index_left]==-1) {
 			        if (adhereIndex==-1) {
 					forceVal2=10*forceVal  ; 
@@ -536,7 +536,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri); // Ali & June 30th
+				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri,adhereIndex); // Ali & June 30th
 				//if (adhereIndex==-1 && _adhereIndexAddr[index_right]==-1) {
 				if (adhereIndex==-1) {
 					forceVal2=10*forceVal  ; 
