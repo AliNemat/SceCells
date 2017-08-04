@@ -20,7 +20,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 //Ali comment
 //Ali
-typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -440,13 +440,14 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	double* _locXAddr;
 	double* _locYAddr;
 	bool* _isActiveAddr;
+	int* _adhereIndexAddr;
 	double _mitoticCri;
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr, double mitoticCri) :
+			double* locXAddr, double* locYAddr, bool* isActiveAddr, int* adhereIndexAddr,double mitoticCri) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
-					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr), _mitoticCri(mitoticCri) {
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),_adhereIndexAddr(adhereIndexAddr), _mitoticCri(mitoticCri) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ CVec10 operator()(const TensionData &tData) const {
@@ -454,7 +455,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		double progress = thrust::get<0>(tData);
 		uint activeMembrCount = thrust::get<1>(tData);
 		double Cell_CenterX = thrust::get<2>(tData);
-		double Cell_Time_F  = thrust::get<3>(tData);
+		int    adhereIndex= thrust::get<3>(tData);
 		uint   cellRank = thrust::get<4>(tData);
 		uint   nodeRank = thrust::get<5>(tData);
 		double locX = thrust::get<6>(tData);
@@ -484,6 +485,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		double rightDiffX;
 		double rightDiffY;
 		double lenRight;
+		double forceVal2 ; 
+		
 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
@@ -502,10 +505,21 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri); //Ali & Abu June 30th
+			        //if (adhereIndex==-1 && _adhereIndexAddr[index_left]==-1) {
+			        if (adhereIndex==-1) {
+					forceVal2=10*forceVal  ; 
+				}
+				//else if (adhereIndex==-1 || _adhereIndexAddr[index_left]==-1){
+				//	forceVal=1*forceVal ; 	
+			//	}
+				else {
+					forceVal2=0.1*forceVal  ; 
+				}
+					
 				if (longEnough(lenLeft)) {
-					velX = velX + 1.0*forceVal * leftDiffX / lenLeft;
-					velY = velY + 1.0*forceVal * leftDiffY / lenLeft;
-					mag = forceVal + mag;
+					velX = velX + 1.0*forceVal2 * leftDiffX / lenLeft;
+					velY = velY + 1.0*forceVal2 * leftDiffY / lenLeft;
+					mag = forceVal2 + mag;
 				}
 			}
 
@@ -522,12 +536,23 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri); // Ali & June 30th 
+				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri); // Ali & June 30th
+				//if (adhereIndex==-1 && _adhereIndexAddr[index_right]==-1) {
+				if (adhereIndex==-1) {
+					forceVal2=10*forceVal  ; 
+				}
+			//	else if (adhereIndex==-1 || _adhereIndexAddr[index_right]==-1){
+			//		forceVal=1000*forceVal ; 	
+			//	}
+				else {
+					forceVal2=0.1*forceVal  ; 
+				}
+
 				if (longEnough(lenRight)) {
-					velX = velX + 1.0*forceVal * rightDiffX / lenRight;
-					velY = velY + 1.0*forceVal * rightDiffY / lenRight;
-					mag = forceVal + mag;
-					rightMag = forceVal;
+					velX = velX + 1.0*forceVal2 * rightDiffX / lenRight;
+					velY = velY + 1.0*forceVal2 * rightDiffY / lenRight;
+					mag = forceVal2 + mag;
+					rightMag = forceVal2;
 					midX = (rightPosX + locX) / 2;
 					midY = (rightPosY + locY) / 2;
 				}
@@ -590,7 +615,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 						//((ay - by)/(Lab*Lbc) - (DotP*(2*by - 2*cy))/(2*Lab*Lbc^3))/(1 - DotP^2/(Lab^2*Lbc^2))^(1/2)
 
 						// f = -dE/dx, so the values added below are negative, compared with the symbolics shown above.
-                                                double  F_Ext=calExtForce (Cell_Time_F) ;  //Ali 
+                                                double  F_Ext=0.0 ; // calExtForce (Cell_Time_F) ;  //Ali 
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
                                                 //if (locX > Cell_CenterX && Cell_CenterX>23.53) {
                                                 if (locX > Cell_CenterX) {

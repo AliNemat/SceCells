@@ -2061,7 +2061,15 @@ void SceCells::applyMemForce_M() {
 			&(nodes->getInfoVecs().nodeLocY[0]));
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
-
+	int* nodeAdhereIndexAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeAdhereIndex[0])); //assuming that number of boundary nodes are equal to zero
+	
+	/*if (curTime>10.05) { 
+		for (int i=0; i<nodes->getInfoVecs().nodeAdhereIndex.size(); i++) {
+			cout<<"node adhere index"<<i+allocPara_m.bdryNodeCount<<" is" <<nodes->getInfoVecs().nodeAdhereIndex[i]<<endl ; 
+		}
+		exit (EXIT_FAILURE) ; 
+	}*/
 	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU
@@ -2082,11 +2090,8 @@ void SceCells::applyMemForce_M() {
 									cellInfoVecs.centerCoordX.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
-                                                        thrust::make_permutation_iterator(
-									cellInfoVecs.Cell_Time.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-
+                                                        nodes->getInfoVecs().nodeAdhereIndex.begin()
+									+ allocPara_m.bdryNodeCount,
 							make_transform_iterator(iBegin,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin,
@@ -2099,6 +2104,7 @@ void SceCells::applyMemForce_M() {
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeVelY.begin()
 									+ allocPara_m.bdryNodeCount)),
+
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
@@ -2113,10 +2119,8 @@ void SceCells::applyMemForce_M() {
 									cellInfoVecs.centerCoordX.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
-                                                        thrust::make_permutation_iterator(
-									cellInfoVecs.Cell_Time.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
+                                                        nodes->getInfoVecs().nodeAdhereIndex.begin()
+									+ allocPara_m.bdryNodeCount,
 							make_transform_iterator(iBegin,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin,
@@ -2143,7 +2147,7 @@ void SceCells::applyMemForce_M() {
 							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M));
 
 
 
