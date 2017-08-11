@@ -884,6 +884,7 @@ public:
 	thrust::device_vector<double> membrBendLeftY;
 	thrust::device_vector<double> membrBendRightX;
 	thrust::device_vector<double> membrBendRightY;
+	thrust::device_vector<bool> nodeIsBasalMem;//Ali
 };
 
 /**

@@ -30,9 +30,9 @@ double calMorse_ECM(const double& linkLength ) {
 				* exp(-linkLength / sceInterCell_ECM[2])
 				+ sceInterCell_ECM[1] / sceInterCell_ECM[3]
 						* exp(-linkLength / sceInterCell_ECM[3]);
-		if (forceValue > 0) {
-			forceValue = 0;
-		}
+//		if (forceValue > 0) {
+//			forceValue = 0;
+//		}
 	}
 
 	return (forceValue) ; 
@@ -48,7 +48,8 @@ double eCMMaxX= 50;
 double eCMMinDist=0.04;
 
 
-std::fstream readCoord_ECM ; 
+std::fstream readCoord_ECM ;
+std::fstream readInput_ECM ;  
 int numberNodes_ECM ; 
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
@@ -75,19 +76,39 @@ for (int i=0 ; i<posXIni_ECM.size() ; i++){
 
 
 
+readInput_ECM.open("./resources/input_ECM.txt") ;
+if (readInput_ECM.is_open()) {
+	cout << "ECM Mech input opened successfully" <<endl ; 
+}
+else {
+	cout << "ECM Mech input is not opened successfully" << endl ; 
+}
 
-mechPara_ECM.sceInterCellCPU_ECM[0]=39.0 ; 
-mechPara_ECM.sceInterCellCPU_ECM[1]=3.90 ;
-mechPara_ECM.sceInterCellCPU_ECM[2]=0.125 ; 
-mechPara_ECM.sceInterCellCPU_ECM[3]=1.5625 ;
-mechPara_ECM.sceInterCellCPU_ECM[4]=0.78125 ;
 
+ for (int i=0 ; i<5 ; i++) {
+ 	readInput_ECM>> mechPara_ECM.sceInterCellCPU_ECM[i] ; //=39.0 ; 
+ }
+// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[1]; //=3.90 ;
+// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[2]; //=0.125 ; 
+// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[3]; //=1.5625 ;
+// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[4]; //=0.78125 ;
+
+ for (int i=0 ; i<5; i++) {
+	cout <<"Morse parameter number"<<i<<" is " <<mechPara_ECM.sceInterCellCPU_ECM[i]<<endl ; 
+
+	} 
+
+ readInput_ECM>>restLenECMSpring ;
+ cout <<"rest length of ECM spring is "<<restLenECMSpring<<endl ;   
+
+readInput_ECM>>eCMLinSpringStiff ;    
+ cout <<"ECM spring stiffness is "<<eCMLinSpringStiff<<endl ;   
 cudaMemcpyToSymbol(sceInterCell_ECM,mechPara_ECM.sceInterCellCPU_ECM
 			,5*sizeof(double)); 
 
-lastPrintECM=0 ; 
+lastPrintECM=10000 ; 
 outputFrameECM=0 ; 
-restLenECMSpring=0.03 ; //eCMMinDist ;  
+//restLenECMSpring=0.03 ; //eCMMinDist ;  
 eCMY=23.1 ; 
 numNodesECM= numberNodes_ECM ; //(eCMMaxX-eCMMinX)/eCMMinDist ; 
 //thrust:: device_vector<double> tmp ; 
@@ -138,6 +159,7 @@ void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM){
 thrust::counting_iterator<int> iBegin(0) ; 
 nodeDeviceTmpLocX.resize(totalNodeCountForActiveCellsECM,0.0) ;
 nodeDeviceTmpLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
+isBasalMemNode.resize(totalNodeCountForActiveCellsECM,false) ;
  
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
@@ -155,7 +177,6 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 			&nodeECMLocY[0]) ; 
 
 
-double eCMLinSpringStiff=200 ;   
 /*
 thrust:: transform (
 		thrust::make_zip_iterator (
@@ -198,7 +219,8 @@ thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					nodeDeviceLocX.begin(),
-					nodeDeviceLocY.begin())),
+					nodeDeviceLocY.begin(),
+					isBasalMemNode.begin())),
 				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell));
 
 
@@ -313,7 +335,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM==1000) { 
+               if (lastPrintECM>=20) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";

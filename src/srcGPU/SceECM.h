@@ -9,6 +9,7 @@
 typedef thrust ::tuple<int,double,double> IDD ; 
 typedef thrust ::tuple<int,double,double,bool> IDDB ; 
 typedef thrust ::tuple<double,double> DD ; 
+typedef thrust ::tuple<double,double,bool> DDB ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 typedef thrust ::tuple<double,double,double,double> DDDD ; 
 
@@ -27,7 +28,8 @@ public:
         void applyECMForce_M() ; 
         void ApplyECMConstrain(int totalNodeCountForActiveCellsECM) ; 
  double eCMY ; 
-double restLenECMSpring ; 
+double restLenECMSpring ;
+double eCMLinSpringStiff ;  
 int outputFrameECM ;  
 int lastPrintECM ;
 int numNodesECM ;
@@ -47,6 +49,7 @@ thrust::device_vector<double> nodeDeviceLocX ;
 thrust::device_vector<double> nodeDeviceLocY ; 
 thrust::device_vector<double> nodeDeviceTmpLocX ; 
 thrust::device_vector<double> nodeDeviceTmpLocY ;
+thrust::device_vector<bool>   isBasalMemNode ;
  
 thrust::device_vector<bool> nodeIsActive_Cell ; 
 
@@ -175,7 +178,7 @@ struct MoveNodes_Cell: public thrust::unary_function<IDDB,DD> {
 	
 } ;
 
-struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DD> {
+struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDB> {
 	 double  *_locXAddr_ECM; 
          double  *_locYAddr_ECM; 
          int _maxMembrNodePerCell ; 
@@ -183,7 +186,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DD> {
 	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell) :
 				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell) {
 	}
-	__device__ DD operator()(const IDDB & iDDB) const {
+	__device__ DDB  operator()(const IDDB & iDDB) const {
 	
 	int nodeRankInOneCell=     thrust::get<0>(iDDB) ; 
 	double  locX=     thrust::get<1>(iDDB) ; 
@@ -212,12 +215,13 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DD> {
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 			fTotalMorse=fTotalMorse+fMorse ; 
 		}
-	
-                return thrust::make_tuple ((locX+fTotalMorseX*0.005/36.0),(locY+fTotalMorseY*0.005/36.0))  ; 
+	}
+	if (fTotalMorse!=0.0){	
+                return thrust::make_tuple ((locX+fTotalMorseX*0.005/36.0),(locY+fTotalMorseY*0.005/36.0),true)  ; 
 	}
 		
 	else {
-		return thrust::make_tuple (locX,locY) ; 
+		return thrust::make_tuple (locX,locY,false) ; 
 	}
         	
 		
@@ -353,7 +357,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 			fTotalMorse=fTotalMorse+fMorse ; 
 		}
 	}
-	return thrust::make_tuple(fTotalMorseX,fTotalMorseY) ; 
+		return thrust::make_tuple(fTotalMorseX,fTotalMorseY) ;
 	//return thrust::make_tuple(5,5) ; 
 
 	}

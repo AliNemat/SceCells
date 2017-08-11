@@ -25,16 +25,17 @@ __constant__ double F_Ext_Incline_M2 ;  //Ali
 //Ali &  Abu June 30th
 __device__
 double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri, double adhereIndex) {
-	if (adhereIndex==-1) {
+/*	if (adhereIndex==-1) {
 
 		if (progress <= mitoticCri) {
-			return (length - 0.5*membrEquLen) * membrStiff;
+			return (length - membrEquLen) * membrStiff;
 		} 
 		else {
- 			return (length - 0.5*membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
+ 			return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
 		}
 	}
-	else {
+*/
+//	else { 
 
 		if (progress <= mitoticCri) {
 			return (length - membrEquLen) * membrStiff;
@@ -43,7 +44,7 @@ double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri
  			return (length - membrEquLen) *(membrStiff+ (membrStiff_Mitotic-membrStiff)* (progress-mitoticCri)/(1.0-mitoticCri));
 		}
  
-         }
+  //       }
 
 }
 //
@@ -1459,7 +1460,10 @@ thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().no
         thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
         thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
 	//thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
-        cout << " first writing for nodeDevice finished in SceCells after function "<< endl ;  
+ thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ; 
+	       
+
+cout << " first writing for nodeDevice finished in SceCells after function "<< endl ;  
         //thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
         cout << " second writing for node info vecs finished in SceCells after functuion "<< endl ;  
         std::cout << "     *** 9 ***" << endl;
