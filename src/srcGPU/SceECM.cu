@@ -1,22 +1,18 @@
 #include "SceECM.h"
 
 __constant__ double sceInterCell_ECM[5]; 
+__constant__ double wLCPara_ECM[4]; 
 
-namespace patch
-{
-template <typename  T> std::string to_string (const T& n) 
-{
-std:: ostringstream stm ; 
-stm << n ; 
-return stm.str() ; 
+namespace patch{
+	template <typename  T> std::string to_string (const T& n) 
+	{
+	std:: ostringstream stm ; 
+	stm << n ; 
+	return stm.str() ; 
+	}
 }
-}
 
 
-
-void SceECM::applyECMForce_M() {
-double Ali=5 ; 
-} 
 
 
 __device__
@@ -38,14 +34,17 @@ double calMorse_ECM(const double& linkLength ) {
 	return (forceValue) ; 
 }
 
+__device__
+double calWLC_ECM(const double& linkLength ) {
 
+	double x=linkLength/wLCPara_ECM[0] ;
+	return (wLCPara_ECM[1]*( 6*x+ ( x*x*(3.0-2*x))/( (1-x)*(1-x) ) )
+	       -wLCPara_ECM[2]/pow(linkLength,wLCPara_ECM[3]) ) ; 	
+}
 
 
 void SceECM::Initialize() {
 
-double eCMMinX= -50;
-double eCMMaxX= 50;
-double eCMMinDist=0.04;
 
 
 std::fstream readCoord_ECM ;
@@ -54,24 +53,19 @@ int numberNodes_ECM ;
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
  
-readCoord_ECM.open("./resources/coordinate_ECM.txt") ;
+readCoord_ECM.open("./resources/coordinate_ECM3.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }
 else {
 	cout << "ECM coordinates file is not opened successfully" << endl ; 
 }
+
 readCoord_ECM>>numberNodes_ECM ;
-cout<< "numer of ECM nodes is"<< numberNodes_ECM <<endl ; 
 for (int i=0 ; i<numberNodes_ECM ; i++){
 	readCoord_ECM>>tmpPosX_ECM>>tmpPosY_ECM ; 
 	posXIni_ECM.push_back(tmpPosX_ECM) ; 
 	posYIni_ECM.push_back(tmpPosY_ECM) ; 
-}
-
-for (int i=0 ; i<posXIni_ECM.size() ; i++){
-	cout << "ECM nodes read in cpu"<<endl; 
-	cout << posXIni_ECM[i] <<posYIni_ECM[i]<<endl;  ; 
 }
 
 
@@ -85,38 +79,51 @@ else {
 }
 
 
- for (int i=0 ; i<5 ; i++) {
+ for (int i=0 ; i<5; i++) {
  	readInput_ECM>> mechPara_ECM.sceInterCellCPU_ECM[i] ; //=39.0 ; 
  }
-// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[1]; //=3.90 ;
-// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[2]; //=0.125 ; 
-// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[3]; //=1.5625 ;
-// readInput_ECM>>mechPara_ECM.sceInterCellCPU_ECM[4]; //=0.78125 ;
+ 
+ readInput_ECM>>restLenECMSpring ;
+ readInput_ECM>>eCMLinSpringStiff ;    
+ for ( int i=0 ; i<4 ; i++) {
+	readInput_ECM>>mechPara_ECM.wLCParaCPU_ECM[i] ;
+ }    
+
+
+
+
+cout<< "numer of ECM nodes is"<< numberNodes_ECM <<endl ; 
+for (int i=0 ; i<posXIni_ECM.size() ; i++){
+	cout << "ECM nodes read in cpu"<<endl; 
+	cout << posXIni_ECM[i] <<posYIni_ECM[i]<<endl;  ; 
+}
+
+
+
 
  for (int i=0 ; i<5; i++) {
 	cout <<"Morse parameter number"<<i<<" is " <<mechPara_ECM.sceInterCellCPU_ECM[i]<<endl ; 
 
-	} 
+} 
 
- readInput_ECM>>restLenECMSpring ;
  cout <<"rest length of ECM spring is "<<restLenECMSpring<<endl ;   
 
-readInput_ECM>>eCMLinSpringStiff ;    
- cout <<"ECM spring stiffness is "<<eCMLinSpringStiff<<endl ;   
+ cout <<"ECM spring stiffness is "<<eCMLinSpringStiff<<endl ;  
+
+for ( int i=0 ; i<4 ; i++) {
+	cout<<"wLC parameter "<< i << " is "<<mechPara_ECM.wLCParaCPU_ECM[i]<<endl ;  ;
+}    
+
 cudaMemcpyToSymbol(sceInterCell_ECM,mechPara_ECM.sceInterCellCPU_ECM
 			,5*sizeof(double)); 
+cudaMemcpyToSymbol(wLCPara_ECM,mechPara_ECM.wLCParaCPU_ECM
+			,4*sizeof(double)); 
 
-lastPrintECM=10000 ; 
+lastPrintECM=1000000 ; // large number 
 outputFrameECM=0 ; 
-//restLenECMSpring=0.03 ; //eCMMinDist ;  
-eCMY=23.1 ; 
 numNodesECM= numberNodes_ECM ; //(eCMMaxX-eCMMinX)/eCMMinDist ; 
-//thrust:: device_vector<double> tmp ; 
-cout<<" I am inside ECM initialization0  " << endl ; 
 
-//tmp.resize(numNodesECM,0.0) ;
 
-//thrust::sequence (tmp.begin(),tmp.begin()+numNodesECM);
 
 
 indexECM.resize(numNodesECM,0) ;
@@ -140,19 +147,19 @@ totalForceECMY.resize(numNodesECM,0.0);
 
 thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
  
-//thrust::fill (nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,0.0); 
-//thrust::fill (nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,eCMY); 
-//thrust::transform(indexECM.begin(),indexECM.begin()+numNodesECM,nodeECMLocY.begin(),nodeECMLocX.begin(),InitECMLoc(eCMMinX,eCMMinDist));
 thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ; 
 thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
 for (int i=0;  i<nodeECMLocX.size() ;  i++) {
-cout<< nodeECMLocX[i]<<endl; 
+	cout<< nodeECMLocX[i]<<endl; 
 } 
-cout<<" I am inside ECM initialization4  " << endl ; 
+
+
+} //initilaization function finished
 
 
 
-}
+
+
 
 void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM){   
 
@@ -165,8 +172,6 @@ thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActi
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
 
-double yBound=10 ;
- eCMY=23.7 ;  
 int maxAllNodePerCell=360 ;
 int maxMembrNodePerCell=280 ;
 
@@ -177,28 +182,7 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 			&nodeECMLocY[0]) ; 
 
 
-/*
-thrust:: transform (
-		thrust::make_zip_iterator (
-				thrust:: make_tuple (
-					make_transform_iterator (iBegin,
-							ModuloFunctor2(maxAllNodePerCell)),
-					nodeDeviceTmpLocX.begin(),
-					nodeDeviceTmpLocY.begin(), 
-					nodeIsActive_Cell.begin())), 
-		thrust::make_zip_iterator (
-				thrust:: make_tuple (
-					 make_transform_iterator (iBegin,
-							ModuloFunctor2(maxAllNodePerCell)),
-					 nodeDeviceTmpLocX.begin(),
-                                         nodeDeviceTmpLocY.begin(),
-					 nodeIsActive_Cell.begin()))+totalNodeCountForActiveCellsECM,
-		thrust::make_zip_iterator (
-				thrust::make_tuple (
-					nodeDeviceLocX.begin(),
-					nodeDeviceLocY.begin())),
-				MoveNodes_Cell(eCMY,yBound,maxMembrNodePerCell));
-*/
+
 
 
  thrust:: transform (
@@ -221,7 +205,7 @@ thrust:: transform (
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin(),
 					isBasalMemNode.begin())),
-				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell));
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM));
 
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
@@ -249,12 +233,6 @@ thrust:: transform (
 					linSpringForceECMX.begin(),
 					linSpringForceECMY.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
-
-
-//double* nodeCellLocXAddr= thrust::raw_pointer_cast (
-//			&nodeDeviceTmpLocX[0]) ; 
-//double* nodeCellLocYAddr= thrust::raw_pointer_cast (
-//			&nodeDeviceTmpLocY[0]) ;
 
 
 

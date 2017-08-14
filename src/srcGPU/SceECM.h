@@ -16,6 +16,7 @@ typedef thrust ::tuple<double,double,double,double> DDDD ;
 
 struct MechPara_ECM {
 	double sceInterCellCPU_ECM[5] ;
+	double wLCParaCPU_ECM[4] ;
 	double linSpringCPU_ECM ; 
 	double linSpringRestLenCPU_ECM ; 
 }; 
@@ -25,9 +26,7 @@ class SceECM {
 //	SceNodes* nodes;
 
 public:
-        void applyECMForce_M() ; 
         void ApplyECMConstrain(int totalNodeCountForActiveCellsECM) ; 
- double eCMY ; 
 double restLenECMSpring ;
 double eCMLinSpringStiff ;  
 int outputFrameECM ;  
@@ -73,6 +72,8 @@ thrust::device_vector<double> totalForceECMY ;
 __device__
 double calMorse_ECM (const double & linkLength); 
 
+__device__
+double calWLC_ECM (const double & linkLength); 
 
 
 
@@ -143,48 +144,13 @@ struct ModuloFunctor2: public thrust::unary_function <int,int>{
 	} ; 
 
 
-struct MoveNodes_Cell: public thrust::unary_function<IDDB,DD> {
-
-	 double  _eCMY, _activeBound ;
-         int _maxMembrNodePerCell ; 
-
-	__host__ __device__ MoveNodes_Cell (double eCMY , double activeBound, int maxMembrNodePerCell) :
-				_eCMY(eCMY),_activeBound(activeBound),_maxMembrNodePerCell(maxMembrNodePerCell) {
-	}
-	__host__ __device__ DD operator()(const IDDB & iDDB) const {
-	
-	int nodeRank=     thrust::get<0>(iDDB) ; 
-	double  LocX=     thrust::get<1>(iDDB) ; 
-	double  LocY=     thrust::get<2>(iDDB) ; 
-	bool    nodeIsActive= thrust::get<3>(iDDB) ; 
-
-//	if (nodeRank> _maxMembrNodePerCell) {
-//		return thrust::make_tuple (LocX,LocY) ; 
-//	}
-
-	 if (LocY<=_eCMY && nodeIsActive) {
-			return thrust::make_tuple (LocX,_eCMY+0.1) ; 
-	}	
-		else if (LocY>(_eCMY+0.5)){
-		
-		return thrust::make_tuple (LocX,LocY) ; 
-		}
-        	else {
-                	return thrust::make_tuple (LocX,(LocY-10.25*(LocY-_eCMY)*0.005/36.0))  ; 
-		}
-
-	}
-
-	
-} ;
-
 struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDB> {
 	 double  *_locXAddr_ECM; 
          double  *_locYAddr_ECM; 
          int _maxMembrNodePerCell ; 
-
-	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell) :
-				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell) {
+	 int _numNodes_ECM ; 
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell, int numNodes_ECM) :
+				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM) {
 	}
 	__device__ DDB  operator()(const IDDB & iDDB) const {
 	
@@ -199,7 +165,6 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDB> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-	int _numNodes_ECM=2500 ;  
 
 
 
@@ -246,7 +211,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	__host__ __device__ LinSpringForceECM (double numNodes, double restLen, double linSpringStiff , double * locXAddr, double * locYAddr) :
 	 _numNodes(numNodes),_restLen(restLen),_linSpringStiff(linSpringStiff),_locXAddr(locXAddr),_locYAddr(locYAddr) {
 	}
-	__host__ __device__ DD operator()(const IDD & iDD) const {
+	 __device__ DD operator()(const IDD & iDD) const {
 	
 	int     index=    thrust::get<0>(iDD) ; 
 	double  locX=     thrust::get<1>(iDD) ; 
@@ -279,6 +244,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	}
 
 	distLeft=sqrt( ( locX-locXLeft )*(locX-locXLeft) +( locY-locYLeft )*(locY-locYLeft) ) ;
+	//	forceLeft=calWLC_ECM(distLeft) ; 
 		forceLeft=_linSpringStiff*(distLeft-_restLen) ; 
 		forceLeftX=forceLeft*(locXLeft-locX)/distLeft ; 
 		forceLeftY=forceLeft*(locYLeft-locY)/distLeft ; 
@@ -295,7 +261,8 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 		locYRight=_locYAddr[0] ;
 	}
 	distRight=sqrt( ( locX-locXRight )*(locX-locXRight) +( locY-locYRight )*(locY-locYRight) ) ; 
-		forceRight=_linSpringStiff*(distRight-_restLen) ; 
+   	    	forceRight=_linSpringStiff*(distRight-_restLen) ; 
+        //  	forceRight=calWLC_ECM(distRight) ; 
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
 
@@ -333,8 +300,6 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-	double kStiff=1.0 ; 
-	double restLen=0.03 ; 
 	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 
         for (int i=0 ; i<_numActiveNodes_Cell ; i++) {
 		if (_nodeIsActive_Cell[i] && (i%_maxNodePerCell)<_maxMembrNodePerCell){
@@ -343,14 +308,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 		 
 			locX_C=_locXAddr_Cell[i]; 
 			locY_C=_locYAddr_Cell[i];
-		//	if (locY_C>10 && locY_C<30) {
 			dist=sqrt((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ;
-		//	if (0.0001<dist<2.0) { 
-		//		fMorse=kStiff*(dist-restLen) ;
-		//	}
-		///	else {
-		//		fMorse=0.0 ; 
-		//	}
 			fMorse=calMorse_ECM(dist);  
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
