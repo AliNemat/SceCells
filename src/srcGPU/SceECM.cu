@@ -167,6 +167,7 @@ thrust::counting_iterator<int> iBegin(0) ;
 nodeDeviceTmpLocX.resize(totalNodeCountForActiveCellsECM,0.0) ;
 nodeDeviceTmpLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
 isBasalMemNode.resize(totalNodeCountForActiveCellsECM,false) ;
+adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
  
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
@@ -204,7 +205,8 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 				thrust::make_tuple (
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin(),
-					isBasalMemNode.begin())),
+					isBasalMemNode.begin(),
+					adhPairECM_Cell.begin())),
 				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM));
 
 
@@ -216,6 +218,8 @@ double* nodeCellLocYAddr= thrust::raw_pointer_cast (
 bool* nodeIsActive_CellAddr= thrust::raw_pointer_cast (
 			&nodeIsActive_Cell[0]) ; 
 
+int * adhPairECM_CellAddr= thrust::raw_pointer_cast (
+			&adhPairECM_Cell[0]) ; 
 
 thrust:: transform (
 		thrust::make_zip_iterator (
@@ -251,7 +255,7 @@ thrust:: transform (
 				thrust::make_tuple (
 					memMorseForceECMX.begin(),
 					memMorseForceECMY.begin())),
-				MorseForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr));
+				MorseForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr,adhPairECM_CellAddr));
 
 
 double dummy=0.0 ;
