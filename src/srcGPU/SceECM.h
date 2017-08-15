@@ -165,28 +165,45 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDB> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-
-
-
-
+	double distMin=10000 ; 
+	double distMinX, distMinY ; 
+	double kStifMemECM=10.0 ; 
+	double distMaxAdh=1.5; 
+	double distSponAdh=0.0625 ; 
+	double fAdhMemECM=0.0   ; 
+	double fAdhMemECMX=0.0 ; 
+	double fAdhMemECMY=0.0  ; 
 	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
 
 		for (int i=0 ; i<_numNodes_ECM ; i++) {
 			locX_ECM=_locXAddr_ECM[i]; 
 			locY_ECM=_locYAddr_ECM[i];
 			dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
+			if (dist < distMin) {
+				distMin=dist ; 
+				distMinX=(locX_ECM-locX) ;
+				distMinY=(locY_ECM-locY) ;  
+			}
 			fMorse=calMorse_ECM(dist);  
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 			fTotalMorse=fTotalMorse+fMorse ; 
 		}
 	}
+	if (distMin<distMaxAdh && distMin>distSponAdh) {
+		
+		fAdhMemECMX=kStifMemECM*(distMin-distSponAdh)*distMinX/distMin ;  
+		fAdhMemECMY=kStifMemECM*(distMin-distSponAdh)*distMinY/distMin ;  
+	}
+	
 	if (fTotalMorse!=0.0){	
-                return thrust::make_tuple ((locX+fTotalMorseX*0.005/36.0),(locY+fTotalMorseY*0.005/36.0),true)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.005/36.0),true)  ; 
 	}
 		
 	else {
-		return thrust::make_tuple (locX,locY,false) ; 
+	
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.005/36.0),false)  ; 
+ 
 	}
         	
 		
@@ -296,10 +313,17 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 
 	double fMorse ; 
 	double locX_C, locY_C ; 
-	double dist ; 
+	double dist ;
+	double distMin=100000 ; //large number
+	double distMinX,distMinY ; 
+	double fAdhX=0 ; 
+	double fAdhY=0 ;  
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
+	double kAdhECM=10 ; 
+	double distAdhSpon=0.0625 ; 
+	double distAdhMax=1.5 ; 
 	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 
         for (int i=0 ; i<_numActiveNodes_Cell ; i++) {
 		if (_nodeIsActive_Cell[i] && (i%_maxNodePerCell)<_maxMembrNodePerCell){
@@ -309,13 +333,23 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 			locX_C=_locXAddr_Cell[i]; 
 			locY_C=_locYAddr_Cell[i];
 			dist=sqrt((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ;
+			if (dist<distMin) {
+				distMin=dist ; 
+				distMinX=locX_C-locX ; 
+				distMinY=locY_C-locY ; 
+			}
 			fMorse=calMorse_ECM(dist);  
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
 			fTotalMorse=fTotalMorse+fMorse ; 
 		}
 	}
-		return thrust::make_tuple(fTotalMorseX,fTotalMorseY) ;
+	
+	if (distMin>distAdhSpon && distMin<distAdhMax) {
+		fAdhX=kAdhECM*(distMin-distAdhSpon)*distMinX/distMin ; 
+		fAdhY=kAdhECM*(distMin-distAdhSpon)*distMinY/distMin ; 
+	}
+		return thrust::make_tuple(fTotalMorseX+fAdhX,fTotalMorseY+fAdhY) ;
 	//return thrust::make_tuple(5,5) ; 
 
 	}
