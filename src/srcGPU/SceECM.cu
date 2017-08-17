@@ -141,6 +141,13 @@ bendSpringForceECMY.resize(numNodesECM,0.0);
 memMorseForceECMX.resize(numNodesECM,0.0); 
 memMorseForceECMY.resize(numNodesECM,0.0);
  
+fBendCenterX.resize(numNodesECM,0.0); 
+fBendCenterY.resize(numNodesECM,0.0); 
+fBendLeftX.resize(numNodesECM,0.0); 
+fBendLeftY.resize(numNodesECM,0.0); 
+fBendRightX.resize(numNodesECM,0.0); 
+fBendRightY.resize(numNodesECM,0.0); 
+ 
 totalForceECMX.resize(numNodesECM,0.0); 
 totalForceECMY.resize(numNodesECM,0.0);
 
@@ -175,7 +182,7 @@ thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActi
 
 int maxAllNodePerCell=360 ;
 int maxMembrNodePerCell=280 ;
-
+double eCMBendStiff=0.6 ; 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
 			&nodeECMLocX[0]) ; 
@@ -238,6 +245,53 @@ thrust:: transform (
 					linSpringForceECMY.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
 
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					indexECM.begin(),
+					nodeECMLocX.begin(),
+					nodeECMLocY.begin())), 
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					 indexECM.begin(),
+					 nodeECMLocX.begin(),
+                                         nodeECMLocY.begin()))+numNodesECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					fBendCenterX.begin(),
+					fBendCenterY.begin(),
+					fBendLeftX.begin(),
+					fBendLeftY.begin(),
+					fBendRightX.begin(),
+					fBendRightY.begin())),
+				CalBendECM(nodeECMLocXAddr,nodeECMLocYAddr,numNodesECM,eCMBendStiff));
+
+double* fBendLeftXAddr= thrust::raw_pointer_cast (
+			&fBendLeftX[0]) ; 
+double* fBendLeftYAddr= thrust::raw_pointer_cast (
+			&fBendLeftY[0]) ; 
+double* fBendRightXAddr= thrust::raw_pointer_cast (
+			&fBendRightX[0]) ; 
+double* fBendRightYAddr= thrust::raw_pointer_cast (
+			&fBendRightY[0]) ; 
+
+
+thrust:: transform (
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					indexECM.begin(),
+					fBendCenterX.begin(),
+					fBendCenterY.begin())), 
+		thrust::make_zip_iterator (
+				thrust:: make_tuple (
+					 indexECM.begin(),
+					 fBendCenterX.begin(),
+                                         fBendCenterY.begin()))+numNodesECM,
+		thrust::make_zip_iterator (
+				thrust::make_tuple (
+					bendSpringForceECMX.begin(),
+					bendSpringForceECMY.begin())),
+				SumBendForce(fBendLeftXAddr,fBendLeftYAddr,fBendRightXAddr,fBendRightYAddr,numNodesECM));
 
 
 thrust:: transform (
@@ -284,7 +338,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.005 ;   
+double dt=0.00005 ;   
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
