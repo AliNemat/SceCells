@@ -1656,6 +1656,8 @@ void SceCells::copyCellsEnterMitotic() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpNodePosY_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpAdhIndx_M = thrust::device_vector<int>(
+			divAuxData.nodeStorageCount, -1); //Ali 
 
 	divAuxData.tmpCellRank_M = thrust::device_vector<uint>(
 			divAuxData.toEnterMitoticCount, 0);
@@ -1692,6 +1694,8 @@ void SceCells::copyCellsEnterMitotic() {
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeAdhereIndex.begin()
 									+ allocPara_m.bdryNodeCount)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1700,6 +1704,8 @@ void SceCells::copyCellsEnterMitotic() {
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().nodeAdhereIndex.begin()
 									+ allocPara_m.bdryNodeCount))
 					+ totalNodeCountForActiveCells,
 			thrust::make_permutation_iterator(cellInfoVecs.isEnteringMitotic.begin(),
@@ -1708,7 +1714,8 @@ void SceCells::copyCellsEnterMitotic() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
-							divAuxData.tmpNodePosY_M.begin())), isTrue());
+							divAuxData.tmpNodePosY_M.begin(),
+							divAuxData.tmpAdhIndx_M.begin())), isTrue());
 // step 3 , continued  //copy cell info values ready for division /comment A&A
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::copy_if(
@@ -1797,14 +1804,21 @@ void SceCells::findHertwigAxis() {
                 uint cellRank = divAuxData.tmpCellRank_M[i];
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
+		vector<int> adhIndxDiv ; 
 
-		obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
+
+		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
+		obtainMembrAndIntnlNodesPlusAdh(i, membrNodes, intnlNodes,adhIndxDiv); // Ali 
 
 		CVector oldCenter = obtainCenter(i);
 		double lenAlongMajorAxis;
-		CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
-				lenAlongMajorAxis);
+		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+		//		lenAlongMajorAxis);
 
+		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
+		//		lenAlongMajorAxis); //Ali
+		CVector divDir = calDivDir_ApicalBasal(oldCenter, membrNodes,
+				lenAlongMajorAxis,adhIndxDiv); //Ali
 
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
                cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
@@ -4278,6 +4292,38 @@ void SceCells::obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 		}
 	}
 }
+//Ali
+void SceCells::obtainMembrAndIntnlNodesPlusAdh(uint i, vector<CVector>& membrNodes,
+		vector<CVector>& intnlNodes, vector<int> & adhIndxDiv) {
+	membrNodes.clear();
+	intnlNodes.clear();
+	adhIndxDiv.clear() ; 
+
+	uint membThreshold = allocPara_m.maxMembrNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint index;
+	for (uint j = 0; j < maxAllNodePerCell; j++) {
+		index = i * maxAllNodePerCell + j;
+		if (divAuxData.tmpIsActive_M[index] != true) {
+			continue;
+		}
+		double posX = divAuxData.tmpNodePosX_M[index];
+		double posY = divAuxData.tmpNodePosY_M[index];
+		int    adhI = divAuxData.tmpAdhIndx_M[index];
+		if (j < membThreshold) {
+			// means node type is membrane
+			CVector memPos(posX, posY, 0);
+			membrNodes.push_back(memPos);
+			adhIndxDiv.push_back(adhI) ; 
+		} else {
+			CVector intnlPos(posX, posY, 0);
+			intnlNodes.push_back(intnlPos);
+		}
+	}
+}
+
+
+
 
 CVector SceCells::obtainCenter(uint i) {
 	double oldCenterX = divAuxData.tmpCenterPosX_M[i];
@@ -4345,6 +4391,54 @@ CVector SceCells::calDivDir_MajorAxis(CVector center,
 	return minorAxisDir;
 }
 
+CVector SceCells::calDivDir_ApicalBasal(CVector center,
+		vector<CVector>& membrNodes, double& lenAlongMajorAxis, vector<int> & adhIndxDiv) {
+// not the optimal algorithm but easy to code
+	double minDiff = 10000;
+	int adhesionIndexFinal=-1 ; 
+	CVector minorAxisDir;
+	int minPointAdhIndex ; 
+	int maxPointAdhIndex; 
+
+	for (uint i = 0; i < membrNodes.size(); i++) {
+		cout <<"adhesion index for dividing cell node"<<i<<"is" << adhIndxDiv[i] <<endl; 
+	}	
+	//return 0 ; 
+	for (uint i = 0; i < membrNodes.size(); i++) {
+		if (adhIndxDiv[i]==-1) {
+			continue ; 
+		} 
+		CVector tmpDir = membrNodes[i] - center;
+		CVector tmpUnitDir = tmpDir.getUnitVector();
+		double min = 0, max = 0;
+		//minPointAdhIndex=-1 ; 
+		//maxPointAdhIndex=-1 ;
+		//distance finder for node i to the opposite nodes //Ali 
+		for (uint j = 0; j < membrNodes.size(); j++) {
+			CVector tmpDir2 = membrNodes[j] - center;
+			double tmpVecProduct = tmpDir2 * tmpUnitDir;
+			if (tmpVecProduct < min) {
+				min = tmpVecProduct;
+		//		minPointAdhIndex=adhIndxDiv[j] ; 
+			}
+			if (tmpVecProduct > max) {
+				max = tmpVecProduct;
+		//		maxPointAdhIndex=adhIndxDiv[j] ; 
+			}
+		}
+		double diff = max - min;
+		// minimum distance finder for each cells to be used for cell center shifting. It should also need to be a node that have neighbor
+		if (diff < minDiff ) {
+			minDiff = diff;
+			minorAxisDir = tmpUnitDir;
+			adhesionIndexFinal=adhIndxDiv[i]; 
+		}
+	}
+	cout<< "one of the membrane nodes adhesion index in the direction of cell center shifting is "<<adhesionIndexFinal<<endl ; 
+
+	lenAlongMajorAxis = minDiff;
+	return minorAxisDir;
+}
 
 //A&A
 double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,

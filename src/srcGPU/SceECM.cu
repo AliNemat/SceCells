@@ -182,7 +182,7 @@ thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActi
 
 int maxAllNodePerCell=360 ;
 int maxMembrNodePerCell=280 ;
-double eCMBendStiff=0.6 ; 
+double eCMBendStiff=0.0 ; 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
 			&nodeECMLocX[0]) ; 
@@ -338,7 +338,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.00005 ;   
+double dt=0.005 ;   
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;

@@ -210,12 +210,12 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	}
 	
 	if (fTotalMorse!=0.0){	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.00005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.00005/36.0),true,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.005/36.0),true,adhPairECM)  ; 
 	}
 		
 	else {
 	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.00005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.00005/36.0),false,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.005/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.005/36.0),false,adhPairECM)  ; 
  
 	}
         	

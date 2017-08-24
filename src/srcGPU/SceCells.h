@@ -2433,6 +2433,7 @@ struct CellDivAuxData {
 	thrust::device_vector<bool> tmpIsActive_M;
 	thrust::device_vector<double> tmpNodePosX_M;
 	thrust::device_vector<double> tmpNodePosY_M;
+	thrust::device_vector<int> tmpAdhIndx_M ; //Ali 
 
 	thrust::device_vector<bool> tmpIsActiveHost_M;
 	thrust::device_vector<double> tmpNodePosXHost_M;
@@ -2784,10 +2785,14 @@ class SceCells {
 	void processMemVec(std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 	void obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 			vector<CVector>& intnlNodes);
+	void obtainMembrAndIntnlNodesPlusAdh(uint i, vector<CVector>& membrNodes,
+			vector<CVector>& intnlNodes, vector<int>& adhIndxDiv); //Ali 
 	CVector obtainCenter(uint i);
 	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis);
 
+	CVector calDivDir_ApicalBasal(CVector oldCenter, vector<CVector>& membrNodes,
+			double& lenAlongMajorAxis, vector<int> & adhIndxDiv);
 	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCenter, vector<CVector>& membrNodes); //A&A
 
 	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
