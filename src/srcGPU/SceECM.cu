@@ -338,7 +338,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.005 ;   
+double dt=0.003 ;   
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
@@ -371,7 +371,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=2000) { 
+               if (lastPrintECM>=10000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";
