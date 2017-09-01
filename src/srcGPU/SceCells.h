@@ -2080,6 +2080,7 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 			rng.discard(seedNew);
 			double distanceY=abs (centerCellY-_minY) ; 
 			double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
+			//double randomNum1 =dist(rng);
 			
 			rng.discard(seedNew);
 			double randomNum2 = dist2(rng);

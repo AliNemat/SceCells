@@ -2631,8 +2631,8 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
 							countingBegin)),
 			thrust::make_zip_iterator(
