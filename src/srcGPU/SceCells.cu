@@ -2617,6 +2617,15 @@ void SceCells::allComponentsMove_M() {
 }
 
 void SceCells::randomizeGrowth_M() {
+
+thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount,
+                                              nodes->getInfoVecs().nodeLocY.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
+        double minY_Tisu= *MinY_Itr ; 
+        double maxY_Tisu= *MaxY_Itr ;  
+
+
 	uint seed = time(NULL);
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::transform(
@@ -2628,17 +2637,17 @@ void SceCells::randomizeGrowth_M() {
 							countingBegin)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
 							countingBegin))
 					+ allocPara_m.currentActiveCellCount,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
-							cellInfoVecs.growthXDir.begin(),
-							cellInfoVecs.growthYDir.begin(),
+							cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin())),
-			RandomizeGrow_M(growthAuxData.randomGrowthSpeedMin,
+			RandomizeGrow_M(minY_Tisu,maxY_Tisu,growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax, seed));
 }
 
