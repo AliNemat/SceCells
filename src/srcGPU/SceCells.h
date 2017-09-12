@@ -2461,6 +2461,7 @@ class SceCells {
 	thrust::constant_iterator<double> initGrowthProgress;
 
 	uint totalNodeCountForActiveCells;
+	double lastTimeImported ; 
         int plotSignal ; //Ali
 	double dt;
         double Damp_Coef ;   //Ali
@@ -2476,6 +2477,7 @@ class SceCells {
 	double curTime;
         vector<double>  dppLevels ; 
         vector<double>  dppLevels_Cell ; 
+        vector<double>  dppLevels_CellOld ; 
 
 	void readMiscPara();
 	void readBioPara();
