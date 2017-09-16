@@ -634,7 +634,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 //	curTime = 0.0 + 55800.0;//AAMIRIi
         curTime=InitTimeStage ; 
         std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
-	lastTimeImported=1000000 ; //big number 
+	lastTimeExchang=1000000 ; //big number
+	currentActiveCellCountOld=1 ; // small number 
 	tmpDebug = false;
 	aniDebug = false;
 	membrPara.initFromConfig();
@@ -1415,27 +1416,20 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_MaxX= *MaxX_Itr ; 
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;
-        
+        lastTimeExchang=lastTimeExchang+dt ; 
+	double exchPeriod=2*60*60 ; 
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
-	dppLevels_CellOld.clear() ; 
-	for (int i=0; i<dppLevels_Cell.size(); i++) {
-  		dppLevels_CellOld.push_back(dppLevels_Cell[i])	; 
-	}       
-        dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeImported) ; //Ali
-        cout<< " I am right after signal function" << endl; 
-        cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
-        cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ; 
-	if (lastTimeImported<0.5*dt){ 
+	if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
+        	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang) ; //Ali
+        	cout<< " I am right after signal function" << endl; 
+        	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
+        	cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ; 
+	
         	assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
         	thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
-	} 
-	else
-	{
-		cout << "I skept copying dpp data"<<endl ;
-		for (int i=0; i<dppLevels_Cell.size(); i++) {
-  			dppLevels_Cell[i]=dppLevels_CellOld[i]	; 
-		}
-	}       
+		currentActiveCellCountOld=allocPara_m.currentActiveCellCount; 
+	}	 
+	   
 
        // cellInfoVecs.cell_Dpp=dppLevels ; 
         cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          

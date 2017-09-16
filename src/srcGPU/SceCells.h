@@ -2461,7 +2461,8 @@ class SceCells {
 	thrust::constant_iterator<double> initGrowthProgress;
 
 	uint totalNodeCountForActiveCells;
-	double lastTimeImported ; 
+	double lastTimeExchang ; //Ali 
+	int currentActiveCellCountOld ;  //Ali  
         int plotSignal ; //Ali
 	double dt;
         double Damp_Coef ;   //Ali

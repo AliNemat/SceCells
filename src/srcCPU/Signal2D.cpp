@@ -13,7 +13,7 @@ return stm.str();
 
 
 }
-vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeImported)  {
+vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang)  {
 
 cout << "I am in update signal started" << std::endl ; 
 
@@ -261,21 +261,30 @@ cout << "I am in update signal end " << std::endl ;
 
 double dppDist,dppLevel ; 
 vector<double> dppDistV,dppLevelV ;
-double exchFreq=2*60*60 ;  
+double exchPeriod=2*60*60 ;  
 double minResol=0.1 ; 
 int resol=501 ; 
 if (importData) {
 	dppLevels_Cell.clear(); 
-	cout << "last time imported data is" << lastTimeImported <<endl ;  
-	lastTimeImported=lastTimeImported+dt ; 
-	if (lastTimeImported>exchFreq) {
+	cout << "last time data exchanged is" << lastTimeExchang <<endl ;  
+	//lastTimeExchang=lastTimeExchang+dt ;
+ 	int periodCount=abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
+	cout << "The iformation is read from "<< periodCount<<" data" <<endl ; 
+	if (lastTimeExchang>exchPeriod) {
+		lastTimeExchang=0 ; 
+		 
+
+		//exporting data//
+		std :: string  txtFileName="ExportTisuProp_" + patch::to_string(periodCount)+".txt" ; 
+		ofstream ExportOut ; 
+		ExportOut.open(txtFileName.c_str()); 
+		ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
+		ExportOut<<curTime<<","<<Center_X<<","<<R_x<<endl ;
+	}		
+		//Importing data //
 		dppLevelV.clear(); 
 		dppDistV.clear();
-		cout << " I am in importing Dpp data section" <<endl ; 
-		lastTimeImported=0 ; 
-		int hours=abs(floor((curTime-InitTimeStage)/(60*60))) ;
-		cout << "hours passed from simulation is "<< hours<< endl ;  
-		std:: string importDppFileName= "./resources/DppImport_" + patch::to_string(hours) + ".txt" ; 
+		std:: string importDppFileName= "./resources/DppImport_" + patch::to_string(periodCount) + ".txt" ; 
 		std:: fstream inputDpp ; 
 		inputDpp.open(importDppFileName.c_str()) ;
 		//inputDpp.open("/home/anematba/workspace/2017/Sep/2nd/SceCells/resources/DppImport_0.txt") ;
@@ -310,16 +319,21 @@ if (importData) {
        		for (int k=CellCentersHost.size(); k<cellMax ; k++){
        			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
        		}
+          
+				
+		
 
 
-      }
-      else {
-		for (int k=0; k<cellMax ; k++){
-       			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
-      		}
-      }
+     // }
+    //  else {
+//		for (int k=0; k<cellMax ; k++){
+  //     			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
+    //  		}
+    //  }
 
   }
+
+
 
  
 return  dppLevels_Cell ; 
