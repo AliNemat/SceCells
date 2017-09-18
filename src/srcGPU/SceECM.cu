@@ -53,7 +53,7 @@ int numberNodes_ECM ;
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
  
-readCoord_ECM.open("./resources/coordinate_ECM4.txt") ;
+readCoord_ECM.open("./resources/coordinate_ECM5.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }
@@ -180,8 +180,8 @@ thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActi
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
 
-int maxAllNodePerCell=360 ;
-int maxMembrNodePerCell=280 ;
+int maxAllNodePerCell=240 ;
+int maxMembrNodePerCell=200 ;
 double eCMBendStiff=0.0 ; 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (

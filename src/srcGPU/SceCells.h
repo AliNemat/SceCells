@@ -507,13 +507,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri,adhereIndex); //Ali & Abu June 30th
 			        //if (adhereIndex==-1 && _adhereIndexAddr[index_left]==-1) {
 			        if (adhereIndex==-1) {
-					forceVal2=10*forceVal  ; 
+					forceVal2=1*forceVal  ; 
 				}
 				//else if (adhereIndex==-1 || _adhereIndexAddr[index_left]==-1){
 				//	forceVal=1*forceVal ; 	
 			//	}
 				else {
-					forceVal2=0.1*forceVal  ; 
+					forceVal2=1*forceVal  ; 
 				}
 					
 				if (longEnough(lenLeft)) {
@@ -539,13 +539,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri,adhereIndex); // Ali & June 30th
 				//if (adhereIndex==-1 && _adhereIndexAddr[index_right]==-1) {
 				if (adhereIndex==-1) {
-					forceVal2=10*forceVal  ; 
+					forceVal2=1*forceVal  ; 
 				}
 			//	else if (adhereIndex==-1 || _adhereIndexAddr[index_right]==-1){
 			//		forceVal=1000*forceVal ; 	
 			//	}
 				else {
-					forceVal2=0.1*forceVal  ; 
+					forceVal2=1*forceVal  ; 
 				}
 
 				if (longEnough(lenRight)) {
