@@ -2085,7 +2085,20 @@ void SceCells::applyMemForce_M() {
         cout<<"The maximum location in X is="<<MaxX<< endl;  
         cout<<"The minimum location in Y is="<<MinY<< endl;  
         cout<<"The maximum location in Y is="<<MaxY<< endl;  
-        //Ali 
+        //Ali
+
+ 		
+        thrust::device_vector<double>::iterator  MinY_Itr_Cell=thrust::min_element(
+                                       cellInfoVecs.centerCoordY.begin(),
+                                       cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
+
+        thrust::device_vector<double>::iterator  MaxY_Itr_Cell=thrust::max_element(
+                                       cellInfoVecs.centerCoordY.begin(),
+                                       cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
+        double minY_Cell= *MinY_Itr_Cell ; 
+        double maxY_Cell= *MaxY_Itr_Cell ;
+
+
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
 	double* nodeLocYAddr = thrust::raw_pointer_cast(
@@ -2118,7 +2131,7 @@ void SceCells::applyMemForce_M() {
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
 							thrust::make_permutation_iterator(
-									cellInfoVecs.centerCoordX.begin(),
+									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
                                                         nodes->getInfoVecs().nodeAdhereIndex.begin()
@@ -2147,7 +2160,7 @@ void SceCells::applyMemForce_M() {
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
 							thrust::make_permutation_iterator(
-									cellInfoVecs.centerCoordX.begin(),
+									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
                                                         nodes->getInfoVecs().nodeAdhereIndex.begin()
@@ -2178,7 +2191,7 @@ void SceCells::applyMemForce_M() {
 							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell));
 
 
 

@@ -442,19 +442,21 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	bool* _isActiveAddr;
 	int* _adhereIndexAddr;
 	double _mitoticCri;
+	double _minY ; 
+	double _maxY ; 
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr, int* adhereIndexAddr,double mitoticCri) :
+			double* locXAddr, double* locYAddr, bool* isActiveAddr, int* adhereIndexAddr,double mitoticCri, double minY, double maxY) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
-					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),_adhereIndexAddr(adhereIndexAddr), _mitoticCri(mitoticCri) {
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),_adhereIndexAddr(adhereIndexAddr), _mitoticCri(mitoticCri),_minY(minY),_maxY(maxY) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ CVec10 operator()(const TensionData &tData) const {
 
 		double progress = thrust::get<0>(tData);
 		uint activeMembrCount = thrust::get<1>(tData);
-		double Cell_CenterX = thrust::get<2>(tData);
+		double cell_CenterY = thrust::get<2>(tData);
 		int    adhereIndex= thrust::get<3>(tData);
 		uint   cellRank = thrust::get<4>(tData);
 		uint   nodeRank = thrust::get<5>(tData);
@@ -507,14 +509,14 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri,adhereIndex); //Ali & Abu June 30th
 			        //if (adhereIndex==-1 && _adhereIndexAddr[index_left]==-1) {
 			        if (adhereIndex==-1) {
-					forceVal2=1*forceVal  ; 
-				}
+					forceVal2=1*forceVal*(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+					}
 				//else if (adhereIndex==-1 || _adhereIndexAddr[index_left]==-1){
 				//	forceVal=1*forceVal ; 	
 			//	}
 				else {
-					forceVal2=1*forceVal  ; 
-				}
+					forceVal2=1*forceVal *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+					}
 					
 				if (longEnough(lenLeft)) {
 					velX = velX + 1.0*forceVal2 * leftDiffX / lenLeft;
@@ -539,13 +541,13 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri,adhereIndex); // Ali & June 30th
 				//if (adhereIndex==-1 && _adhereIndexAddr[index_right]==-1) {
 				if (adhereIndex==-1) {
-					forceVal2=1*forceVal  ; 
+					forceVal2=1*forceVal *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 				}
 			//	else if (adhereIndex==-1 || _adhereIndexAddr[index_right]==-1){
 			//		forceVal=1000*forceVal ; 	
 			//	}
 				else {
-					forceVal2=1*forceVal  ; 
+					forceVal2=1*forceVal *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 				}
 
 				if (longEnough(lenRight)) {
@@ -618,19 +620,19 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
                                                 double  F_Ext=0.0 ; // calExtForce (Cell_Time_F) ;  //Ali 
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
                                                 //if (locX > Cell_CenterX && Cell_CenterX>23.53) {
-                                                if (locX > Cell_CenterX) {
-						velX = velX
-								+ bendMultiplier
-										* (term2x - term1x + term3x - term4x)
-										/ term0 +F_Ext  ;
-                                                }
+                        //                        if (locX > Cell_CenterX) {
+					//	velX = velX
+					//			+ bendMultiplier
+					//					* (term2x - term1x + term3x - term4x)
+					//					/ term0 +F_Ext  ;
+                      //                          }
                                                 //else if (locX < Cell_CenterX && Cell_CenterX<23.53) {
-                                                else {
+                        //                        else {
 						velX = velX
 								+ bendMultiplier
 										* (term2x - term1x + term3x - term4x)
-										/ term0 -F_Ext  ;
-                                                }
+										/ term0 ;  // -F_Ext  ;
+                                             //   }
                                                // else {
 					//	velX = velX
 					//			+ bendMultiplier
@@ -1131,8 +1133,8 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-			return thrust::make_tuple(true, 0);
-	//		return thrust::make_tuple(false, progress); //No growth
+	//		return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(false, progress); //No growth
 		} else {
 			return thrust::make_tuple(false, progress);
 		}
