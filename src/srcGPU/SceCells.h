@@ -2464,6 +2464,7 @@ class SceCells {
 	double lastTimeExchang ; //Ali 
 	int currentActiveCellCountOld ;  //Ali  
         int plotSignal ; //Ali
+		int periodCount ; //Ali 
 	double dt;
         double Damp_Coef ;   //Ali
         double InitTimeStage ;  //A & A 

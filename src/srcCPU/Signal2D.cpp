@@ -13,7 +13,7 @@ return stm.str();
 
 
 }
-vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang)  {
+vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang, int & periodCount)  {
 
 cout << "I am in update signal started" << std::endl ; 
 
@@ -261,16 +261,15 @@ cout << "I am in update signal end " << std::endl ;
 
 double dppDist,dppLevel ; 
 vector<double> dppDistV,dppLevelV ;
-double exchPeriod=2*60*60 ;  
+//double exchPeriod=2*60*60 ;  
 double minResol=0.1 ; 
 int resol=501 ; 
 if (importData) {
 	dppLevels_Cell.clear(); 
 	cout << "last time data exchanged is" << lastTimeExchang <<endl ;  
 	//lastTimeExchang=lastTimeExchang+dt ;
- 	int periodCount=abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
 	cout << "The iformation is read from "<< periodCount<<" data" <<endl ; 
-	if (lastTimeExchang>exchPeriod) {
+		
 		lastTimeExchang=0 ; 
 		 
 
@@ -280,22 +279,31 @@ if (importData) {
 		ExportOut.open(txtFileName.c_str()); 
 		ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
 		ExportOut<<curTime<<","<<Center_X<<","<<R_x<<endl ;
-	}		
+		
 		//Importing data //
 		dppLevelV.clear(); 
 		dppDistV.clear();
-		std:: string importDppFileName= "./resources/DppImport_" + patch::to_string(periodCount) + ".txt" ; 
-		std:: fstream inputDpp ; 
-		inputDpp.open(importDppFileName.c_str()) ;
-		//inputDpp.open("/home/anematba/workspace/2017/Sep/2nd/SceCells/resources/DppImport_0.txt") ;
-		//inputDpp.open("./resources/DppImport_0.txt") ;
-		cout << "file name is " << importDppFileName <<endl ; 
-		if (inputDpp.is_open()){
-			cout<< "dpp file opened successfully"<<endl; 
+		std:: string importDppFileName= "./resources/DppImport_" + patch::to_string(periodCount) + ".txt" ;
+
+
+		std:: fstream inputDpp ;
+		bool fileIsOpen=false ;
+
+		cout << "the file name I am looking for is " << importDppFileName <<endl ;
+		while (fileIsOpen==false) {
+			inputDpp.open(importDppFileName.c_str()) ;
+			if (inputDpp.is_open()){
+				cout<< "dpp file opened successfully"<<endl; 
+				cout << "the opened file nameis " << importDppFileName <<endl ;
+				fileIsOpen=true ; 
+			}
+			//else {
+			//	cout << "failed openining dpp file"<<endl ;
+		//	}	
 		}
-		else {
-			cout << "failed openining dpp file"<<endl ;
-		}	 
+		cout << " I passed opening the file in the while loop"<< endl ;
+
+ 		periodCount+= 1 ;// abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
 		for (int i=0; i<resol ; i++) {
 			inputDpp >> dppDist >> dppLevel ;
 			dppDistV.push_back(dppDist) ; 
@@ -312,6 +320,9 @@ if (importData) {
         			StoredI=i ;
            			break;  
         		}
+				if (i==resol-1) {
+        			StoredI=i ;
+				}
        		}  
        		dppLevels_Cell.push_back(dppLevelV[StoredI]);
        		}
