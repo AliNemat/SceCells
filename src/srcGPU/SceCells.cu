@@ -1418,7 +1418,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;
         lastTimeExchang=lastTimeExchang+dt ; 
-	double exchPeriod=2 ; 
+	double exchPeriod=200 ; 
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
 	if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
         	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang,periodCount) ; //Ali

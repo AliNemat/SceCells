@@ -278,12 +278,15 @@ if (importData) {
 		ofstream ExportOut ; 
 		ExportOut.open(txtFileName.c_str()); 
 		ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
-		ExportOut<<curTime<<","<<Center_X<<","<<R_x<<endl ;
+		ExportOut<<curTime<<","<<Center_X<<","<<R_x<<endl   ;
+		ExportOut.flush() ;
+		cout << "I export the data"<< endl ; 
+		ExportOut.close() ;  
 		
 		//Importing data //
 		dppLevelV.clear(); 
 		dppDistV.clear();
-		std:: string importDppFileName= "./resources/DppImport_" + patch::to_string(periodCount) + ".txt" ;
+		std:: string importDppFileName= "DppImport_" + patch::to_string(periodCount) + ".txt" ;
 
 
 		std:: fstream inputDpp ;
