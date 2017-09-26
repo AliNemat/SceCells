@@ -1425,12 +1425,15 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         	cout<< " I am right after signal function" << endl; 
         	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         	cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ; 
-	
+		cout << "third dpp level is" << dppLevels_Cell.at(0) << endl ; 	
         	assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
         	thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
-		currentActiveCellCountOld=allocPara_m.currentActiveCellCount; 
+		currentActiveCellCountOld=allocPara_m.currentActiveCellCount;
+ 
+		 cout << "fourth dpp level is" << cellInfoVecs.cell_Dpp[0] << endl ; 	
 	}	 
 	   
+		 cout << "fifth dpp level is" << cellInfoVecs.cell_Dpp[0] << endl ; 	
 
        // cellInfoVecs.cell_Dpp=dppLevels ; 
         cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          

@@ -1,7 +1,8 @@
 #include <fstream>
 #include <sstream>
 #include "Signal2D.h"
-
+#include <unistd.h>
+#include <time.h>  
 namespace patch
 {
 template  < typename T> std::string to_string (const T & n)
@@ -259,7 +260,7 @@ cout << "I am in update signal end " << std::endl ;
  
 }
 
-double dppDist,dppLevel ; 
+float dppDist,dppLevel ; 
 vector<double> dppDistV,dppLevelV ;
 //double exchPeriod=2*60*60 ;  
 double minResol=0.1 ; 
@@ -286,32 +287,45 @@ if (importData) {
 		//Importing data //
 		dppLevelV.clear(); 
 		dppDistV.clear();
+
 		std:: string importDppFileName= "DppImport_" + patch::to_string(periodCount) + ".txt" ;
 
 
-		std:: fstream inputDpp ;
+		std:: ifstream inputDpp ;
 		bool fileIsOpen=false ;
-
+			
 		cout << "the file name I am looking for is " << importDppFileName <<endl ;
+		
+		sleep(400) ; 
 		while (fileIsOpen==false) {
 			inputDpp.open(importDppFileName.c_str()) ;
 			if (inputDpp.is_open()){
 				cout<< "dpp file opened successfully"<<endl; 
 				cout << "the opened file nameis " << importDppFileName <<endl ;
 				fileIsOpen=true ; 
+				 clock_t t;
+				t = clock();
+				cout << "I start to sleep time is"  <<endl ;
+				sleep(30) ; 
+				 t = clock() - t;
+				cout << "Sleep takes"<< ((float)t)/CLOCKS_PER_SEC  <<endl ;
+				cout << "the opened file nameis " << importDppFileName <<endl ;
 			}
-			//else {
-			//	cout << "failed openining dpp file"<<endl ;
-		//	}	
+			else {
+				cout << "failed openining dpp file"<<endl ;
+			}	
 		}
+		if (inputDpp.good()) {
 		cout << " I passed opening the file in the while loop"<< endl ;
-
+		}
  		periodCount+= 1 ;// abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
 		for (int i=0; i<resol ; i++) {
 			inputDpp >> dppDist >> dppLevel ;
+			cout<<"zeroth dpp is"<<dppDist<<dppLevel<< endl ; 
 			dppDistV.push_back(dppDist) ; 
 			dppLevelV.push_back(dppLevel) ;  
-		}		
+		}	
+		cout <<"first dpp value is"<< dppLevelV.at(0)<< endl ; 	
 
   		for (int k=0; k<CellCentersHost.size(); k++){
      			double DistXCell=abs(CellCentersHost[k].x-Center_X); 
@@ -335,6 +349,7 @@ if (importData) {
        		}
           
 				
+		cout <<"second dpp value is"<< dppLevels_Cell.at(0)<< endl ; 	
 		
 
 
