@@ -2233,6 +2233,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
 	thrust::device_vector<double> cell_Dpp;//Ali
+	thrust::device_vector<double> cell_DppOld;//Ali
        
 	thrust::device_vector<double> growthProgressOld;  //A&A
 //Ali
@@ -2461,7 +2462,8 @@ class SceCells {
 	thrust::constant_iterator<double> initGrowthProgress;
 
 	uint totalNodeCountForActiveCells;
-	double lastTimeExchang ; //Ali 
+	double lastTimeExchang ; //Ali
+	bool firstTimeReadDpp ;  
 	int currentActiveCellCountOld ;  //Ali  
         int plotSignal ; //Ali
 		int periodCount ; //Ali 

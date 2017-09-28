@@ -635,6 +635,7 @@ SceCells::SceCells(SceNodes* nodesInput,
         curTime=InitTimeStage ; 
         std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
 	lastTimeExchang=1000000 ; //big number
+	firstTimeReadDpp=true ; 
 	periodCount=0 ; 
 	currentActiveCellCountOld=1 ; // small number 
 	tmpDebug = false;
@@ -680,7 +681,8 @@ void SceCells::initCellInfoVecs_M() {
 	//std::cout << "max cell count = " << allocPara_m.maxCellCount << std::endl;
 	cellInfoVecs.Cell_Damp.resize(allocPara_m.maxCellCount, 36.0);   //Ali
 	cellInfoVecs.cell_Dpp.resize(allocPara_m.maxCellCount, 0.0);   //Ali
-        cout<< "size of dpp in init is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
+	cellInfoVecs.cell_DppOld.resize(allocPara_m.maxCellCount, 0.0);   //Ali
+        //cout<< "size of dpp in init is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
 	cellInfoVecs.growthProgress.resize(allocPara_m.maxCellCount, 0.0); //A&A
         cellInfoVecs.growthProgressOld.resize(allocPara_m.maxCellCount, 0.0);//Ali
 	cellInfoVecs.Cell_Time.resize(allocPara_m.maxCellCount, 0.0); //Ali
@@ -1379,7 +1381,6 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage) {   //Ali
         
         
-        cout<< "size of dpp begining of runAll is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         vector<CVector> cellCentersHost ; 
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
@@ -1425,18 +1426,18 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         	cout<< " I am right after signal function" << endl; 
         	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         	cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ; 
-		cout << "third dpp level is" << dppLevels_Cell.at(0) << endl ; 	
         	assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
         	thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
 		currentActiveCellCountOld=allocPara_m.currentActiveCellCount;
  
-		 cout << "fourth dpp level is" << cellInfoVecs.cell_Dpp[0] << endl ; 	
-	}	 
-	   
-		 cout << "fifth dpp level is" << cellInfoVecs.cell_Dpp[0] << endl ; 	
+	}
+	if (firstTimeReadDpp) {	 
+	   thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_DppOld.begin()) ;
+		firstTimeReadDpp=false ; 
+	}
 
        // cellInfoVecs.cell_Dpp=dppLevels ; 
-        cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
+        //cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
         BC_Imp_M() ; 
 	std::cout << "     *** 3.5 ***" << endl;
 	std::cout.flush();
@@ -1795,7 +1796,7 @@ void SceCells::createTwoNewCellArr_M() {
 		divDir.y = divAuxData.tmpHertwigYdir[i] ; //A&A 
 		
 		double lenAlongHertwigAxis = calLengthAlongHertwigAxis(divDir, oldCenter, membrNodes);//A&A added
-
+//
  
 		std::vector<VecVal> tmp1Membr, tmp2Membr;
 		CVector cell1Center, cell2Center;
@@ -1838,11 +1839,11 @@ void SceCells::findHertwigAxis() {
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
                cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
                
-               std::cout<<cellInfoVecs.HertwigXdir[cellRank]<<"HertwigXdir Thrust" <<std::endl;  
-               std::cout<<cellInfoVecs.HertwigYdir[cellRank]<<"HertwigYdir Thrust" <<std::endl;  
+               //std::cout<<cellInfoVecs.HertwigXdir[cellRank]<<"HertwigXdir Thrust" <<std::endl;  
+               //std::cout<<cellInfoVecs.HertwigYdir[cellRank]<<"HertwigYdir Thrust" <<std::endl;  
 
-               std::cout<<divDir.x<<"HertwigXdir " <<std::endl;  
-               std::cout<<divDir.y<<"HertwigYdir " <<std::endl;  
+               //std::cout<<divDir.x<<"HertwigXdir " <<std::endl;  
+               //std::cout<<divDir.y<<"HertwigYdir " <<std::endl;  
 
 
 	}
@@ -1885,12 +1886,15 @@ void SceCells::copyFirstCellArr_M() {
 		cellInfoVecs.membrGrowProgress[cellRank] = 0.0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
+		cellInfoVecs.cell_DppOld[cellRank] = cellInfoVecs.cell_Dpp[cellRank];
 	}
 }
 
 void SceCells::copySecondCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
+		
+		uint cellRankMother = divAuxData.tmpCellRank_M[i];
 		uint cellRank = allocPara_m.currentActiveCellCount + i;
 		uint nodeStartIndx = cellRank * maxAllNodePerCell
 				+ allocPara_m.bdryNodeCount;
@@ -1924,6 +1928,7 @@ void SceCells::copySecondCellArr_M() {
 		cellInfoVecs.membrGrowProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
+		cellInfoVecs.cell_DppOld[cellRank] = cellInfoVecs.cell_Dpp[cellRankMother];
 	}
 }
 
@@ -2699,8 +2704,8 @@ void SceCells::decideIsScheduleToGrow_M() {
 //AAMIRI May5
 void SceCells::decideIsScheduleToShrink_M() {
 
-	double laserCenterX = 26.0;
 	double laserCenterY = 25.0;
+	double laserCenterX = 25.0;
 	double laserRadius = 4.0; 
 
 	thrust::counting_iterator<uint> iBegin(0);
