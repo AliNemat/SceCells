@@ -321,7 +321,7 @@ if (importData) {
  		periodCount+= 1 ;// abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
 		for (int i=0; i<resol ; i++) {
 			inputDpp >> dppDist >> dppLevel ;
-			cout<<"zeroth dpp is"<<dppDist<<dppLevel<< endl ; 
+			//cout<<"zeroth dpp is"<<dppDist<<dppLevel<< endl ; 
 			dppDistV.push_back(dppDist) ; 
 			dppLevelV.push_back(dppLevel) ;  
 		}	
