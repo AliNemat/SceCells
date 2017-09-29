@@ -296,7 +296,7 @@ if (importData) {
 			
 		cout << "the file name I am looking for is " << importDppFileName <<endl ;
 		
-		sleep(5) ; 
+		sleep(200) ; 
 		while (fileIsOpen==false) {
 			inputDpp.open(importDppFileName.c_str()) ;
 			if (inputDpp.is_open()){
@@ -306,7 +306,7 @@ if (importData) {
 				 clock_t t;
 				t = clock();
 				cout << "I start to sleep time is"  <<endl ;
-				sleep(5) ; 
+				sleep(30) ; 
 				 t = clock() - t;
 				cout << "Sleep takes"<< ((float)t)/CLOCKS_PER_SEC  <<endl ;
 				cout << "the opened file nameis " << importDppFileName <<endl ;

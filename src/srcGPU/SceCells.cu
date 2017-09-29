@@ -1419,10 +1419,10 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;
         lastTimeExchang=lastTimeExchang+dt ; 
-	double exchPeriod=2 ; 
+	double exchPeriod=200 ; 
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
-	//if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
-	if ( lastTimeExchang>exchPeriod) {     
+	if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
+	//if ( lastTimeExchang>exchPeriod) {     
         	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang,periodCount) ; //Ali
         	cout<< " I am right after signal function" << endl; 
         	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
@@ -2096,13 +2096,13 @@ void SceCells::applyMemForce_M() {
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;  
         */
-        cout<< "# of boundary nodes"<< allocPara_m.bdryNodeCount<<endl ;
-        cout<< "# of total active nodes"<<totalNodeCountForActiveCells <<endl ;
+        //cout<< "# of boundary nodes"<< allocPara_m.bdryNodeCount<<endl ;
+        //cout<< "# of total active nodes"<<totalNodeCountForActiveCells <<endl ;
 
-        cout<<"The minimum location in X in applyMemForce_M is="<<Tisu_MinX<< endl;  
-        cout<<"The maximum location in X in applyMemForce_M is="<<Tisu_MaxX<< endl;  
-        cout<<"The minimum location in Y in applyMemForce_M is="<<Tisu_MinY<< endl;  
-        cout<<"The maximum location in Y in applyMemForce_M is="<<Tisu_MaxY<< endl;  
+        //cout<<"The minimum location in X in applyMemForce_M is="<<Tisu_MinX<< endl;  
+        //cout<<"The maximum location in X in applyMemForce_M is="<<Tisu_MaxX<< endl;  
+        //cout<<"The minimum location in Y in applyMemForce_M is="<<Tisu_MinY<< endl;  
+        //cout<<"The maximum location in Y in applyMemForce_M is="<<Tisu_MaxY<< endl;  
         //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
@@ -2477,10 +2477,10 @@ void SceCells::BC_Imp_M() {
         MaxY= *MaxY_Itr ;
  */
  
-        cout<<"The minimum location of cell cetners in Y in  BC_Imp_M is="<<Tisu_MinX<< endl;  
-        cout<<"The maximum location of cell centers in Y in  BC_Imp_M is="<<Tisu_MaxX<< endl;  
-        cout<<"The minimum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MinY<< endl;  
-        cout<<"The maximum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MaxY<< endl;  
+        //cout<<"The minimum location of cell cetners in Y in  BC_Imp_M is="<<Tisu_MinX<< endl;  
+        //cout<<"The maximum location of cell centers in Y in  BC_Imp_M is="<<Tisu_MaxX<< endl;  
+        //cout<<"The minimum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MinY<< endl;  
+        //cout<<"The maximum location of cell centers in Y in  BC_Imp_M  is="<<Tisu_MaxY<< endl;  
 /**	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
@@ -2644,10 +2644,10 @@ void SceCells::randomizeGrowth_M() {
         double CntrTisuX=0.5*(Tisu_MaxX-Tisu_MinX) ; 
         double CntrTisuY=0.5*(Tisu_MaxY-Tisu_MinY) ; 
         
-        cout<<"The minimum location of cell cetners in Y in  randomizeGrowth_M is="<<Tisu_MinX<< endl;  
-        cout<<"The maximum location of cell centers in Y in  randomizeGrowth_M is="<<Tisu_MaxX<< endl;  
-        cout<<"The minimum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MinY<< endl;  
-        cout<<"The maximum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MaxY<< endl;  
+        //cout<<"The minimum location of cell cetners in Y in  randomizeGrowth_M is="<<Tisu_MinX<< endl;  
+        //cout<<"The maximum location of cell centers in Y in  randomizeGrowth_M is="<<Tisu_MaxX<< endl;  
+        //cout<<"The minimum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MinY<< endl;  
+        //cout<<"The maximum location of cell centers in Y in randomizeGrowth_M  is="<<Tisu_MaxY<< endl;  
 
 
 	uint seed = time(NULL);
