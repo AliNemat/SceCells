@@ -1419,9 +1419,10 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;
         lastTimeExchang=lastTimeExchang+dt ; 
-	double exchPeriod=200 ; 
+	double exchPeriod=2 ; 
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
-	if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
+	//if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
+	if ( lastTimeExchang>exchPeriod) {     
         	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang,periodCount) ; //Ali
         	cout<< " I am right after signal function" << endl; 
         	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
@@ -2681,11 +2682,29 @@ void SceCells::updateGrowthProgress_M() {
 			cellInfoVecs.growthProgressOld.begin());
 
         
-	thrust::transform(cellInfoVecs.growthSpeed.begin(),
-			cellInfoVecs.growthSpeed.begin()
+	//thrust::transform(cellInfoVecs.growthSpeed.begin(),
+	//		cellInfoVecs.growthSpeed.begin()
+	//				+ allocPara_m.currentActiveCellCount,
+	//		cellInfoVecs.growthProgress.begin(),
+	//		cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
+
+
+	double dummy=0 ; 
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.cell_Dpp.begin(),
+						           cellInfoVecs.cell_DppOld.begin(),
+							   cellInfoVecs.growthProgress.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.cell_Dpp.begin(),
+							           cellInfoVecs.cell_DppOld.begin(),
+							           cellInfoVecs.growthProgress.begin()))
 					+ allocPara_m.currentActiveCellCount,
-			cellInfoVecs.growthProgress.begin(),
-			cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
+			                           cellInfoVecs.growthProgress.begin(),
+			DppGrowRegulator(dummy));  
+
+
+
 }
 
 void SceCells::decideIsScheduleToGrow_M() {

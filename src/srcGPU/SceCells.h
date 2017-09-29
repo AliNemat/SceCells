@@ -10,6 +10,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<double, double, double> DDD; //Ali 
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
@@ -2024,6 +2025,27 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 		}
 	}
 };
+
+struct DppGrowRegulator: public thrust::unary_function<DDD, double> {
+	double _dummy ;
+
+
+	__host__ __device__ DppGrowRegulator(double dummy) :
+			_dummy(dummy)  {
+	}
+	__host__ __device__ double  operator()(const DDD &dDD) {
+		double dpp = thrust::get<0>(dDD);
+		double dpp_Old = thrust::get<1>(dDD);
+		double progress = thrust::get<2>(dDD);
+		if (0.5*(dpp/dpp_Old-1)>1) {
+			return 1.0 ; 
+		}
+		else {
+			return max(0.5*(dpp/dpp_Old-1),progress)   ;
+		}
+	}
+};
+
 
 struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
 	double _speed;
