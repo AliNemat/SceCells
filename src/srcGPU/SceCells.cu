@@ -1419,10 +1419,10 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         Tisu_MinY= *MinY_Itr ; 
         Tisu_MaxY= *MaxY_Itr ;
         lastTimeExchang=lastTimeExchang+dt ; 
-	double exchPeriod=200 ; 
+	double exchPeriod=2 ; 
         Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
-	if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
-	//if ( lastTimeExchang>exchPeriod) {     
+	//if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
+	if ( lastTimeExchang>exchPeriod) {     
         	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang,periodCount) ; //Ali
         	cout<< " I am right after signal function" << endl; 
         	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
@@ -1930,6 +1930,7 @@ void SceCells::copySecondCellArr_M() {
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 		cellInfoVecs.cell_DppOld[cellRank] = cellInfoVecs.cell_Dpp[cellRankMother];
+		cellInfoVecs.cell_Dpp[cellRank]    = cellInfoVecs.cell_Dpp[cellRankMother];
 	}
 }
 
@@ -3258,7 +3259,7 @@ AniRawData SceCells::obtainAniRawData(AnimationCriteria& aniCri) {
 }
 
 AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
-		AnimationCriteria& aniCri, vector<double>& cellsPerimeter) {   //AliE
+		AnimationCriteria& aniCri, vector<double>& cellsPerimeter, vector <double> & cellsDppLevel) {   //AliE
         cout << "I am in obtainAniRawDataGivenCellColor start"<<endl; 
 	uint activeCellCount = allocPara_m.currentActiveCellCount;
 	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
@@ -3471,7 +3472,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index1];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali added 
-                                        aniVal2=dppLevels_Cell[i] ; 
+                                        //aniVal2=dppLevels_Cell[i] ; 
+                                        aniVal2=cellsDppLevel[i] ; 
                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
@@ -3486,7 +3488,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 					//aniVal = hostTmpVectorNodeType[index2];
 					aniVal = cellColors[i];
                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added 
-					aniVal2=dppLevels_Cell[i]; 
+					//aniVal2=dppLevels_Cell[i]; 
+					aniVal2=cellsDppLevel[i]; 
                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 					rawAniData.aniNodePosArr.push_back(tmpPos);
 					rawAniData.aniNodeVal.push_back(aniVal);
@@ -3532,7 +3535,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
-						        aniVal2=dppLevels_Cell[i]; 
+						        //aniVal2=dppLevels_Cell[i]; 
+						        aniVal2=cellsDppLevel[i]; 
                                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 	 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
@@ -3547,7 +3551,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 							//aniVal = hostTmpVectorNodeType[index1];
 							aniVal = cellColors[i];
                                                         rawAniData.aniNodeF_MI_M_MagN_Int.push_back(tmpF_MI_M_MagN_Int[i]/cellsPerimeter[i]) ; //Ali Added
-                                        		aniVal2=dppLevels_Cell[i]; 
+                                        		//aniVal2=dppLevels_Cell[i]; 
+                                        		aniVal2=cellsDppLevel[i]; 
                                                         rawAniData.dppLevel.push_back(aniVal2) ; //Ali Added 
 
 							rawAniData.aniNodePosArr.push_back(tmpPos);
@@ -4627,6 +4632,9 @@ CellsStatsData SceCells::outputPolyCountData() {
         thrust::host_vector<double> cellPerimHost(
  			allocPara_m.currentActiveCellCount);//AAMIRI
 
+		thrust::host_vector<double> cellDppHost(
+ 			allocPara_m.currentActiveCellCount);//Ali
+
 
 	thrust::copy(cellInfoVecs.cellAreaVec.begin(),
 			cellInfoVecs.cellAreaVec.begin()
@@ -4636,6 +4644,9 @@ CellsStatsData SceCells::outputPolyCountData() {
  			cellInfoVecs.cellPerimVec.begin()
 					+ allocPara_m.currentActiveCellCount, cellPerimHost.begin());//AAMIRI
 
+		thrust::copy(cellInfoVecs.cell_Dpp.begin(),
+ 			cellInfoVecs.cell_Dpp.begin()
+					+ allocPara_m.currentActiveCellCount, cellDppHost.begin());//Ali
 
 
         sumX=0 ; 
@@ -4721,6 +4732,7 @@ CellsStatsData SceCells::outputPolyCountData() {
 				centerCoordYHost[i], 0);
 		cellStatsData.cellArea = cellAreaHost[i];
                 cellStatsData.cellPerim = cellPerimHost[i];//AAMIRI
+                cellStatsData.cellDpp = cellDppHost[i];//Ali
 		result.cellsStats.push_back(cellStatsData);
                 sumX=sumX+cellStatsData.cellCenter.x ; 
                 sumY=sumY+cellStatsData.cellCenter.y ;

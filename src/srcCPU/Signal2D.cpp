@@ -260,6 +260,8 @@ cout << "I am in update signal end " << std::endl ;
  
 }
 
+
+ double max_Rx=max (MaxX-Center_X,Center_X-MinX) ; 
 float dppDist,dppLevel ; 
 vector<double> dppDistV,dppLevelV ;
 //double exchPeriod=2*60*60 ;  
@@ -279,7 +281,7 @@ if (importData) {
 		ofstream ExportOut ; 
 		ExportOut.open(txtFileName.c_str()); 
 		ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
-		ExportOut<<curTime<<","<<Center_X<<","<<R_x<<endl   ;
+		ExportOut<<curTime<<","<<Center_X<<","<<max_Rx<<endl   ;
 		ExportOut.flush() ;
 		cout << "I export the data"<< endl ; 
 		ExportOut.close() ;  
@@ -296,7 +298,7 @@ if (importData) {
 			
 		cout << "the file name I am looking for is " << importDppFileName <<endl ;
 		
-		sleep(200) ; 
+		sleep(20) ; 
 		while (fileIsOpen==false) {
 			inputDpp.open(importDppFileName.c_str()) ;
 			if (inputDpp.is_open()){

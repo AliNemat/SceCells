@@ -221,10 +221,10 @@ void SimulationDomainGPU::outputVtkFilesWithCri_M(std::string scriptNameBase,
 }
 
 void SimulationDomainGPU::outputVtkGivenCellColor(std::string scriptNameBase,
-		int rank, AnimationCriteria aniCri, std::vector<double>& cellColorVal,std::vector<double>& cellsPerimeter) {
+		int rank, AnimationCriteria aniCri, std::vector<double>& cellColorVal,std::vector<double>& cellsPerimeter, std::vector<double> & cellsDppLevel) {
 	nodes.prepareSceForceComputation();
 	AniRawData rawAni = cells.obtainAniRawDataGivenCellColor(cellColorVal,
-			aniCri,cellsPerimeter); //AliE
+			aniCri,cellsPerimeter,cellsDppLevel); //AliE
 	VtkAnimationData aniData = cells.outputVtkData(rawAni, aniCri);
 	aniData.outputVtkAni(scriptNameBase, rank);
 }
@@ -254,17 +254,20 @@ void SimulationDomainGPU::outputVtkColorByCell_polySide(
 
         std::cout  <<"I am in modified function" <<std:: endl; 
 	assert(aniCri.animationType == PolySide);
-        std:: vector<double> cellsPerimeter ; 
-	std::vector<double> polySideColorVec = processPolySideColor(cellsPerimeter);
-	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, polySideColorVec,cellsPerimeter);
-        cellsPerimeter.clear(); 
+        std:: vector<double> cellsPerimeter ;
+		std:: vector<double> cellsDppLevel ; 
+	std::vector<double> polySideColorVec = processPolySideColor(cellsPerimeter,cellsDppLevel);
+	outputVtkGivenCellColor(scriptNameBase, rank, aniCri, polySideColorVec,cellsPerimeter,cellsDppLevel);
+        cellsPerimeter.clear();
+		cellsDppLevel.clear(); 
 }
-std::vector<double> SimulationDomainGPU::processPolySideColor(std:: vector<double> & cellsPerimeter) {
+std::vector<double> SimulationDomainGPU::processPolySideColor(std:: vector<double> & cellsPerimeter, vector<double> &  cellsDppLevel) {
 	CellsStatsData cellStatsVec = cells.outputPolyCountData();
         for (int i=0; i< int (cellStatsVec.cellsStats.size());  i++) {
 
-        std::cout << cellStatsVec.cellsStats.size() <<"cellsStatsvec vector size is" <<std:: endl; 
+        //std::cout << cellStatsVec.cellsStats.size() <<"cellsStatsvec vector size is" <<std:: endl; 
         cellsPerimeter.push_back(cellStatsVec.cellsStats[i].cellPerim) ;
+        cellsDppLevel.push_back(cellStatsVec.cellsStats[i].cellDpp) ; //Ali 
         }
 
          //AliE        

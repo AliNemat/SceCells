@@ -97,9 +97,9 @@ class SimulationDomainGPU {
 	std::set<int> findT1Transition();
 
 	void outputVtkGivenCellColor(std::string scriptNameBase, int rank,
-			AnimationCriteria aniCri, std::vector<double>& cellColorVec, std::vector<double> & cellsPerimeter);  //AliE
+			AnimationCriteria aniCri, std::vector<double>& cellColorVec, std::vector<double> & cellsPerimeter, std::vector<double> & cellsDppLevel);  //AliE
 	std::vector<double> processT1Color();
-	std::vector<double> processPolySideColor(std::vector<double> & cellsPerimeter); //AliE
+	std::vector<double> processPolySideColor(std::vector<double> & cellsPerimeter, std::vector<double> & cellsDppLevel); //AliE
 
 public:
 	/**

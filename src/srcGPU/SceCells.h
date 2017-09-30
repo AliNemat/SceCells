@@ -2810,7 +2810,7 @@ public:
 	AniRawData obtainAniRawData(AnimationCriteria& aniCri);
 
 	AniRawData obtainAniRawDataGivenCellColor(vector<double>& cellColors,
-			AnimationCriteria& aniCri,vector<double>& cellsPerimeter);
+			AnimationCriteria& aniCri,vector<double>& cellsPerimeter, vector<double> & cellsDppLevel);
 
 	VtkAnimationData outputVtkData(AniRawData& rawAniData,
 			AnimationCriteria& aniCri);
