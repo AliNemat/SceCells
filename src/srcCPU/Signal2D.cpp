@@ -298,7 +298,7 @@ if (importData) {
 			
 		cout << "the file name I am looking for is " << importDppFileName <<endl ;
 		
-		sleep(20) ; 
+		sleep(200) ; 
 		while (fileIsOpen==false) {
 			inputDpp.open(importDppFileName.c_str()) ;
 			if (inputDpp.is_open()){
@@ -351,7 +351,7 @@ if (importData) {
        		}
           
 				
-		cout <<"second dpp value is"<< dppLevels_Cell.at(0)<< endl ; 	
+//		cout <<"second dpp value is"<< dppLevels_Cell.at(0)<< endl ; 	
 		
 
 
