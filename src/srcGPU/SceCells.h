@@ -2037,11 +2037,11 @@ struct DppGrowRegulator: public thrust::unary_function<DDD, double> {
 		double dpp = thrust::get<0>(dDD);
 		double dpp_Old = thrust::get<1>(dDD);
 		double progress = thrust::get<2>(dDD);
-		if (0.5*(dpp/dpp_Old-1)>1) {
+		if (0.5*(dpp/(dpp_Old+0.005)-1)>1) {
 			return 1.0 ; 
 		}
 		else {
-			return max(0.5*(dpp/dpp_Old-1),progress)   ;
+			return max(0.5*(dpp/(dpp_Old+0.005)-1),progress)   ;
 		}
 	}
 };
