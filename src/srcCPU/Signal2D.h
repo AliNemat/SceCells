@@ -8,4 +8,6 @@ using namespace std ;
 
 vector<double> updateSignal(vector<double> & dppLevels, const vector<CVector> & cellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang, int & periodCount) ;
 
+double NormalCDFInverse(double p);
+double RationalApproximation(double t);
 

@@ -3,6 +3,8 @@
 #include "Signal2D.h"
 #include <unistd.h>
 #include <time.h>  
+#include <stdlib.h>
+#include <stdio.h>
 namespace patch
 {
 template  < typename T> std::string to_string (const T & n)
@@ -11,6 +13,7 @@ std::ostringstream stm ;
 stm << n ; 
 return stm.str(); 
 }
+
 
 
 }
@@ -25,241 +28,7 @@ cout << "I am in update signal started" << std::endl ;
  double Center_Y=MinY+0.5*(MaxY-MinY);
  bool importData=true ; 
 
- if (importData==false) {
-	const double MinFinalX=-40; 
- 	const double MaxFinalX=100; 
- 	const double MinFinalY=-40; 
- 	const double MaxFinalY=100; 
- 
- 	const int nx=201; 
- 	const int ny=201; 
- 	double dx=(MaxFinalX-MinFinalX)/(nx-1); 
- 	double dy=(MaxFinalY-MinFinalY)/(ny-1);
- 	double x[nx+1],y[ny+1] ; 
- 	double dppLevelsOld[nx+1][ny+1]; 
- 	double dppLevels[nx+1][ny+1]; 
- 	double C_Tisu[nx+1][ny+1]; 
- 	double Prd[nx+1][ny+1]; 
-
- 	double dppS_Width=5 ; 
- 	double miu=1.0 ; 
-
-	cout << "I am in update signal 0 " << std::endl ; 
- 	for (int i=0 ; i<=nx ; i++) {
-		x[i]=MinFinalX+0.5*dx+(i-1)*dx; 
-        }
- 	for (int j=0 ; j<=ny ; j++){
-		y[j]=MinFinalY+0.5*dy+(j-1)*dy; 
-     	}
-
-        if (curTime==(InitTimeStage+dt)){
-
-        	for (int i=0 ; i<=nx; i++){
-        		for (int j=0 ; j<=ny ; j++){
-        			dppLevelsOld[i][j]=0.0; 
-        		}
-       		}
-
-       }
-       else { 
-       		int kk=0 ; 
-     		for (int i=0 ; i<=nx; i++){
-        		for (int j=0 ; j<=ny ; j++){
-        			dppLevelsOld[i][j]=dppLevelsV[kk]; 
-        			kk=kk+1 ; 
-        		}
-      		}
-      }
-
-      double Anydist; 
-      for (int i=0; i<=nx; i++){
-     		for (int j=0; j<=ny ; j++){
-        		Anydist=pow((x[i]-Center_X),2)/pow(R_x,2)+pow((y[j]-Center_Y),2)/pow(R_y,2) ; 
-       			if (Anydist<=1.0){
-         			C_Tisu[i][j]=1.0 ; 
-         		}
-       			else {
-         			C_Tisu[i][j]=0.0; 
-         		}
-
-       		}
-    	}
-
-
-    	for (int i=0; i<=nx; i++){
-    		for (int j=0; j<=ny ; j++){
-        		if (C_Tisu[i][j]==1){
-         			Anydist=abs(x[i]-Center_X) ; 
-         			if (Anydist<dppS_Width){
-         				Prd[i][j]=100.0 ;     
-         			}
-         			else
-           			{		  
-           				Prd[i][j]=0.0 ;
-           			}     
-         		}
-         
-         		else
-         		{
-	 			Prd[i][j]=0.0; 
-         		}
-
-     		}
-   	}
-
-  	for ( int i=1 ; i<=nx-1 ; i++){
-    		for (int j=1 ; j<ny-1 ; j++){
-    
-    			dppLevels[i][j]=dppLevelsOld[i][j] +dt*Prd[i][j] 
-                                       +dt*miu*(
-                                               (dppLevelsOld[i+1][j]-2*dppLevelsOld[i][j]+dppLevelsOld[i-1][j])/(dx*dx)
-                                              +(dppLevelsOld[i][j+1]-2*dppLevelsOld[i][j]+dppLevelsOld[i][j-1])/(dy*dy)
-                                               ); 
-    		}
-  	}
-
- // treating boundary
-  	for (int i=1 ; i<=nx-1; i++){
-    		dppLevels[i][0]=dppLevels[i][1]; 
-    		dppLevels[i][ny]=dppLevels[i][ny-1]; 
-   	}
-  	for (int j=0 ; j <=ny ; j++){
-    		dppLevels[0][j]=dppLevels[1][j]; 
-    		dppLevels[nx][j]=dppLevels[nx-1][j]; 
-   	}
-
-
-  	double AnyX; 
-  	double AnyY; 
- 
-  //  if (curTime==(InitTimeStage+dt)){
-	dppLevels_Cell.clear(); 
-  	for (int k=0; k<CellCentersHost.size(); k++)
-   	{
-     		AnyX=CellCentersHost[k].x; 
-     		AnyY=CellCentersHost[k].y; 
-     		int StoredI=-1 ;  //We will figure out that there is an error if stays -1  
-     		int StoredJ=-1 ; 
-  
-     for (i=0 ; i<nx ; i++)
-     {
-       if (x[i]<=AnyX && x[i+1]>=AnyX)
-        {  StoredI=i ;
-           break;  
-        }
-     }  
-     for (j=0 ; j<ny ; j++)
-     {
-       if (y[j]<=AnyY && y[j+1]>=AnyY)
-        {  StoredJ=j ;
-           break;  
-        }
-     }
-cout<< "stored I and J is"<<StoredI<<StoredJ<<endl; 
-cout<< "dpp level for stored I and J is"<<dppLevels[StoredI][StoredJ]<<endl; 
-cout << "I am in first time loop for dppLevels_cell vector pushing " << std::endl ; 
-     dppLevels_Cell.push_back(dppLevels[StoredI][StoredJ]);
-   }
-
-for (int k=CellCentersHost.size(); k<cellMax ; k++){
-     dppLevels_Cell.push_back(0.0) ;   //these cells are not active
-   }
-
-
-
-cout << "I cellmax is " <<cellMax <<std::endl ; 
-cout << "dppLevels_cell size is" << dppLevels_Cell.size()<<std::endl ; 
-
-cout << "I am in update signal end-2 " << std::endl ; 
-    if (curTime==(InitTimeStage+dt)){
-        plotSignal=0 ; 
-      for (int i=0 ; i<=nx; i++)
-      {
-        for (int j=0 ; j<=ny ; j++)
-        {
-        dppLevelsV.push_back(dppLevels[i][j]); 
-        }
-       }
-
-     }
-
-cout << "I am in update signal end-1 " << std::endl ; 
-     int kk=0 ; 
-     for (int i=0 ; i<=nx; i++)
-      {
-      for (int j=0 ; j<=ny ; j++)
-        {
-        dppLevelsV[kk]=dppLevels[i][j]; 
-        kk=kk+1 ; 
-        }
-      }
-
-
-cout << "I am in update signal end " << std::endl ;
- double z[2]; 
- z[1]=1 ; //for output purpose
- int nz=2 ; 
-            plotSignal++ ; 
-	if (plotSignal == 7000) {
-                int curTimePlot=curTime*100 ; 
-		std::string vtkFileName = "DPP_" + patch::to_string(curTimePlot) + ".vtk";
-//		std::string vtkFileName = "DPP.vtk";
-		ofstream SignalOut;
-		SignalOut.open(vtkFileName.c_str());
-		SignalOut << "# vtk DataFile Version 2.0" << endl;
-		SignalOut << "Result for paraview 2d code" << endl;
-		SignalOut << "ASCII" << endl;
-		SignalOut << "DATASET RECTILINEAR_GRID" << endl;
-		SignalOut << "DIMENSIONS" << " " << nx - 1 << " " << " " << ny - 1 << " " << nz - 1 << endl;
-
-			SignalOut << "X_COORDINATES " << nx - 1 << " float" << endl;
-			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
- 			for (int i = 1; i <= nx - 1; i++) {
- 				SignalOut << x[i] << endl;
- 			}
-
- 			SignalOut << "Y_COORDINATES " << ny - 1 << " float" << endl;
- 			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
- 			for (int j = 1; j <= ny - 1; j++) {
- 				SignalOut << y[j] << endl;
- 			}
- 
- 			SignalOut << "Z_COORDINATES " << nz - 1 << " float" << endl;
- 			//write(tp + 10000, 106) 'X_COORDINATES ', Nx - 1, ' float'
- 			for (int k = 1; k <= nz - 1; k++) {
- 				SignalOut << z[k] << endl;
- 			}
- 
- 			SignalOut << "POINT_DATA " << (nx - 1)*(ny - 1)*(nz - 1) << endl;
- 			SignalOut << "SCALARS DPP float 1" << endl;
- 			SignalOut << "LOOKUP_TABLE default" << endl;
- 
- 			for (int k = 1; k <= nz - 1; k++) {
- 				for (int j = 1; j <= ny - 1; j++) {
- 					for (int i = 1; i <= nx - 1; i++) {
- 						SignalOut << dppLevels[i][j] << endl;
- 
- 					}
- 				}
- 			}
- 
- 			SignalOut << "SCALARS Wing float 1" << endl;
- 			SignalOut << "LOOKUP_TABLE default" << endl;
- 
- 			for (int k = 1; k <= nz - 1; k++) {
- 				for (int j = 1; j <= ny - 1; j++) {
- 					for (int i = 1; i <= nx - 1; i++) {
- 						SignalOut << C_Tisu[i][j] << endl;
- 
- 					}
- 				}
- 			}
- 
- 			plotSignal = 0; 
- 		}
- 
-}
-
+srand(time(NULL));
 
  double max_Rx=max (MaxX-Center_X,Center_X-MinX) ; 
 float dppDist,dppLevel ; 
@@ -349,8 +118,17 @@ if (importData) {
        		for (int k=CellCentersHost.size(); k<cellMax ; k++){
        			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
        		}
-          
-				
+
+
+		for (int k=0 ;  k<CellCentersHost.size() ; k++) {
+			double distYAbs=abs (CellCentersHost[k].y-Center_Y); 
+          		
+			double dummy = (static_cast<double>(rand()) / RAND_MAX);
+			double ranNum = NormalCDFInverse(dummy);	
+
+			dppLevels_Cell[k]=dppLevels_Cell[k]+
+					  dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
+		}	
 //		cout <<"second dpp value is"<< dppLevels_Cell.at(0)<< endl ; 	
 		
 
@@ -363,9 +141,36 @@ if (importData) {
     //  }
 
   }
+	//std :: string  normFileName="normDistr_" + patch::to_string(periodCount)+".txt" ; 
+	//ofstream ofs(normFileName.c_str());
 
+	//double r, norm;
 
+	//for (int i = 0; i < 1000; i++) {
+	//	r = (static_cast<double>(rand()) / RAND_MAX);
+	//	norm = NormalCDFInverse(r);	
+	//	ofs << norm << endl;
+//	}
 
- 
 return  dppLevels_Cell ; 
 }
+
+double NormalCDFInverse(double p) {
+	
+	if (p < 0.5) {
+		return -RationalApproximation( sqrt(-2.0*log(p)));
+	}
+	else {
+		return RationalApproximation( sqrt(-2.0*log(1-p)));
+	}
+}
+
+double RationalApproximation(double t) {
+
+	double c[] = {2.515517, 0.802853, 0.010328};
+	double d[] = {1.432788, 0.189269, 0.001308};
+	return (t - ((c[2]*t + c[1])*t + c[0]) / (((d[2]*t + d[1])*t + d[0])*t + 1.0));
+
+}
+
+
