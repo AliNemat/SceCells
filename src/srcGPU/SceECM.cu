@@ -133,6 +133,7 @@ nodeECMLocY.resize(numNodesECM,0.0) ;
 
 linSpringForceECMX.resize(numNodesECM,0.0); 
 linSpringForceECMY.resize(numNodesECM,0.0); 
+linSpringAvgTension.resize(numNodesECM,0.0); 
 
 
 bendSpringForceECMX.resize(numNodesECM,0.0); 
@@ -242,7 +243,8 @@ thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					linSpringForceECMX.begin(),
-					linSpringForceECMY.begin())),
+					linSpringForceECMY.begin(),
+					linSpringAvgTension.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
 
 thrust:: transform (
@@ -371,7 +373,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=10000) { 
+               if (lastPrintECM>=20000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";
@@ -387,17 +389,24 @@ lastPrintECM=lastPrintECM+1 ;
 				<< 0.0 << std::endl;
 			}
 			ECMOut<< std::endl;
-			 ECMOut<< "CELLS " << nodeECMLocX.size()-1<< " " << 3 *(nodeECMLocX.size()-1)<< std::endl;
+			 ECMOut<< "CELLS " << nodeECMLocX.size()<< " " << 3 *nodeECMLocX.size()<< std::endl;
 			for (uint i = 0; i < (nodeECMLocX.size()-1); i++) {
 				ECMOut << 2 << " " << indexECM[i] << " "
 				<< indexECM[i+1] << std::endl;
 			}
+			ECMOut << 2 << " " << indexECM[nodeECMLocX.size()-1] << " "<< indexECM[0] << std::endl; //last point to the first point
 
-			ECMOut << "CELL_TYPES " << nodeECMLocX.size()-1<< endl;
-			for (uint i = 0; i < (nodeECMLocX.size()-1); i++) {
+
+			ECMOut << "CELL_TYPES " << nodeECMLocX.size()<< endl;
+			for (uint i = 0; i < nodeECMLocX.size() ; i++) {
 				ECMOut << "3" << endl;
 			}
-
+			ECMOut << "POINT_DATA "<<nodeECMLocX.size() <<endl ; 
+			ECMOut << "SCALARS Avg_Tension " << "float"<< endl;
+			ECMOut << "LOOKUP_TABLE " << "default"<< endl;
+			for (uint i = 0; i < nodeECMLocX.size(); i++) {
+				ECMOut<<linSpringAvgTension[i] <<endl ; 
+			}
 			ECMOut.close(); 
 			}
 

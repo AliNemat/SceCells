@@ -2097,6 +2097,10 @@ void SceCells::applyMemForce_M() {
                                        cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
+		bool membPolar=true ; 
+	    if (curTime<20000 ){
+			membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
+		}
 
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
@@ -2191,7 +2195,7 @@ void SceCells::applyMemForce_M() {
 							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell,membPolar));
 
 
 

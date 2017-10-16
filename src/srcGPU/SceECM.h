@@ -9,6 +9,7 @@
 typedef thrust ::tuple<int,double,double> IDD ; 
 typedef thrust ::tuple<int,double,double,bool> IDDB ; 
 typedef thrust ::tuple<double,double> DD ; 
+typedef thrust ::tuple<double,double,double> DDD ; 
 typedef thrust ::tuple<double,double,bool> DDB ; 
 typedef thrust ::tuple<double,double,bool,int> DDBI ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
@@ -56,6 +57,7 @@ thrust::device_vector<bool> nodeIsActive_Cell ;
 
 thrust::device_vector<double> linSpringForceECMX ; 
 thrust::device_vector<double> linSpringForceECMY ; 
+thrust::device_vector<double> linSpringAvgTension  ; 
  
  
 thrust::device_vector<double> bendSpringForceECMX ; 
@@ -230,7 +232,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 
 
 
-struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
+struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
          int   _numNodes ; 	
 	 double  _restLen ; 
 	 double  _linSpringStiff ;
@@ -241,7 +243,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 	__host__ __device__ LinSpringForceECM (double numNodes, double restLen, double linSpringStiff , double * locXAddr, double * locYAddr) :
 	 _numNodes(numNodes),_restLen(restLen),_linSpringStiff(linSpringStiff),_locXAddr(locXAddr),_locYAddr(locYAddr) {
 	}
-	 __device__ DD operator()(const IDD & iDD) const {
+	 __device__ DDD operator()(const IDD & iDD) const {
 	
 	int     index=    thrust::get<0>(iDD) ; 
 	double  locX=     thrust::get<1>(iDD) ; 
@@ -296,7 +298,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DD> {
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
 
-	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY) ; 
+	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ; 
 	//return thrust::make_tuple(0.0,0.0) ; 
         
 
