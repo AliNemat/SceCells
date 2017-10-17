@@ -3375,7 +3375,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			if ( hostIsActiveVec[index1]==true) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
-				tmpMembTen = hostTmpVectorNodeCurvature[index1];//Ali
+				tmpMembTen = hostTmpVectorTenMag[index1];//Ali
 				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
 
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
@@ -3405,7 +3405,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			if ( hostIsActiveVec[index1]==true ) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
-				tmpMembTen = hostTmpVectorNodeCurvature[index1];//Ali
+				tmpMembTen = hostTmpVectorTenMag[index1];//Ali
 				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
 
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
