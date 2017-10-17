@@ -214,6 +214,11 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 		fs << pointsAniData[i].rankScale << endl;
 	}
 	//AAMIRI finished writing the cell rank of each node
+	fs << "SCALARS Membr_Tension float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].colorScale3 << endl;
+	}
 
 
 	//AAMIRI starts writing tension vector data

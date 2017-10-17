@@ -3354,6 +3354,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	CVector tmpF_MI_M ;//AAmiri
 	CVector tmpExtForce;//AAMIRI
 	double tmpCurv;
+	double tmpMembTen ; 
 	uint index1;
 	int index2;
 	std::vector<BondInfo> bondInfoVec;
@@ -3374,6 +3375,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			if ( hostIsActiveVec[index1]==true) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
+				tmpMembTen = hostTmpVectorNodeCurvature[index1];//Ali
+				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
 
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
@@ -3402,6 +3405,9 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			if ( hostIsActiveVec[index1]==true ) {
 				tmpCurv = hostTmpVectorNodeCurvature[index1];//AAMIRI
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
+				tmpMembTen = hostTmpVectorNodeCurvature[index1];//Ali
+				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
+
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
 				tmpF_MI_M= CVector(node1F_MI_M_x, node1F_MI_M_y, 0.0); //AliE
@@ -3822,6 +3828,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		ptAniData.F_MI_M = rawAniData.aniNodeF_MI_M[i];//AAMIRI
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
 		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
+		ptAniData.colorScale3 = rawAniData.aniNodeMembTension[i];//Ali 
 		ptAniData.rankScale = rawAniData.aniNodeRank[i];//AAMIRI
 		ptAniData.extForce = rawAniData.aniNodeExtForceArr[i];//AAMIRI
 		vtkData.pointsAniData.push_back(ptAniData);
