@@ -2060,7 +2060,7 @@ void SceCells::applyMemForce_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	thrust::counting_iterator<uint> iBegin(0), iBegin1(0); 
+	thrust::counting_iterator<uint> iBegin(0), iBegin1(0), iBegin2(0)  ; 
  //Ali
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
         
@@ -2098,7 +2098,7 @@ void SceCells::applyMemForce_M() {
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=true ; 
-	    if (curTime<20000 ){
+	    if (curTime<100 ){
 			membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
@@ -2122,6 +2122,47 @@ void SceCells::applyMemForce_M() {
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU
 							- growthAuxData.grthPrgrCriVal_M_Ori);
+
+
+		thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+                            nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							make_transform_iterator(iBegin2,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin2,
+									ModuloFunctor(maxAllNodePerCell)))),
+																					
+
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+                            nodes->getInfoVecs().nodeAdhereIndex.begin(),
+							make_transform_iterator(iBegin2,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin2,
+									ModuloFunctor(maxAllNodePerCell))))
+					+ totalNodeCountForActiveCells,
+			nodes->getInfoVecs().nodeActinLevel.begin(),
+			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,membPolar));
+
+
+				
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -3286,6 +3327,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	thrust::host_vector<double> hostTmpVectorF_MI_M_T(maxActiveNode); //AliE
 	thrust::host_vector<double> hostTmpVectorF_MI_M_N(maxActiveNode);//AliE
 	thrust::host_vector<double> hostTmpVectorNodeCurvature(maxActiveNode);//AAMIRI
+	thrust::host_vector<double> hostTmpVectorNodeActinLevel(maxActiveNode);//Ali
 	thrust::host_vector<double> hostTmpVectorExtForceTangent(maxActiveNode);//AAMIRI
 	thrust::host_vector<double> hostTmpVectorExtForceNormal(maxActiveNode);//AAMIRI
 
@@ -3329,17 +3371,19 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							nodes->getInfoVecs().nodeF_MI_M_T.begin(), //Ali
-							nodes->getInfoVecs().nodeF_MI_M_N.begin() //Ali
+							nodes->getInfoVecs().nodeF_MI_M_N.begin(), //Ali
+							nodes->getInfoVecs().nodeActinLevel.begin() //Ali
 							)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							nodes->getInfoVecs().nodeF_MI_M_T.begin(),//AliE
-							nodes->getInfoVecs().nodeF_MI_M_N.begin() //AliE
+							nodes->getInfoVecs().nodeF_MI_M_N.begin(), //AliE
+							nodes->getInfoVecs().nodeActinLevel.begin() //Ali
 							))
 					+ maxActiveNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							hostTmpVectorF_MI_M_T.begin(), hostTmpVectorF_MI_M_N.begin()
+							hostTmpVectorF_MI_M_T.begin(), hostTmpVectorF_MI_M_N.begin(),hostTmpVectorNodeActinLevel.begin()
 							)));
 
 
@@ -3355,6 +3399,7 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 	CVector tmpExtForce;//AAMIRI
 	double tmpCurv;
 	double tmpMembTen ; 
+	double tmpActinLevel ; 
 	uint index1;
 	int index2;
 	std::vector<BondInfo> bondInfoVec;
@@ -3377,6 +3422,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 				tmpMembTen = hostTmpVectorTenMag[index1];//Ali
 				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
+				tmpActinLevel = hostTmpVectorNodeActinLevel[index1];//Ali
+				rawAniData.aniNodeActinLevel.push_back(tmpActinLevel);//Ali
 
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
@@ -3407,6 +3454,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 				rawAniData.aniNodeCurvature.push_back(tmpCurv);//AAMIRI
 				tmpMembTen = hostTmpVectorTenMag[index1];//Ali
 				rawAniData.aniNodeMembTension.push_back(tmpMembTen);//Ali
+				tmpActinLevel = hostTmpVectorNodeActinLevel[index1];//Ali
+				rawAniData.aniNodeActinLevel.push_back(tmpActinLevel);//Ali
 
 				node1F_MI_M_x= hostTmpVectorF_MI_M_x[index1]; //AliE
 				node1F_MI_M_y= hostTmpVectorF_MI_M_y[index1]; //AliE
@@ -3829,6 +3878,7 @@ VtkAnimationData SceCells::outputVtkData(AniRawData& rawAniData,
 		ptAniData.colorScale = rawAniData.aniNodeVal[i];
 		ptAniData.colorScale2 = rawAniData.aniNodeCurvature[i];//AAMIRI
 		ptAniData.colorScale3 = rawAniData.aniNodeMembTension[i];//Ali 
+		ptAniData.colorScale4 = rawAniData.aniNodeActinLevel[i];//Ali 
 		ptAniData.rankScale = rawAniData.aniNodeRank[i];//AAMIRI
 		ptAniData.extForce = rawAniData.aniNodeExtForceArr[i];//AAMIRI
 		vtkData.pointsAniData.push_back(ptAniData);

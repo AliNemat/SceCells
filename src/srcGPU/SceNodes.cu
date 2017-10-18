@@ -2447,6 +2447,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeVelTangent.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeVelNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeCurvature.resize(maxTotalNodeCount, 0.0);//AAMIRI
+	infoVecs.nodeActinLevel.resize(maxTotalNodeCount, 0.0);//Ali
 	infoVecs.nodeExtForceX.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeExtForceY.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeExtForceTangent.resize(maxTotalNodeCount);//AAMIRI

@@ -835,7 +835,9 @@ public:
 	thrust::device_vector<double> nodeVelTangent;//AAMIRI
 // Normal to the nodes
 	thrust::device_vector<double> nodeVelNormal;//AAMIRI
-// Curvature at the nodes
+//Sitffness of the cells representing actin level
+	thrust::device_vector<double> nodeActinLevel;//Ali 
+// Curvature at the node
 	thrust::device_vector<double> nodeCurvature;//AAMIRI
 
 //External forces on nodes in x dir

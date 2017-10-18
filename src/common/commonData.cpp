@@ -219,6 +219,11 @@ void VtkAnimationData::outputVtkAni(std::string scriptNameBase, int rank) {
 	for (uint i = 0; i < pointsAniData.size(); i++) {
 		fs << pointsAniData[i].colorScale3 << endl;
 	}
+	fs << "SCALARS Actinomysoin float" << endl;
+	fs << "LOOKUP_TABLE default" << endl;
+	for (uint i = 0; i < pointsAniData.size(); i++) {
+		fs << pointsAniData[i].colorScale4 << endl;
+	}
 
 
 	//AAMIRI starts writing tension vector data

@@ -21,6 +21,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //Ali comment
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<uint, double, int ,uint, uint> ActinData;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -432,6 +433,57 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 };
 */ 
 //Ali comment end
+
+//Ali Acin Level
+struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double _minY ; 
+	double _maxY ; 
+	bool _membPolar ; 
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ ActinLevelCal(uint maxNodePerCell, bool* isActiveAddr, double minY, double maxY,bool membPolar) :
+			 _maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _minY(minY),_maxY(maxY),_membPolar(membPolar) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ double operator()(const ActinData &actinData) const {
+
+		uint activeMembrCount = thrust::get<0>(actinData);
+		double cell_CenterY = thrust::get<1>(actinData);
+		int    adhereIndex= thrust::get<2>(actinData);
+		uint   cellRank = thrust::get<3>(actinData);
+		uint   nodeRank = thrust::get<4>(actinData);
+
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+		double actinLevel ; 
+		double forceVal2 ; 
+		
+		double kStiff=200 ; 
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return 0.0;
+		} else {
+
+			if (_membPolar) {	
+					if (adhereIndex==-1) {
+							actinLevel=kStiff *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+					}
+					else {
+							actinLevel=1*kStiff *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+					}
+			}
+			else {
+					actinLevel=1*kStiff ;
+				}
+
+
+		   return actinLevel;
+
+	}
+}
+}; 
+
+
 
 //Ali
 struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {

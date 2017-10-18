@@ -570,8 +570,9 @@ struct PointAniData {
 	double F_MI_M_MagN_Int; //AliE
 	CVector extForce;//AAMIRI
 	double colorScale;
-	double colorScale2;//AAMIRI
-	double colorScale3;//Ali
+	double colorScale2;//AAMIRI //curvature
+	double colorScale3;//Ali  //membrane tension
+	double colorScale4;//Ali //actin 
 	int rankScale;//AAMIRI
 };
 
@@ -634,6 +635,7 @@ struct AniRawData {
 	std::vector<double> aniNodeVal;
 	std::vector<double> aniNodeCurvature;//AAMIRI
 	std::vector<double> aniNodeMembTension ;//Ali 
+	std::vector<double> aniNodeActinLevel ;//Ali 
 	std::vector<int> aniNodeRank;//AAMIRI
 	std::vector<LinkAniData> memLinks;
 	std::vector<LinkAniData> internalLinks;
