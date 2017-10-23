@@ -50,6 +50,14 @@ double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri
 //
 //Ali
 __device__
+double calMembrForce_Actin(double& length, double kAvg) {
+			return (length - membrEquLen) * kAvg;
+		 
+
+}
+
+
+__device__
 double calExtForce(double& curTime) {
 		return curTime * F_Ext_Incline_M2;
 }
@@ -2162,6 +2170,8 @@ void SceCells::applyMemForce_M() {
 			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,membPolar));
 
 
+	double* nodeActinLevelAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeActinLevel[0])); //assuming that number of boundary nodes are equal to zero
 				
 
 	thrust::transform(
@@ -2236,7 +2246,7 @@ void SceCells::applyMemForce_M() {
 							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell,membPolar));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr,nodeActinLevelAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell,membPolar));
 
 
 

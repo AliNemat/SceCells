@@ -43,9 +43,12 @@ double calExtForce(double& curTime);
 //__device__
 //double calMembrForce(double& length);
 
-//Ali & Abu June 30th
+//Ali & Abu June 30th 2016  
 __device__
-double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri, double adhereIndex);
+double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri, double nodeAdhereIndex);
+//Ali Oc 17th 2017
+__device__
+double calMembrForce_Actin(double& length, double kAvg);
 __device__
 double calBendMulti(double& angle, uint activeMembrCt);
 
@@ -457,7 +460,6 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		double actinLevel ; 
-		double forceVal2 ; 
 		
 		double kStiff=200 ; 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
@@ -493,6 +495,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 	double* _locYAddr;
 	bool* _isActiveAddr;
 	int* _adhereIndexAddr;
+	double* _actinLevelAddr;
 	double _mitoticCri;
 	double _minY ; 
 	double _maxY ; 
@@ -500,9 +503,9 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddMembrForce(uint bdryCount, uint maxNodePerCell,
-			double* locXAddr, double* locYAddr, bool* isActiveAddr, int* adhereIndexAddr,double mitoticCri, double minY, double maxY,bool membPolar) :
+			double* locXAddr, double* locYAddr, bool* isActiveAddr, int* adhereIndexAddr,double *actinLevelAddr, double mitoticCri, double minY, double maxY,bool membPolar) :
 			_bdryCount(bdryCount), _maxNodePerCell(maxNodePerCell), _locXAddr(
-					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),_adhereIndexAddr(adhereIndexAddr), _mitoticCri(mitoticCri),_minY(minY),_maxY(maxY),_membPolar(membPolar) {
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),_adhereIndexAddr(adhereIndexAddr),_actinLevelAddr(actinLevelAddr), _mitoticCri(mitoticCri),_minY(minY),_maxY(maxY),_membPolar(membPolar) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__device__ CVec10 operator()(const TensionData &tData) const {
@@ -540,8 +543,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		double rightDiffX;
 		double rightDiffY;
 		double lenRight;
-		double forceVal2 ; 
-		
+        double kAvgRight,kAvgLeft ; 		
 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return thrust::make_tuple(velX, velY, mag, rightMag, midX, midY,
@@ -556,29 +558,17 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 			if (_isActiveAddr[index_left]) {
 				leftPosX = _locXAddr[index_left];
 				leftPosY = _locYAddr[index_left];
+				kAvgLeft=0.5*(_actinLevelAddr[index_left]+_actinLevelAddr[index]); 
 				leftDiffX = leftPosX - locX;
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
-				double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri,adhereIndex); //Ali & Abu June 30th
+				//double forceVal = calMembrForce_Mitotic(lenLeft,progress, _mitoticCri,adhereIndex); //Ali & Abu June 30th
+				double forceVal = calMembrForce_Actin(lenLeft,kAvgLeft); // Ali & June 30th
 			        //if (adhereIndex==-1 && _adhereIndexAddr[index_left]==-1) {
-				if (_membPolar){
-			        if (adhereIndex==-1) {
-					forceVal2=1*forceVal*(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-					}
-					//else if (adhereIndex==-1 || _adhereIndexAddr[index_left]==-1){
-					//	forceVal=1*forceVal ; 	
-					//	}
-					else {
-						forceVal2=1*forceVal *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-					}
-				}
-				else {
-					forceVal2=forceVal ;
-				}
 				if (longEnough(lenLeft)) {
-					velX = velX + 1.0*forceVal2 * leftDiffX / lenLeft;
-					velY = velY + 1.0*forceVal2 * leftDiffY / lenLeft;
-					mag = forceVal2 + mag;
+					velX = velX + forceVal * leftDiffX / lenLeft;
+					velY = velY + forceVal * leftDiffY / lenLeft;
+					mag = forceVal + mag;
 				}
 			}
 
@@ -591,33 +581,19 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 			if (_isActiveAddr[index_right]) {
 				rightPosX = _locXAddr[index_right];
 				rightPosY = _locYAddr[index_right];
+				kAvgRight=0.5*(_actinLevelAddr[index_right]+_actinLevelAddr[index]); 
 				rightDiffX = rightPosX - locX;
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(
 						rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri,adhereIndex); // Ali & June 30th
+				//double forceVal = calMembrForce_Mitotic(lenRight,progress, _mitoticCri,adhereIndex); // Ali & June 30th
+				double forceVal = calMembrForce_Actin(lenRight,kAvgRight); // Ali & June 30th
 				//if (adhereIndex==-1 && _adhereIndexAddr[index_right]==-1) {
-				if (_membPolar) {	
-					if (adhereIndex==-1) {
-						forceVal2=1*forceVal *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-					}
-					//	else if (adhereIndex==-1 || _adhereIndexAddr[index_right]==-1){
-					//		forceVal=1000*forceVal ; 	
-					//	}
-					else {
-						forceVal2=1*forceVal *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-					}
-				}
-				else {
-					forceVal2=forceVal ;
-				}
-
-
-				if (longEnough(lenRight)) {
-					velX = velX + 1.0*forceVal2 * rightDiffX / lenRight;
-					velY = velY + 1.0*forceVal2 * rightDiffY / lenRight;
-					mag = forceVal2 + mag;
-					rightMag = forceVal2;
+			if (longEnough(lenRight)) {
+					velX = velX + forceVal * rightDiffX / lenRight;
+					velY = velY + forceVal * rightDiffY / lenRight;
+					mag = forceVal + mag;
+					rightMag = forceVal;
 					midX = (rightPosX + locX) / 2;
 					midY = (rightPosY + locY) / 2;
 				}
