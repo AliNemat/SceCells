@@ -178,7 +178,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	double fTotalMorse=0.0 ;
 	double distMin=10000 ; 
 	double distMinX, distMinY ; 
-	double kStifMemECM=3.0 ; 
+	double kStifMemECM=3.0 ; //3.0 
 	double distMaxAdh=0.78125; 
 	double distSponAdh=0.0625 ; 
 	double fAdhMemECM=0.0   ; 
@@ -212,12 +212,12 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	}
 	
 	if (fTotalMorse!=0.0){	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.003/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.003/36.0),true,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.001/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.001/36.0),true,adhPairECM)  ; 
 	}
 		
 	else {
 	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.003/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.003/36.0),false,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.001/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.001/36.0),false,adhPairECM)  ; 
  
 	}
         	
@@ -336,7 +336,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-	double kAdhECM=3.0 ; 
+	double kAdhECM=3 ; 
 	double distAdhSpon=0.0625 ; 
 	double distAdhMax=0.78125 ; 
 	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 

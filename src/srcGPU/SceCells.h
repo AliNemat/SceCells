@@ -468,10 +468,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_membPolar) {	
 					if (adhereIndex==-1) {
-							actinLevel=kStiff *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+							actinLevel=kStiff *(1.0-0.1*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 					}
 					else {
-							actinLevel=1*kStiff *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+							actinLevel=1*kStiff *(0.9+0.1*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 					}
 			}
 			else {
@@ -559,6 +559,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				leftPosX = _locXAddr[index_left];
 				leftPosY = _locYAddr[index_left];
 				kAvgLeft=0.5*(_actinLevelAddr[index_left]+_actinLevelAddr[index]); 
+				//kAvgLeft=_actinLevelAddr[index]; 
 				leftDiffX = leftPosX - locX;
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
@@ -582,6 +583,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 				rightPosX = _locXAddr[index_right];
 				rightPosY = _locYAddr[index_right];
 				kAvgRight=0.5*(_actinLevelAddr[index_right]+_actinLevelAddr[index]); 
+				//kAvgRight=_actinLevelAddr[index]; 
 				rightDiffX = rightPosX - locX;
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(
@@ -1114,7 +1116,7 @@ struct MultiWithLimit: public thrust::unary_function<double, double> {
 		}
 	}
 };
-
+//Ali simplifies
 struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 	/*
 	 * Growth speed set to be constant when growth is necessary.
@@ -1149,7 +1151,8 @@ struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 		if (curActiveMembrNode < targetMembrCt) {
 			return _constSpeed;
 		} else {
-			return 0;
+			//return 0;
+			return _constSpeed;
 		}
 	}
 };
@@ -1171,9 +1174,10 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		double progress = thrust::get<1>(uidd); //Ali
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-	//		return thrust::make_tuple(true, 0);
-			return thrust::make_tuple(false, progress); //No growth
+		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
+		if (curActiveMembrNode < _bound  && LengthMax>0.0975 ) {
+			return thrust::make_tuple(true, 0);
+			//return thrust::make_tuple(false, progress); //No growth
 		} else {
 			return thrust::make_tuple(false, progress);
 		}

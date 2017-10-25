@@ -73,7 +73,7 @@ typedef thrust::tuple<double, double, double, uint> DDDUi;//AAMIRI
 typedef thrust::tuple<bool, int> BoolInt;
 typedef thrust::tuple<uint, bool> UiB;
 typedef thrust::tuple<bool, uint, double> BoolUID;
-typedef thrust::tuple<bool, int, int, double, double> BoolIUiDD;
+typedef thrust::tuple<bool, int, uint, double, double> BoolIUiDD;
 typedef thrust::tuple<bool, uint, double, double, uint, double> BoolUIDDUID;
 typedef thrust::tuple<bool, uint, double, double, uint, uint, bool, double> BoolUIDDUIUIBoolD;//AAMIRI
 typedef thrust::tuple<uint, uint, bool, double> UiUiBD;//AAMIRI
@@ -603,15 +603,16 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	int* _nodeAdhereIndex;
 	int* _membrIntnlIndex;
 	double* _nodeGroProAddr;
+	bool _adhNotSet ; 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
 	AddForceDisc_M(uint* valueAddress, double* nodeLocXAddress,
 			double* nodeLocYAddress, int* nodeAdhereIndex, int* membrIntnlIndex,
-			double* nodeGrowProAddr) :
+			double* nodeGrowProAddr,bool adhNotSet) :
 			_extendedValuesAddress(valueAddress), _nodeLocXAddress(
 					nodeLocXAddress), _nodeLocYAddress(nodeLocYAddress), _nodeAdhereIndex(
 					nodeAdhereIndex), _membrIntnlIndex(membrIntnlIndex), _nodeGroProAddr(
-					nodeGrowProAddr) {
+					nodeGrowProAddr),_adhNotSet(adhNotSet) {
 	}
 	__device__
 	CVec2 operator()(const Tuuudd &u3d2) const {
@@ -627,8 +628,10 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		bool isSuccess = false;
 		uint index;
 		double dist;
-                bool  Lennard_Jones =Is_Lennard_Jones() ; 
+                bool  Lennard_Jones =Is_Lennard_Jones() ;
+		if (_adhNotSet){
 		_nodeAdhereIndex[myValue] = -1 ; 
+		}
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOther = _extendedValuesAddress[i];
 			if (nodeRankOther == myValue) {
@@ -643,18 +646,22 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
                                                }
+			if(_adhNotSet){
 			//	if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
 							yPos, _nodeLocXAddress[nodeRankOther],
 							_nodeLocYAddress[nodeRankOther]);
 			//	}
-//Ali 
+//Ali
+
+			}
 			}
 		}
-		if (isSuccess) {
-			_nodeAdhereIndex[myValue] = index;
+		if (_adhNotSet) {
+			if (isSuccess) {
+				_nodeAdhereIndex[myValue] = index;
+			}
 		}
-
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
@@ -710,10 +717,11 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 	double* _nodeLocXArrAddr;
 	double* _nodeLocYArrAddr;
 	double* _nodeGrowProAddr;
+	int* _nodeAdhAddr ; 
 // comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__
-	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr, double* nodeGrowProAddr) :
-			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr), _nodeGrowProAddr(nodeGrowProAddr) {
+	ApplyAdh(double* nodeLocXArrAddr, double* nodeLocYArrAddr, double* nodeGrowProAddr, int* nodeAdhAddr  ) :
+			_nodeLocXArrAddr(nodeLocXArrAddr), _nodeLocYArrAddr(nodeLocYArrAddr), _nodeGrowProAddr(nodeGrowProAddr), _nodeAdhAddr(nodeAdhAddr) {
 	}
 	__device__
 	CVec2 operator()(const BoolIUiDD& adhInput) const {
@@ -726,19 +734,37 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		double growProgNeigh = _nodeGrowProAddr[adhIndx];
 		//bool adhSkipped = false;	
 		double alpha = getMitoticAdhCoef(growProg, growProgNeigh);//to adjust the mitotic values of stiffness
+		int maxNodePerCell=680  ; 
+		int cellRank=nodeIndx/maxNodePerCell ;
+		int nodeRank=nodeIndx%maxNodePerCell ;
+		int activeMembCount=600 ; 
 
+		int indexLeft=nodeRank-1;
+		if (indexLeft==-1){
+			indexLeft=activeMembCount-1 ;
+		}
+		indexLeft=indexLeft+cellRank*maxNodePerCell ;
+		int indexRight=nodeRank+1 ;
+		if (indexRight==activeMembCount){
+			indexRight=0 ; 
+		}
+		indexRight=indexRight+cellRank*maxNodePerCell ;
 
 		if (adhIndx == -1 || !isActive) {
 			return thrust::make_tuple(oriVelX, oriVelY);
-		} else {
-			double locX = _nodeLocXArrAddr[nodeIndx];
-			double locY = _nodeLocYArrAddr[nodeIndx];
-			double adhLocX = _nodeLocXArrAddr[adhIndx];
-			double adhLocY = _nodeLocYArrAddr[adhIndx];
-			handleAdhesionForce_M(adhIndx, locX, locY, adhLocX, adhLocY,
+		} 
+		else {	//else if  (_nodeAdhAddr[indexLeft]==-1 || _nodeAdhAddr[indexRight]==-1){ 
+				double locX = _nodeLocXArrAddr[nodeIndx];
+				double locY = _nodeLocYArrAddr[nodeIndx];
+				double adhLocX = _nodeLocXArrAddr[adhIndx];
+				double adhLocY = _nodeLocYArrAddr[adhIndx];
+				handleAdhesionForce_M(adhIndx, locX, locY, adhLocX, adhLocY,
 					oriVelX, oriVelY, alpha);
-			return thrust::make_tuple(oriVelX, oriVelY);
+				return thrust::make_tuple(oriVelX, oriVelY);
 		}
+	//	else { 
+	//		return thrust::make_tuple(oriVelX, oriVelY);
+	//	}
 	}
 };
 
@@ -922,6 +948,7 @@ struct NodeAuxVecs {
  * 4) maximum number of uinter-cellular links per node
  */
 class SceNodes {
+	bool adhNotSet ; 
 	SceDomainPara domainPara;
 	SceMechPara mechPara;
 	NodeAllocPara allocPara;

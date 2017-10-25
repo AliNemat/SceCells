@@ -603,7 +603,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 
  
 		//rawData.cellGrowProgVec.push_back(randNum);
-		rawData.cellGrowProgVec.push_back(0.5);
+		rawData.cellGrowProgVec.push_back(0.75);
 	}
 
 	std::cout << "Printing initial cell center positions ......" << std::endl;

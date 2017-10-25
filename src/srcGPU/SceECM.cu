@@ -181,8 +181,8 @@ thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActi
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
 
-int maxAllNodePerCell=240 ;
-int maxMembrNodePerCell=200 ;
+int maxAllNodePerCell=680 ;
+int maxMembrNodePerCell=600 ;
 double eCMBendStiff=0.0 ; 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
@@ -340,7 +340,7 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.003 ;   
+double dt=0.001 ;   
 double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
@@ -373,10 +373,10 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=20000) { 
+               if (lastPrintECM>=1000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
-			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM) + ".vtk";
+			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM-1) + ".vtk";
 			ofstream ECMOut;
 			ECMOut.open(vtkFileName.c_str());
 			ECMOut<< "# vtk DataFile Version 3.0" << endl;

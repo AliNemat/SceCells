@@ -324,6 +324,8 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
         std::cout << " I am in SceNodes constructor with short input which includes copyParaToGPUConstMem_M  function " << endl ; 
 	//std::cout << "at the end" << std::endl;
 	//std::cout.flush();
+	adhNotSet=true ; 
+	cout << "adhesion not set is initialized as" << adhNotSet << endl ; 
 }
 
 void SceNodes::copyParaToGPUConstMem() {
@@ -2199,6 +2201,7 @@ void SceNodes::applySceForcesDisc_M() {
 			&infoVecs.membrIntnlIndex[0]);
 	double* nodeGrowProAddr = thrust::raw_pointer_cast(
 			&infoVecs.nodeGrowPro[0]);
+	
 
 	thrust::transform(
 			make_zip_iterator(
@@ -2230,7 +2233,9 @@ void SceNodes::applySceForcesDisc_M() {
 							make_permutation_iterator(infoVecs.nodeVelY.begin(),
 									auxVecs.bucketValues.begin()))),
 			AddForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
-					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr));
+					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr,adhNotSet));
+	
+	//adhNotSet= false ; 
 }
 
 const SceDomainPara& SceNodes::getDomainPara() const {
@@ -2625,6 +2630,8 @@ void SceNodes::applyMembrAdh_M() {
 	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
 	double* nodeGrowProAddr = thrust::raw_pointer_cast(
 			&infoVecs.nodeGrowPro[0]);
+	int* nodeAdhAddr = thrust::raw_pointer_cast(&infoVecs.nodeAdhereIndex[0]);
+	//thrust::counting_iterator<uint> iBegin_node(0); 
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -2640,7 +2647,11 @@ void SceNodes::applyMembrAdh_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(infoVecs.nodeVelX.begin(),
 							infoVecs.nodeVelY.begin())),
-			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr));
+			ApplyAdh(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr,nodeAdhAddr));
+		//for (int i=0 ; i<140 ; i++){
+		//	cout <<"adhesion index for "<<i << " is "<<infoVecs.nodeAdhereIndex[i]<< endl ; 
+//		}
+
 }
 
 //AAMIRI

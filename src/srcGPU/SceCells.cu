@@ -2106,7 +2106,7 @@ void SceCells::applyMemForce_M() {
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=true ; 
-	    if (curTime<100 ){
+	    if (curTime<1 ){
 			membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
@@ -4019,7 +4019,7 @@ void SceCells::copyToGPUConstMem() {
 
 void SceCells::handleMembrGrowth_M() {
 	// figure out membr growth speed
-	calMembrGrowSpeed_M();
+	calMembrGrowSpeed_M();  //Ali: to my understanding it doesn't do anything right now. it will be override by adjustMembrGrowSpeed_M 
 	// figure out which cells will add new point
 
 	adjustMembrGrowSpeed_M();
