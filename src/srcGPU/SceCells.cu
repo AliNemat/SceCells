@@ -4063,6 +4063,26 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
+	//Ali for min Distance
+
+	thrust::counting_iterator<uint> iBegin_min(0);
+thrust::reduce_by_key(
+			make_transform_iterator(iBegin_min, DivideFunctor(maxNPerCell)), // begin of the key 
+			make_transform_iterator(iBegin_min, DivideFunctor(maxNPerCell))  // end of the key 
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin_min,   // values to reduce by key 
+									ModuloFunctor(maxNPerCell)),  
+							nodes->getInfoVecs().membrDistToRi.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),  // to Store reduced version of key 
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.minTenIndxVec.begin(),  // to sotred the reduce verision of values 
+							cellInfoVecs.minDistToRiVec.begin())), 
+			thrust::equal_to<uint>(), MinWInfo());  // how to sort the keys & how to reduce the parameters assigned to based on each key
+// equal_to mean how we set the beans to reduce. For example here we are saying if they are equal in Int we compare them and would peroform the reduction.
+
 	thrust::reduce_by_key(
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))

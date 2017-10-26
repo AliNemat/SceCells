@@ -11,6 +11,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, double> UiD; //Ali 
 typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
@@ -179,6 +180,20 @@ struct MaxWInfo: public thrust::binary_function<DUiDDD, DUiDDD, DUiDDD> {
 			return data1;
 		} else {
 			return data2;
+		}
+	}
+};
+
+//Ali
+struct MinWInfo: public thrust::binary_function<UiD, UiD, UiD> {
+	__host__ __device__ UiD operator()(const UiD & data_1,
+			const UiD & data_2) {
+		double num1 = thrust::get<1>(data_1);
+		double num2 = thrust::get<1>(data_2);
+		if (num1 < num2) {
+			return data_1;
+		} else {
+			return data_2;
 		}
 	}
 };
@@ -2392,10 +2407,12 @@ struct CellInfoVecs {
 	thrust::device_vector<double> membrGrowSpeed;
 	thrust::device_vector<double> maxTenRiVec;
 	thrust::device_vector<double> maxDistToRiVec;  //Ali 
+	thrust::device_vector<double> minDistToRiVec;  //Ali 
 	thrust::device_vector<double> maxTenRiMidXVec;
 	thrust::device_vector<double> maxTenRiMidYVec;
 	thrust::device_vector<double> aveTension;
 	thrust::device_vector<uint> maxTenIndxVec;
+	thrust::device_vector<uint> minTenIndxVec; //Ali 
 	thrust::device_vector<bool> isMembrAddingNode;
 
 	thrust::device_vector<double> cellAreaVec;
