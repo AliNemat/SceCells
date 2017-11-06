@@ -186,8 +186,7 @@ struct MaxWInfo: public thrust::binary_function<DUiDDD, DUiDDD, DUiDDD> {
 
 //Ali
 struct MinWInfo: public thrust::binary_function<UiD, UiD, UiD> {
-	__host__ __device__ UiD operator()(const UiD & data_1,
-			const UiD & data_2) {
+	__host__ __device__ UiD operator()(const UiD & data_1,const UiD & data_2) {
 		double num1 = thrust::get<1>(data_1);
 		double num2 = thrust::get<1>(data_2);
 		if (num1 < num2) {
@@ -1131,7 +1130,7 @@ struct MultiWithLimit: public thrust::unary_function<double, double> {
 		}
 	}
 };
-//Ali simplifies
+//Ali simplifies: ration between the internal element and membrane nodes is not checked anymore 
 struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 	/*
 	 * Growth speed set to be constant when growth is necessary.
@@ -1198,6 +1197,31 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		}
 	}
 };
+
+//Ali
+struct MemDelFunc: public thrust::unary_function<UiDD, BoolD> {
+	uint _bound;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
+	__host__ __device__ MemDelFunc(uint bound) :
+			_bound(bound) {
+	}
+	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
+	__host__ __device__ BoolD operator()(const UiDD& uidd) {
+		//Ali double progress = thrust::get<0>(dui);
+		uint   curActiveMembrNode = thrust::get<0>(uidd); //Ali
+		double progress = thrust::get<1>(uidd); //Ali
+                double LengthMin=thrust::get<2>(uidd); //Ali
+		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
+		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.0375 ) {
+			return thrust::make_tuple(true, 0);
+			//return thrust::make_tuple(false, progress); //No growth
+		} else {
+			return thrust::make_tuple(false, progress);
+		}
+	}
+};
+
 
 /**
  * One dimensional version of a*X plus Y, return one if result is larger than one.
@@ -2414,6 +2438,7 @@ struct CellInfoVecs {
 	thrust::device_vector<uint> maxTenIndxVec;
 	thrust::device_vector<uint> minTenIndxVec; //Ali 
 	thrust::device_vector<bool> isMembrAddingNode;
+	thrust::device_vector<bool> isMembrRemovingNode; // Ali
 
 	thrust::device_vector<double> cellAreaVec;
         thrust::device_vector<double> cellPerimVec;//AAMIRI
@@ -2838,6 +2863,7 @@ class SceCells {
 	 */
 	void adjustMembrGrowSpeed_M();
 	void decideIfAddMembrNode_M();
+	void decideIfDelMembrNode_M(); // Ali
 	void addMembrNodes_M();
 
 	bool tmpDebug;

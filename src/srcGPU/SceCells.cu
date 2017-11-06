@@ -726,9 +726,12 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.growthYDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.isRandGrowInited.resize(allocPara_m.maxCellCount, false);
 	cellInfoVecs.isMembrAddingNode.resize(allocPara_m.maxCellCount, false);
+	cellInfoVecs.isMembrRemovingNode.resize(allocPara_m.maxCellCount, false); // Ali
 	cellInfoVecs.maxTenIndxVec.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.minTenIndxVec.resize(allocPara_m.maxCellCount); //Ali
 	cellInfoVecs.maxTenRiVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxDistToRiVec.resize(allocPara_m.maxCellCount); //Ali
+	cellInfoVecs.minDistToRiVec.resize(allocPara_m.maxCellCount); //Ali
 	cellInfoVecs.maxTenRiMidXVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.maxTenRiMidYVec.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.aveTension.resize(allocPara_m.maxCellCount);
@@ -4022,9 +4025,11 @@ void SceCells::handleMembrGrowth_M() {
 	calMembrGrowSpeed_M();  //Ali: to my understanding it doesn't do anything right now. it will be override by adjustMembrGrowSpeed_M 
 	// figure out which cells will add new point
 
-	adjustMembrGrowSpeed_M();
+	adjustMembrGrowSpeed_M(); // for now just a constant speed to give some relaxation before adding another node.
 
-	decideIfAddMembrNode_M();
+	// returning a bool and progress for each cell. if bool is true (a node sould be added) progress will be reset to give relaxation time after adding the node. Otherwise growth prgoress will be incremented
+	decideIfAddMembrNode_M(); 
+	decideIfDelMembrNode_M(); 
 // add membr nodes
 	addMembrNodes_M();
 	//membrDebug();
@@ -4159,6 +4164,25 @@ void SceCells::decideIfAddMembrNode_M() {
 			MemGrowFunc(maxMembrNode));
 
 }
+//Ali
+void SceCells::decideIfDelMembrNode_M() {
+	uint curActCellCt = allocPara_m.currentActiveCellCount;
+		uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+         thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.minDistToRiVec.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
+							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.minDistToRiVec.begin()))
+					+ curActCellCt,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.isMembrRemovingNode.begin(),
+							cellInfoVecs.membrGrowProgress.begin())),
+			MemDelFunc(maxMembrNode));
+
+}
+
 
 /**
  * Add new membrane elements to cells.
