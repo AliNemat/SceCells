@@ -245,7 +245,10 @@ void MembrPara::initFromConfig() {
 
 SceCells::SceCells() {
 	//curTime = 0 + 55800.0;//AAMIRI // Ali I comment that our safely on 04/04/2017
-        std ::cout << "I am in SceCells constructor with zero element "<<InitTimeStage<<std::endl ; 
+        std ::cout << "I am in SceCells constructor with zero element "<<InitTimeStage<<std::endl ;
+
+    addNode=true ;
+	cout << " addNode boolean is initialized " <<addNode <<endl ; 
 }
 
 void SceCells::growAtRandom(double d_t) {
@@ -628,7 +631,7 @@ void SceCells::addPointIfScheduledToGrow() {
 					growthAuxData.nodeYPosAddress, time(NULL),
 					miscPara.growThreshold));
 }
-//Ali commented this constructor in 04/04/2017
+//Ali commented this constructor in 04/04/2017 // this constructor is not active
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& numOfInitActiveNodesOfCells,
 		std::vector<SceNodeType>& cellTypes) :
@@ -636,7 +639,6 @@ SceCells::SceCells(SceNodes* nodesInput,
 				nodesInput->getAllocPara().maxNodeOfOneCell / 2), initGrowthProgress(
 				0.0) {
 	curTime = 0.0 + 55800.0;//AAMIRI
-
         std ::cout << "I am in SceCells constructor with polymorphism shape "<<InitTimeStage<<std::endl ; 
 	initialize(nodesInput);
 
@@ -721,6 +723,7 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.HertwigYdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
 
 	cellInfoVecs.cellRanksTmpStorage.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.cellRanksTmpStorage1.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.growthSpeed.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.growthXDir.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.growthYDir.resize(allocPara_m.maxCellCount);
@@ -4023,15 +4026,24 @@ void SceCells::copyToGPUConstMem() {
 void SceCells::handleMembrGrowth_M() {
 	// figure out membr growth speed
 	calMembrGrowSpeed_M();  //Ali: to my understanding it doesn't do anything right now. it will be override by adjustMembrGrowSpeed_M 
-	// figure out which cells will add new point
+	// figure out which cells will add new point and which cell needs to delete node.
 
 	adjustMembrGrowSpeed_M(); // for now just a constant speed to give some relaxation before adding another node.
 
 	// returning a bool and progress for each cell. if bool is true (a node sould be added) progress will be reset to give relaxation time after adding the node. Otherwise growth prgoress will be incremented
 	decideIfAddMembrNode_M(); 
-	decideIfDelMembrNode_M(); 
-// add membr nodes
-	addMembrNodes_M();
+	decideIfDelMembrNode_M(); //Ali 
+// add membr nodes  // In each time step either adding mechanism is active or deleting mechanism. It is an unneccessary complication to manage memory for both operations at one time step.
+    if (addNode) { 
+		addMembrNodes_M();
+		addNode=false  ; 
+		cout << " I am in add membrane node " << endl ; 
+	}	
+    else  { 
+		delMembrNodes_M();
+		addNode=true ; 
+		cout << " I am in del membrane node " << endl ; 
+		}
 	//membrDebug();
 }
 
@@ -4047,6 +4059,7 @@ void SceCells::calMembrGrowSpeed_M() {
 // reduce_by_key, find value of max tension and their index
 	thrust::counting_iterator<uint> iBegin(0);
 	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
+	
 	thrust::reduce_by_key(
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))
@@ -4068,6 +4081,10 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
+//	for (int i=0 ; i<cellInfoVecs.maxDistToRiVec.size() ; i++) {
+//		cout << "the max distance in cell" << i << " is "<<cellInfoVecs.maxDistToRiVec[i] << endl ; 
+//	}
+
 	//Ali for min Distance
 
 	thrust::counting_iterator<uint> iBegin_min(0);
@@ -4077,16 +4094,24 @@ thrust::reduce_by_key(
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
+							nodes->getInfoVecs().membrDistToRi.begin(),
 							make_transform_iterator(iBegin_min,   // values to reduce by key 
-									ModuloFunctor(maxNPerCell)),  
-							nodes->getInfoVecs().membrDistToRi.begin())),
-			cellInfoVecs.cellRanksTmpStorage.begin(),  // to Store reduced version of key 
+									ModuloFunctor(maxNPerCell))  
+							)),
+			cellInfoVecs.cellRanksTmpStorage1.begin(),  // to Store reduced version of key 
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
-							cellInfoVecs.minTenIndxVec.begin(),  // to sotred the reduce verision of values 
-							cellInfoVecs.minDistToRiVec.begin())), 
+							cellInfoVecs.minDistToRiVec.begin(),
+							cellInfoVecs.minTenIndxVec.begin()  // to sotred the reduce verision of values 
+							)), 
 			thrust::equal_to<uint>(), MinWInfo());  // how to sort the keys & how to reduce the parameters assigned to based on each key
 // equal_to mean how we set the beans to reduce. For example here we are saying if they are equal in Int we compare them and would peroform the reduction.
+
+	//for (int i=0 ; i<cellInfoVecs.minDistToRiVec.size() ; i++) {
+	//	cout << "the min distance in cell" << i << " is "<<cellInfoVecs.minDistToRiVec[i] << endl ; 
+	//	cout << "the min tension index vec" << i << " is "<<cellInfoVecs.minTenIndxVec[i] << endl ; 
+//	}
+
 
 	thrust::reduce_by_key(
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
@@ -4208,6 +4233,28 @@ void SceCells::addMembrNodes_M() {
 					+ curAcCCount, cellInfoVecs.isMembrAddingNode.begin(),
 			cellInfoVecs.activeMembrNodeCounts.begin(),
 			AddMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
+					growthAuxData.nodeXPosAddress,
+					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
+			thrust::identity<bool>());
+}
+
+//Ali
+void SceCells::delMembrNodes_M() {
+	thrust::counting_iterator<uint> iBegin(0);
+	uint curAcCCount = allocPara_m.currentActiveCellCount;
+	uint maxNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::transform_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							cellInfoVecs.minTenIndxVec.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(iBegin,
+							cellInfoVecs.maxTenIndxVec.begin(),
+							cellInfoVecs.activeMembrNodeCounts.begin()))
+					+ curAcCCount, cellInfoVecs.isMembrRemovingNode.begin(),
+			cellInfoVecs.activeMembrNodeCounts.begin(),
+			DelMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
 					growthAuxData.nodeXPosAddress,
 					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
 			thrust::identity<bool>());

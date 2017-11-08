@@ -11,7 +11,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
-typedef thrust::tuple<uint, double> UiD; //Ali 
+typedef thrust::tuple<double, uint> DUi; //Ali 
 typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
@@ -185,14 +185,18 @@ struct MaxWInfo: public thrust::binary_function<DUiDDD, DUiDDD, DUiDDD> {
 };
 
 //Ali
-struct MinWInfo: public thrust::binary_function<UiD, UiD, UiD> {
-	__host__ __device__ UiD operator()(const UiD & data_1,const UiD & data_2) {
-		double num1 = thrust::get<1>(data_1);
-		double num2 = thrust::get<1>(data_2);
-		if (num1 < num2) {
+struct MinWInfo: public thrust::binary_function<DUi, DUi, DUi> {
+	__host__ __device__ DUi operator()(const DUi & data_1,const DUi & data_2) {
+		double num1 = thrust::get<0>(data_1);
+		double num2 = thrust::get<0>(data_2);
+	
+		if ( num1 < num2 && num1>0.000001) {  // just a small number
 			return data_1;
-		} else {
-			return data_2;
+		} else if (num2>0.000001) {
+		    return data_2;
+		}
+		else {
+			return thrust:: make_tuple (num1+10000, thrust::get<1>(data_1)) ;  // we add this number to remove zero from being candidate for minimum value 
 		}
 	}
 };
@@ -1214,7 +1218,7 @@ struct MemDelFunc: public thrust::unary_function<UiDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.0375 ) {
-			return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(true,progress);
 			//return thrust::make_tuple(false, progress); //No growth
 		} else {
 			return thrust::make_tuple(false, progress);
@@ -2219,6 +2223,40 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 		return (curActCount + 1);
 	}
 };
+//Ali
+struct DelMemNode: public thrust::unary_function<Tuuu, uint> {
+	uint _maxNodePerCell;
+	bool* _isActiveAddr;
+	double* _xPosAddr, *_yPosAddr;
+	int* _adhIndxAddr;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ DelMemNode(uint maxNodePerCell, bool* isActiveAddr,
+			double* xPosAddr, double* yPosAddr, int* adhIndxAddr) :
+			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
+					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
+	}
+	__device__ uint operator()(const Tuuu &oriData) {
+		uint cellRank = thrust::get<0>(oriData);
+		uint insertIndx = thrust::get<1>(oriData) + 1;
+		uint curActCount = thrust::get<2>(oriData);
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;
+		uint globalIndexDel = cellRank * _maxNodePerCell + insertIndx;
+		for (uint i =globalIndexDel+1; i<=globalIndxEnd; i++) {
+			_isActiveAddr[i-1] = _isActiveAddr[i];
+			_xPosAddr[i-1] = _xPosAddr[i];
+			_yPosAddr[i-1] = _yPosAddr[i];
+			_adhIndxAddr[i-1] = _adhIndxAddr[i];
+		}
+		 _isActiveAddr[globalIndxEnd]=false ;
+		 _adhIndxAddr[globalIndxEnd] = -1;
+
+		return (curActCount - 1);
+	}
+};
+
+
+
+
 
 struct CalTriArea: public thrust::unary_function<Tuuudd, double> {
 	uint _maxNodePerCell;
@@ -2423,6 +2461,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthYDir;
 // some memory for holding intermediate values instead of dynamically allocating.
 	thrust::device_vector<uint> cellRanksTmpStorage;
+	thrust::device_vector<uint> cellRanksTmpStorage1;  //Ali
 
 	thrust::device_vector<uint> activeMembrNodeCounts;
 	thrust::device_vector<uint> activeIntnlNodeCounts;
@@ -2609,6 +2648,7 @@ class SceCells {
 	uint totalNodeCountForActiveCells;
 
 	double dt;
+		bool addNode  ; 
         double Damp_Coef ;   //Ali
         double InitTimeStage ;  //A & A 
         double MinX ;  
@@ -2865,6 +2905,7 @@ class SceCells {
 	void decideIfAddMembrNode_M();
 	void decideIfDelMembrNode_M(); // Ali
 	void addMembrNodes_M();
+	void delMembrNodes_M(); // Ali
 
 	bool tmpDebug;
 
