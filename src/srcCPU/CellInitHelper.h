@@ -27,11 +27,13 @@ using namespace std;
 //Ali
 struct ForReadingData_M2 {
       public: 
-      vector <double> TempSX,TempSY,TempSZ; 
+      vector <double> TempSX,TempSY,TempSZ;
+	  vector <ECellType> eCellTypeV ; //Ali 
        int    CellNumber ; 
 }; 
 
 ForReadingData_M2  ReadFile_M2(std::string CellCentersFileName);
+ECellType StringToECellTypeConvertor (const string & eCellTypeString) ;// Ali 
 //Ali 
 
 struct SimulationGlobalParameter {

@@ -33,6 +33,7 @@ enum SceExceptionType {
 	AlgorithmBug
 };
 
+enum ECellType {notActive, pouch, peri, bc} ; 
 std::string toString(SceExceptionType type);
 double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);
@@ -453,6 +454,7 @@ struct RawDataInput_M {
 	std::vector<CVector> bdryNodes;
 	std::vector<CVector> initCellCenters;
 	std::vector<double> cellGrowProgVec;
+	std::vector<ECellType> cellsTypeCPU; //Ali 
 	std::vector<std::vector<CVector> > initIntnlNodePoss;
 	std::vector<std::vector<CVector> > initMembrNodePoss;
 };
@@ -508,6 +510,7 @@ struct SimulationInitData_V2_M {
 	std::vector<SceNodeType> nodeTypes;
 	std::vector<CVector> initNodeVec;
 	std::vector<bool> initIsActive;
+	std::vector<ECellType> eCellTypeV1;  //Ali 
 };
 
 std::vector<double> getArrayXComp(std::vector<CVector> &nodePosVec);

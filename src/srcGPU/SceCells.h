@@ -2480,7 +2480,8 @@ struct CellInfoVecs {
 	thrust::device_vector<bool> isMembrRemovingNode; // Ali
 
 	thrust::device_vector<double> cellAreaVec;
-        thrust::device_vector<double> cellPerimVec;//AAMIRI
+    thrust::device_vector<double> cellPerimVec;//AAMIRI
+    thrust::device_vector<ECellType> eCellTypeV2 ;//Ali
 };
 
 struct CellNodeInfoVecs {
@@ -2667,7 +2668,8 @@ class SceCells {
 			std::vector<uint>& numOfInitActiveNodesOfCells);
 	void copyInitActiveNodeCount_M(std::vector<uint>& initMembrActiveNodeCounts,
 			std::vector<uint>& initIntnlActiveNodeCounts,
-			std::vector<double> &initGrowProgVec);
+			std::vector<double> &initGrowProgVec,
+			std::vector<ECellType> & eCellTypeV1); //Ali 
 
 	void initCellInfoVecs();
 	void initCellNodeInfoVecs();
@@ -2945,7 +2947,8 @@ public:
 	SceCells(SceNodes* nodesInput,
 			std::vector<uint> &numOfInitActiveMembrNodeCounts,
 			std::vector<uint> &numOfInitActiveIntnlNodeCounts,
-			std::vector<double> &initGrowProgVec, double InitTimeStage);
+			std::vector<double> &initGrowProgVec, std::vector<ECellType> &eCellTypeV1 
+			,double InitTimeStage);
 
 	void runAllCellLevelLogicsDisc(double dt);
 

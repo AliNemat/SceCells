@@ -13,6 +13,7 @@ ForReadingData_M2 ReadFile_M2(std::string CellCentersFileName) {
           std::fstream inputc;
           ForReadingData_M2  ForReadingData1; 
           double TempPos_X,TempPos_Y,TempPos_Z ; 
+		  string eCellTypeString ; 
           //inputc.open("./resources/CellCenters_General.txt");
           //inputc.open("./resources/CellCenters_General.txt");
 //          inputc.open("./resources/CellCenters2.txt");
@@ -29,14 +30,26 @@ ForReadingData_M2 ReadFile_M2(std::string CellCentersFileName) {
           inputc >> ForReadingData1.CellNumber ; 
           for (int i = 0; i <ForReadingData1.CellNumber; i = i + 1) {
 	    cout << "i=" << i << endl;		
-	    inputc >> TempPos_X >> TempPos_Y >> TempPos_Z ;	
+	    inputc >> TempPos_X >> TempPos_Y >> TempPos_Z>> eCellTypeString ;	
 	    ForReadingData1.TempSX.push_back(TempPos_X);
 	    ForReadingData1.TempSY.push_back(TempPos_Y);
 	    ForReadingData1.TempSZ.push_back(TempPos_Z);
+		ECellType eCellType=StringToECellTypeConvertor (eCellTypeString) ; 
+		ForReadingData1.eCellTypeV.push_back (eCellType) ; 
             }     
          cout << "Cell center positions read successfully";
+		
+          for (int i = 0; i <ForReadingData1.CellNumber; i = i + 1) {
+			  cout << ForReadingData1.eCellTypeV.at(i) << "cell type read" << endl ;				 }
+return ForReadingData1;
+}
 
-return ForReadingData1; 
+ECellType StringToECellTypeConvertor ( const string & eCellTypeString) {
+if (eCellTypeString=="bc") {return bc ;  }
+else if (eCellTypeString=="peri") {return peri ;  }
+else if (eCellTypeString=="pouch") {return pouch ;  }
+//else { throw std:: invslid_argument ("recevied invalid cell type") ; } 
+
 }
 //Ali 
 
@@ -422,15 +435,21 @@ SimulationInitData_V2_M CellInitHelper::initInputsV3_M(
 	initData.initNodeVec.resize(initMaxNodeCount);
 	initData.initIsActive.resize(initMaxNodeCount, false);
 	//initData.initGrowProgVec.resize(initCellCount, 0);
-
+    ECellType eCellTypeTmp2 ; // Ali
 	for (uint i = 0; i < initCellCount; i++) {
 		initData.initActiveMembrNodeCounts.push_back(
 				rawData_m.initMembrNodePoss[i].size());
 		initData.initActiveIntnlNodeCounts.push_back(
 				rawData_m.initIntnlNodePoss[i].size());
 		initData.initGrowProgVec.push_back(rawData_m.cellGrowProgVec[i]);
+		eCellTypeTmp2=rawData_m.cellsTypeCPU.at(i) ;  // Ali
+		initData.eCellTypeV1.push_back(eCellTypeTmp2); // Ali
+
 	}
 
+	for (uint i = 0; i < initCellCount; i++) {
+		cout << "third check cell type" << initData.eCellTypeV1.at(i)<< endl ;  // Ali
+	}
 	for (uint i = 0; i < maxNodeInDomain; i++) {
 		nodeRank = i % maxAllNodeCountPerCell;
 		if (nodeRank < maxMembrNodePerCell) {
@@ -604,6 +623,11 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
  
 		//rawData.cellGrowProgVec.push_back(randNum);
 		rawData.cellGrowProgVec.push_back(0.75);
+		ECellType eCellTypeTmp=ForReadingData2.eCellTypeV.at(i);  
+		rawData.cellsTypeCPU.push_back(eCellTypeTmp);
+	}
+	for (uint i = 0; i < initCellCt; i++) {
+    	cout << "second check for cell type" <<rawData.cellsTypeCPU.at(i) << endl ; 
 	}
 
 	std::cout << "Printing initial cell center positions ......" << std::endl;

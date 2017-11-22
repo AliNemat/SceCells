@@ -654,7 +654,9 @@ SceCells::SceCells(SceNodes* nodesInput,
 SceCells::SceCells(SceNodes* nodesInput,
 		std::vector<uint>& initActiveMembrNodeCounts,
 		std::vector<uint>& initActiveIntnlNodeCounts,
-		std::vector<double> &initGrowProgVec, double InitTimeStage) {
+		std::vector<double> &initGrowProgVec, 
+		std::vector<ECellType> &eCellTypeV1, 
+		double InitTimeStage) {
 //	curTime = 0.0 + 55800.0;//AAMIRIi
         curTime=InitTimeStage ; 
         std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
@@ -670,7 +672,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 	initialize_M(nodesInput);
 	copyToGPUConstMem();
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
-			initActiveIntnlNodeCounts, initGrowProgVec);
+			initActiveIntnlNodeCounts, initGrowProgVec, eCellTypeV1);
 }
 
 void SceCells::initCellInfoVecs() {
@@ -741,7 +743,8 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.membrGrowProgress.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.membrGrowSpeed.resize(allocPara_m.maxCellCount, 0.0);
 	cellInfoVecs.cellAreaVec.resize(allocPara_m.maxCellCount, 0.0);
-        cellInfoVecs.cellPerimVec.resize(allocPara_m.maxCellCount, 0.0);//AAMIRI
+    cellInfoVecs.cellPerimVec.resize(allocPara_m.maxCellCount, 0.0);//AAMIRI
+    cellInfoVecs.eCellTypeV2.resize(allocPara_m.maxCellCount, notActive);//Ali 
         std::cout << "finished " << std::endl;
 }
 
@@ -3633,7 +3636,8 @@ AniRawData SceCells::obtainAniRawDataGivenCellColor(vector<double>& cellColors,
 void SceCells::copyInitActiveNodeCount_M(
 		std::vector<uint>& initMembrActiveNodeCounts,
 		std::vector<uint>& initIntnlActiveNodeCounts,
-		std::vector<double> &initGrowProgVec) {
+		std::vector<double> &initGrowProgVec,
+		std::vector<ECellType> &eCellTypeV1) {
 	assert(
 			initMembrActiveNodeCounts.size()
 					== initIntnlActiveNodeCounts.size());
@@ -3648,6 +3652,11 @@ void SceCells::copyInitActiveNodeCount_M(
 			cellInfoVecs.activeIntnlNodeCounts.begin());
 	thrust::copy(initGrowProgVec.begin(), initGrowProgVec.end(),
 			cellInfoVecs.growthProgress.begin());
+	thrust::copy(eCellTypeV1.begin(), eCellTypeV1.end(),
+			cellInfoVecs.eCellTypeV2.begin());   // v2 might be bigger
+	for (int i=0 ; i<eCellTypeV1.size() ; i++ ) {
+		cout << "fourth check for cell type" << cellInfoVecs.eCellTypeV2[i] << endl ; 
+	}
 }
 
 void SceCells::myDebugFunction() {
