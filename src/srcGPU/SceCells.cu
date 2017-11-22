@@ -2115,7 +2115,7 @@ void SceCells::applyMemForce_M() {
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=true ; 
-	    if (curTime<1 ){
+	    if (curTime<0.002 ){
 			membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
@@ -2145,6 +2145,10 @@ void SceCells::applyMemForce_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
+									cellInfoVecs.eCellTypeV2.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
 									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
@@ -2161,6 +2165,11 @@ void SceCells::applyMemForce_M() {
 
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.eCellTypeV2.begin(),
+									make_transform_iterator(iBegin2,
+											DivideFunctor(maxAllNodePerCell))),
+
 							thrust::make_permutation_iterator(
 									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin2,
