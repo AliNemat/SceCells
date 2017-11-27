@@ -462,13 +462,14 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 	double _minY ; 
 	double _maxY ; 
 	bool _membPolar ; 
+	bool _subMembPolar ; 
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ ActinLevelCal(uint maxNodePerCell, bool* isActiveAddr, double minY, double maxY,bool membPolar) :
-			 _maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _minY(minY),_maxY(maxY),_membPolar(membPolar) {
+	__host__ __device__ ActinLevelCal(uint maxNodePerCell, bool* isActiveAddr, double minY, double maxY,bool membPolar, bool subMembPolar) :
+			 _maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _minY(minY),_maxY(maxY),_membPolar(membPolar), _subMembPolar(subMembPolar) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ double operator()(const ActinData &actinData) const {
+	__host__  __device__ double operator()(const ActinData &actinData) const {
 
 		ECellType  cellType= thrust::get<0>(actinData);
 		uint activeMembrCount = thrust::get<1>(actinData);
@@ -479,11 +480,25 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 		double actinLevel ; 
-		
+	   MembraneType1  membraneType ; 	
 		double kStiff=200 ; 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
 			return 0.0;
-		} else {
+		} else { // It is a membrane node
+
+			actinLevel=1*kStiff ;  // default 
+            // test if the memrane node is lateral or apicalBasal // 
+		   if (adhereIndex == -1) { 
+		    	membraneType=apicalBasal1 ;
+			   }
+		   //else if ( (adhereIndex-index)<( 2*_maxNodePerCell) && 
+			//	     (adhereIndex-index)>(-2*_maxNodePerCell)  )  { 
+		    //	membraneType=apicalBasal1 ;
+		//	}
+		   else { 
+				membraneType=lateral1 ;
+			}
+
 
 			if (_membPolar) {
 				if (cellType==pouch) {
@@ -499,21 +514,31 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 					actinLevel=2*kStiff ;
 				}
-				//	if (adhereIndex==-1) {
-				//			actinLevel=kStiff *(1.0-0.1*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-				//	}
-				//	else {
-				//			actinLevel=kStiff *(0.9+0.1*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
-				//	}
 			}
-			else {
+			
+
+
+			if (_subMembPolar) {
+				if (cellType==pouch && membraneType==lateral1 ) {
+					actinLevel=0.5*kStiff ;
+				}
+		        if (cellType==pouch && membraneType==apicalBasal1) {
+					 actinLevel=2*kStiff ;
+				}
+				if  (cellType==peri && membraneType==lateral1) {
+					  actinLevel=2*kStiff ;
+				}
+				if   (cellType==peri && membraneType==apicalBasal1) {
+					  actinLevel=0.5*kStiff ;
+				}
+			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;
 				}
-
+			}
 
 		   return actinLevel;
 
-	}
+	    }
 }
 }; 
 
@@ -2221,7 +2246,7 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 		uint curActCount = thrust::get<2>(oriData);
 		double insertX = thrust::get<3>(oriData);
 		double insertY = thrust::get<4>(oriData);
-		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;  //based on this line, the membrane not is first and then internal nodes.
 		uint globalIndexInsert = cellRank * _maxNodePerCell + insertIndx;
 		for (uint i = globalIndxEnd; i >= globalIndexInsert; i--) {
 			_isActiveAddr[i] = _isActiveAddr[i - 1];
