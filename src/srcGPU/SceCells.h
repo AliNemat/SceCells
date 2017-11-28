@@ -520,16 +520,16 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_subMembPolar) {
 				if (cellType==pouch && membraneType==lateral1 ) {
-					actinLevel=0.5*kStiff ;
+					actinLevel=0.25*kStiff ;
 				}
 		        if (cellType==pouch && membraneType==apicalBasal1) {
-					 actinLevel=2*kStiff ;
+					 actinLevel=4*kStiff ;
 				}
 				if  (cellType==peri && membraneType==lateral1) {
-					  actinLevel=2*kStiff ;
+					  actinLevel=4*kStiff ;
 				}
 				if   (cellType==peri && membraneType==apicalBasal1) {
-					  actinLevel=0.5*kStiff ;
+					  actinLevel=0.25*kStiff ;
 				}
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;

@@ -2116,8 +2116,13 @@ void SceCells::applyMemForce_M() {
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=false ; 
 		bool subMemPolar= false  ; 
-	    if (curTime>500 ){
-			//membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
+	    if (curTime>500 && curTime<1000 ){
+			membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+		}
+
+	    if (curTime>=1000 ){
+			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
