@@ -457,7 +457,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 
 //Ali Acin Level
 struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
-	uint _maxNodePerCell;
+	int _maxNodePerCell;
 	bool* _isActiveAddr;
 	double _minY ; 
 	double _maxY ; 
@@ -472,13 +472,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 	__host__  __device__ double operator()(const ActinData &actinData) const {
 
 		ECellType  cellType= thrust::get<0>(actinData);
-		uint activeMembrCount = thrust::get<1>(actinData);
+		int activeMembrCount = thrust::get<1>(actinData);
 		double cell_CenterY = thrust::get<2>(actinData);
 		int    adhereIndex= thrust::get<3>(actinData);
-		uint   cellRank = thrust::get<4>(actinData);
-		uint   nodeRank = thrust::get<5>(actinData);
+		int   cellRank = thrust::get<4>(actinData);
+		int   nodeRank = thrust::get<5>(actinData);
 
-		uint index = cellRank * _maxNodePerCell + nodeRank;
+		int  index = cellRank * _maxNodePerCell + nodeRank;
 		double actinLevel ; 
 	   MembraneType1  membraneType ; 	
 		double kStiff=200 ; 
@@ -487,16 +487,16 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 		} else { // It is a membrane node
 
 			actinLevel=1*kStiff ;  // default 
-            // test if the memrane node is lateral or apicalBasal // 
+            // test if the membrane node is lateral or apicalBasal // 
 		   if (adhereIndex == -1) { 
 		    	membraneType=apicalBasal1 ;
 			   }
-		   //else if ( (adhereIndex-index)<( 2*_maxNodePerCell) && 
-			//	     (adhereIndex-index)>(-2*_maxNodePerCell)  )  { 
-		    //	membraneType=apicalBasal1 ;
-		//	}
+		   else if ( (adhereIndex-index)<  2* _maxNodePerCell &&    // since the first cell and the last cell are boundary cells (no polarity), this algorithm is sufficent.
+				     (adhereIndex-index)> -2*_maxNodePerCell  )  { 
+		    	membraneType=lateral1 ;
+			}
 		   else { 
-				membraneType=lateral1 ;
+				membraneType=apicalBasal1 ;
 			}
 
 

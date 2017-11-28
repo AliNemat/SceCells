@@ -2115,8 +2115,8 @@ void SceCells::applyMemForce_M() {
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=false ; 
-		bool subMemPolar= false ; 
-	    if (curTime>5 ){
+		bool subMemPolar= false  ; 
+	    if (curTime>500 ){
 			//membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
 			subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -2188,8 +2188,12 @@ void SceCells::applyMemForce_M() {
 					+ totalNodeCountForActiveCells,
 			nodes->getInfoVecs().nodeActinLevel.begin(),
 			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,membPolar,subMemPolar));
-
-
+		//double a ; 
+	//for(int i=0 ;  i<totalNodeCountForActiveCells ; i++) {
+	//	a=static_cast<double>(nodes->getInfoVecs().nodeAdhereIndex[i]-i);  
+	//	cout<< "adhere index of node " << i << " is " << nodes->getInfoVecs().nodeAdhereIndex[i] << endl ; 
+	//	cout<< "the normalized difference is" <<a/(2.0*680) <<"the difference is " << a << "2 time max node per cell is  " << 2*maxAllNodePerCell << endl ; 
+//	}
 	double* nodeActinLevelAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeActinLevel[0])); //assuming that number of boundary nodes are equal to zero
 				
