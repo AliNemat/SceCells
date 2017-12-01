@@ -169,7 +169,7 @@ for (int i=0;  i<nodeECMLocX.size() ;  i++) {
 
 
 
-void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM){   
+void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar){   
 
 thrust::counting_iterator<int> iBegin(0) ; 
 nodeDeviceTmpLocX.resize(totalNodeCountForActiveCellsECM,0.0) ;
@@ -180,10 +180,13 @@ adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
+int maxAllNodePerCell=680 ; // need to be imported
+int maxMembrNodePerCell=600 ; // need to be imported
+double eCMBendStiff=0.0 ; // need to be an input
 
-int maxAllNodePerCell=680 ;
-int maxMembrNodePerCell=600 ;
-double eCMBendStiff=0.0 ; 
+if (cellPolar) {eCMLinSpringStiff=100 ; }
+if (subCellPolar) {eCMLinSpringStiff=100 ; }
+
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
 			&nodeECMLocX[0]) ; 
@@ -215,7 +218,7 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 					nodeDeviceLocY.begin(),
 					isBasalMemNode.begin(),
 					adhPairECM_Cell.begin())),
-				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM));
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef));
 
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
@@ -340,8 +343,6 @@ thrust:: transform (
 				TotalECMForceCompute(dummy));
 
 
-double dt=0.001 ;   
-double dampECM=36.0 ; 
 
 nodeECMTmpLocX.resize(numNodesECM,0.0) ;
 nodeECMTmpLocY.resize(numNodesECM,0.0) ;
@@ -367,7 +368,7 @@ thrust:: transform (
 				thrust::make_tuple (
 					nodeECMLocX.begin(),
 					nodeECMLocY.begin())),
-				MoveNodeECM(dt,dampECM));
+				MoveNodeECM(dt,Damp_Coef));
 
 
 

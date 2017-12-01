@@ -1,4 +1,4 @@
-#include "commonData.h" 
+#include "commonData.h"
 #include "SceNodes.h" 
 #include <string>
 #include <sstream>
@@ -28,7 +28,7 @@ class SceECM {
 //	SceNodes* nodes;
 
 public:
-        void ApplyECMConstrain(int totalNodeCountForActiveCellsECM) ; 
+        void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar) ; 
 double restLenECMSpring ;
 double eCMLinSpringStiff ;  
 int outputFrameECM ;  
@@ -159,9 +159,12 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	 double  *_locXAddr_ECM; 
          double  *_locYAddr_ECM; 
          int _maxMembrNodePerCell ; 
-	 int _numNodes_ECM ; 
-	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell, int numNodes_ECM) :
-				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM) {
+	 int _numNodes_ECM ;
+	 double _dt ; 
+	 double _Damp_Coef ; 
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, int maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef) :
+				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM),_dt(dt),
+			    _Damp_Coef(Damp_Coef)	{
 	}
 	__device__ DDBI  operator()(const IDDB & iDDB) const {
 	
@@ -178,9 +181,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	double fTotalMorse=0.0 ;
 	double distMin=10000 ; 
 	double distMinX, distMinY ; 
-	double kStifMemECM=3.0 ; //3.0 
-	double distMaxAdh=0.78125; 
-	double distSponAdh=0.0625 ; 
+	double kStifMemECM=3.0 ; // need to take out 
+	double distMaxAdh=0.78125; // need to take out
+	double distSponAdh=0.0625 ;  // need to take out
 	double fAdhMemECM=0.0   ; 
 	double fAdhMemECMX=0.0 ; 
 	double fAdhMemECMY=0.0  ; 
@@ -212,12 +215,12 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	}
 	
 	if (fTotalMorse!=0.0){	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.001/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.001/36.0),true,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),true,adhPairECM)  ; 
 	}
 		
 	else {
 	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*0.001/36.0),(locY+(fTotalMorseY+fAdhMemECMY)*0.001/36.0),false,adhPairECM)  ; 
+                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),false,adhPairECM)  ; 
  
 	}
         	
@@ -336,9 +339,9 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-	double kAdhECM=3 ; 
-	double distAdhSpon=0.0625 ; 
-	double distAdhMax=0.78125 ; 
+	double kAdhECM=3 ;  //need to take out 
+	double distAdhSpon=0.0625 ; // need to take out 
+	double distAdhMax=0.78125 ; // need to take out
 	// we are already in active cells. Two more conditions: 1-it is membrane 2-it is active node 
         for (int i=0 ; i<_numActiveNodes_Cell ; i++) {
 		if (_nodeIsActive_Cell[i] && (i%_maxNodePerCell)<_maxMembrNodePerCell){

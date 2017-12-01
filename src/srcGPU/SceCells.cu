@@ -1431,8 +1431,20 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
 	
-//Ali 
-	applyMemForce_M();
+//Ali
+		bool cellPolar=false ; 
+		bool subCellPolar= false  ; 
+	    if (curTime>500 && curTime<1000 ){
+			cellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+		}
+
+	    if (curTime>=1000 ){
+			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+		}
+
+	applyMemForce_M(cellPolar,subCellPolar);
 	std::cout << "     *** 4 ***" << endl;
 	std::cout.flush();
 
@@ -1472,7 +1484,7 @@ thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().no
 
 
  
-	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM);
+	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM,curTime,dt,Damp_Coef,cellPolar,subCellPolar);
 
         thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
         thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
@@ -2073,7 +2085,7 @@ cout << "I am in move_nodes and bdry node count is" << allocPara_m.bdryNodeCount
 
 
 
-void SceCells::applyMemForce_M() {
+void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
@@ -2114,18 +2126,7 @@ void SceCells::applyMemForce_M() {
                                        cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
-		bool membPolar=false ; 
-		bool subMemPolar= false  ; 
-	    if (curTime>500 && curTime<1000 ){
-			membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-		}
-
-	    if (curTime>=1000 ){
-			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-			subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-		}
-
+		
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
@@ -2192,7 +2193,7 @@ void SceCells::applyMemForce_M() {
 									ModuloFunctor(maxAllNodePerCell))))
 					+ totalNodeCountForActiveCells,
 			nodes->getInfoVecs().nodeActinLevel.begin(),
-			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,membPolar,subMemPolar));
+			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,cellPolar,subCellPolar));
 		//double a ; 
 	//for(int i=0 ;  i<totalNodeCountForActiveCells ; i++) {
 	//	a=static_cast<double>(nodes->getInfoVecs().nodeAdhereIndex[i]-i);  
@@ -2275,7 +2276,7 @@ void SceCells::applyMemForce_M() {
 							nodes->getInfoVecs().membrBendRightY.begin()))
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr,nodeActinLevelAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell,membPolar));
+					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr,nodeActinLevelAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell));
 
 
 
