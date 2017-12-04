@@ -2106,9 +2106,9 @@ void SceCells::applyMemForce_M() {
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
 		bool membPolar=true ; 
-	    if (curTime<100 ){
-			membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
-		}
+	    //if (curTime<100 ){
+		//	membPolar=false ; // to reach to equlibrium mimicking 35 hours AEG 
+	//	}
 
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(

@@ -468,10 +468,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_membPolar) {	
 					if (adhereIndex==-1) {
-							actinLevel=kStiff *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+							actinLevel=kStiff *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 					}
 					else {
-							actinLevel=1*kStiff *(0.5+4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
+							actinLevel=1*kStiff *(5.0-4.5*(cell_CenterY- _minY)/(_maxY- _minY))  ; 
 					}
 			}
 			else {
@@ -558,7 +558,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 			if (_isActiveAddr[index_left]) {
 				leftPosX = _locXAddr[index_left];
 				leftPosY = _locYAddr[index_left];
-				kAvgLeft=0.5*(_actinLevelAddr[index_left]+_actinLevelAddr[index]); 
+				//kAvgLeft=0.5*(_actinLevelAddr[index_left]+_actinLevelAddr[index]); 
+				kAvgLeft=_actinLevelAddr[index]; 
 				leftDiffX = leftPosX - locX;
 				leftDiffY = leftPosY - locY;
 				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
@@ -581,7 +582,8 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 			if (_isActiveAddr[index_right]) {
 				rightPosX = _locXAddr[index_right];
 				rightPosY = _locYAddr[index_right];
-				kAvgRight=0.5*(_actinLevelAddr[index_right]+_actinLevelAddr[index]); 
+				//kAvgRight=0.5*(_actinLevelAddr[index_right]+_actinLevelAddr[index]); 
+				kAvgRight=_actinLevelAddr[index]; 
 				rightDiffX = rightPosX - locX;
 				rightDiffY = rightPosY - locY;
 				lenRight = sqrt(

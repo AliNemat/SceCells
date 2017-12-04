@@ -181,8 +181,8 @@ thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActi
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
 
-int maxAllNodePerCell=240 ;
-int maxMembrNodePerCell=200 ;
+int maxAllNodePerCell=480 ;
+int maxMembrNodePerCell=400 ;
 double eCMBendStiff=0.0 ; 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (
