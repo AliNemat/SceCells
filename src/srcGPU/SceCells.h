@@ -22,7 +22,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //Ali comment
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
-typedef thrust::tuple<ECellType,uint, double, int ,uint, uint> ActinData;
+typedef thrust::tuple<ECellType,uint, double, int ,uint, uint> ActinData; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -459,18 +459,18 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 	int _maxNodePerCell;
 	bool* _isActiveAddr;
+	int* _cellRoot;
 	double _minY ; 
 	double _maxY ; 
 	bool _membPolar ; 
 	bool _subMembPolar ; 
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ ActinLevelCal(uint maxNodePerCell, bool* isActiveAddr, double minY, double maxY,bool membPolar, bool subMembPolar) :
-			 _maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _minY(minY),_maxY(maxY),_membPolar(membPolar), _subMembPolar(subMembPolar) {
+	__host__ __device__ ActinLevelCal(uint maxNodePerCell, bool* isActiveAddr, int* cellRoot, double minY, double maxY,bool membPolar, bool subMembPolar) :
+			 _maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr),_cellRoot(cellRoot), _minY(minY),_maxY(maxY),_membPolar(membPolar), _subMembPolar(subMembPolar) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__  __device__ double operator()(const ActinData &actinData) const {
-
 		ECellType  cellType= thrust::get<0>(actinData);
 		int activeMembrCount = thrust::get<1>(actinData);
 		double cell_CenterY = thrust::get<2>(actinData);
@@ -482,63 +482,67 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 		double actinLevel ; 
 	   MembraneType1  membraneType ; 	
 		double kStiff=200 ; 
-		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {  //if #1
 			return 0.0;
-		} else { // It is a membrane node
+		} else { // It is a membrane node    //if #1 continue
 
 			actinLevel=1*kStiff ;  // default 
-            // test if the membrane node is lateral or apicalBasal // 
-		   if (adhereIndex == -1) { 
+		    if (adhereIndex == -1) {   //if #2 start
 		    	membraneType=apicalBasal1 ;
 			   }
-		   else if ( (adhereIndex-index)<  2* _maxNodePerCell &&    // since the first cell and the last cell are boundary cells (no polarity), this algorithm is sufficent.
-				     (adhereIndex-index)> -2*_maxNodePerCell  )  { 
-		    	membraneType=lateral1 ;
-			}
-		   else { 
-				membraneType=apicalBasal1 ;
-			}
+		   //else if ( (adhereIndex-index)<  2* _maxNodePerCell &&  // since the first cell and the last cell are boundary cells (no polarity), this algorithm is sufficent.
+			//	     (adhereIndex-index)> -2*_maxNodePerCell  )  { 
+			else {                   //if # 2 continue
+				 int cellRankAdhTo=adhereIndex/_maxNodePerCell ; 
+				 if (abs(_cellRoot[cellRankAdhTo]-_cellRoot[cellRank])<2) { // if #3  start
 
+		    	 	membraneType=lateral1 ;
+				}
+		   		else {   // if # 3 continue
+					membraneType=apicalBasal1 ;
+					}   // if # 3 end
 
-			if (_membPolar) {
-				if (cellType==pouch) {
+				} // if # 2 ends
+
+			if (_membPolar) {  // if # 4 start 
+				if (cellType==pouch) {  // if # 5 starts 
                 
 					actinLevel=0.5*kStiff ;
 				}
-				else if (cellType==bc) {
+				else if (cellType==bc) { // if #5 continue 
 					
 					actinLevel=1*kStiff ;
 
 				}
-				else { // means peri 
+				else { // means peri  // if # 5 continue 
 
 					actinLevel=2*kStiff ;
-				}
-			}
+				}  // if # 5 ends
+			}  // if # 4 ends
 			
 
 
-			if (_subMembPolar) {
-				if (cellType==pouch && membraneType==lateral1 ) {
-					actinLevel=0.25*kStiff ;
+			if (_subMembPolar) { // if # 6 s
+				if (cellType==pouch && membraneType==lateral1 ) { 
+					actinLevel=1*kStiff ;
 				}
 		        if (cellType==pouch && membraneType==apicalBasal1) {
-					 actinLevel=4*kStiff ;
+					 actinLevel=5*kStiff ;
 				}
 				if  (cellType==peri && membraneType==lateral1) {
-					  actinLevel=4*kStiff ;
+					  actinLevel=5*kStiff ;
 				}
 				if   (cellType==peri && membraneType==apicalBasal1) {
-					  actinLevel=0.25*kStiff ;
+					  actinLevel=1*kStiff ;
 				}
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;
 				}
-			}
+			} // if #6 end 
 
 		   return actinLevel;
 
-	    }
+	    } // if 1# ends
 }
 }; 
 
@@ -2458,6 +2462,7 @@ struct CellInfoVecs {
 	thrust::device_vector<double> growthProgress; //Ali
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
+	thrust::device_vector<int> cellRoot;//Ali
        
 	thrust::device_vector<double> growthProgressOld;  //A&A
 //Ali

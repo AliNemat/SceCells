@@ -244,7 +244,7 @@ void MembrPara::initFromConfig() {
 }
 
 SceCells::SceCells() {
-	//curTime = 0 + 55800.0;//AAMIRI // Ali I comment that our safely on 04/04/2017
+	//curTime = 0 + 55800.0;//AAMIRI // Ali I comment that out safely on 04/04/2017
         std ::cout << "I am in SceCells constructor with zero element "<<InitTimeStage<<std::endl ;
 
     addNode=true ;
@@ -745,7 +745,11 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.cellAreaVec.resize(allocPara_m.maxCellCount, 0.0);
     cellInfoVecs.cellPerimVec.resize(allocPara_m.maxCellCount, 0.0);//AAMIRI
     cellInfoVecs.eCellTypeV2.resize(allocPara_m.maxCellCount, notActive);//Ali 
-        std::cout << "finished " << std::endl;
+    cellInfoVecs.cellRoot.resize(allocPara_m.maxCellCount, -1);//Ali
+
+	thrust:: sequence (cellInfoVecs.cellRoot.begin(),cellInfoVecs.cellRoot.begin()+allocPara_m.currentActiveCellCount) ; 
+        std::cout << "initial number of active cells is " <<allocPara_m.currentActiveCellCount <<std::endl;
+	    std::cout <<"last cell rank used in the cell root is " <<cellInfoVecs.cellRoot[allocPara_m.currentActiveCellCount-1] << endl ;   
 }
 
 void SceCells::initCellNodeInfoVecs() {
@@ -1435,11 +1439,11 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 		bool cellPolar=false ; 
 		bool subCellPolar= false  ; 
 	    if (curTime>500 && curTime<1000 ){
-			cellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+			//cellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
-	    if (curTime>=1000 ){
+	    if (curTime>=300 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1905,6 +1909,8 @@ void SceCells::copyFirstCellArr_M() {
 void SceCells::copySecondCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
+
+		int cellRankMother=divAuxData.tmpCellRank_M[i] ; //Ali 
 		uint cellRank = allocPara_m.currentActiveCellCount + i;
 		uint nodeStartIndx = cellRank * maxAllNodePerCell
 				+ allocPara_m.bdryNodeCount;
@@ -1938,6 +1944,8 @@ void SceCells::copySecondCellArr_M() {
 		cellInfoVecs.membrGrowProgress[cellRank] = 0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
+		cellInfoVecs.cellRoot[cellRank] = cellInfoVecs.cellRoot[cellRankMother]; //Ali 
+		cellInfoVecs.eCellTypeV2[cellRank] = cellInfoVecs.eCellTypeV2[cellRankMother]; //Ali
 	}
 }
 
@@ -2136,7 +2144,9 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 	int* nodeAdhereIndexAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeAdhereIndex[0])); //assuming that number of boundary nodes are equal to zero
-	
+	int* cellRootAddr = thrust::raw_pointer_cast(
+			&(cellInfoVecs.cellRoot[0])); // Ali
+
 	/*if (curTime>10.05) { 
 		for (int i=0; i<nodes->getInfoVecs().nodeAdhereIndex.size(); i++) {
 			cout<<"node adhere index"<<i+allocPara_m.bdryNodeCount<<" is" <<nodes->getInfoVecs().nodeAdhereIndex[i]<<endl ; 
@@ -2177,7 +2187,6 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									cellInfoVecs.eCellTypeV2.begin(),
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
-
 							thrust::make_permutation_iterator(
 									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin2,
@@ -2193,7 +2202,7 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									ModuloFunctor(maxAllNodePerCell))))
 					+ totalNodeCountForActiveCells,
 			nodes->getInfoVecs().nodeActinLevel.begin(),
-			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,minY_Cell,maxY_Cell,cellPolar,subCellPolar));
+			ActinLevelCal(maxAllNodePerCell,nodeIsActiveAddr,cellRootAddr,minY_Cell,maxY_Cell,cellPolar,subCellPolar));
 		//double a ; 
 	//for(int i=0 ;  i<totalNodeCountForActiveCells ; i++) {
 	//	a=static_cast<double>(nodes->getInfoVecs().nodeAdhereIndex[i]-i);  
@@ -2723,6 +2732,7 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
         double minY_Tisu= *MinY_Itr ; 
         double maxY_Tisu= *MaxY_Itr ;  
 
+	if (curTime>=300 ){
 
 	uint seed = time(NULL);
 	thrust::counting_iterator<uint> countingBegin(0);
@@ -2747,6 +2757,7 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
 							cellInfoVecs.isRandGrowInited.begin())),
 			RandomizeGrow_M(minY_Tisu,maxY_Tisu,growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax, seed));
+	}
 }
 
 void SceCells::updateGrowthProgress_M() {
