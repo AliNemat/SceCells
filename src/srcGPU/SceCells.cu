@@ -2147,12 +2147,12 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 	int* cellRootAddr = thrust::raw_pointer_cast(
 			&(cellInfoVecs.cellRoot[0])); // Ali
 
-	/*if (curTime>10.05) { 
-		for (int i=0; i<nodes->getInfoVecs().nodeAdhereIndex.size(); i++) {
-			cout<<"node adhere index"<<i+allocPara_m.bdryNodeCount<<" is" <<nodes->getInfoVecs().nodeAdhereIndex[i]<<endl ; 
-		}
-		exit (EXIT_FAILURE) ; 
-	}*/
+//	if (curTime>10.05) { 
+//		for (int i=0; i<nodes->getInfoVecs().nodeAdhereIndex.size(); i++) {
+//			cout<<"node adhere index"<<i+allocPara_m.bdryNodeCount<<" is" <<nodes->getInfoVecs().nodeAdhereIndex[i]<<endl ; 
+//		}
+//		exit (EXIT_FAILURE) ; 
+//	}
 	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU

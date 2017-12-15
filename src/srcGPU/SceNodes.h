@@ -631,7 +631,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		double dist;
                 bool  Lennard_Jones =Is_Lennard_Jones() ;
 		if (_adhNotSet){
-		_nodeAdhereIndex[myValue] = -1 ; 
+	//	_nodeAdhereIndex[myValue] = -1 ;  Ali commented to deactive this part of the code
 		}
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOther = _extendedValuesAddress[i];
@@ -648,7 +648,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
                                                }
 			if(_adhNotSet){
-			//	if (_nodeAdhereIndex[myValue] == -1) {
+				//if (_nodeAdhereIndex[myValue] == -1) {
 					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
 							yPos, _nodeLocXAddress[nodeRankOther],
 							_nodeLocYAddress[nodeRankOther]);
@@ -660,7 +660,8 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		}
 		if (_adhNotSet) {
 			if (isSuccess) {
-				_nodeAdhereIndex[myValue] = index;
+		//			_nodeAdhereIndex[myValue] = index;  //Ali commented to deactive this part of the code
+		//		_nodeAdhereIndex[index] = myValue; Ali added and then commentted out
 			}
 		}
 		return thrust::make_tuple(xRes, yRes);
@@ -735,7 +736,7 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 		double growProgNeigh = _nodeGrowProAddr[adhIndx];
 		//bool adhSkipped = false;	
 		double alpha = getMitoticAdhCoef(growProg, growProgNeigh);//to adjust the mitotic values of stiffness
-		int maxNodePerCell=680  ; 
+		/*int maxNodePerCell=680  ; 
 		int cellRank=nodeIndx/maxNodePerCell ;
 		int nodeRank=nodeIndx%maxNodePerCell ;
 		int activeMembCount=600 ; 
@@ -750,7 +751,7 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 			indexRight=0 ; 
 		}
 		indexRight=indexRight+cellRank*maxNodePerCell ;
-
+		*/
 		if (adhIndx == -1 || !isActive) {
 			return thrust::make_tuple(oriVelX, oriVelY);
 		} 
@@ -836,10 +837,13 @@ public:
 // E.g, max number of nodes of a cell is 100 maybe the first 75 nodes are active.
 // The value of this vector will be changed by external process.
 	thrust::device_vector<bool> nodeIsActive;
+	thrust::host_vector<bool> nodeIsActiveHost; //Ali
 // X locations of nodes
 	thrust::device_vector<double> nodeLocX;
+	thrust::host_vector<double> nodeLocXHost; // Ali
 // Y locations of nodes
 	thrust::device_vector<double> nodeLocY;
+	thrust::host_vector<double> nodeLocYHost; // Ali
 // Z locations of nodes
 	thrust::device_vector<double> nodeLocZ;
 // X velocities of nodes
@@ -901,6 +905,7 @@ public:
 // only for modified version
 	thrust::device_vector<int> nodeAdhereIndex;
 	thrust::host_vector<int> nodeAdhIndxHostCopy;
+	thrust::host_vector<int> nodeAdhereIndexHost;    //Ali
 	thrust::device_vector<int> membrIntnlIndex;
 
 	thrust::device_vector<double> membrTensionMag;

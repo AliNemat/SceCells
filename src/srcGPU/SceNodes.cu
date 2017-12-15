@@ -1434,9 +1434,9 @@ void calAndAddInter_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 				* exp(-linkLength / sceInterBPara_M[2])
 				+ sceInterBPara_M[1] / sceInterBPara_M[3]
 						* exp(-linkLength / sceInterBPara_M[3]);
-		if (forceValue > 0) {
-			forceValue = 0;
-		}
+	//	if (forceValue > 0) {  //Ali 
+	//		forceValue = 0;
+	//	}
 	}
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
@@ -2191,6 +2191,50 @@ void SceNodes::applySceForcesDisc() {
 }
 
 void SceNodes::applySceForcesDisc_M() {
+
+     thrust :: copy (infoVecs.nodeLocX.begin(),infoVecs.nodeLocX.end(),infoVecs.nodeLocXHost.begin()) ; // Ali	
+     thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
+     thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
+	 thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
+
+	  int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
+	  int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
+	  int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
+      double  distMinP2,distP2 ;
+	  int indexAdhNode ; 
+	  bool findAnyNode ;
+	  double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
+	  int cellRankTmp1, cellRankTmp2 ;  
+	 for (int i=0 ; i<totalActiveNodes ;  i++) {
+		 if (infoVecs.nodeAdhereIndexHost[i]==-1 && infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+			cellRankTmp1=i/maxNodePerCell ; 
+		 	distMinP2=10000 ; // large number
+	  		findAnyNode=false ; 
+		 	for (int j=0 ; j<totalActiveNodes ; j++) {
+				
+				cellRankTmp2=j/maxNodePerCell ; 
+			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeAdhereIndexHost[j]==-1 && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+					distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
+			         	   pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+
+					if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+						distMinP2=distP2 ;
+						indexAdhNode=j ; 
+						findAnyNode=true ; 
+					}
+		  		}
+		 	}
+
+			if (findAnyNode) {
+	     		infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ; 
+	     		infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+			}
+		 }
+	 }
+		 
+      
+	thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
@@ -2202,7 +2246,6 @@ void SceNodes::applySceForcesDisc_M() {
 	double* nodeGrowProAddr = thrust::raw_pointer_cast(
 			&infoVecs.nodeGrowPro[0]);
 	
-
 	thrust::transform(
 			make_zip_iterator(
 					make_tuple(
@@ -2234,6 +2277,8 @@ void SceNodes::applySceForcesDisc_M() {
 									auxVecs.bucketValues.begin()))),
 			AddForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr,adhNotSet));
+
+
 	
 	//adhNotSet= false ; 
 }
@@ -2348,7 +2393,7 @@ void SceNodes::sceForcesDisc_M() {
 #endif
 	cout << " confirm   --- 1 ---" << endl;
 	cout.flush();
-	prepareSceForceComputation_M();
+	prepareSceForceComputation_M(); //buckets for optimization of searching algorithm
 
 #ifdef DebugMode
 	cudaEventRecord(start2, 0);
@@ -2357,7 +2402,7 @@ void SceNodes::sceForcesDisc_M() {
 #endif
 	cout << "     --- 2 ---" << endl;
 	cout.flush();
-	applySceForcesDisc_M();
+	applySceForcesDisc_M(); // compate the MMD forces and also finds the nearset neighbor for applying the adhesion
 
 
 #ifdef DebugMode
@@ -2367,7 +2412,7 @@ void SceNodes::sceForcesDisc_M() {
 #endif
 	cout << "     --- 3 ---" << endl;
 	cout.flush();
-	processMembrAdh_M();
+	processMembrAdh_M(); //applying the adhesion force 
 
 	cout << "     --- 4 ---" << endl;
 	cout.flush();
@@ -2439,7 +2484,9 @@ void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {
 
 void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeLocX.resize(maxTotalNodeCount);
+	infoVecs.nodeLocXHost.resize(maxTotalNodeCount); //Ali 
 	infoVecs.nodeLocY.resize(maxTotalNodeCount);
+	infoVecs.nodeLocYHost.resize(maxTotalNodeCount); // Ali
 	infoVecs.nodeLocZ.resize(maxTotalNodeCount);
 	infoVecs.nodeVelX.resize(maxTotalNodeCount);
 	infoVecs.nodeVelY.resize(maxTotalNodeCount);
@@ -2462,6 +2509,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
+	infoVecs.nodeIsActiveHost.resize(maxTotalNodeCount); // Ali
 	if (controlPara.simuType == Disc
 			|| controlPara.simuType == SingleCellTest) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
@@ -2473,6 +2521,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	if (controlPara.simuType == Disc_M) {
 		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount);
 		infoVecs.nodeAdhIndxHostCopy.resize(maxTotalNodeCount);
+		infoVecs.nodeAdhereIndexHost.resize(maxTotalNodeCount); //Ali 
 		infoVecs.membrIntnlIndex.resize(maxTotalNodeCount);
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
 		infoVecs.membrTensionMag.resize(maxTotalNodeCount, 0);
