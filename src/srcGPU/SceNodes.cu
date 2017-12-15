@@ -1810,7 +1810,7 @@ void attemptToAdhere(bool& isSuccess, uint& index, double& dist,
 		}
 	}
 }
-
+/*
 __device__
 void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
@@ -1828,6 +1828,44 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 
 	}
 }
+*/
+__device__
+void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
+		double& curAdherePosX, double& curAdherePosY, double& xRes,
+		double& yRes, double& alpha) {
+	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+	//if (curLen > maxAdhBondLen_M) {
+	//	adhereIndex = -1;
+	//	return;
+//	} else {
+		if (curLen > minAdhBondLen_M) {
+			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
+			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
+			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
+		}
+
+//	}
+}
+
+//Ali for reaction force
+
+__device__
+void handleAdhesionForce_M2(double& xPos, double& yPos,
+		double& curAdherePosX, double& curAdherePosY, double& xRes,
+		double& yRes, double& alpha) {
+		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+		if (curLen > minAdhBondLen_M ) {
+			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
+			xRes = forceValue * (curAdherePosX - xPos) / curLen;
+			yRes = forceValue * (curAdherePosY - yPos) / curLen;
+		}
+		else {
+			xRes=0 ;
+			yRes=0 ; 
+		}
+
+	}
+
 
 
 //Ali June 16
@@ -2471,7 +2509,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 
 	}
 	if (controlPara.simuType == Disc_M) {
-		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount);
+		infoVecs.nodeAdhereIndex.resize(maxTotalNodeCount, -1);
 		infoVecs.nodeAdhIndxHostCopy.resize(maxTotalNodeCount);
 		infoVecs.membrIntnlIndex.resize(maxTotalNodeCount);
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
@@ -2624,6 +2662,7 @@ void SceNodes::removeInvalidPairs_M() {
 
 void SceNodes::applyMembrAdh_M() {
 	thrust::counting_iterator<uint> iBegin(0);
+        thrust::counting_iterator<uint> iBegin2(0);
 	uint maxTotalNode = allocPara_M.currentActiveCellCount
 			* allocPara_M.maxAllNodePerCell;
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
@@ -2651,7 +2690,23 @@ void SceNodes::applyMembrAdh_M() {
 		//for (int i=0 ; i<140 ; i++){
 		//	cout <<"adhesion index for "<<i << " is "<<infoVecs.nodeAdhereIndex[i]<< endl ; 
 //		}
-
+/*
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							iBegin2,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							iBegin2,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())) + maxTotalNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeVelX.begin(),
+									   infoVecs.nodeVelY.begin())),
+			ApplyAdhReaction(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr,nodeAdhAddr,maxTotalNode));
+*/
 }
 
 //AAMIRI
