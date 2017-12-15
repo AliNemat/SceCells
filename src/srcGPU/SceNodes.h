@@ -896,6 +896,8 @@ public:
 
 	thrust::device_vector<double> nodeInterForceZ;
 
+	thrust::host_vector<int> nodeAdhPotential; // Ali
+
 // in order to represent differential adhesion, we also need an vector
 // for each cell node to identify the cell type.
 	thrust::device_vector<SceNodeType> nodeCellType;

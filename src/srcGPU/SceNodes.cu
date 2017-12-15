@@ -2196,6 +2196,7 @@ void SceNodes::applySceForcesDisc_M() {
      thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
      thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
 	 thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
+	 thrust::fill(infoVecs.nodeAdhPotential.begin(),infoVecs.nodeAdhPotential.end(), 1) ;  //Ali
 
 	  int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
 	  int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
@@ -2205,15 +2206,16 @@ void SceNodes::applySceForcesDisc_M() {
 	  bool findAnyNode ;
 	  double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
 	  int cellRankTmp1, cellRankTmp2 ;  
+     // It is not one by one finding. 
 	 for (int i=0 ; i<totalActiveNodes ;  i++) {
-		 if (infoVecs.nodeAdhereIndexHost[i]==-1 && infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+		 if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
 			cellRankTmp1=i/maxNodePerCell ; 
 		 	distMinP2=10000 ; // large number
 	  		findAnyNode=false ; 
 		 	for (int j=0 ; j<totalActiveNodes ; j++) {
 				
 				cellRankTmp2=j/maxNodePerCell ; 
-			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeAdhereIndexHost[j]==-1 && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeAdhPotential[j]>0  && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
 					distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
 			         	   pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
@@ -2226,8 +2228,9 @@ void SceNodes::applySceForcesDisc_M() {
 		 	}
 
 			if (findAnyNode) {
-	     		infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ; 
-	     		infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+	     		infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
+				infoVecs.nodeAdhPotential[indexAdhNode]=infoVecs.nodeAdhPotential[indexAdhNode]-1 ; 
+	     	//	infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
 			}
 		 }
 	 }
@@ -2510,6 +2513,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActiveHost.resize(maxTotalNodeCount); // Ali
+	infoVecs.nodeAdhPotential.resize(maxTotalNodeCount); // Ali
 	if (controlPara.simuType == Disc
 			|| controlPara.simuType == SingleCellTest) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);

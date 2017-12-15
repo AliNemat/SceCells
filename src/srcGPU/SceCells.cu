@@ -1443,7 +1443,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
 
-	    if (curTime>=300 ){
+	    if (curTime>=0.1 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
