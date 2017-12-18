@@ -1817,7 +1817,7 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& yRes, double& alpha) {
 	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
 	if (curLen > maxAdhBondLen_M) {
-		adhereIndex = -1;
+	//	adhereIndex = -1;
 		return;
 	} else {
 		if (curLen > minAdhBondLen_M) {
@@ -1828,6 +1828,27 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 
 	}
 }
+
+//Ali for reaction force
+
+__device__
+void handleAdhesionForce_M2(double& xPos, double& yPos,
+		double& curAdherePosX, double& curAdherePosY, double& xRes,
+		double& yRes, double& alpha) {
+		double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
+		if (curLen > minAdhBondLen_M ) {
+			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
+			xRes = forceValue * (curAdherePosX - xPos) / curLen;
+			yRes = forceValue * (curAdherePosY - yPos) / curLen;
+		}
+		else {
+			xRes=0 ;
+			yRes=0 ; 
+		}
+
+	}
+
+
 
 
 //Ali June 16
@@ -2196,7 +2217,7 @@ void SceNodes::applySceForcesDisc_M() {
      thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
      thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
 	 thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
-	 thrust::fill(infoVecs.nodeAdhPotential.begin(),infoVecs.nodeAdhPotential.end(), 1) ;  //Ali
+	 thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
 
 	  int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
 	  int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
@@ -2205,7 +2226,8 @@ void SceNodes::applySceForcesDisc_M() {
 	  int indexAdhNode ; 
 	  bool findAnyNode ;
 	  double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
-	  int cellRankTmp1, cellRankTmp2 ;  
+	  int cellRankTmp1, cellRankTmp2 ; 
+	  int deactiveIdMyPair, deactiveIdAdhPair ; 
      // It is not one by one finding. 
 	 for (int i=0 ; i<totalActiveNodes ;  i++) {
 		 if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
@@ -2215,7 +2237,7 @@ void SceNodes::applySceForcesDisc_M() {
 		 	for (int j=0 ; j<totalActiveNodes ; j++) {
 				
 				cellRankTmp2=j/maxNodePerCell ; 
-			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeAdhPotential[j]>0  && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
 					distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
 			         	   pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
@@ -2227,14 +2249,53 @@ void SceNodes::applySceForcesDisc_M() {
 		  		}
 		 	}
 
-			if (findAnyNode) {
+			if ( findAnyNode && 
+				 sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],
+				                      infoVecs.nodeAdhMinDist[i]))
+			{
+
+				
+
+	     		 deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
+	     		 deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
+				if (deactiveIdMyPair != -1){	
+	     			infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
+	     			infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
+				}
+				if (deactiveIdAdhPair != -1){	
+	     			infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
+	     			infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
+				}
+
+			//	if (i==36) {
+			//	cout << "deactive ID 36  is " << deactiveIdAdhPair << endl ;
+			//	cout << "index Adh node 36  is " << indexAdhNode << endl ;
+
+			//	}
 	     		infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
-				infoVecs.nodeAdhPotential[indexAdhNode]=infoVecs.nodeAdhPotential[indexAdhNode]-1 ; 
-	     	//	infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+	     		infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+				infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
+				infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
+
+			//	if (i==34) {
+			//	cout << "deactive ID 34  is " << deactiveIdAdhPair << endl ;
+			//	cout << "index Adh node 34  is " << indexAdhNode << endl ;
+	     	  //  cout << " index for pair 34 is set to " << infoVecs.nodeAdhereIndexHost[indexAdhNode] << endl ;  
+
+			//	}
+
 			}
 		 }
 	 }
-		 
+
+    /*for (int i=0 ; i<4*maxNodePerCell; i++) {
+
+		cout<<"I am in node"<< i << "connected to"<<infoVecs.nodeAdhereIndexHost[i]
+		<<" distance is "<< infoVecs.nodeAdhMinDist[i] << endl ; 
+		
+	 }
+	 exit (EXIT_FAILURE)	; 
+	 */
       
 	thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
 
@@ -2513,7 +2574,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActiveHost.resize(maxTotalNodeCount); // Ali
-	infoVecs.nodeAdhPotential.resize(maxTotalNodeCount); // Ali
+	infoVecs.nodeAdhMinDist.resize(maxTotalNodeCount); // Ali
 	if (controlPara.simuType == Disc
 			|| controlPara.simuType == SingleCellTest) {
 		infoVecs.nodeGrowPro.resize(maxTotalNodeCount);
@@ -2677,6 +2738,7 @@ void SceNodes::removeInvalidPairs_M() {
 
 void SceNodes::applyMembrAdh_M() {
 	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> iBegin2(0);
 	uint maxTotalNode = allocPara_M.currentActiveCellCount
 			* allocPara_M.maxAllNodePerCell;
 	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
@@ -2705,6 +2767,22 @@ void SceNodes::applyMembrAdh_M() {
 		//	cout <<"adhesion index for "<<i << " is "<<infoVecs.nodeAdhereIndex[i]<< endl ; 
 //		}
 
+/*	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							iBegin2,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeIsActive.begin(),
+							iBegin2,
+							infoVecs.nodeVelX.begin(),
+							infoVecs.nodeVelY.begin())) + maxTotalNode,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(infoVecs.nodeVelX.begin(),
+									   infoVecs.nodeVelY.begin())),
+			ApplyAdhReaction(nodeLocXAddress, nodeLocYAddress, nodeGrowProAddr,nodeAdhAddr,maxTotalNode));
+*/
 }
 
 //AAMIRI
