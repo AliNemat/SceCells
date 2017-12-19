@@ -1458,9 +1458,11 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	growAtRandom_M(dt);
-	std::cout << "     *** 6 ***" << endl;
-	std::cout.flush();
+	if (curTime>300) {
+		growAtRandom_M(dt);
+		std::cout << "     *** 6 ***" << endl;
+		std::cout.flush();
+	}
 	//if (curTime<3300.0)
     relaxCount=relaxCount+1 ; 
 	if (relaxCount==10) { 
@@ -2674,7 +2676,7 @@ void SceCells::growAtRandom_M(double dt) {
 
 	//delPointIfScheduledToGrow_M();//AAMIRI - commented out on June20
 
-	adjustGrowthInfo_M();
+	adjustGrowthInfo_M(); // Ali: I don't understand this function
 }
 
 void SceCells::divide2D_M() {
