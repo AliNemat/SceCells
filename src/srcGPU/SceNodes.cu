@@ -324,8 +324,10 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
         std::cout << " I am in SceNodes constructor with short input which includes copyParaToGPUConstMem_M  function " << endl ; 
 	//std::cout << "at the end" << std::endl;
 	//std::cout.flush();
-	adhNotSet=true ; 
+	adhNotSet=true ; //Ali 
+	adhUpdate=true ; //Ali 
 	cout << "adhesion not set is initialized as" << adhNotSet << endl ; 
+	cout << "adhesion update is initialized as" << adhUpdate  << endl ; 
 }
 
 void SceNodes::copyParaToGPUConstMem() {
@@ -2212,92 +2214,72 @@ void SceNodes::applySceForcesDisc() {
 }
 
 void SceNodes::applySceForcesDisc_M() {
+	if (adhUpdate) {
+		adhUpdate=false ; 
+     	thrust :: copy (infoVecs.nodeLocX.begin(),infoVecs.nodeLocX.end(),infoVecs.nodeLocXHost.begin()) ; // Ali	
+     	thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
+     	thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
+	 	thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
+	 	thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
 
-     thrust :: copy (infoVecs.nodeLocX.begin(),infoVecs.nodeLocX.end(),infoVecs.nodeLocXHost.begin()) ; // Ali	
-     thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
-     thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
-	 thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
-	 thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
-
-	  int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
-	  int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
-	  int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
-      double  distMinP2,distP2 ;
-	  int indexAdhNode ; 
-	  bool findAnyNode ;
-	  double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
-	  int cellRankTmp1, cellRankTmp2 ; 
-	  int deactiveIdMyPair, deactiveIdAdhPair ; 
-     // It is not one by one finding. 
-	 for (int i=0 ; i<totalActiveNodes ;  i++) {
-		 if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
-			cellRankTmp1=i/maxNodePerCell ; 
-		 	distMinP2=10000 ; // large number
-	  		findAnyNode=false ; 
-		 	for (int j=0 ; j<totalActiveNodes ; j++) {
+	  	int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
+	  	int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
+	  	int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
+      	double  distMinP2,distP2 ;
+	  	int indexAdhNode ; 
+	  	bool findAnyNode ;
+	  	double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
+	  	int cellRankTmp1, cellRankTmp2 ; 
+	  	int deactiveIdMyPair, deactiveIdAdhPair ; 
+     	// It is not one by one finding. 
+	 	for (int i=0 ; i<totalActiveNodes ;  i++) {
+			if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+				cellRankTmp1=i/maxNodePerCell ; 
+		 		distMinP2=10000 ; // large number
+	  			findAnyNode=false ; 
+		 		for (int j=0 ; j<totalActiveNodes ; j++) {
 				
-				cellRankTmp2=j/maxNodePerCell ; 
-			 	if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
-					distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
-			         	   pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+					cellRankTmp2=j/maxNodePerCell ; 
+			 		if (cellRankTmp2 !=cellRankTmp1 && infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+						distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
+			         	       pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
-					if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
-						distMinP2=distP2 ;
-						indexAdhNode=j ; 
-						findAnyNode=true ; 
+						if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+							distMinP2=distP2 ;
+							indexAdhNode=j ; 
+							findAnyNode=true ; 
+						}
+		  			}
+		 		}
+
+				if ( findAnyNode && 
+					sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],
+				                         infoVecs.nodeAdhMinDist[i]))
+				{
+
+	     			deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
+	     			deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
+					if (deactiveIdMyPair != -1){	
+	     				infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
+	     				infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
 					}
-		  		}
+					if (deactiveIdAdhPair != -1){	
+	     				infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
+	     				infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
+					}
+
+	     			infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
+	     			infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+					infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
+					infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
+
+				}
 		 	}
+	 	}
+         
+		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
 
-			if ( findAnyNode && 
-				 sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],
-				                      infoVecs.nodeAdhMinDist[i]))
-			{
-
-				
-
-	     		 deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
-	     		 deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
-				if (deactiveIdMyPair != -1){	
-	     			infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
-	     			infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
-				}
-				if (deactiveIdAdhPair != -1){	
-	     			infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
-	     			infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
-				}
-
-			//	if (i==36) {
-			//	cout << "deactive ID 36  is " << deactiveIdAdhPair << endl ;
-			//	cout << "index Adh node 36  is " << indexAdhNode << endl ;
-
-			//	}
-	     		infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
-	     		infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
-				infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
-				infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
-
-			//	if (i==34) {
-			//	cout << "deactive ID 34  is " << deactiveIdAdhPair << endl ;
-			//	cout << "index Adh node 34  is " << indexAdhNode << endl ;
-	     	  //  cout << " index for pair 34 is set to " << infoVecs.nodeAdhereIndexHost[indexAdhNode] << endl ;  
-
-			//	}
-
-			}
-		 }
-	 }
-
-    /*for (int i=0 ; i<4*maxNodePerCell; i++) {
-
-		cout<<"I am in node"<< i << "connected to"<<infoVecs.nodeAdhereIndexHost[i]
-		<<" distance is "<< infoVecs.nodeAdhMinDist[i] << endl ; 
-		
-	 }
-	 exit (EXIT_FAILURE)	; 
-	 */
-      
-	thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+	}
 
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);

@@ -2703,6 +2703,7 @@ class SceCells {
 	double shrinkRatio;
 	double memNewSpacing;
 	double curTime;
+	int relaxCount ;  //Ali 
 
 	void readMiscPara();
 	void readBioPara();

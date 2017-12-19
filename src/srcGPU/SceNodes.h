@@ -637,9 +637,9 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		uint index;
 		double dist;
                 bool  Lennard_Jones =Is_Lennard_Jones() ;
-		if (_adhNotSet){
+//		if (_adhNotSet){
 	//	_nodeAdhereIndex[myValue] = -1 ;  Ali commented to deactive this part of the code
-		}
+//		}
 		for (uint i = begin; i < end; i++) {
 			uint nodeRankOther = _extendedValuesAddress[i];
 			if (nodeRankOther == myValue) {
@@ -654,23 +654,23 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 				calAndAddInter_M(xPos, yPos, _nodeLocXAddress[nodeRankOther],
 						_nodeLocYAddress[nodeRankOther], xRes, yRes);
                                                }
-			if(_adhNotSet){
+		//	if(_adhNotSet){
 				//if (_nodeAdhereIndex[myValue] == -1) {
-					attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
-							yPos, _nodeLocXAddress[nodeRankOther],
-							_nodeLocYAddress[nodeRankOther]);
+	//				attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos,
+	//						yPos, _nodeLocXAddress[nodeRankOther],
+	//						_nodeLocYAddress[nodeRankOther]);
 			//	}
 //Ali
 
-			}
+		//	}
 			}
 		}
-		if (_adhNotSet) {
-			if (isSuccess) {
+	//	if (_adhNotSet) {
+	//		if (isSuccess) {
 		//			_nodeAdhereIndex[myValue] = index;  //Ali commented to deactive this part of the code
 		//		_nodeAdhereIndex[index] = myValue; Ali added and then commentted out
-			}
-		}
+	//		}
+	//	}
 		return thrust::make_tuple(xRes, yRes);
 	}
 };
@@ -1121,7 +1121,8 @@ class SceNodes {
 // friend unit test so these it can test private functions
 	FRIEND_TEST(SceNodeTest, outputAnimationLinks);
 public:
-
+    
+	bool adhUpdate ; //Ali 
 
 	NodeInfoVecs infoVecs; //Ali 
 	/**

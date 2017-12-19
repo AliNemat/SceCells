@@ -108,6 +108,7 @@ public:
 	 * Default constructor.
 	 * Reads all the configuration values from file.
 	 */
+
 	SimulationDomainGPU();
 
 	/**

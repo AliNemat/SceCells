@@ -668,7 +668,8 @@ SceCells::SceCells(SceNodes* nodesInput,
 			globalConfigVars.getConfigValue("CenterShiftRatio").toDouble();
 
 	memNewSpacing = globalConfigVars.getConfigValue("MembrLenDiv").toDouble();
-
+    relaxCount=0 ;
+	cout << "relax count is initialized as" << relaxCount << endl ; 
 	initialize_M(nodesInput);
 	copyToGPUConstMem();
 	copyInitActiveNodeCount_M(initActiveMembrNodeCounts,
@@ -1461,7 +1462,12 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 6 ***" << endl;
 	std::cout.flush();
 	//if (curTime<3300.0)
-	divide2D_M();
+    relaxCount=relaxCount+1 ; 
+	if (relaxCount==10) { 
+		divide2D_M();
+
+		nodes->adhUpdate=true; 
+	}
 	std::cout << "     *** 7 ***" << endl;
 	std::cout.flush();
 	distributeCellGrowthProgress_M();
@@ -1501,9 +1507,13 @@ cout << " first writing for nodeDevice finished in SceCells after function "<< e
         cout << " second writing for node info vecs finished in SceCells after functuion "<< endl ;  
         std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
-	handleMembrGrowth_M();
-	std::cout << "     *** 10 ***" << endl;
-	std::cout.flush();
+	if (relaxCount==10) { 
+		handleMembrGrowth_M();
+		std::cout << "     *** 10 ***" << endl;
+		std::cout.flush();
+		relaxCount=0 ; // Ali
+		nodes->adhUpdate=true; // Ali 
+	}
 }
 
 void SceCells::runStretchTest(double dt) {

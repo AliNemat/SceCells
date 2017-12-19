@@ -375,7 +375,7 @@ void SimulationDomainGPU::performAblation(AblationEvent& ablEvent) {
 //We may be able to remove this function by repositioning the location of calling output data
 CellsStatsData SimulationDomainGPU::outputPolyCountData() {
 	// this step is necessary for obtaining correct neighbors because new cells might have been created in previous step.
-	nodes.sceForcesDisc_M();
+	//nodes.sceForcesDisc_M(); // Ali commented this. it will intefere with logics of the code.
 	return cells.outputPolyCountData();
 }
 

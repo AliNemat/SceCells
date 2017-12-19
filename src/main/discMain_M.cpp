@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
 	SimulationDomainGPU simuDomain;
 
         cout<< "I am in main file after simulationDomainGPU instance creation"<<endl; 
-	SimulationInitData_V2_M initData = initHelper.initInput_M();
+	SimulationInitData_V2_M initData = initHelper.initInput_M(); // it will go inside cell init helper Ali 
 
         cout<< "I am in main file after initInput_M creation"<<endl; 
 	simuDomain.initialize_v2_M(initData,mainPara.InitTimeStage);
