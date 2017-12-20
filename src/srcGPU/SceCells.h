@@ -2878,6 +2878,7 @@ class SceCells {
 
 	void growAtRandom_M(double dt);
 
+	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();
 
 	void distributeCellGrowthProgress_M();

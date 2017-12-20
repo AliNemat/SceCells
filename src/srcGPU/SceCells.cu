@@ -1433,16 +1433,16 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 //Ali        
 	computeCenterPos_M();
         BC_Imp_M() ; 
-	std::cout << "     *** 5 ***" << endl;
+	std::cout << "     ***3.5 ***" << endl;
 	std::cout.flush();
 	
 //Ali
 		bool cellPolar=false ; 
 		bool subCellPolar= false  ; 
-	    if (curTime>500 && curTime<1000 ){
+	  //  if (curTime>500 && curTime<1000 ){
 			//cellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-		}
+	//	}
 
 	    if (curTime>=0.1 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
@@ -1458,12 +1458,13 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>30) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
 	}
-	//if (curTime<3300.0)
+
+	enterMitoticCheckForDivAxisCal() ; 
     relaxCount=relaxCount+1 ; 
 	if (relaxCount==10) { 
 		divide2D_M();
@@ -2679,17 +2680,21 @@ void SceCells::growAtRandom_M(double dt) {
 	adjustGrowthInfo_M(); // Ali: I don't understand this function
 }
 
-void SceCells::divide2D_M() {
-	bool isDivisionPresent = decideIfGoingToDivide_M();
-        bool isEnteringMitotic = decideIfAnyCellEnteringMitotic() ; //A&A
+//Ali
+void SceCells::enterMitoticCheckForDivAxisCal() {
+
+    bool isEnteringMitotic = decideIfAnyCellEnteringMitotic() ; //A&A
         
         //A&A
 	if (isEnteringMitotic){
         std::cout<< "I am in EnteringMitotic"<< std::endl; 
-	copyCellsEnterMitotic();
-	findHertwigAxis();
+		copyCellsEnterMitotic();
+		findHertwigAxis();
 	}
-        //A&A
+}
+
+void SceCells::divide2D_M() {
+	bool isDivisionPresent = decideIfGoingToDivide_M();
 
 	if (!isDivisionPresent) {
 		return;
@@ -2744,7 +2749,6 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
         double minY_Tisu= *MinY_Itr ; 
         double maxY_Tisu= *MaxY_Itr ;  
 
-	if (curTime>=300 ){
 
 	uint seed = time(NULL);
 	thrust::counting_iterator<uint> countingBegin(0);
@@ -2769,7 +2773,6 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
 							cellInfoVecs.isRandGrowInited.begin())),
 			RandomizeGrow_M(minY_Tisu,maxY_Tisu,growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax, seed));
-	}
 }
 
 void SceCells::updateGrowthProgress_M() {
