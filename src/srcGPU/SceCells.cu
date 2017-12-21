@@ -1823,16 +1823,17 @@ void SceCells::createTwoNewCellArr_M() {
  
 		std::vector<VecVal> tmp1Membr, tmp2Membr;
 		CVector cell1Center, cell2Center;
-
+        // obtain the center of two cell along the shortest distance between the membrane nodes of mother cell. There is also a tuning factor to shift the centers inside the cell "shiftRatio"
 		obtainTwoNewCenters(oldCenter, divDir, lenAlongHertwigAxis, cell1Center,
 				cell2Center);
 
+		// decide each membrane nodes and internal nodes of mother cell is going to belongs to daugther cell 1 or 2. Also shrink the internal nod position along the aixs connecting mother cell to the internal nodes by a factor given as an input in the name of "Shrink ratio"
 		prepareTmpVec(i, divDir, oldCenter, tmp1Membr, tmp2Membr);
-
+		//create the two new membrane line based on the specified distance. 
 		processMemVec(tmp1Membr, tmp2Membr);
-
+        // shift the internal to make sure the center of new daugther cell is exactly similar to what have chosen in the function "obtainTwoNewCenters"
 		shiftIntnlNodesByCellCenter(cell1Center, cell2Center);
-
+// assemble two new daughter cells information.
 		assembleVecForTwoCells(i);
 	}
 	//divDebug();
@@ -2700,10 +2701,10 @@ void SceCells::divide2D_M() {
 		return;
 	}
 	//aniDebug = true;
-	copyCellsPreDivision_M();
-	createTwoNewCellArr_M();
-	copyFirstCellArr_M();
-	copySecondCellArr_M();
+	copyCellsPreDivision_M(); 
+	createTwoNewCellArr_M(); // main function which plays with position of internal nodes and membrane new created nodes.
+	copyFirstCellArr_M(); // copy the first cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
+	copySecondCellArr_M();// copy the second cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
 	updateActiveCellCount_M();
 	markIsDivideFalse_M();
 	//divDebug();
