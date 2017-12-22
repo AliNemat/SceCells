@@ -11,6 +11,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, double, double, double> UiDDD; //Ali
 typedef thrust::tuple<double, uint> DUi; //Ali 
 typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
@@ -1221,21 +1222,22 @@ struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 
 
 //Ali struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
-struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
+struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 	uint _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
 	__host__ __device__ MemGrowFunc(uint bound) :
 			_bound(bound) {
 	}
 	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
-	__host__ __device__ BoolD operator()(const UiDD& uidd) {
+	__host__ __device__ BoolD operator()(const UiDDD& uiddd) {
 		//Ali double progress = thrust::get<0>(dui);
-		uint   curActiveMembrNode = thrust::get<0>(uidd); //Ali
-		double progress = thrust::get<1>(uidd); //Ali
-                double LengthMax=thrust::get<2>(uidd); //Ali
+		uint   curActiveMembrNode = thrust::get<0>(uiddd); //Ali
+		double progress = thrust::get<1>(uiddd); //Ali
+        double LengthMax=thrust::get<2>(uiddd); //Ali
+        double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode < _bound  && LengthMax>0.0975 ) {
+		if (curActiveMembrNode < _bound  && LengthMax>0.0975 && cellProgress>0.05 ) {
 			return thrust::make_tuple(true, 0);
 			//return thrust::make_tuple(false, progress); //No growth
 		} else {
@@ -1245,21 +1247,22 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 };
 
 //Ali
-struct MemDelFunc: public thrust::unary_function<UiDD, BoolD> {
+struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 	uint _bound;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
 	__host__ __device__ MemDelFunc(uint bound) :
 			_bound(bound) {
 	}
 	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
-	__host__ __device__ BoolD operator()(const UiDD& uidd) {
+	__host__ __device__ BoolD operator()(const UiDDD& uiddd) {
 		//Ali double progress = thrust::get<0>(dui);
-		uint   curActiveMembrNode = thrust::get<0>(uidd); //Ali
-		double progress = thrust::get<1>(uidd); //Ali
-                double LengthMin=thrust::get<2>(uidd); //Ali
+		uint   curActiveMembrNode = thrust::get<0>(uiddd); //Ali
+		double progress = thrust::get<1>(uiddd); //Ali
+        double LengthMin=thrust::get<2>(uiddd); //Ali
+        double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.0375 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.0375 && cellProgress>0.05 ) {
 			return thrust::make_tuple(true,progress);
 			//return thrust::make_tuple(false, progress); //No growth
 		} else {

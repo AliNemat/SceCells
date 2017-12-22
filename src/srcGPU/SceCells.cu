@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>30) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -4235,10 +4235,16 @@ void SceCells::decideIfAddMembrNode_M() {
          thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin())),
+							           cellInfoVecs.membrGrowProgress.begin(),
+									   cellInfoVecs.maxDistToRiVec.begin(),
+									   cellInfoVecs.growthSpeed.begin()
+									   )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.maxDistToRiVec.begin()))
+							           cellInfoVecs.membrGrowProgress.begin(),
+									   cellInfoVecs.maxDistToRiVec.begin(),
+									   cellInfoVecs.growthSpeed.begin()
+									   ))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
@@ -4253,10 +4259,16 @@ void SceCells::decideIfDelMembrNode_M() {
          thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.minDistToRiVec.begin())),
+							   		   cellInfoVecs.membrGrowProgress.begin(),
+									   cellInfoVecs.minDistToRiVec.begin(),
+									  cellInfoVecs.growthSpeed.begin()
+									  )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
-							   cellInfoVecs.membrGrowProgress.begin(),cellInfoVecs.minDistToRiVec.begin()))
+							   		   cellInfoVecs.membrGrowProgress.begin(),
+									   cellInfoVecs.minDistToRiVec.begin(),
+									  cellInfoVecs.growthSpeed.begin()
+									  ))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrRemovingNode.begin(),
@@ -4755,11 +4767,24 @@ void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 						divAuxData.tmpNodePosY_M[index], 0);
 				CVector centerToPosDir = internalPos - oldCenter;
 				CVector shrinkedPos = centerToPosDir * shrinkRatio + oldCenter;
-				double dotProduct = centerToPosDir * divDir;
+
+		        CVector unitDivDir = divDir.getUnitVector(); // Ali 
+				double  AmpTanget=centerToPosDir*unitDivDir ;  // Ali dot product of two vectors
+				double  shrinkedAmpTanget=shrinkRatio*AmpTanget; // multiply two doubles //Ali
+
+				CVector TangetVShrink=unitDivDir*shrinkedAmpTanget; // shrink the tanget component //Ali
+				CVector TangetV=      unitDivDir*        AmpTanget; // get the tanget component to compute the normal vector  //Ali
+				CVector  NormV=centerToPosDir-TangetV ;             // compute the normal vector Ali
+
+				CVector  polarShrinkedPos=NormV+TangetVShrink ;  // summation of shrinked tanget and as previous vector in the normal direction to division axis//Ali
+				CVector  updatedV=polarShrinkedPos+oldCenter ; //Ali 
+
+				//double dotProduct = centerToPosDir * divDir; //Ali comment 
+				double dotProduct = polarShrinkedPos   * divDir; //Ali 
 				if (dotProduct > 0) {
-					divAuxData.tmp1IntnlVec.push_back(shrinkedPos);
+					divAuxData.tmp1IntnlVec.push_back(updatedV);
 				} else {
-					divAuxData.tmp2IntnlVec.push_back(shrinkedPos);
+					divAuxData.tmp2IntnlVec.push_back(updatedV);
 				}
 			}
 		}
