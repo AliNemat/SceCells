@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>30) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
