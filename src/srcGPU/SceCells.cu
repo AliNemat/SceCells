@@ -1444,7 +1444,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	//	}
 
-	    if (curTime>=0.1 ){
+	    if (curTime>=300 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>30) {
+	if (curTime>300) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -4237,13 +4237,13 @@ void SceCells::decideIfAddMembrNode_M() {
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
 							           cellInfoVecs.membrGrowProgress.begin(),
 									   cellInfoVecs.maxDistToRiVec.begin(),
-									   cellInfoVecs.growthSpeed.begin()
+									   cellInfoVecs.growthProgress.begin()
 									   )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
 							           cellInfoVecs.membrGrowProgress.begin(),
 									   cellInfoVecs.maxDistToRiVec.begin(),
-									   cellInfoVecs.growthSpeed.begin()
+									   cellInfoVecs.growthProgress.begin()
 									   ))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
@@ -4261,13 +4261,13 @@ void SceCells::decideIfDelMembrNode_M() {
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
 							   		   cellInfoVecs.membrGrowProgress.begin(),
 									   cellInfoVecs.minDistToRiVec.begin(),
-									  cellInfoVecs.growthSpeed.begin()
+									  cellInfoVecs.growthProgress.begin()
 									  )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
 							   		   cellInfoVecs.membrGrowProgress.begin(),
 									   cellInfoVecs.minDistToRiVec.begin(),
-									  cellInfoVecs.growthSpeed.begin()
+									  cellInfoVecs.growthProgress.begin()
 									  ))
 					+ curActCellCt,
 			thrust::make_zip_iterator(
