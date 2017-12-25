@@ -1237,7 +1237,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode < _bound  && LengthMax>0.0975 && cellProgress>0.05 ) {
+		if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05 ) {
 			return thrust::make_tuple(true, 0);
 			//return thrust::make_tuple(false, progress); //No growth
 		} else {
@@ -1262,7 +1262,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.0375 && cellProgress>0.05 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
 			return thrust::make_tuple(true,progress);
 			//return thrust::make_tuple(false, progress); //No growth
 		} else {

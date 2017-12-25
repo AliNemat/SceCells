@@ -1444,7 +1444,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	//	}
 
-	    if (curTime>=300 ){
+	    if (curTime>=500 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>500) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
