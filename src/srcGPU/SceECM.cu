@@ -180,7 +180,7 @@ adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 
-int maxAllNodePerCell=620 ; // need to be imported
+int maxAllNodePerCell=700 ; // need to be imported
 int maxMembrNodePerCell=500 ; // need to be imported
 double eCMBendStiff=0.0 ; // need to be an input
 

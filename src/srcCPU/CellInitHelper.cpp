@@ -913,8 +913,8 @@ vector<CVector> CellInitHelper::tryGenInitCellNodes(uint initNodeCt) {
 	double randX, randY;
 
                //Ali
-               cout << "I am in the right one" << endl ; 
-               cout << "# of internal Nodes" << initNodeCt <<endl ; 
+            //   cout << "I am in the right one" << endl ; 
+             //  cout << "# of internal Nodes" << initNodeCt <<endl ; 
                //Ali
 	while (foundCount < initNodeCt) {
 		bool isInCircle = false;
@@ -928,7 +928,7 @@ vector<CVector> CellInitHelper::tryGenInitCellNodes(uint initNodeCt) {
                 //Ali
 		 poss.push_back(CVector(randX, randY, 0));
 		 foundCount++;
-               cout << "#internal nodes location" << foundCount<<"isInCircle"<<isInCircle <<endl ; 
+         //      cout << "#internal nodes location" << foundCount<<"isInCircle"<<isInCircle <<endl ; 
                //Ali
                  }
                //Ali 
