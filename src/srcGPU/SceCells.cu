@@ -1444,7 +1444,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	//	}
 
-	    if (curTime>=5000 ){
+	    if (curTime>=500 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>5000) {
+	if (curTime>500) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2755,13 +2755,15 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
 	thrust::counting_iterator<uint> countingBegin(0);
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+					thrust::make_tuple(cellInfoVecs.eCellTypeV2.begin(),
+							cellInfoVecs.growthSpeed.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),
 							countingBegin)),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.growthSpeed.begin(),
+					thrust::make_tuple(cellInfoVecs.eCellTypeV2.begin(),
+							cellInfoVecs.growthSpeed.begin(),
 							cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin(),
 							cellInfoVecs.isRandGrowInited.begin(),

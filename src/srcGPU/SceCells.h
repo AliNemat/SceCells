@@ -2188,7 +2188,7 @@ struct AssignRandIfNotInit: public thrust::unary_function<CVec3BoolInt,
 	}
 };
 //Ali modified
-struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
+struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Bool> {
 	double _lowerLimit, _upperLimit;
 	double _minY,_maxY ; 
 	uint _seed;
@@ -2200,26 +2200,32 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 			_minY(minY),_maxY(maxY),_lowerLimit(low), _upperLimit(high), _seed(seed), dist(_lowerLimit,
 					_upperLimit), dist2(0, 2 * acos(-1.0)) {
 	}
-	__host__ __device__ CVec3Bool operator()(const CVec3BoolInt &inputInfo) {
-		double curSpeed = thrust::get<0>(inputInfo);
-		double centerCellX = thrust::get<1>(inputInfo);
-		double centerCellY = thrust::get<2>(inputInfo);
-		bool isInitBefore = thrust::get<3>(inputInfo);
+	__host__ __device__ CVec3Bool operator()(const TypeCVec3BoolInt &inputInfo) {
+		ECellType  cellType= thrust::get<0>(inputInfo);
+		double curSpeed = thrust::get<1>(inputInfo);
+		double centerCellX = thrust::get<2>(inputInfo);
+		double centerCellY = thrust::get<3>(inputInfo);
+		bool isInitBefore = thrust::get<4>(inputInfo);
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
-			uint cellRank = thrust::get<4>(inputInfo);
-			uint seedNew = _seed + cellRank;
-			rng.discard(seedNew);
-			double distanceY=abs (centerCellY-_minY) ; 
-			double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
-			//double randomNum1 =dist(rng);
+			if (cellType==pouch) {
+				uint cellRank = thrust::get<4>(inputInfo);
+				uint seedNew = _seed + cellRank;
+				rng.discard(seedNew);
+				double distanceY=abs (centerCellY-_minY) ; 
+				double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
+				//double randomNum1 =dist(rng);
 			
-			rng.discard(seedNew);
-			double randomNum2 = dist2(rng);
-			//double xDir = cos(randomNum2);
-			//double yDir = sin(randomNum2);
-			return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);
+				rng.discard(seedNew);
+				double randomNum2 = dist2(rng);
+				//double xDir = cos(randomNum2);
+				//double yDir = sin(randomNum2);
+				return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);
+			}
+			else {
+				return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
+			}
 		}
 	}
 };
