@@ -2472,6 +2472,8 @@ struct CellInfoVecs {
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
 	thrust::device_vector<int> cellRoot;//Ali
+	thrust::device_vector<int> cellRankFront ;//Ali
+	thrust::device_vector<int> cellRankBehind ;//Ali
        
 	thrust::device_vector<double> growthProgressOld;  //A&A
 //Ali
@@ -2632,6 +2634,7 @@ struct CellDivAuxData {
 
 	thrust::device_vector<double> tmpHertwigXdir;  //A&A
 	thrust::device_vector<double> tmpHertwigYdir;  //A&A
+	thrust::host_vector<bool> isMotherCellBehind ;  //Ali 
 
 	std::vector<CVector> tmp1IntnlVec, tmp2IntnlVec;
 	std::vector<CVector> tmp1VecMem, tmp2VecMem;

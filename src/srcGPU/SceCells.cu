@@ -747,8 +747,26 @@ void SceCells::initCellInfoVecs_M() {
     cellInfoVecs.cellPerimVec.resize(allocPara_m.maxCellCount, 0.0);//AAMIRI
     cellInfoVecs.eCellTypeV2.resize(allocPara_m.maxCellCount, notActive);//Ali 
     cellInfoVecs.cellRoot.resize(allocPara_m.maxCellCount, -1);//Ali
+    cellInfoVecs.cellRankFront.resize(allocPara_m.maxCellCount, -1);//Ali for cross section simulation 
+    cellInfoVecs.cellRankBehind.resize(allocPara_m.maxCellCount, -1);//Ali for cross section simulation
 
-	thrust:: sequence (cellInfoVecs.cellRoot.begin(),cellInfoVecs.cellRoot.begin()+allocPara_m.currentActiveCellCount) ; 
+	thrust:: sequence (cellInfoVecs.cellRoot.begin(),cellInfoVecs.cellRoot.begin()+allocPara_m.currentActiveCellCount) ; //Ali
+
+	thrust:: sequence (cellInfoVecs.cellRankFront.begin(),cellInfoVecs.cellRankFront.begin()+allocPara_m.currentActiveCellCount) ; //Ali
+	thrust:: device_vector<int>  tmp1 ; 
+	thrust:: device_vector<int>  tmp2 ; 
+    tmp1.resize(allocPara_m.currentActiveCellCount,1) ; 
+    tmp2.resize(allocPara_m.currentActiveCellCount,-1) ;
+	thrust:: transform(tmp1.begin(),                                            tmp1.begin()+allocPara_m.currentActiveCellCount,
+					   cellInfoVecs.cellRankFront.begin(),cellInfoVecs.cellRankFront.begin()+allocPara_m.currentActiveCellCount,thrust::plus<int>()
+					  ) ; //Ali
+	thrust:: transform(tmp2.begin(),                                              tmp2.begin()+allocPara_m.currentActiveCellCount,
+	                   cellInfoVecs.cellRankBehind.begin(),cellInfoVecs.cellRankBehind.begin()+allocPara_m.currentActiveCellCount,thrust::plus<int>()
+					  ) ; //Ali
+	cellInfoVecs.cellRankBehind[0]=allocPara_m.currentActiveCellCount-1 ; 
+	cellInfoVecs.cellRankFront[allocPara_m.currentActiveCellCount-1]=0 ; 
+
+     
         std::cout << "initial number of active cells is " <<allocPara_m.currentActiveCellCount <<std::endl;
 	    std::cout <<"last cell rank used in the cell root is " <<cellInfoVecs.cellRoot[allocPara_m.currentActiveCellCount-1] << endl ;   
 }
@@ -1793,6 +1811,7 @@ void SceCells::createTwoNewCellArr_M() {
 	divAuxData.tmp1InternalActiveCounts.clear();
 	divAuxData.tmp2MemActiveCounts.clear();
 	divAuxData.tmp2InternalActiveCounts.clear();
+	divAuxData.isMotherCellBehind.clear(); //Ali
 
 	//divDebug();
 
@@ -1825,7 +1844,8 @@ void SceCells::createTwoNewCellArr_M() {
 		CVector cell1Center, cell2Center;
         // obtain the center of two cell along the shortest distance between the membrane nodes of mother cell. There is also a tuning factor to shift the centers inside the cell "shiftRatio"
 		obtainTwoNewCenters(oldCenter, divDir, lenAlongHertwigAxis, cell1Center,
-				cell2Center);
+	  			cell2Center);
+		
 
 		// decide each membrane nodes and internal nodes of mother cell is going to belongs to daugther cell 1 or 2. Also shrink the internal nod position along the aixs connecting mother cell to the internal nodes by a factor given as an input in the name of "Shrink ratio"
 		prepareTmpVec(i, divDir, oldCenter, tmp1Membr, tmp2Membr);
@@ -1885,6 +1905,7 @@ void SceCells::copyFirstCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		uint cellRank = divAuxData.tmpCellRank_M[i];
+		uint cellRankDaughter = allocPara_m.currentActiveCellCount + i; //Ali 
 		uint nodeStartIndx = cellRank * maxAllNodePerCell
 				+ allocPara_m.bdryNodeCount;
 		uint tmpStartIndx = i * maxAllNodePerCell;
@@ -1917,6 +1938,16 @@ void SceCells::copyFirstCellArr_M() {
 		cellInfoVecs.membrGrowProgress[cellRank] = 0.0;
 		cellInfoVecs.isRandGrowInited[cellRank] = false;
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
+		//Ali
+		if (divAuxData.isMotherCellBehind[i]) {
+			//cellInfoVecs.cellRankBehindNeighb[cellRank] =cellInfoVecs.cellRankBehindNeighb[cellRank] ; //as before so no need to update 
+			cellInfoVecs.cellRankFront[cellRank]  =cellRankDaughter ; 
+		}
+		else {
+			cellInfoVecs.cellRankBehind[cellRank] =cellRankDaughter ; 
+		//	cellInfoVecs.cellRankFrontNeighb[cellRank]  = cellInfoVecs.cellRankFrontNeighb[cellRank]; //as before so no need to update
+
+		}
 	}
 }
 
@@ -1960,6 +1991,17 @@ void SceCells::copySecondCellArr_M() {
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 		cellInfoVecs.cellRoot[cellRank] = cellInfoVecs.cellRoot[cellRankMother]; //Ali 
 		cellInfoVecs.eCellTypeV2[cellRank] = cellInfoVecs.eCellTypeV2[cellRankMother]; //Ali
+//Ali
+
+		if (divAuxData.isMotherCellBehind[i]) {
+			cellInfoVecs.cellRankBehind[cellRank] =cellRankMother ; 
+			cellInfoVecs.cellRankFront[cellRank]  =cellInfoVecs.cellRankFront[cellRankMother]; 
+		}
+		else {
+			cellInfoVecs.cellRankBehind[cellRank] =cellInfoVecs.cellRankBehind[cellRankMother]; 
+			cellInfoVecs.cellRankFront[cellRank]  =cellRankMother ; 
+		}
+//Ali
 	}
 }
 
@@ -4731,6 +4773,19 @@ void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 	double lenChange = len_MajorAxis / 2.0 * centerShiftRatio;
 	centerNew1 = oldCenter + lenChange * divDirUnit;
 	centerNew2 = oldCenter - lenChange * divDirUnit;
+	CVector centerTissue ;  //Ali
+	centerTissue=CVector (25.0, 25.0, 0.0) ; //Ali should be imported
+	CVector tmpVec1=centerNew1-centerTissue ;  //Ali 
+	CVector tmpVec2=centerNew2-centerTissue ;  //Ali 
+
+	CVector tmpCross=Cross(tmpVec1,tmpVec2) ; //Ali 
+	bool isMotherCellBehindInt=false ;  //Ali 
+	// assuming CCW is the initial order of cell ranks
+	if (tmpCross.z>0){
+		isMotherCellBehindInt=true  ; 
+	}
+//Ali
+   divAuxData.isMotherCellBehind.push_back(isMotherCellBehindInt) ; 
 }
 
 void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
