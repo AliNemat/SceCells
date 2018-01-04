@@ -747,26 +747,8 @@ void SceCells::initCellInfoVecs_M() {
     cellInfoVecs.cellPerimVec.resize(allocPara_m.maxCellCount, 0.0);//AAMIRI
     cellInfoVecs.eCellTypeV2.resize(allocPara_m.maxCellCount, notActive);//Ali 
     cellInfoVecs.cellRoot.resize(allocPara_m.maxCellCount, -1);//Ali
-    cellInfoVecs.cellRankFront.resize(allocPara_m.maxCellCount, -1);//Ali for cross section simulation 
-    cellInfoVecs.cellRankBehind.resize(allocPara_m.maxCellCount, -1);//Ali for cross section simulation
 
 	thrust:: sequence (cellInfoVecs.cellRoot.begin(),cellInfoVecs.cellRoot.begin()+allocPara_m.currentActiveCellCount) ; //Ali
-
-	thrust:: sequence (cellInfoVecs.cellRankFront.begin(),cellInfoVecs.cellRankFront.begin()+allocPara_m.currentActiveCellCount) ; //Ali
-	thrust:: device_vector<int>  tmp1 ; 
-	thrust:: device_vector<int>  tmp2 ; 
-    tmp1.resize(allocPara_m.currentActiveCellCount,1) ; 
-    tmp2.resize(allocPara_m.currentActiveCellCount,-1) ;
-	thrust:: transform(tmp1.begin(),                                            tmp1.begin()+allocPara_m.currentActiveCellCount,
-					   cellInfoVecs.cellRankFront.begin(),cellInfoVecs.cellRankFront.begin()+allocPara_m.currentActiveCellCount,thrust::plus<int>()
-					  ) ; //Ali
-	thrust:: transform(tmp2.begin(),                                              tmp2.begin()+allocPara_m.currentActiveCellCount,
-	                   cellInfoVecs.cellRankBehind.begin(),cellInfoVecs.cellRankBehind.begin()+allocPara_m.currentActiveCellCount,thrust::plus<int>()
-					  ) ; //Ali
-	cellInfoVecs.cellRankBehind[0]=allocPara_m.currentActiveCellCount-1 ; 
-	cellInfoVecs.cellRankFront[allocPara_m.currentActiveCellCount-1]=0 ; 
-
-     
         std::cout << "initial number of active cells is " <<allocPara_m.currentActiveCellCount <<std::endl;
 	    std::cout <<"last cell rank used in the cell root is " <<cellInfoVecs.cellRoot[allocPara_m.currentActiveCellCount-1] << endl ;   
 }
@@ -1462,7 +1444,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	//	}
 
-	    if (curTime>=500 ){
+	    if (curTime>=0.5 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1940,12 +1922,12 @@ void SceCells::copyFirstCellArr_M() {
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 		//Ali
 		if (divAuxData.isMotherCellBehind[i]) {
-			//cellInfoVecs.cellRankBehindNeighb[cellRank] =cellInfoVecs.cellRankBehindNeighb[cellRank] ; //as before so no need to update 
-			cellInfoVecs.cellRankFront[cellRank]  =cellRankDaughter ; 
+			//nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] =nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] ; //as before so no need to update 
+	  		nodes->getInfoVecs().nodeCellRankFront[cellRank]  =cellRankDaughter ; 
 		}
 		else {
-			cellInfoVecs.cellRankBehind[cellRank] =cellRankDaughter ; 
-		//	cellInfoVecs.cellRankFrontNeighb[cellRank]  = cellInfoVecs.cellRankFrontNeighb[cellRank]; //as before so no need to update
+			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =cellRankDaughter ; 
+		//	nodes->getInfoVecs().nodeCellRankFrontNeighb[cellRank]  = nodes->getInfoVecs().nodeCellRankFrontNeighb[cellRank]; //as before so no need to update
 
 		}
 	}
@@ -1994,12 +1976,12 @@ void SceCells::copySecondCellArr_M() {
 //Ali
 
 		if (divAuxData.isMotherCellBehind[i]) {
-			cellInfoVecs.cellRankBehind[cellRank] =cellRankMother ; 
-			cellInfoVecs.cellRankFront[cellRank]  =cellInfoVecs.cellRankFront[cellRankMother]; 
+			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =cellRankMother ; 
+			nodes->getInfoVecs().nodeCellRankFront[cellRank]  =nodes->getInfoVecs().nodeCellRankFront[cellRankMother]; 
 		}
 		else {
-			cellInfoVecs.cellRankBehind[cellRank] =cellInfoVecs.cellRankBehind[cellRankMother]; 
-			cellInfoVecs.cellRankFront[cellRank]  =cellRankMother ; 
+			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =nodes->getInfoVecs().nodeCellRankBehind[cellRankMother]; 
+			nodes->getInfoVecs().nodeCellRankFront[cellRank]  =cellRankMother ; 
 		}
 //Ali
 	}
@@ -2746,10 +2728,13 @@ void SceCells::divide2D_M() {
 	copyCellsPreDivision_M(); 
 	createTwoNewCellArr_M(); // main function which plays with position of internal nodes and membrane new created nodes.
 	copyFirstCellArr_M(); // copy the first cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
-	copySecondCellArr_M();// copy the second cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
+	copySecondCellArr_M();// copy the second cell information to GPU level and initilize values such as cell prgoress and cell rank ..
+
 	updateActiveCellCount_M();
 	markIsDivideFalse_M();
 	//divDebug();
+	//Ali 
+   	
 }
 
 void SceCells::distributeCellGrowthProgress_M() {

@@ -2472,8 +2472,6 @@ struct CellInfoVecs {
 	thrust::device_vector<double> Cell_Time;//Ali
 	thrust::device_vector<double> Cell_Damp;//Ali
 	thrust::device_vector<int> cellRoot;//Ali
-	thrust::device_vector<int> cellRankFront ;//Ali
-	thrust::device_vector<int> cellRankBehind ;//Ali
        
 	thrust::device_vector<double> growthProgressOld;  //A&A
 //Ali

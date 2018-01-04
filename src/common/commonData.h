@@ -18,6 +18,13 @@
 #define COMMONDATA_H_
 
 
+
+
+
+
+
+
+
 typedef unsigned int uint;
 typedef std::map<uint, uint> IndexMap;
 
@@ -457,6 +464,7 @@ struct RawDataInput_M {
 	std::vector<ECellType> cellsTypeCPU; //Ali 
 	std::vector<std::vector<CVector> > initIntnlNodePoss;
 	std::vector<std::vector<CVector> > initMembrNodePoss;
+
 };
 
 /**
@@ -672,7 +680,8 @@ struct CellStats {
 	uint currentActiveMembrNodes;
 	CVector cellCenter;
 	void printToFile(ofstream& ofs);
-};
+
+	};
 
 struct CountEntry {
 	uint numOfNeighbor;
@@ -692,6 +701,7 @@ public:
         //Ali 
         double MaxDistanceX ; //Ali 
 	std::vector<CellStats> cellsStats;
+
 	void printPolyCountToFile(std::string fileName, double divThreshold);
 	void printDetailStatsToFile(std::string fileNameBase, int timestep);
 	vector<double> outputPolySides();
@@ -709,3 +719,6 @@ void printEntriesToFile(ofstream& fs, std::vector<CountEntry>& countEntries);
 //Ali
 //Ali 
 #endif /* COMMONDATA_H_ */
+
+//Ali 
+

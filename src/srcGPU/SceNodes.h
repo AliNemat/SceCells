@@ -36,6 +36,7 @@
 // include google test files in order to test private functions.
 #include "gtest/gtest_prod.h"
 #include "SceNodes.h"
+//#include "SceCells.h"
 
 // I wish I could include some c++ 11 data structure here but it seems
 // Thrust is not compatible with c++ 11.
@@ -983,6 +984,10 @@ public:
 	thrust::device_vector<double> membrBendRightX;
 	thrust::device_vector<double> membrBendRightY;
 	thrust::device_vector<bool> nodeIsBasalMem;//Ali
+	thrust::device_vector<int>  nodeCellRankFront;//Ali it is cell size
+	thrust::device_vector<int>  nodeCellRankBehind;//Ali it is cell size
+	thrust::host_vector<int>  nodeCellRankFrontHost;//Ali it is cell size
+	thrust::host_vector<int>  nodeCellRankBehindHost;//Ali it is cell size
 };
 
 /**
@@ -1018,6 +1023,7 @@ struct NodeAuxVecs {
  * 4) maximum number of uinter-cellular links per node
  */
 class SceNodes {
+//	SceCells* cells ;
 	bool adhNotSet ; 
 	SceDomainPara domainPara;
 	SceMechPara mechPara;
