@@ -622,7 +622,7 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 
  
 		rawData.cellGrowProgVec.push_back(randNum);
-		//rawData.cellGrowProgVec.push_back(0.75);
+		//rawData.cellGrowProgVec.push_back(0.97);
 		ECellType eCellTypeTmp=ForReadingData2.eCellTypeV.at(i);  
 		rawData.cellsTypeCPU.push_back(eCellTypeTmp);
 	}

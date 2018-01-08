@@ -986,6 +986,8 @@ public:
 	thrust::device_vector<bool> nodeIsBasalMem;//Ali
 	thrust::device_vector<int>  nodeCellRankFront;//Ali it is cell size
 	thrust::device_vector<int>  nodeCellRankBehind;//Ali it is cell size
+	thrust::device_vector<int>  nodeCellRankFrontOld;//Ali it is cell size
+	thrust::device_vector<int>  nodeCellRankBehindOld;//Ali it is cell size
 	thrust::host_vector<int>  nodeCellRankFrontHost;//Ali it is cell size
 	thrust::host_vector<int>  nodeCellRankBehindHost;//Ali it is cell size
 };

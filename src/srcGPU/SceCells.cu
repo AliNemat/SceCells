@@ -1444,7 +1444,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	//	}
 
-	    if (curTime>=0.5 ){
+	    if (curTime>=300 ){
 			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 		}
@@ -1458,7 +1458,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>500) {
+	if (curTime>300) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -1885,6 +1885,17 @@ void SceCells::findHertwigAxis() {
 
 void SceCells::copyFirstCellArr_M() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+
+	//Ali to preserve the neighbors information of each cell for the copySecondCellArr_M  function if two neighbor cell divide at eaxctly one time step and the order
+	// of mother and daughter cells are oppposite the methodology won't work. I think it almost never this situation will happen.
+    thrust::copy (nodes->getInfoVecs().nodeCellRankFront.begin(),nodes->getInfoVecs().nodeCellRankFront.begin()+allocPara_m.currentActiveCellCount,
+	              nodes->getInfoVecs().nodeCellRankFrontOld.begin()) ; 
+    thrust::copy (nodes->getInfoVecs().nodeCellRankBehind.begin(),nodes->getInfoVecs().nodeCellRankBehind.begin()+allocPara_m.currentActiveCellCount,
+	        	  nodes->getInfoVecs().nodeCellRankBehindOld.begin()) ; 
+	cout << "Number of cells ready to divide in this time step is " <<divAuxData.toBeDivideCount << endl ; 
+	if (divAuxData.toBeDivideCount>1) {
+    cout << "Warnining: at Least two cells divided at the same time step chance of error in finding next neighbor of each cell"<<  endl ; 
+	}
 	for (uint i = 0; i < divAuxData.toBeDivideCount; i++) {
 		uint cellRank = divAuxData.tmpCellRank_M[i];
 		uint cellRankDaughter = allocPara_m.currentActiveCellCount + i; //Ali 
@@ -1893,6 +1904,7 @@ void SceCells::copyFirstCellArr_M() {
 		uint tmpStartIndx = i * maxAllNodePerCell;
 		uint tmpEndIndx = (i + 1) * maxAllNodePerCell;
 		thrust::constant_iterator<int> noAdhesion(-1), noAdhesion2(-1);
+
 		thrust::copy(
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
@@ -1922,12 +1934,18 @@ void SceCells::copyFirstCellArr_M() {
 		cellInfoVecs.lastCheckPoint[cellRank] = 0;
 		//Ali
 		if (divAuxData.isMotherCellBehind[i]) {
-			//nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] =nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] ; //as before so no need to update 
-	  		nodes->getInfoVecs().nodeCellRankFront[cellRank]  =cellRankDaughter ; 
+			//nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] =nodes->getInfoVecs().nodeCellRankBehindNeighb[cellRank] ; //as before so no need to update
+	  		nodes->getInfoVecs().nodeCellRankFront[cellRank]  =cellRankDaughter ;
+
+			int tmpCellRankFront=nodes->getInfoVecs().nodeCellRankFrontOld[cellRank] ;  
+	  		nodes->getInfoVecs().nodeCellRankBehind[tmpCellRankFront]  =cellRankDaughter ; 
 		}
 		else {
 			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =cellRankDaughter ; 
 		//	nodes->getInfoVecs().nodeCellRankFrontNeighb[cellRank]  = nodes->getInfoVecs().nodeCellRankFrontNeighb[cellRank]; //as before so no need to update
+			
+			int tmpCellRankBehind=nodes->getInfoVecs().nodeCellRankBehindOld[cellRank] ;
+	  		nodes->getInfoVecs().nodeCellRankFront[tmpCellRankBehind]  =cellRankDaughter ; 
 
 		}
 	}
@@ -1977,10 +1995,10 @@ void SceCells::copySecondCellArr_M() {
 
 		if (divAuxData.isMotherCellBehind[i]) {
 			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =cellRankMother ; 
-			nodes->getInfoVecs().nodeCellRankFront[cellRank]  =nodes->getInfoVecs().nodeCellRankFront[cellRankMother]; 
+			nodes->getInfoVecs().nodeCellRankFront[cellRank]  =nodes->getInfoVecs().nodeCellRankFrontOld[cellRankMother]; 
 		}
 		else {
-			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =nodes->getInfoVecs().nodeCellRankBehind[cellRankMother]; 
+			nodes->getInfoVecs().nodeCellRankBehind[cellRank] =nodes->getInfoVecs().nodeCellRankBehindOld[cellRankMother]; 
 			nodes->getInfoVecs().nodeCellRankFront[cellRank]  =cellRankMother ; 
 		}
 //Ali
@@ -2727,7 +2745,8 @@ void SceCells::divide2D_M() {
 	//aniDebug = true;
 	copyCellsPreDivision_M(); 
 	createTwoNewCellArr_M(); // main function which plays with position of internal nodes and membrane new created nodes.
-	copyFirstCellArr_M(); // copy the first cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
+
+    copyFirstCellArr_M(); // copy the first cell information to GPU level and initilize values such as cell prgoress and cell rank .. 
 	copySecondCellArr_M();// copy the second cell information to GPU level and initilize values such as cell prgoress and cell rank ..
 
 	updateActiveCellCount_M();

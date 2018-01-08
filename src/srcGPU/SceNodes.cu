@@ -2225,14 +2225,7 @@ void SceNodes::applySceForcesDisc_M() {
 	 	thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
 
 
-        for (int i=0 ;  i<25 ;  i++) {
-
-		cout << "front cell for rank " <<i << " is " <<infoVecs.nodeCellRankFrontHost[i] << endl ; 
-		cout << "behind cell for rank " <<i << " is " <<infoVecs.nodeCellRankBehindHost[i] << endl ; 
-
-
-		}
-	  	int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
+        	  	int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
 	  	int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
 	  	int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
       	double  distMinP2,distP2 ;
@@ -2241,7 +2234,13 @@ void SceNodes::applySceForcesDisc_M() {
 	  	double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
 	  	int cellRankTmp1, cellRankTmp2 ; 
 	  	int deactiveIdMyPair, deactiveIdAdhPair ; 
-     	// It is not one by one finding. 
+     	// It is not one by one finding.
+
+		for (int i=0 ;  i<allocPara_M.currentActiveCellCount ;  i++) {
+			cout << "front cell for rank " <<i << " is " <<infoVecs.nodeCellRankFrontHost[i] << endl ; 
+			cout << "behind cell for rank " <<i << " is " <<infoVecs.nodeCellRankBehindHost[i] << endl ; 
+		}
+
 	 	for (int i=0 ; i<totalActiveNodes ;  i++) {
 			if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
 				cellRankTmp1=i/maxNodePerCell ; 
@@ -2573,6 +2572,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeAdhMinDist.resize(maxTotalNodeCount); // Ali
 	infoVecs.nodeCellRankFront.resize(maxNumCells,-1); // Ali
 	infoVecs.nodeCellRankBehind.resize(maxNumCells,-1); // Ali
+	infoVecs.nodeCellRankFrontOld.resize(maxNumCells,-1); // Ali
+	infoVecs.nodeCellRankBehindOld.resize(maxNumCells,-1); // Ali
 	infoVecs.nodeCellRankFrontHost.resize(maxNumCells,-1); // Ali
 	infoVecs.nodeCellRankBehindHost.resize(maxNumCells,-1); // Ali
 	if (controlPara.simuType == Disc
