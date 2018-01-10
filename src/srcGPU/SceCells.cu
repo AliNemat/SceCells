@@ -1417,13 +1417,23 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	growthAuxData.randomGrowthSpeedMax = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMax_Ori;
 
+	bool cellPolar=false ; 
+	bool subCellPolar= false  ; 
+	curTime = curTime + dt;
+
+	if (curTime>=3 ){
+		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
+	}
 
  	if (curTime==InitTimeStage) {
-	cout<<"I am before ECM initialization"<< endl ; 
-	eCM.Initialize();
-	cout<<"I am after ECM initialization"<< endl ; 
+		eCM.Initialize();
 	}
-	curTime = curTime + dt;
+
+
+	eCMCellInteraction(cellPolar,subCellPolar); 
+
+    assignMemNodeType();  // Ali
+
 
 	std::cout << "     *** 2 ***" << endl;
 	std::cout.flush();
@@ -1432,22 +1442,11 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout.flush();
 //Ali        
 	computeCenterPos_M();
-        BC_Imp_M() ; 
+    BC_Imp_M() ; 
 	std::cout << "     ***3.5 ***" << endl;
 	std::cout.flush();
 	
 //Ali
-		bool cellPolar=false ; 
-		bool subCellPolar= false  ; 
-	  //  if (curTime>500 && curTime<1000 ){
-			//cellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-			//subMemPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-	//	}
-
-	    if (curTime>=300 ){
-			//membPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-			subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
-		}
 
 	applyMemForce_M(cellPolar,subCellPolar);
 	std::cout << "     *** 4 ***" << endl;
@@ -1458,7 +1457,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>3) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -1477,38 +1476,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 8 ***" << endl;
 	std::cout.flush();
 
-        findTangentAndNormal_M();//AAMIRI ADDED May29
+    findTangentAndNormal_M();//AAMIRI ADDED May29
 	allComponentsMove_M();
-                //thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
-        cout << " first writing for nodeDevice finished in SceCells before function "<< endl ;  
-        //thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
-        cout << " second writing for node info vecs finished in SceCells before functuion "<< endl ; 
-        int totalNodeCountForActiveCellsECM = allocPara_m.currentActiveCellCount
-			* allocPara_m.maxAllNodePerCell;
-
-	eCM.nodeDeviceLocX.resize(totalNodeCountForActiveCellsECM,0.0) ; 
-        eCM.nodeDeviceLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
-        eCM.nodeIsActive_Cell.resize(totalNodeCountForActiveCellsECM,false) ;
-        //totalNodeCountForActiveCells=1680 ; 
-        thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocX.begin()) ; 
-        thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ;
-//assuming no boundary node exist 
-thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeIsActive_Cell.begin()) ; 
-
-
- 
-	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM,curTime,dt,Damp_Coef,cellPolar,subCellPolar);
-
-        thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
-        thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
-	//thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
- thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ; 
-	       
-
-cout << " first writing for nodeDevice finished in SceCells after function "<< endl ;  
-        //thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ 160,std::ostream_iterator<double>(std::cout,"\n"));
-        cout << " second writing for node info vecs finished in SceCells after functuion "<< endl ;  
-        std::cout << "     *** 9 ***" << endl;
+   std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
 	if (relaxCount==10) { 
 		handleMembrGrowth_M();
@@ -2230,7 +2200,7 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
-                            nodes->getInfoVecs().nodeAdhereIndex.begin(),
+                            nodes->getInfoVecs().memNodeType1.begin(),
 							make_transform_iterator(iBegin2,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin2,
@@ -2251,7 +2221,7 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									cellInfoVecs.centerCoordY.begin(),
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
-                            nodes->getInfoVecs().nodeAdhereIndex.begin(),
+                            nodes->getInfoVecs().memNodeType1.begin(),
 							make_transform_iterator(iBegin2,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin2,
@@ -2692,7 +2662,36 @@ void SceCells::BC_Imp_M() {
 }
 
 
+void SceCells::assignMemNodeType() {
 
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint>  iBegin2(0)  ; 
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+				     thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
+										nodes->getInfoVecs().nodeIsLateralMem.begin(),
+							            nodes->getInfoVecs().nodeIsBasalMem.begin(),
+									    make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
+									    thrust::make_permutation_iterator(
+									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
+									                                     make_transform_iterator(iBegin2,
+											                             DivideFunctor(maxAllNodePerCell))))),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
+									   nodes->getInfoVecs().nodeIsLateralMem.begin(),
+							           nodes->getInfoVecs().nodeIsBasalMem.begin(),
+									   make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
+									   thrust::make_permutation_iterator(
+									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
+									                                     make_transform_iterator(iBegin2,
+											                             DivideFunctor(maxAllNodePerCell)))))								
+									   + totalNodeCountForActiveCells,
+									   nodes->getInfoVecs().memNodeType1.begin(),AssignMemNodeType());
+
+}
 
 void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
@@ -2755,6 +2754,31 @@ void SceCells::divide2D_M() {
 	//Ali 
    	
 }
+
+void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar) {
+
+
+	int totalNodeCountForActiveCellsECM = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+	eCM.nodeDeviceLocX.resize(totalNodeCountForActiveCellsECM,0.0) ; 
+    eCM.nodeDeviceLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
+    eCM.nodeIsActive_Cell.resize(totalNodeCountForActiveCellsECM,false) ;
+
+    thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocX.begin()) ; 
+    thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ;
+	//assuming no boundary node exist 
+	thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeIsActive_Cell.begin()) ; 
+	
+	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM,curTime,dt,Damp_Coef,cellPolar,subCellPolar);
+
+    thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
+    thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
+ 	thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ; 
+}
+
+
+
 
 void SceCells::distributeCellGrowthProgress_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount

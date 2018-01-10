@@ -23,7 +23,8 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //Ali comment
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
-typedef thrust::tuple<ECellType,uint, double, int ,uint, uint> ActinData; //Ali
+typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,uint, uint> ActinData; //Ali
+typedef thrust::tuple<bool,bool, bool,uint ,uint> BBBUiUi; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -475,35 +476,19 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 		ECellType  cellType= thrust::get<0>(actinData);
 		int activeMembrCount = thrust::get<1>(actinData);
 		double cell_CenterY = thrust::get<2>(actinData);
-		int    adhereIndex= thrust::get<3>(actinData);
+		MembraneType1    memType= thrust::get<3>(actinData);
 		int   cellRank = thrust::get<4>(actinData);
 		int   nodeRank = thrust::get<5>(actinData);
 
 		int  index = cellRank * _maxNodePerCell + nodeRank;
 		double actinLevel ; 
-	   MembraneType1  membraneType ; 	
+	   //MembraneType1  membraneType ; 	
 		double kStiff=200 ; 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {  //if #1
 			return 0.0;
 		} else { // It is a membrane node    //if #1 continue
 
-			actinLevel=1*kStiff ;  // default 
-		    if (adhereIndex == -1) {   //if #2 start
-		    	membraneType=apicalBasal1 ;
-			   }
-		   //else if ( (adhereIndex-index)<  2* _maxNodePerCell &&  // since the first cell and the last cell are boundary cells (no polarity), this algorithm is sufficent.
-			//	     (adhereIndex-index)> -2*_maxNodePerCell  )  { 
-			else {                   //if # 2 continue
-				 int cellRankAdhTo=adhereIndex/_maxNodePerCell ; 
-				 if (abs(_cellRoot[cellRankAdhTo]-_cellRoot[cellRank])<2) { // if #3  start
-
-		    	 	membraneType=lateral1 ;
-				}
-		   		else {   // if # 3 continue
-					membraneType=apicalBasal1 ;
-					}   // if # 3 end
-
-				} // if # 2 ends
+			actinLevel=1*kStiff ;  // default
 
 			if (_membPolar) {  // if # 4 start 
 				if (cellType==pouch) {  // if # 5 starts 
@@ -522,18 +507,21 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 			}  // if # 4 ends
 			
 
-
 			if (_subMembPolar) { // if # 6 s
-				if (cellType==pouch && membraneType==lateral1 ) { 
+				if (cellType==pouch && memType==lateral1 ) { 
 					actinLevel=1*kStiff ;
 				}
-		        if (cellType==pouch && membraneType==apicalBasal1) {
+		        if (cellType==pouch &&  memType==apical1) {
 					 actinLevel=5*kStiff ;
 				}
-				if  (cellType==peri && membraneType==lateral1) {
+				if (cellType==pouch &&  memType==basal1) {
+					 actinLevel=10*kStiff ;
+				}
+
+				if  (cellType==peri && memType==lateral1) {
 					  actinLevel=5*kStiff ;
 				}
-				if   (cellType==peri && membraneType==apicalBasal1) {
+				if   (cellType==peri && memType != lateral1) {
 					  actinLevel=1*kStiff ;
 				}
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
@@ -541,11 +529,46 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				}
 			} // if #6 end 
 
-		   return actinLevel;
+		    return actinLevel;
 
 	    } // if 1# ends
 }
 }; 
+
+
+struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MembraneType1> {
+	
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AssignMemNodeType(){
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__  __device__ MembraneType1  operator()(const BBBUiUi &bBBUiUi) const {
+		bool  isActive=  thrust::get<0>(bBBUiUi) ; 
+		bool  isLateral= thrust::get<1>(bBBUiUi); 
+		bool  isBasal  = thrust::get<2>(bBBUiUi); 
+		uint   nodeRank = thrust::get<3>(bBBUiUi) ; // node rank in each cell 
+		uint   activeMembrCount = thrust::get<4>(bBBUiUi) ; 
+
+		if (isActive == false || nodeRank >= activeMembrCount) { 
+			return notAssigned1;
+		} else if(isLateral) { 
+			return lateral1 ; 
+		}
+			else if (isBasal) {
+				return basal1 ; 
+			}
+				else {
+					return apical1 ; 
+			}
+
+		}
+
+}; 
+
+
+
+
 
 
 
@@ -2746,6 +2769,7 @@ class SceCells {
 
 	void growAtRandom(double d_t);
 
+
 	void growAlongX(bool isAddPt, double d_t);
 	void growWithStress(double d_t);
 
@@ -2888,6 +2912,9 @@ class SceCells {
 
 	void growAtRandom_M(double dt);
 
+
+	void assignMemNodeType();  //Ali 
+
 	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();
 
@@ -2991,7 +3018,8 @@ class SceCells {
 			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
 
 	void calCellArea();
-        void calCellPerim();//AAMIRI
+    void calCellPerim();//AAMIRI
+	void eCMCellInteraction(bool cellPolar, bool subCellPolar) ; 
 public:
 	SceCells();
 

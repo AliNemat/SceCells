@@ -2222,6 +2222,7 @@ void SceNodes::applySceForcesDisc_M() {
      	thrust :: copy (infoVecs.nodeCellRankFront.begin() ,infoVecs.nodeCellRankFront.end() ,infoVecs.nodeCellRankFrontHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeCellRankBehind.begin(),infoVecs.nodeCellRankBehind.end(),infoVecs.nodeCellRankBehindHost.begin()) ; // Ali 	
 	 	thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
+	 	thrust::fill(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), false) ;  //Ali
 	 	thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
 
 
@@ -2257,12 +2258,13 @@ void SceNodes::applySceForcesDisc_M() {
 							if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
 								distMinP2=distP2 ;
 								indexAdhNode=j ; 
-								findAnyNode=true ; 
+								findAnyNode=true ;
+								 
 							}
 		  				}
 					}
 		 	   }
-
+                
 				if ( findAnyNode && 
 					sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],
 				                         infoVecs.nodeAdhMinDist[i]))
@@ -2285,10 +2287,15 @@ void SceNodes::applySceForcesDisc_M() {
 					infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
 
 				}
+				if (findAnyNode) {
+					infoVecs.nodeIsLateralMemHost[i]=true  ;
+
+				}
 		 	}
 	 	}
          
 		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+		thrust::copy(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), infoVecs.nodeIsLateralMem.begin()) ;  //Ali
 
 	}
 
@@ -2565,6 +2572,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeExtForceNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
 	infoVecs.nodeIsBasalMem.resize(maxTotalNodeCount,false); //Ali
+	infoVecs.nodeIsLateralMem.resize(maxTotalNodeCount,false); //Ali
+	infoVecs.nodeIsLateralMemHost.resize(maxTotalNodeCount,false); //Ali
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
@@ -2599,6 +2608,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.membrBendLeftY.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightY.resize(maxTotalNodeCount, 0);
+		infoVecs.memNodeType1.resize(maxTotalNodeCount, notAssigned1); //Ali 
 
 		auxVecs.bucketKeys.resize(maxTotalNodeCount);
 		auxVecs.bucketValues.resize(maxTotalNodeCount);

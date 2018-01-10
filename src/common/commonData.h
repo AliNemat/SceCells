@@ -39,7 +39,7 @@ enum SceExceptionType {
 	InvalidInput,
 	AlgorithmBug
 };
-enum MembraneType1 {lateral1, apicalBasal1} ; 
+enum MembraneType1 {lateral1, apical1, basal1,notAssigned1} ; //Ali  
 enum ECellType {notActive, pouch, peri, bc} ; 
 std::string toString(SceExceptionType type);
 double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
