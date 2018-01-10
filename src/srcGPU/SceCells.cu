@@ -1419,7 +1419,6 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
-	curTime = curTime + dt;
 
 	if (curTime>=3 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
@@ -1429,6 +1428,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 		eCM.Initialize();
 	}
 
+	curTime = curTime + dt;
 
 	eCMCellInteraction(cellPolar,subCellPolar); 
 
@@ -5243,6 +5243,9 @@ void SceCells::applySceCellDisc_M() {
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 
+	MembraneType1* memType1Addr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().memNodeType1[0]));
+
 	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU
@@ -5296,23 +5299,23 @@ void SceCells::applySceCellDisc_M() {
 							   nodes->getInfoVecs().nodeF_MI_M_x.begin(),  //Ali added for cell pressure calculation 
 							   nodes->getInfoVecs().nodeF_MI_M_y.begin())),// ALi added for cell pressure calculation
 			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
-					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+					nodeLocYAddr, nodeIsActiveAddr,memType1Addr, grthPrgrCriVal_M));
 }
 
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M) {
+		double& growPro, double& xRes, double& yRes, MembraneType1 memTypeOther, double grthPrgrCriVal_M) {
 	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
 
 	double forceValue = 0;
-	if (growPro > grthPrgrCriEnd_M) {
+	if (growPro > grthPrgrCriEnd_M && memTypeOther==apical1) {
 		if (linkLength < sceIBDiv_M[4]) {
 			forceValue = -sceIBDiv_M[0] / sceIBDiv_M[2]
 					* exp(-linkLength / sceIBDiv_M[2])
 					+ sceIBDiv_M[1] / sceIBDiv_M[3]
 							* exp(-linkLength / sceIBDiv_M[3]);
 		}
-	} else if (growPro > grthPrgrCriVal_M) {
+	} else if (growPro > grthPrgrCriVal_M && memTypeOther==apical1) {
 		double percent = (growPro - grthPrgrCriVal_M)
 				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
 		double lenLimit = percent * (sceIBDiv_M[4])
@@ -5344,18 +5347,18 @@ void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 //Ali function added for eventually computing pressure for each cells
 __device__
 void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes, double & F_MI_M_x, double & F_MI_M_y, double grthPrgrCriVal_M) {
+		double& growPro, double& xRes, double& yRes, double & F_MI_M_x, double & F_MI_M_y, double grthPrgrCriVal_M, MembraneType1 memType) {
 	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
 
 	double forceValue = 0;
-	if (growPro > grthPrgrCriEnd_M) {
+	if (growPro > grthPrgrCriEnd_M && memType==apical1 ) {
 		if (linkLength < sceIBDiv_M[4]) {
 			forceValue = -sceIBDiv_M[0] / sceIBDiv_M[2]
 					* exp(-linkLength / sceIBDiv_M[2])
 					+ sceIBDiv_M[1] / sceIBDiv_M[3]
 							* exp(-linkLength / sceIBDiv_M[3]);
 		}
-	} else if (growPro > grthPrgrCriVal_M) {
+	} else if (growPro > grthPrgrCriVal_M && memType==apical1) {
 		double percent = (growPro - grthPrgrCriVal_M)
 				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
 		double lenLimit = percent * (sceIBDiv_M[4])

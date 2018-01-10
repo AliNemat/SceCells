@@ -101,11 +101,11 @@ double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
 
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
+		double& growPro, double& xRes, double& yRes, MembraneType1 memTypeOther,double grthPrgrCriVal_M);
 //AliA 
 __device__
 void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
-		double& growPro, double& xRes, double& yRes, double &F_MI_M_x, double & F_MI_M_y,double grthPrgrCriVal_M);
+		double& growPro, double& xRes, double& yRes, double &F_MI_M_x, double & F_MI_M_y,double grthPrgrCriVal_M, MembraneType1 memType);
 
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
@@ -974,14 +974,15 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 	double* _locXAddr;
 	double* _locYAddr;
 	bool* _isActiveAddr;
+	MembraneType1* _memType1Addr ; 
 	double _grthPrgrCriVal_M;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddSceCellForce(uint maxNodePerCell,
 			uint maxMemNodePerCell, double* locXAddr, double* locYAddr,
-			bool* isActiveAddr, double grthPrgrCriVal_M) :
+			bool* isActiveAddr, MembraneType1* memType1Addr, double grthPrgrCriVal_M) :
 			_maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
 					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
-					locYAddr), _isActiveAddr(isActiveAddr), _grthPrgrCriVal_M(
+					locYAddr), _isActiveAddr(isActiveAddr),_memType1Addr(memType1Addr), _grthPrgrCriVal_M(
 					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -1005,22 +1006,26 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 		uint intnlIndxBegin = cellRank * _maxNodePerCell + _maxMemNodePerCell;
 		uint intnlIndxEnd = intnlIndxBegin + activeIntnlCount;
 		uint index_other;
-		double nodeX = _locXAddr[index];
-		double nodeY = _locYAddr[index];
+		double         nodeX   = _locXAddr[index];
+		double         nodeY   = _locYAddr[index];
+		MembraneType1  memType = _memType1Addr[index];
 		double nodeXOther, nodeYOther;
+		MembraneType1  memTypeOther;
+
 		// means membrane node
 		//Because we want to compute the force on the membrane nodes we modify this function 
 		if (nodeRank < _maxMemNodePerCell) {
 			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
 					index_other++) {
 				nodeXOther = _locXAddr[index_other];
-				nodeYOther = _locYAddr[index_other]; 
+				nodeYOther = _locYAddr[index_other];
+				
                                 /* Ali comment
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
                                  */ 
 				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY,F_MI_M_x,F_MI_M_y, _grthPrgrCriVal_M);
+						oriVelX, oriVelY,F_MI_M_x,F_MI_M_y, _grthPrgrCriVal_M,memType);
 
 			}
 		} else {
@@ -1028,10 +1033,11 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 			for (index_other = intnlIndxMemBegin;
 					index_other < intnlIndxMemBegin + activeMembrCount;
 					index_other++) {
-				nodeXOther = _locXAddr[index_other];
-				nodeYOther = _locYAddr[index_other];
+				nodeXOther   = _locXAddr[index_other];
+				nodeYOther   = _locYAddr[index_other];
+				memTypeOther = _memType1Addr[index_other] ; 
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY, _grthPrgrCriVal_M);
+						oriVelX, oriVelY,memTypeOther, _grthPrgrCriVal_M);
 			}
 			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
 					index_other++) {
