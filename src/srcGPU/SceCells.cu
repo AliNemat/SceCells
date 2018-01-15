@@ -721,6 +721,9 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordZ.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.apicalLocX.resize(allocPara_m.maxCellCount);  //Ali 
+	cellInfoVecs.apicalLocY.resize(allocPara_m.maxCellCount); //Ali 
+	cellInfoVecs.apicalNodeCount.resize(allocPara_m.maxCellCount,0); //Ali 
 
         cellInfoVecs.HertwigXdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
 	cellInfoVecs.HertwigYdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
@@ -771,6 +774,9 @@ void SceCells::initCellNodeInfoVecs_M() {
 	cellNodeInfoVecs.activeZPoss.resize(allocPara_m.maxTotalNodeCount);
 	cellNodeInfoVecs.distToCenterAlongGrowDir.resize(
 			allocPara_m.maxTotalNodeCount);
+
+	cellNodeInfoVecs.activeLocXApical.resize(allocPara.maxTotalCellNodeCount); //Ali 
+	cellNodeInfoVecs.activeLocYApical.resize(allocPara.maxTotalCellNodeCount); //Ali 
 }
 
 void SceCells::initGrowthAuxData() {
@@ -1419,21 +1425,23 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
-	curTime = curTime + dt;
 
-	if (curTime>=3 ){
+	if (curTime>=10 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
  	if (curTime==InitTimeStage) {
 		eCM.Initialize();
+		cout << " I initialized the ECM module" << endl ; 
 	}
 
+	curTime = curTime + dt;
 
+	
 	eCMCellInteraction(cellPolar,subCellPolar); 
 
     assignMemNodeType();  // Ali
-
+    computeApicalLoc(); 
 
 	std::cout << "     *** 2 ***" << endl;
 	std::cout.flush();
@@ -1457,7 +1465,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>3) {
+	if (curTime>10) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2689,9 +2697,111 @@ void SceCells::assignMemNodeType() {
 									                                     make_transform_iterator(iBegin2,
 											                             DivideFunctor(maxAllNodePerCell)))))								
 									   + totalNodeCountForActiveCells,
-									   nodes->getInfoVecs().memNodeType1.begin(),AssignMemNodeType());
+										thrust::make_zip_iterator(
+											thrust::make_tuple(
+									   			nodes->getInfoVecs().memNodeType1.begin(),
+												nodes->getInfoVecs().nodeIsApicalMem.begin()))
+												,AssignMemNodeType());
 
 }
+
+void SceCells::computeApicalLoc() {
+
+	uint maxNPerCell = allocPara_m.maxAllNodePerCell;
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
+
+    for (uint i=2*maxNPerCell ; i<3*maxNPerCell; i++) {
+		cout <<"node rank "<< i << "is apical=" << nodes->getInfoVecs().nodeIsApicalMem[i] << endl ; 
+	}
+thrust::reduce_by_key(
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
+			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))
+					+ totalNodeCountForActiveCells,
+			nodes->getInfoVecs().nodeIsApicalMem.begin(),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			cellInfoVecs.apicalNodeCount.begin(),
+			thrust::equal_to<uint>(), thrust::plus<int>());
+
+
+	for (int i=0; i<30 ; i++) {
+
+		cout << "cell " << i << "number of apical nodes is "<< cellInfoVecs.apicalNodeCount[i] << endl ; 
+
+	}
+
+
+
+	uint totalApicalNodeCount = thrust::reduce(
+			cellInfoVecs.apicalNodeCount.begin(),
+			cellInfoVecs.apicalNodeCount.begin()
+					+ allocPara_m.currentActiveCellCount);
+
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().memNodeType1.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.cellRanks.begin(),
+							cellNodeInfoVecs.activeLocXApical.begin(),
+							cellNodeInfoVecs.activeLocYApical.begin())),
+			ActiveAndApical());
+
+
+	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
+			cellNodeInfoVecs.cellRanks.begin() + totalApicalNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.activeLocXApical.begin(),
+									   cellNodeInfoVecs.activeLocYApical.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
+					            	   cellInfoVecs.apicalLocY.begin())),
+			thrust::equal_to<uint>(), CVec2Add());
+
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
+							           cellInfoVecs.apicalLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
+							           cellInfoVecs.apicalLocY.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			                           cellInfoVecs.apicalNodeCount.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
+							           cellInfoVecs.apicalLocY.begin())), CVec2Divide());
+
+	for (int i=0; i<30 ; i++) {
+
+		cout << "cell " << i << "apical location is "<< cellInfoVecs.apicalLocX[i]<<"and "<<cellInfoVecs.apicalLocY[i]<< endl ; 
+
+	}
+
+}
+
+
+
+
 
 void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
@@ -2774,7 +2884,15 @@ void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar) {
 
     thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
     thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
- 	thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ; 
+ 	thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ;
+
+for (uint i=2*allocPara_m.maxAllNodePerCell ; i<3*allocPara_m.maxAllNodePerCell; i++) {
+		cout <<"node rank "<< i << "is basal=" <<eCM.isBasalMemNode[i] << endl ; 
+		cout <<"node rank "<< i << "is apical=" << nodes->getInfoVecs().nodeIsApicalMem[i] << endl ; 
+	}
+
+
+
 }
 
 

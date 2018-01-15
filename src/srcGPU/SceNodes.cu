@@ -2573,6 +2573,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
 	infoVecs.nodeIsBasalMem.resize(maxTotalNodeCount,false); //Ali
 	infoVecs.nodeIsLateralMem.resize(maxTotalNodeCount,false); //Ali
+	infoVecs.nodeIsApicalMem.resize(maxTotalNodeCount,0); //Ali
 	infoVecs.nodeIsLateralMemHost.resize(maxTotalNodeCount,false); //Ali
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);

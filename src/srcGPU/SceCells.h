@@ -24,6 +24,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,uint, uint> ActinData; //Ali
+typedef thrust::tuple<MembraneType1,int> MI; //Ali
 typedef thrust::tuple<bool,bool, bool,uint ,uint> BBBUiUi; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
@@ -512,7 +513,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=5*kStiff ;
+					 actinLevel=20*kStiff ;  //5
 				}
 				if (cellType==pouch &&  memType==basal1) {
 					 actinLevel=10*kStiff ;
@@ -521,8 +522,9 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				if  (cellType==peri && memType==lateral1) {
 					  actinLevel=5*kStiff ;
 				}
-				if   (cellType==peri && memType != lateral1) {
-					  actinLevel=1*kStiff ;
+				//if   (cellType==peri && memType != lateral1) {
+				if   (cellType==peri && memType == apical1) {
+					  actinLevel=10*kStiff ;
 				}
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;
@@ -536,14 +538,14 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 }; 
 
 
-struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MembraneType1> {
+struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MI> {
 	
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AssignMemNodeType(){
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__  __device__ MembraneType1  operator()(const BBBUiUi &bBBUiUi) const {
+	__host__  __device__ MI  operator()(const BBBUiUi &bBBUiUi) const {
 		bool  isActive=  thrust::get<0>(bBBUiUi) ; 
 		bool  isLateral= thrust::get<1>(bBBUiUi); 
 		bool  isBasal  = thrust::get<2>(bBBUiUi); 
@@ -551,15 +553,15 @@ struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MembraneType1> 
 		uint   activeMembrCount = thrust::get<4>(bBBUiUi) ; 
 
 		if (isActive == false || nodeRank >= activeMembrCount) { 
-			return notAssigned1;
+			return thrust::make_tuple(notAssigned1,0);
 		} else if(isLateral) { 
-			return lateral1 ; 
+			return thrust::make_tuple( lateral1,0) ; 
 		}
 			else if (isBasal) {
-				return basal1 ; 
+				return thrust::make_tuple(basal1,0) ; 
 			}
 				else {
-					return apical1 ; 
+					return thrust::make_tuple(apical1,1) ; 
 			}
 
 		}
@@ -2525,6 +2527,9 @@ struct CellInfoVecs {
 	thrust::device_vector<double> centerCoordX;
 	thrust::device_vector<double> centerCoordY;
 	thrust::device_vector<double> centerCoordZ;
+	thrust::device_vector<double> apicalLocX; //Ali 
+	thrust::device_vector<double> apicalLocY; //Ali 
+	thrust::device_vector<int> apicalNodeCount; //Ali 
 
 	thrust::device_vector<double> HertwigXdir; //A&A
 	thrust::device_vector<double> HertwigYdir; //A&A
@@ -2565,6 +2570,8 @@ struct CellNodeInfoVecs {
 	thrust::device_vector<double> activeXPoss;
 	thrust::device_vector<double> activeYPoss;
 	thrust::device_vector<double> activeZPoss;
+	thrust::device_vector<double> activeLocXApical; //Ali 
+	thrust::device_vector<double> activeLocYApical; //Ali 
 
 // temp value for holding a node direction to its corresponding center
 	thrust::device_vector<double> distToCenterAlongGrowDir;
@@ -2914,6 +2921,7 @@ class SceCells {
 
 
 	void assignMemNodeType();  //Ali 
+	void computeApicalLoc();  //Ali 
 
 	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();

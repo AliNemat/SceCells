@@ -220,6 +220,10 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 					adhPairECM_Cell.begin())),
 				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef));
 
+for (int i=2*maxAllNodePerCell ; i<3*maxAllNodePerCell; i++){
+
+  cout << "isBasal variable in ecm module for node "<< i << " is " <<isBasalMemNode[i] << endl ; 
+}
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
 			&nodeDeviceTmpLocX[0]) ; 
