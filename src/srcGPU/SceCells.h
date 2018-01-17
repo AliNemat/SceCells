@@ -18,6 +18,7 @@ typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
+typedef thrust::tuple<double, double, double, bool, double, double, double, double> DDDBDDDD;
 //Ali comment 
 //typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 //Ali comment
@@ -537,6 +538,30 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 }
 }; 
 
+struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
+	
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CalNucleusLoc() {
+		
+		}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__  __device__ CVec2 operator()(const CVec5 &cVec5) const {
+		double   progress= thrust::get<0>(cVec5);
+		double   centerX = thrust::get<1>(cVec5);
+		double   centerY = thrust::get<2>(cVec5);
+		double   apicalX=  thrust::get<3>(cVec5) ;
+		double   apicalY = thrust::get<4>(cVec5);
+
+        double nucleusX,nucleusY ;
+		double nucleusHPercent ; 
+		nucleusHPercent=4*(progress-0.5)*(progress-0.5) ; 
+		nucleusX= centerX+nucleusHPercent*(apicalX-centerX) ; 
+		nucleusY= centerY+nucleusHPercent*(apicalY-centerY) ; 
+
+		return thrust::make_tuple( nucleusX,nucleusY) ; 
+	}
+}; 
 
 struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MI> {
 	
@@ -1049,6 +1074,39 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 		return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y);
 	}
 };
+
+struct AddNucleusForce: public thrust::unary_function<DDDBDDDD, CVec2> {
+	double _grthPrgrCriVal_M;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddNucleusForce(double grthPrgrCriVal_M) :
+			 _grthPrgrCriVal_M(grthPrgrCriVal_M) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec2 operator()(const DDDBDDDD &dDDBDDDD) const {
+		double nucleusX = thrust::get<0>(dDDBDDDD);
+		double nucleusY = thrust::get<1>(dDDBDDDD);
+		double progress = thrust::get<2>(dDDBDDDD);
+		bool   isActive = thrust::get<3>(dDDBDDDD);
+		double nodX     = thrust::get<4>(dDDBDDDD);
+		double nodY     = thrust::get<5>(dDDBDDDD);
+		double oriVelX  = thrust::get<6>(dDDBDDDD);
+		double oriVelY  = thrust::get<7>(dDDBDDDD);
+                
+
+		if (isActive == false) {
+			return thrust::make_tuple(oriVelX, oriVelY); 
+		}
+		else {
+	//		calAndAddNucleusEffect(nodeX, nodeY, nucleusX, nucleusY, progress,oriVelX, oriVelY,_grthPrgrCriVal_M);
+			return thrust::make_tuple(oriVelX, oriVelY);
+		}
+	}
+};
+
+
+
+
+
 
 /**
  * Obtain growth speed and direction given node position.
@@ -2529,6 +2587,8 @@ struct CellInfoVecs {
 	thrust::device_vector<double> centerCoordZ;
 	thrust::device_vector<double> apicalLocX; //Ali 
 	thrust::device_vector<double> apicalLocY; //Ali 
+	thrust::device_vector<double> nucleusLocX; //Ali 
+	thrust::device_vector<double> nucleusLocY; //Ali 
 	thrust::device_vector<int> apicalNodeCount; //Ali 
 
 	thrust::device_vector<double> HertwigXdir; //A&A
@@ -2922,6 +2982,8 @@ class SceCells {
 
 	void assignMemNodeType();  //Ali 
 	void computeApicalLoc();  //Ali 
+	void computeNucleusLoc();  //Ali 
+	void applyNucleusEffect();  //Ali 
 
 	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();

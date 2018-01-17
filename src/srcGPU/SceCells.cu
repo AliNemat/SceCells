@@ -723,6 +723,8 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.centerCoordZ.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.apicalLocX.resize(allocPara_m.maxCellCount);  //Ali 
 	cellInfoVecs.apicalLocY.resize(allocPara_m.maxCellCount); //Ali 
+	cellInfoVecs.nucleusLocX.resize(allocPara_m.maxCellCount);  //Ali 
+	cellInfoVecs.nucleusLocY.resize(allocPara_m.maxCellCount); //Ali 
 	cellInfoVecs.apicalNodeCount.resize(allocPara_m.maxCellCount,0); //Ali 
 
         cellInfoVecs.HertwigXdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
@@ -1441,18 +1443,21 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	eCMCellInteraction(cellPolar,subCellPolar); 
 
     assignMemNodeType();  // Ali
-    computeApicalLoc(); 
+    computeApicalLoc();
+	
+	computeCenterPos_M();
+	computeNucleusLoc() ; 
+    BC_Imp_M() ; 
+	std::cout << "     ***3.5 ***" << endl;
+	std::cout.flush();
 
 	std::cout << "     *** 2 ***" << endl;
 	std::cout.flush();
 	applySceCellDisc_M();
+	applyNucleusEffect() ; 
 	std::cout << "     *** 3 ***" << endl;
 	std::cout.flush();
 //Ali        
-	computeCenterPos_M();
-    BC_Imp_M() ; 
-	std::cout << "     ***3.5 ***" << endl;
-	std::cout.flush();
 	
 //Ali
 
@@ -2713,9 +2718,6 @@ void SceCells::computeApicalLoc() {
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
 
-    for (uint i=2*maxNPerCell ; i<3*maxNPerCell; i++) {
-		cout <<"node rank "<< i << "is apical=" << nodes->getInfoVecs().nodeIsApicalMem[i] << endl ; 
-	}
 thrust::reduce_by_key(
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell))
@@ -2726,11 +2728,6 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), thrust::plus<int>());
 
 
-	for (int i=0; i<30 ; i++) {
-
-		cout << "cell " << i << "number of apical nodes is "<< cellInfoVecs.apicalNodeCount[i] << endl ; 
-
-	}
 
 
 
@@ -2791,15 +2788,34 @@ thrust::reduce_by_key(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
 							           cellInfoVecs.apicalLocY.begin())), CVec2Divide());
 
-	for (int i=0; i<30 ; i++) {
-
-		cout << "cell " << i << "apical location is "<< cellInfoVecs.apicalLocX[i]<<"and "<<cellInfoVecs.apicalLocY[i]<< endl ; 
-
-	}
 
 }
 
 
+void SceCells::computeNucleusLoc() {
+
+		thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+									   cellInfoVecs.centerCoordX.begin(),
+									   cellInfoVecs.centerCoordY.begin(),
+									   cellInfoVecs.apicalLocX.begin(),
+							           cellInfoVecs.apicalLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
+									   cellInfoVecs.centerCoordX.begin(),
+									   cellInfoVecs.centerCoordY.begin(),
+									   cellInfoVecs.apicalLocX.begin(),
+							           cellInfoVecs.apicalLocY.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
+							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
+
+
+
+	
+} 
 
 
 
@@ -2886,10 +2902,6 @@ void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar) {
     thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
  	thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ;
 
-for (uint i=2*allocPara_m.maxAllNodePerCell ; i<3*allocPara_m.maxAllNodePerCell; i++) {
-		cout <<"node rank "<< i << "is basal=" <<eCM.isBasalMemNode[i] << endl ; 
-		cout <<"node rank "<< i << "is apical=" << nodes->getInfoVecs().nodeIsApicalMem[i] << endl ; 
-	}
 
 
 
@@ -5416,6 +5428,71 @@ void SceCells::applySceCellDisc_M() {
 			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
 					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
 }
+
+
+
+
+
+
+void SceCells::applyNucleusEffect() {
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+
+	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+			- growthAuxData.prolifDecay
+					* (growthAuxData.grthProgrEndCPU
+							- growthAuxData.grthPrgrCriVal_M_Ori);
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.nucleusLocX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.nucleusLocY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.nucleusLocX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.nucleusLocY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))		
+							+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+									   nodes->getInfoVecs().nodeVelY.begin())),
+			AddNucleusForce(grthPrgrCriVal_M));
+	
+}
+
+
 
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
