@@ -1433,6 +1433,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	eCMCellInteraction(cellPolar,subCellPolar); 
 
     assignMemNodeType();  // Ali
+    assignIntNodeType();  // Ali
 
 
 	std::cout << "     *** 2 ***" << endl;
@@ -2693,6 +2694,53 @@ void SceCells::assignMemNodeType() {
 
 }
 
+
+void SceCells::assignIntNodeType() {
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	thrust::counting_iterator<uint>  iBegin2(0)  ;
+	double* nodeLocXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[0]));
+	double* nodeLocYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[0]));
+	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[0]));
+
+	MembraneType1* memType1Addr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().memNodeType1[0]));
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+				     thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
+							            nodes->getInfoVecs().nodeLocX.begin(),
+							            nodes->getInfoVecs().nodeLocY.begin(),
+									    make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
+									    thrust::make_permutation_iterator(
+									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
+									                                     make_transform_iterator(iBegin2,
+											                             DivideFunctor(maxAllNodePerCell))),
+										make_transform_iterator(iBegin2,DivideFunctor(maxAllNodePerCell)))),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
+							           nodes->getInfoVecs().nodeLocX.begin(),
+							           nodes->getInfoVecs().nodeLocY.begin(),
+									   make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
+									   thrust::make_permutation_iterator(
+									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
+									                                     make_transform_iterator(iBegin2,
+											                             DivideFunctor(maxAllNodePerCell))),
+									   make_transform_iterator(iBegin2,DivideFunctor(maxAllNodePerCell))))								
+									   + totalNodeCountForActiveCells,
+									   nodes->getInfoVecs().intNodeType.begin(),
+									   AssignIntNodeType(maxAllNodePerCell,maxMemNodePerCell,nodeLocXAddr,nodeLocYAddr,nodeIsActiveAddr,memType1Addr));
+
+}
+
+
+
 void SceCells::growAtRandom_M(double dt) {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
@@ -2700,6 +2748,7 @@ void SceCells::growAtRandom_M(double dt) {
 	randomizeGrowth_M();
 
 	updateGrowthProgress_M();
+
 
 	decideIsScheduleToGrow_M();
 
@@ -5246,6 +5295,9 @@ void SceCells::applySceCellDisc_M() {
 	MembraneType1* memType1Addr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().memNodeType1[0]));
 
+	InternalType* intNodeTypeAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().intNodeType[0]));
+
 	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
 			- growthAuxData.prolifDecay
 					* (growthAuxData.grthProgrEndCPU
@@ -5299,7 +5351,7 @@ void SceCells::applySceCellDisc_M() {
 							   nodes->getInfoVecs().nodeF_MI_M_x.begin(),  //Ali added for cell pressure calculation 
 							   nodes->getInfoVecs().nodeF_MI_M_y.begin())),// ALi added for cell pressure calculation
 			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
-					nodeLocYAddr, nodeIsActiveAddr,memType1Addr, grthPrgrCriVal_M));
+					nodeLocYAddr, nodeIsActiveAddr,memType1Addr,intNodeTypeAddr, grthPrgrCriVal_M));
 }
 
 __device__
@@ -5405,6 +5457,55 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 							* exp(-linkLength / sceIIDiv_M[3]);
 		}
 	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIIDiv_M[4])
+				+ (1.0 - percent) * sceII_M[4];
+		if (linkLength < lenLimit) {
+			double intraPara0 = percent * (sceIIDiv_M[0])
+					+ (1.0 - percent) * sceII_M[0];
+			double intraPara1 = percent * (sceIIDiv_M[1])
+					+ (1.0 - percent) * sceII_M[1];
+			double intraPara2 = percent * (sceIIDiv_M[2])
+					+ (1.0 - percent) * sceII_M[2];
+			double intraPara3 = percent * (sceIIDiv_M[3])
+					+ (1.0 - percent) * sceII_M[3];
+			forceValue = -intraPara0 / intraPara2
+					* exp(-linkLength / intraPara2)
+					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		}
+	} else {
+		if (linkLength < sceII_M[4]) {
+			forceValue = -sceII_M[0] / sceII_M[2]
+					* exp(-linkLength / sceII_M[2])
+					+ sceII_M[1] / sceII_M[3] * exp(-linkLength / sceII_M[3]);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+}
+
+
+
+__device__
+void calAndAddII_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, InternalType intNodeType, InternalType intNodeTypeOther, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+   bool isNucleus=false ; 
+   if (intNodeType==nucleus || intNodeTypeOther==nucleus){
+     isNucleus=true ; 
+   }
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M && isNucleus==true) {
+		if (linkLength < sceIIDiv_M[4]) {
+			forceValue = -sceIIDiv_M[0] / sceIIDiv_M[2]
+					* exp(-linkLength / sceIIDiv_M[2])
+					+ sceIIDiv_M[1] / sceIIDiv_M[3]
+							* exp(-linkLength / sceIIDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M && isNucleus==true) {
 		double percent = (growPro - grthPrgrCriVal_M)
 				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
 		double lenLimit = percent * (sceIIDiv_M[4])

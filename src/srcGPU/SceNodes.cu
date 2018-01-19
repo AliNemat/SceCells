@@ -2609,6 +2609,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
 		infoVecs.membrBendRightX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightY.resize(maxTotalNodeCount, 0);
 		infoVecs.memNodeType1.resize(maxTotalNodeCount, notAssigned1); //Ali 
+		infoVecs.intNodeType.resize(maxTotalNodeCount, notAssigned); //Ali 
 
 		auxVecs.bucketKeys.resize(maxTotalNodeCount);
 		auxVecs.bucketValues.resize(maxTotalNodeCount);

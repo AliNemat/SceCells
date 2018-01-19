@@ -40,6 +40,7 @@ enum SceExceptionType {
 	AlgorithmBug
 };
 enum MembraneType1 {lateral1, apical1, basal1,notAssigned1} ; //Ali  
+enum InternalType {nucleus, cytoplasm, notAssigned} ; //Ali  
 enum ECellType {notActive, pouch, peri, bc} ; 
 std::string toString(SceExceptionType type);
 double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,

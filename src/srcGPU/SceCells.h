@@ -25,6 +25,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,uint, uint> ActinData; //Ali
 typedef thrust::tuple<bool,bool, bool,uint ,uint> BBBUiUi; //Ali
+typedef thrust::tuple<bool,double, double ,uint,uint,uint> BDDUiUiUi; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -110,6 +111,10 @@ void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
 __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
+
+__device__
+void calAndAddII_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, InternalType intNodeType, InternalType intNodeTypeOther, double grthPrgrCriVal_M);
 
 __device__
 double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
@@ -566,6 +571,64 @@ struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MembraneType1> 
 
 }; 
 
+struct AssignIntNodeType: public thrust::unary_function<BDDUiUiUi, InternalType> {
+	uint _maxNodePerCell;
+	uint _maxMemNodePerCell ; 
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	MembraneType1* _memType1Addr ; 
+
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AssignIntNodeType(uint maxNodePerCell, uint maxMemNodePerCell, double* locXAddr, double* locYAddr,
+			bool* isActiveAddr, MembraneType1* memType1Addr) : _maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
+					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
+					locYAddr), _isActiveAddr(isActiveAddr),_memType1Addr(memType1Addr){
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__  __device__ InternalType  operator()(const BDDUiUiUi &bDDUiUiUi) const {
+		bool  isActive=  thrust::get<0>(bDDUiUiUi) ; 
+		double  locX= thrust::get<1>(bDDUiUiUi); 
+		double  locY  = thrust::get<2>(bDDUiUiUi); 
+		uint   nodeRank = thrust::get<3>(bDDUiUiUi) ; // node rank in each cell 
+		uint   activeMembrCount = thrust::get<4>(bDDUiUiUi) ; 
+		uint cellRank = thrust::get<5>(bDDUiUiUi);
+
+
+        double dist ;        
+		double limit ;
+		MembraneType1 memTypeOther ; 
+		limit=1.56 ; 
+	    uint intnlIndxMemBegin = cellRank * _maxNodePerCell;
+	    uint index_other;
+		double locXOther, locYOther ; 
+
+
+		if (isActive==false || nodeRank < _maxMemNodePerCell) {
+			return notAssigned; //AliE
+		}
+		else { // it means it is an active internal node
+
+			for (index_other = intnlIndxMemBegin;index_other < intnlIndxMemBegin + activeMembrCount;index_other++) {
+				memTypeOther = _memType1Addr[index_other] ; 
+				if (memTypeOther==apical1) {
+					locXOther   = _locXAddr[index_other];
+					locYOther   = _locYAddr[index_other];
+                    dist=sqrt ( (locXOther-locX)*(locXOther-locX)+ (locYOther-locY)*(locYOther-locY) ) ; 
+					if (dist <limit) {
+						return nucleus ; 
+					}
+				}
+			}
+
+			return cytoplasm ; 
+
+		}
+	}
+}; 
+
+
 
 
 
@@ -975,14 +1038,15 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 	double* _locYAddr;
 	bool* _isActiveAddr;
 	MembraneType1* _memType1Addr ; 
+	InternalType*  _intNodeTypeAddr ; 
 	double _grthPrgrCriVal_M;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddSceCellForce(uint maxNodePerCell,
 			uint maxMemNodePerCell, double* locXAddr, double* locYAddr,
-			bool* isActiveAddr, MembraneType1* memType1Addr, double grthPrgrCriVal_M) :
+			bool* isActiveAddr, MembraneType1* memType1Addr, InternalType* intNodeTypeAddr, double grthPrgrCriVal_M) :
 			_maxNodePerCell(maxNodePerCell), _maxMemNodePerCell(
 					maxMemNodePerCell), _locXAddr(locXAddr), _locYAddr(
-					locYAddr), _isActiveAddr(isActiveAddr),_memType1Addr(memType1Addr), _grthPrgrCriVal_M(
+					locYAddr), _isActiveAddr(isActiveAddr),_memType1Addr(memType1Addr),_intNodeTypeAddr(intNodeTypeAddr), _grthPrgrCriVal_M(
 					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
@@ -1008,9 +1072,12 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 		uint index_other;
 		double         nodeX   = _locXAddr[index];
 		double         nodeY   = _locYAddr[index];
+		
 		MembraneType1  memType = _memType1Addr[index];
+		InternalType   intNodeType= _intNodeTypeAddr[index] ; 
 		double nodeXOther, nodeYOther;
 		MembraneType1  memTypeOther;
+		InternalType   intNodeTypeOther ; 
 
 		// means membrane node
 		//Because we want to compute the force on the membrane nodes we modify this function 
@@ -1046,8 +1113,9 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 				}
 				nodeXOther = _locXAddr[index_other];
 				nodeYOther = _locYAddr[index_other];
-				calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY, _grthPrgrCriVal_M);
+				intNodeTypeOther = _intNodeTypeAddr[index_other] ; 
+				calAndAddII_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY,intNodeType,intNodeTypeOther, _grthPrgrCriVal_M);
 			}
 		}
 		return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y);
@@ -2920,6 +2988,7 @@ class SceCells {
 
 
 	void assignMemNodeType();  //Ali 
+	void assignIntNodeType();  //Ali 
 
 	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();

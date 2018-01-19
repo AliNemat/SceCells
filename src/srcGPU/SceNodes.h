@@ -962,6 +962,7 @@ public:
 	thrust::host_vector<double> nodeAdhMinDist; // Ali
 
 	thrust::device_vector<MembraneType1> memNodeType1; // Ali
+	thrust::device_vector<InternalType>  intNodeType; // Ali
 
 // in order to represent differential adhesion, we also need an vector
 // for each cell node to identify the cell type.
