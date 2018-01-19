@@ -18,7 +18,9 @@ __constant__ double bendCoeff_Mitotic;//AAMIRI
 __constant__ double sceIB_M[5];
 __constant__ double sceIBDiv_M[5];
 __constant__ double sceII_M[5];
+__constant__ double sceN_M[5];  //Ali 
 __constant__ double sceIIDiv_M[5];
+__constant__ double sceNDiv_M[5]; //Ali 
 __constant__ double grthPrgrCriEnd_M;
 __constant__ double F_Ext_Incline_M2 ;  //Ali
 
@@ -777,8 +779,8 @@ void SceCells::initCellNodeInfoVecs_M() {
 	cellNodeInfoVecs.distToCenterAlongGrowDir.resize(
 			allocPara_m.maxTotalNodeCount);
 
-	cellNodeInfoVecs.activeLocXApical.resize(allocPara.maxTotalCellNodeCount); //Ali 
-	cellNodeInfoVecs.activeLocYApical.resize(allocPara.maxTotalCellNodeCount); //Ali 
+	cellNodeInfoVecs.activeLocXApical.resize(allocPara_m.maxTotalNodeCount); //Ali 
+	cellNodeInfoVecs.activeLocYApical.resize(allocPara_m.maxTotalNodeCount); //Ali 
 }
 
 void SceCells::initGrowthAuxData() {
@@ -1428,7 +1430,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
 
-	if (curTime>=10 ){
+	if (curTime>=30 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
@@ -1454,7 +1456,10 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 2 ***" << endl;
 	std::cout.flush();
 	applySceCellDisc_M();
-	applyNucleusEffect() ; 
+
+	if (curTime>30) {
+		applyNucleusEffect() ; 
+	}
 	std::cout << "     *** 3 ***" << endl;
 	std::cout.flush();
 //Ali        
@@ -1470,7 +1475,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>10) {
+	if (curTime>30) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2727,7 +2732,9 @@ thrust::reduce_by_key(
 			cellInfoVecs.apicalNodeCount.begin(),
 			thrust::equal_to<uint>(), thrust::plus<int>());
 
-
+//for (int i=0 ; i<25 ; i++) {
+//	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
+//}
 
 
 
@@ -2761,6 +2768,11 @@ thrust::reduce_by_key(
 							cellNodeInfoVecs.activeLocXApical.begin(),
 							cellNodeInfoVecs.activeLocYApical.begin())),
 			ActiveAndApical());
+
+
+//for (int i=0 ; i<250 ; i++) {
+//	cout << " the location of apical node " << i << " is "<<cellNodeInfoVecs.activeLocXApical[i] << " and " << cellNodeInfoVecs.activeLocYApical[i] << endl ;   
+//}
 
 
 	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
@@ -2811,12 +2823,14 @@ void SceCells::computeNucleusLoc() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
 							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
+//for (int i=0 ; i<25 ; i++) {
 
-
-
-	
-} 
-
+//	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
+//	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
+//	cout << "for cell rank "<< i << " apical  location in X direction is " << cellInfoVecs.apicalLocX[i] <<" in Y direction is " << cellInfoVecs.apicalLocY[i] << endl ; 
+//	cout << "for cell rank "<< i << " center  location in X direction is " << cellInfoVecs.centerCoordX[i] <<" in Y direction is " << cellInfoVecs.centerCoordY[i] << endl ; 
+//} 
+}
 
 
 void SceCells::growAtRandom_M(double dt) {
@@ -4268,6 +4282,7 @@ void SceCells::copyToGPUConstMem() {
 	cudaMemcpyToSymbol(sceII_M, sceIntraParaCPU_M, 5 * sizeof(double));
 	cudaMemcpyToSymbol(sceIIDiv_M, sceIntraParaDivCPU_M, 5 * sizeof(double));
 
+	
 	double IBDivHost[5];
 	IBDivHost[0] =
 			globalConfigVars.getConfigValue("SceIntnlB_U0_Div").toDouble();
@@ -4280,6 +4295,59 @@ void SceCells::copyToGPUConstMem() {
 	IBDivHost[4] =
 			globalConfigVars.getConfigValue("IntnlBDivEffectRange").toDouble();
 	cudaMemcpyToSymbol(sceIBDiv_M, IBDivHost, 5 * sizeof(double));
+
+
+     //////////////////////
+	//// Block Nucleus  /////////
+	//////////////////////
+
+
+	double sceNucleusParaCPU_M[5];
+
+	double U0_Nucleus =
+			globalConfigVars.getConfigValue("NucleusCell_U0").toDouble();
+	double V0_Nucleus =
+			globalConfigVars.getConfigValue("NucleusCell_V0").toDouble();
+	double k1_Nucleus =
+			globalConfigVars.getConfigValue("NucleusCell_k1").toDouble();
+	double k2_Nucleus =
+			globalConfigVars.getConfigValue("NucleusCell_k2").toDouble();
+	double nucleusLinkEffectiveRange = globalConfigVars.getConfigValue(
+			"NucleusEffectRange").toDouble();
+	sceNucleusParaCPU_M[0] = U0_Nucleus;
+	sceNucleusParaCPU_M[1] = V0_Nucleus;
+	sceNucleusParaCPU_M[2] = k1_Nucleus;
+	sceNucleusParaCPU_M[3] = k2_Nucleus;
+	sceNucleusParaCPU_M[4] = nucleusLinkEffectiveRange;
+
+	//////////////////////
+	//// Block Nucleus Division /////////
+	//////////////////////
+
+
+	double sceNucleusParaDivCPU_M[5];
+
+	double U0_Nucleus_Div =
+			globalConfigVars.getConfigValue("NucleusCell_U0_Div").toDouble();
+	double V0_Nucleus_Div =
+			globalConfigVars.getConfigValue("NucleusCell_V0_Div").toDouble();
+	double k1_Nucleus_Div =
+			globalConfigVars.getConfigValue("NucleusCell_k1_Div").toDouble();
+	double k2_Nucleus_Div =
+			globalConfigVars.getConfigValue("NucleusCell_k2_Div").toDouble();
+	double nucleusDivEffectiveRange = globalConfigVars.getConfigValue(
+			"NucleusDivEffectRange").toDouble();
+	sceNucleusParaDivCPU_M[0] = U0_Nucleus_Div;
+	sceNucleusParaDivCPU_M[1] = V0_Nucleus_Div;
+	sceNucleusParaDivCPU_M[2] = k1_Nucleus_Div;
+	sceNucleusParaDivCPU_M[3] = k2_Nucleus_Div;
+	sceNucleusParaDivCPU_M[4] = nucleusDivEffectiveRange;
+
+
+	cudaMemcpyToSymbol(sceN_M,    sceNucleusParaCPU_M,    5 * sizeof(double));  //Ali 
+	cudaMemcpyToSymbol(sceNDiv_M, sceNucleusParaDivCPU_M, 5 * sizeof(double)); //Ali
+	
+
 }
 
 void SceCells::handleMembrGrowth_M() {
@@ -5624,3 +5692,50 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+
+
+__device__
+void calAndAddNucleusEffect(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceNDiv_M[4]) {
+			forceValue = -sceNDiv_M[0] / sceNDiv_M[2]
+					* exp(-linkLength / sceNDiv_M[2])
+					+ sceNDiv_M[1] / sceNDiv_M[3]
+							* exp(-linkLength / sceNDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceNDiv_M[4])
+				+ (1.0 - percent) * sceN_M[4];
+		if (linkLength < lenLimit) {
+			double intraPara0 = percent * (sceNDiv_M[0])
+					+ (1.0 - percent) * sceN_M[0];
+			double intraPara1 = percent * (sceNDiv_M[1])
+					+ (1.0 - percent) * sceN_M[1];
+			double intraPara2 = percent * (sceNDiv_M[2])
+					+ (1.0 - percent) * sceN_M[2];
+			double intraPara3 = percent * (sceNDiv_M[3])
+					+ (1.0 - percent) * sceN_M[3];
+			forceValue = -intraPara0 / intraPara2
+					* exp(-linkLength / intraPara2)
+					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		}
+	} else {
+		if (linkLength < sceN_M[4]) {
+			forceValue = -sceN_M[0] / sceN_M[2]
+					* exp(-linkLength / sceN_M[2])
+					+ sceN_M[1] / sceN_M[3] * exp(-linkLength / sceN_M[3]);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+	
+
+}
+
+

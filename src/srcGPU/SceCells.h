@@ -114,6 +114,10 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
 
 __device__
+void calAndAddNucleusEffect(double &  xPos, double & yPos, double & xPos2, double &yPos2, 
+		double & growPro, double & xRes, double & yRes,double _grthPrgrCriVal_M);
+
+__device__
 double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
 
 /**
@@ -514,7 +518,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=20*kStiff ;  //5
+					 actinLevel=5*kStiff ;  //5
 				}
 				if (cellType==pouch &&  memType==basal1) {
 					 actinLevel=10*kStiff ;
@@ -1087,8 +1091,8 @@ struct AddNucleusForce: public thrust::unary_function<DDDBDDDD, CVec2> {
 		double nucleusY = thrust::get<1>(dDDBDDDD);
 		double progress = thrust::get<2>(dDDBDDDD);
 		bool   isActive = thrust::get<3>(dDDBDDDD);
-		double nodX     = thrust::get<4>(dDDBDDDD);
-		double nodY     = thrust::get<5>(dDDBDDDD);
+		double nodeX     = thrust::get<4>(dDDBDDDD);
+		double nodeY     = thrust::get<5>(dDDBDDDD);
 		double oriVelX  = thrust::get<6>(dDDBDDDD);
 		double oriVelY  = thrust::get<7>(dDDBDDDD);
                 
@@ -1097,7 +1101,7 @@ struct AddNucleusForce: public thrust::unary_function<DDDBDDDD, CVec2> {
 			return thrust::make_tuple(oriVelX, oriVelY); 
 		}
 		else {
-	//		calAndAddNucleusEffect(nodeX, nodeY, nucleusX, nucleusY, progress,oriVelX, oriVelY,_grthPrgrCriVal_M);
+			calAndAddNucleusEffect(nodeX, nodeY, nucleusX, nucleusY, progress,oriVelX, oriVelY,_grthPrgrCriVal_M);
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 	}
