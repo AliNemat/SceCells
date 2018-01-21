@@ -1430,7 +1430,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
 
-	if (curTime>=30 ){
+	if (curTime>=300 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
@@ -1457,7 +1457,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout.flush();
 	applySceCellDisc_M();
 
-	if (curTime>30) {
+	if (curTime>0) {
 		applyNucleusEffect() ; 
 	}
 	std::cout << "     *** 3 ***" << endl;
@@ -1475,7 +1475,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>30) {
+	if (curTime>300) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2731,8 +2731,9 @@ thrust::reduce_by_key(
 			cellInfoVecs.cellRanksTmpStorage.begin(),
 			cellInfoVecs.apicalNodeCount.begin(),
 			thrust::equal_to<uint>(), thrust::plus<int>());
+int sizeApical=cellInfoVecs.apicalNodeCount.size() ; 
 
-//for (int i=0 ; i<25 ; i++) {
+//for (int i=0 ; i<25; i++) {
 //	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
 //}
 
@@ -2770,7 +2771,7 @@ thrust::reduce_by_key(
 			ActiveAndApical());
 
 
-//for (int i=0 ; i<250 ; i++) {
+//for (int i=sizeApical-40 ; i<sizeApical ; i++) {
 //	cout << " the location of apical node " << i << " is "<<cellNodeInfoVecs.activeLocXApical[i] << " and " << cellNodeInfoVecs.activeLocYApical[i] << endl ;   
 //}
 
@@ -2785,20 +2786,23 @@ thrust::reduce_by_key(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
 					            	   cellInfoVecs.apicalLocY.begin())),
 			thrust::equal_to<uint>(), CVec2Add());
-
-
+// up to here apicalLocX and apicalLocY are the summation. We divide them if at lease one apical node exist.
+// 0,0 location for apical node indicates that there is no apical node.
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
-							           cellInfoVecs.apicalLocY.begin())),
+							           cellInfoVecs.apicalLocY.begin(),
+			                           cellInfoVecs.apicalNodeCount.begin()
+									   )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
-							           cellInfoVecs.apicalLocY.begin()))
+							           cellInfoVecs.apicalLocY.begin(),
+			                           cellInfoVecs.apicalNodeCount.begin()
+									   ))
 					+ allocPara_m.currentActiveCellCount,
-			                           cellInfoVecs.apicalNodeCount.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
-							           cellInfoVecs.apicalLocY.begin())), CVec2Divide());
+							           cellInfoVecs.apicalLocY.begin())), ApicalLocCal());
 
 
 }

@@ -559,13 +559,45 @@ struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
 
         double nucleusX,nucleusY ;
 		double nucleusHPercent ; 
-		nucleusHPercent=4*(progress-0.5)*(progress-0.5) ; 
-		nucleusX= centerX+nucleusHPercent*(apicalX-centerX) ; 
-		nucleusY= centerY+nucleusHPercent*(apicalY-centerY) ; 
+		nucleusHPercent=4*(progress-0.5)*(progress-0.5) ;
+		if (apicalX<0.001 && apicalX>-0.001 && apicalY<0.001 && apicalY>-0.001 ) {  // to check if a double is equal to zero.
 
-		return thrust::make_tuple( nucleusX,nucleusY) ; 
+			return thrust::make_tuple(centerX,centerY) ; // if there is no apical point put the nucleus on the center. 
+		}
+		else {
+			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.9 ; 
+			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.9 ; 
+
+			return thrust::make_tuple( nucleusX,nucleusY) ; 
+		}
 	}
 }; 
+struct ApicalLocCal: public thrust::unary_function<CVec2Int,CVec2> {
+	
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ ApicalLocCal() {
+		
+		}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__  __device__ CVec2 operator()(const CVec2Int &cVec2Int) const {
+		double   apicalX=  thrust::get<0>(cVec2Int) ;
+		double   apicalY = thrust::get<1>(cVec2Int);
+		int   apicalNodeCount = thrust::get<2>(cVec2Int);
+
+        if (apicalNodeCount>0) {
+         
+			return thrust::make_tuple( apicalX/apicalNodeCount,apicalY/apicalNodeCount) ; 
+		}
+		else {
+
+			return thrust::make_tuple(0,0) ; // there is no apical node 
+		}
+
+
+	}
+}; 
+
 
 struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MI> {
 	
