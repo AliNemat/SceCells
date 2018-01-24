@@ -518,19 +518,24 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=5*kStiff ;  //5
+					 actinLevel=5*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=10*kStiff ;
+					 actinLevel=5*kStiff ;
 				}
+
 
 				if  (cellType==peri && memType==lateral1) {
 					  actinLevel=5*kStiff ;
 				}
-				//if   (cellType==peri && memType != lateral1) {
 				if   (cellType==peri && memType == apical1) {
-					  actinLevel=10*kStiff ;
+					  actinLevel=1*kStiff ;
 				}
+				if   (cellType==peri && memType == basal1) {
+					  actinLevel=1*kStiff ;
+				}
+
+
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;
 				}
@@ -2841,7 +2846,8 @@ class SceCells {
 	double memNewSpacing;
 	double curTime;
 	int relaxCount ;  //Ali 
-
+	int lastPrintNucleus ; 
+	int outputFrameNucleus ; 
 	void readMiscPara();
 	void readBioPara();
 
@@ -3021,6 +3027,7 @@ class SceCells {
 	void computeApicalLoc();  //Ali 
 	void computeNucleusLoc();  //Ali 
 	void applyNucleusEffect();  //Ali 
+	void PlotNucleus(int & lastPrintNucleus, int & outputFrameNucleus);  //Ali 
 
 	void enterMitoticCheckForDivAxisCal();
 	void divide2D_M();

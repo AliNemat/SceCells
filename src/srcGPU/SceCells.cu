@@ -24,6 +24,18 @@ __constant__ double sceNDiv_M[5]; //Ali
 __constant__ double grthPrgrCriEnd_M;
 __constant__ double F_Ext_Incline_M2 ;  //Ali
 
+
+
+namespace patch{
+	template <typename  T> std::string to_string (const T& n) 
+	{
+	std:: ostringstream stm ; 
+	stm << n ; 
+	return stm.str() ; 
+	}
+}
+
+
 //Ali &  Abu June 30th
 __device__
 double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri, double adhereIndex) {
@@ -1436,7 +1448,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
  	if (curTime==InitTimeStage) {
 		eCM.Initialize();
-		cout << " I initialized the ECM module" << endl ; 
+		cout << " I initialized the ECM module" << endl ;
+		lastPrintNucleus=10000000  ; //just a big number 
+		outputFrameNucleus=0 ; 
 	}
 
 	curTime = curTime + dt;
@@ -1448,7 +1462,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
     computeApicalLoc();
 	
 	computeCenterPos_M();
-	computeNucleusLoc() ; 
+	computeNucleusLoc() ;
+
+	PlotNucleus (lastPrintNucleus, outputFrameNucleus) ;  
     BC_Imp_M() ; 
 	std::cout << "     ***3.5 ***" << endl;
 	std::cout.flush();
@@ -5597,6 +5613,31 @@ void SceCells::applyNucleusEffect() {
 	
 }
 
+void SceCells::PlotNucleus (int & lastPrintNucleus, int & outputFrameNucleus) {
+	lastPrintNucleus=lastPrintNucleus+1 ; 
+    if (lastPrintNucleus>=5000) { 
+		outputFrameNucleus++ ; 
+		lastPrintNucleus=0 ; 
+		std::string vtkFileName = "Nucleus_" + patch::to_string(outputFrameNucleus-1) + ".vtk";
+		ofstream NucleusOut;
+		NucleusOut.open(vtkFileName.c_str());
+		NucleusOut<< "# vtk DataFile Version 3.0" << endl;
+		NucleusOut<< "Result for paraview 2d code" << endl;
+		NucleusOut << "ASCII" << endl;
+		NucleusOut << "DATASET UNSTRUCTURED_GRID" << std::endl;
+		NucleusOut << "POINTS " << allocPara_m.currentActiveCellCount << " float" << std::endl;
+		for (uint i = 0; i < allocPara_m.currentActiveCellCount; i++) {
+			NucleusOut << cellInfoVecs.nucleusLocX[i] << " " << cellInfoVecs.nucleusLocY[i] << " "
+			<< 0.0 << std::endl;
+		}
+		NucleusOut<< std::endl;
+
+
+		NucleusOut.close(); 
+	}
+
+}
+
 
 
 __device__
@@ -5774,5 +5815,9 @@ void calAndAddNucleusEffect(double& xPos, double& yPos, double& xPos2, double& y
 	
 
 }
+
+
+
+
 
 
