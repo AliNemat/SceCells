@@ -573,26 +573,27 @@ struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
 	}
 }; 
 struct ApicalLocCal: public thrust::unary_function<CVec2Int,CVec2> {
-	
+	int * _apicalNodeCountAddr ; 	
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__ __device__ ApicalLocCal() {
+	__host__ __device__ ApicalLocCal(int * apicalNodeCountAddr): _apicalNodeCountAddr(apicalNodeCountAddr){
 		
 		}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__  __device__ CVec2 operator()(const CVec2Int &cVec2Int) const {
 		double   apicalX=  thrust::get<0>(cVec2Int) ;
 		double   apicalY = thrust::get<1>(cVec2Int);
-		int   apicalNodeCount = thrust::get<2>(cVec2Int);
+		uint      cellRank = thrust::get<2>(cVec2Int);
 
-        if (apicalNodeCount>0) {
+     //   if (_apicalNodeCount[cellRank]>0) {
          
-			return thrust::make_tuple( apicalX/apicalNodeCount,apicalY/apicalNodeCount) ; 
-		}
-		else {
+			return thrust::make_tuple( apicalX/_apicalNodeCountAddr[cellRank],
+									   apicalY/_apicalNodeCountAddr[cellRank] ) ; 
+	//	}
+	//	else {
 
-			return thrust::make_tuple(0,0) ; // there is no apical node 
-		}
+	//		return thrust::make_tuple(0,0) ; // there is no apical node 
+	//	}
 
 
 	}

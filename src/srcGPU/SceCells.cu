@@ -2722,6 +2722,8 @@ void SceCells::computeApicalLoc() {
 			* allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
+	int* apicalNodeCountAddr = thrust::raw_pointer_cast(
+			&(cellInfoVecs.apicalNodeCount[0]));
 
 thrust::reduce_by_key(
 			make_transform_iterator(iBegin, DivideFunctor(maxNPerCell)),
@@ -2733,9 +2735,9 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), thrust::plus<int>());
 int sizeApical=cellInfoVecs.apicalNodeCount.size() ; 
 
-//for (int i=0 ; i<25; i++) {
-//	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
-//}
+for (int i=0 ; i<25; i++) {
+	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
+}
 
 
 
@@ -2788,23 +2790,52 @@ int sizeApical=cellInfoVecs.apicalNodeCount.size() ;
 			thrust::equal_to<uint>(), CVec2Add());
 // up to here apicalLocX and apicalLocY are the summation. We divide them if at lease one apical node exist.
 // 0,0 location for apical node indicates that there is no apical node.
+	int  NumCellsWithApicalNode=0 ; 
+	for (int i=0 ; i<allocPara_m.currentActiveCellCount ; i++) {
+		if (cellInfoVecs.apicalNodeCount[i]!=0) {
+			NumCellsWithApicalNode=NumCellsWithApicalNode +1; 
+		}
+	}
+
+	cout << "num of cells with apical node is " << NumCellsWithApicalNode << endl ; 
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
 							           cellInfoVecs.apicalLocY.begin(),
-			                           cellInfoVecs.apicalNodeCount.begin()
+			                           cellInfoVecs.cellRanksTmpStorage.begin()
 									   )),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
 							           cellInfoVecs.apicalLocY.begin(),
-			                           cellInfoVecs.apicalNodeCount.begin()
+			                           cellInfoVecs.cellRanksTmpStorage.begin()
 									   ))
-					+ allocPara_m.currentActiveCellCount,
+					+ NumCellsWithApicalNode,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
-							           cellInfoVecs.apicalLocY.begin())), ApicalLocCal());
+							           cellInfoVecs.apicalLocY.begin())), ApicalLocCal(apicalNodeCountAddr));
 
+	for (int i= 0 ; i<NumCellsWithApicalNode ; i++) {
 
+		cout << "apical location in x for modified id " << i << " is " << cellInfoVecs.apicalLocX[i] << endl ; 
+		cout << "apical location in y for modified id " << i << " is " << cellInfoVecs.apicalLocY[i] << endl ; 
+
+	}
+
+	for (int i= 0 ; i<allocPara_m.currentActiveCellCount ; i++) {
+		cout <<"num of apical nodes for cell " <<i << " is " << cellInfoVecs.apicalNodeCount[i] << endl ;  
+	}
+
+		for (int i=0 ; i<allocPara_m.currentActiveCellCount-1 ; i++) {  // if the cell with 0 apical node is at the end, we are fine.
+			if (cellInfoVecs.apicalNodeCount[i]==0) {
+				cout << " I am inside complicated loop" << endl ; 
+				for (int j=allocPara_m.currentActiveCellCount-2 ; j>=i ; j--) {
+					cellInfoVecs.apicalLocX[j+1]=cellInfoVecs.apicalLocX[j] ;
+					cellInfoVecs.apicalLocY[j+1]=cellInfoVecs.apicalLocY[j] ;
+				}
+				cellInfoVecs.apicalLocX[i]=0 ;
+				cellInfoVecs.apicalLocY[i]=0 ; 
+			}
+		}
 }
 
 
@@ -2827,14 +2858,16 @@ void SceCells::computeNucleusLoc() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
 							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
-//for (int i=0 ; i<25 ; i++) {
+for (int i=0 ; i<25 ; i++) {
 
-//	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
-//	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
-//	cout << "for cell rank "<< i << " apical  location in X direction is " << cellInfoVecs.apicalLocX[i] <<" in Y direction is " << cellInfoVecs.apicalLocY[i] << endl ; 
-//	cout << "for cell rank "<< i << " center  location in X direction is " << cellInfoVecs.centerCoordX[i] <<" in Y direction is " << cellInfoVecs.centerCoordY[i] << endl ; 
-//} 
+	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
+	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
+	cout << "for cell rank "<< i << " apical  location in X direction is " << cellInfoVecs.apicalLocX[i] <<" in Y direction is " << cellInfoVecs.apicalLocY[i] << endl ; 
+	cout << "for cell rank "<< i << " center  location in X direction is " << cellInfoVecs.centerCoordX[i] <<" in Y direction is " << cellInfoVecs.centerCoordY[i] << endl ; 
 }
+
+}
+
 
 
 void SceCells::growAtRandom_M(double dt) {
