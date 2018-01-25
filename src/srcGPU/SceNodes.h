@@ -1083,7 +1083,7 @@ class SceNodes {
 
 	void copyParaToGPUConstMem_M();
 
-	void allocSpaceForNodes(uint maxTotalNodeCount);
+	void allocSpaceForNodes(uint maxTotalNodeCount, uint maxNumCells, uint currentActiveCellCount); //Ali updated
 	/**
 	 * this method maps the points to their bucket ID.
 	 * writes data to thrust::device_vector<uint> bucketValues and
@@ -1161,9 +1161,9 @@ public:
 	SceNodes();
 
 	/**
-	 * recommended constructor for beak project.
 	 */
-	SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell);
+	//SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell);
+	SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell, uint currentActiveCellCount);
 
 	/**
 	 * recommended constructor for beak project.

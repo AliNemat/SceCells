@@ -30,7 +30,10 @@ void SimulationDomainGPU::initializeNodes_M(std::vector<SceNodeType> &nodeTypes,
 	 * while the last four parameters come from Config file.
 	 */
 	std::cout << "Initializing nodes ...... " << std::endl;
-	nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell);
+	uint initTmpNumActiveCells ; //Ali  
+    initTmpNumActiveCells=initActiveMembrNodeCounts.size() ;   //Ali size of this vector is the initial number of active cells 
+	nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell,initTmpNumActiveCells);  // Ali 
+	//nodes = SceNodes(memPara.maxCellInDomain, memPara.maxAllNodePerCell);  // Ali 
 
 	//std::cout << "break point 1 " << std::endl;
 	//std::cout.flush();

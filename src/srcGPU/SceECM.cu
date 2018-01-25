@@ -1,7 +1,10 @@
 #include "SceECM.h"
-
+// task: frequency of plotting the ECM should be imported. Right now is given explicitly
 __constant__ double sceInterCell_ECM[5]; 
 __constant__ double wLCPara_ECM[4]; 
+__constant__ double restLenECMAdhSpringGPU  ;  
+__constant__ double maxLenECMAdhSpringGPU ;
+__constant__ double kAdhECMGPU ;
 
 namespace patch{
 	template <typename  T> std::string to_string (const T& n) 
@@ -42,10 +45,27 @@ double calWLC_ECM(const double& linkLength ) {
 	       -wLCPara_ECM[2]/pow(linkLength,wLCPara_ECM[3]) ) ; 	
 }
 
+__device__
+bool IsValidAdhPair(const double& dist ) {
+		if (dist > restLenECMAdhSpringGPU  && dist < maxLenECMAdhSpringGPU){ 
+			return true ;
+		}
+		else {
+			return false ;
+			}
+	}
 
-void SceECM::Initialize() {
+__device__
+double  CalAdhECM(const double& dist ) {
+	return (kAdhECMGPU*(dist-restLenECMAdhSpringGPU)); 
+	// in the function IsValid pair, distance already checked to be greater than neutral length
+			}
 
 
+void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM) {
+
+maxAllNodePerCell=maxAllNodePerCellECM ; 
+maxMembrNodePerCell= maxMembrNodePerCellECM ; 
 
 std::fstream readCoord_ECM ;
 std::fstream readInput_ECM ;  
@@ -60,6 +80,9 @@ if (readCoord_ECM.is_open()) {
 else {
 	cout << "ECM coordinates file is not opened successfully" << endl ; 
 }
+
+
+
 
 readCoord_ECM>>numberNodes_ECM ;
 for (int i=0 ; i<numberNodes_ECM ; i++){
@@ -85,6 +108,9 @@ else {
  
  readInput_ECM>>restLenECMSpring ;
  readInput_ECM>>eCMLinSpringStiff ;    
+ readInput_ECM>>restLenECMAdhSpring  ;  
+ readInput_ECM>>maxLenECMAdhSpring ;
+ readInput_ECM>>kAdhECM ;
  for ( int i=0 ; i<4 ; i++) {
 	readInput_ECM>>mechPara_ECM.wLCParaCPU_ECM[i] ;
  }    
@@ -108,7 +134,12 @@ for (int i=0 ; i<posXIni_ECM.size() ; i++){
 
  cout <<"rest length of ECM spring is "<<restLenECMSpring<<endl ;   
 
- cout <<"ECM spring stiffness is "<<eCMLinSpringStiff<<endl ;  
+ cout <<"ECM spring stiffness is "<<eCMLinSpringStiff<<endl ; 
+
+ cout <<"ECM Membrane neutral adhesion length is "<<restLenECMAdhSpring<<endl ;  
+ cout <<"ECM Membrane max adhesion length is "<<maxLenECMAdhSpring<<endl ;
+ cout <<"ECM Membrane adhesion stiffness is "<<kAdhECM<<endl ;
+ cout << "ECM only applies adhesvie force" << endl ; 
 
 for ( int i=0 ; i<4 ; i++) {
 	cout<<"wLC parameter "<< i << " is "<<mechPara_ECM.wLCParaCPU_ECM[i]<<endl ;  ;
@@ -118,6 +149,11 @@ cudaMemcpyToSymbol(sceInterCell_ECM,mechPara_ECM.sceInterCellCPU_ECM
 			,5*sizeof(double)); 
 cudaMemcpyToSymbol(wLCPara_ECM,mechPara_ECM.wLCParaCPU_ECM
 			,4*sizeof(double)); 
+
+cudaMemcpyToSymbol(restLenECMAdhSpringGPU, &restLenECMAdhSpring,sizeof(double));
+
+cudaMemcpyToSymbol(maxLenECMAdhSpringGPU, &maxLenECMAdhSpring,sizeof(double));
+cudaMemcpyToSymbol(kAdhECMGPU, &kAdhECM,sizeof(double));
 
 lastPrintECM=1000000 ; // large number 
 outputFrameECM=0 ; 
@@ -179,13 +215,13 @@ adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
  
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
+cout << " max all node per cell in ECM module is " << maxAllNodePerCell << endl ; 
+cout<< "max membrane node per cell in ECM module is " << maxMembrNodePerCell<< endl ; 
 
-int maxAllNodePerCell=580 ; // need to be imported
-int maxMembrNodePerCell=500 ; // need to be imported
 double eCMBendStiff=0.0 ; // need to be an input
 
-if (cellPolar) {eCMLinSpringStiff=100 ; }
-if (subCellPolar) {eCMLinSpringStiff=100 ; }
+//if (cellPolar) {eCMLinSpringStiff=100 ; }
+//if (subCellPolar) {eCMLinSpringStiff=100 ; }
 
 
 double* nodeECMLocXAddr= thrust::raw_pointer_cast (

@@ -179,6 +179,7 @@ void SceNodes::readMechPara() {
 SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 		uint maxCartNodeCount, uint maxTotalECMCount, uint maxNodeInECM,
 		uint maxTotalCellCount, uint maxNodeInCell, bool isStab) {
+	// This constructor is not active Ali 
 	initControlPara(isStab);
 	readDomainPara();
 	uint maxTotalNodeCount;
@@ -199,7 +200,7 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 				maxEpiNodeCount, maxInternalNodeCount);
 		maxTotalNodeCount = allocPara_M.maxTotalNodeCount;
 	}
-	allocSpaceForNodes(maxTotalNodeCount);
+	//allocSpaceForNodes(maxTotalNodeCount); Ali comment this becasue it is not active in this simulation and I updated the function in the active constructor
 	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
 	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
 	thrust::host_vector<int> hostTmpVector3(maxTotalNodeCount);
@@ -255,7 +256,7 @@ SceNodes::SceNodes(uint totalBdryNodeCount, uint maxProfileNodeCount,
 	copyParaToGPUConstMem();
 }
 
-SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
+SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell, uint currentActiveCellCount) {
 	//initControlPara (isStab);
 	int simuTypeConfigValue =
 			globalConfigVars.getConfigValue("SimulationType").toInt();
@@ -284,7 +285,7 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell) {
 	std::cout << "    Max total number of nodes in domain = "
 			<< allocPara_M.maxTotalNodeCount << std::endl;
 
-	allocSpaceForNodes(maxTotalNodeCount);
+	allocSpaceForNodes(maxTotalNodeCount, allocPara_M.maxCellCount, currentActiveCellCount);
 	thrust::host_vector<SceNodeType> hostTmpVector(maxTotalNodeCount);
 	thrust::host_vector<bool> hostTmpVector2(maxTotalNodeCount);
 
@@ -2546,9 +2547,9 @@ void SceNodes::setInfoVecs(const NodeInfoVecs& infoVecs) {
 	this->infoVecs = infoVecs;
 }
 
-void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount) {
-    int currentActiveCellCount=25 ;
-	int maxNumCells=80 ; 
+void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount,uint maxNumCells, uint currentActiveCellCount) {
+    cout << " inside function allocSpaceForNodes current active cells are " << currentActiveCellCount << endl ;  
+    cout << " inside function allocSpaceForNodes max number of cells is " << maxNumCells << endl ;  
 	infoVecs.nodeLocX.resize(maxTotalNodeCount);
 	infoVecs.nodeLocXHost.resize(maxTotalNodeCount); //Ali 
 	infoVecs.nodeLocY.resize(maxTotalNodeCount);

@@ -438,7 +438,7 @@ SimulationInitData_V2_M CellInitHelper::initInputsV3_M(
     ECellType eCellTypeTmp2 ; // Ali
 	for (uint i = 0; i < initCellCount; i++) {
 		initData.initActiveMembrNodeCounts.push_back(
-				rawData_m.initMembrNodePoss[i].size());
+				rawData_m.initMembrNodePoss[i].size()); // the size of this vector will be used to count initial number of active nodes Ali 
 		initData.initActiveIntnlNodeCounts.push_back(
 				rawData_m.initIntnlNodePoss[i].size());
 		initData.initGrowProgVec.push_back(rawData_m.cellGrowProgVec[i]);

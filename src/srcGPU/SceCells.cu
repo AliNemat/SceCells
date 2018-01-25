@@ -1447,7 +1447,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	}
 
  	if (curTime==InitTimeStage) {
-		eCM.Initialize();
+		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell);
 		cout << " I initialized the ECM module" << endl ;
 		lastPrintNucleus=10000000  ; //just a big number 
 		outputFrameNucleus=0 ; 
