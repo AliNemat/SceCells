@@ -2852,6 +2852,12 @@ for (int i=0 ; i<25; i++) {
 				cellInfoVecs.apicalLocY[i]=0 ; 
 			}
 		}
+
+		if (cellInfoVecs.apicalNodeCount[allocPara_m.currentActiveCellCount-1]==0) { // if the cell with 0 apical node is at the end, no rearrngment is required
+			cellInfoVecs.apicalLocX[allocPara_m.currentActiveCellCount-1]=0 ;
+			cellInfoVecs.apicalLocY[allocPara_m.currentActiveCellCount-1]=0 ; 
+		}
+
 }
 
 
