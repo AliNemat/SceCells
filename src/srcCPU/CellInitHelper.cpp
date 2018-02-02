@@ -616,13 +616,13 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 	double progDivStart =
 			globalConfigVars.getConfigValue("GrowthPrgrCriVal").toDouble();
 	for (uint i = 0; i < initCellCt; i++) {
-		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart;
+		randNum = (double) rand() / ((double) RAND_MAX + 1) * progDivStart -0.5 ; //Ali here 
 		//std::cout << "rand init growth progress = " << randNum << std::endl;
 //Ali to make the initial progree of all nodes zero
 
  
-	//	rawData.cellGrowProgVec.push_back(randNum);
-		rawData.cellGrowProgVec.push_back(0.0);
+		rawData.cellGrowProgVec.push_back(randNum);
+	//	rawData.cellGrowProgVec.push_back(0.0);
 		ECellType eCellTypeTmp=ForReadingData2.eCellTypeV.at(i);  
 		rawData.cellsTypeCPU.push_back(eCellTypeTmp);
 	}
@@ -785,9 +785,9 @@ void CellInitHelper::generateCellInitNodeInfo_v3(vector<CVector>& initCenters,
 	vector<CVector> initMembrPosTmp;
 	vector<CVector> initIntnlPosTmp;
 	for (uint i = 0; i < initCenters.size(); i++) {
-		initMembrPosTmp = generateInitMembrNodes(initCenters[i],
+		initMembrPosTmp = generateInitMembrNodes(initCenters[i],   // to generate  membrane node positions
 				initGrowProg[i]);
-		initIntnlPosTmp = generateInitIntnlNodes(initCenters[i],
+		initIntnlPosTmp = generateInitIntnlNodes(initCenters[i],   // to generate internal node positions
 				initGrowProg[i]);
 		initMembrPos.push_back(initMembrPosTmp);
 		initIntnlPos.push_back(initIntnlPosTmp);

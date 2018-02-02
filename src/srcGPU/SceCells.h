@@ -563,15 +563,17 @@ struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
 		double   apicalY = thrust::get<4>(cVec5);
 
         double nucleusX,nucleusY ;
-		double nucleusHPercent ; 
-		nucleusHPercent=4*(progress-0.5)*(progress-0.5) ;
+		double nucleusHPercent ;
+		double pi=3.14159 ; 
+		//nucleusHPercent=4*(progress-0.5)*(progress-0.5) ;
+		nucleusHPercent=0.5*cos(2*pi*progress) + 0.5  ; // to handle negative progress at the begining
 		if (apicalX<0.001 && apicalX>-0.001 && apicalY<0.001 && apicalY>-0.001 ) {  // to check if a double is equal to zero.
 
 			return thrust::make_tuple(centerX,centerY) ; // if there is no apical point put the nucleus on the center. 
 		}
 		else {
-			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.9 ; 
-			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.9 ; 
+			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.8 ; 
+			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.8 ; 
 
 			return thrust::make_tuple( nucleusX,nucleusY) ; 
 		}
@@ -1362,9 +1364,11 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05 ) {
+		if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
 			return thrust::make_tuple(true, 0);
-			//return thrust::make_tuple(false, progress); //No growth
+		}
+			else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
+			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
 		}
@@ -1390,7 +1394,12 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
 			return thrust::make_tuple(true,progress);
 			//return thrust::make_tuple(false, progress); //No growth
-		} else {
+		} 
+		
+		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
+			return thrust::make_tuple(true,progress);
+		}
+		else {
 			return thrust::make_tuple(false, progress);
 		}
 	}
@@ -2164,7 +2173,8 @@ struct CompuIsDivide_M: thrust::unary_function<DUi, bool> {
 	bool operator()(const DUi &vec) {
 		double growthProgress = thrust::get<0>(vec);
 		uint nodeCount = thrust::get<1>(vec);
-		if (growthProgress >= 1.0 && nodeCount == _maxIntnlNodePerCell) {
+		if (growthProgress >= 1.0 && nodeCount == _maxIntnlNodePerCell) { // if we are extremly ulucky there is a chance that growth progress is > 1 but nodes are not full 
+			// and in the growth function there is no mechanism to check and add more nodes.
 			return true;
 		} else {
 			return false;

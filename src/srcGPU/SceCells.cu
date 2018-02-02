@@ -1442,7 +1442,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
 
-	if (curTime>=300 ){
+	if (curTime>=3 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
@@ -1491,7 +1491,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>3) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2918,7 +2918,14 @@ void SceCells::growAtRandom_M(double dt) {
 
 	//delPointIfScheduledToGrow_M();//AAMIRI - commented out on June20
 
-	adjustGrowthInfo_M(); // Ali: I don't understand this function
+	int currentActiveCellCount = allocPara_m.currentActiveCellCount ; 
+	thrust::device_vector<double>::iterator  minCellProgress_Itr=thrust::min_element(cellInfoVecs.growthProgress.begin(),
+                                              cellInfoVecs.growthProgress.begin()+ currentActiveCellCount) ;
+
+    double minCell_Progress= *minCellProgress_Itr ; 
+    if (minCell_Progress > 0 ) {   // to not intefer with initialization with negative progress and no cell should divide before every one is positive.
+		adjustGrowthInfo_M(); // 
+	}
 }
 
 //Ali
