@@ -66,6 +66,8 @@ void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM) 
 
 maxAllNodePerCell=maxAllNodePerCellECM ; 
 maxMembrNodePerCell= maxMembrNodePerCellECM ; 
+int maxTotalNodes=52800 ; //Ali 
+
 
 std::fstream readCoord_ECM ;
 std::fstream readInput_ECM ;  
@@ -188,6 +190,7 @@ fBendRightY.resize(numNodesECM,0.0);
 totalForceECMX.resize(numNodesECM,0.0); 
 totalForceECMY.resize(numNodesECM,0.0);
 
+memNodeType.resize(maxTotalNodes,notAssigned1) ; 
 
 thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
  
@@ -205,12 +208,12 @@ for (int i=0;  i<nodeECMLocX.size() ;  i++) {
 
 
 
-void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar){   
+void SceECM:: ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar, bool isInitPhase){   
 
 thrust::counting_iterator<int> iBegin(0) ; 
 nodeDeviceTmpLocX.resize(totalNodeCountForActiveCellsECM,0.0) ;
 nodeDeviceTmpLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
-isBasalMemNode.resize(totalNodeCountForActiveCellsECM,false) ;
+//isBasalMemNode.resize(totalNodeCountForActiveCellsECM,false) ;
 adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
  
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
@@ -240,21 +243,25 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 							ModuloFunctor2(maxAllNodePerCell)),
 					nodeDeviceTmpLocX.begin(),
 					nodeDeviceTmpLocY.begin(), 
-					nodeIsActive_Cell.begin())), 
+					nodeIsActive_Cell.begin(),
+					memNodeType.begin()
+					)), 
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
 					 make_transform_iterator (iBegin,
 							ModuloFunctor2(maxAllNodePerCell)),
 					 nodeDeviceTmpLocX.begin(),
-                                         nodeDeviceTmpLocY.begin(),
-					 nodeIsActive_Cell.begin()))+totalNodeCountForActiveCellsECM,
+                     nodeDeviceTmpLocY.begin(),
+					 nodeIsActive_Cell.begin(),
+					 memNodeType.begin()
+					 ))+totalNodeCountForActiveCellsECM,
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin(),
-					isBasalMemNode.begin(),
+					memNodeType.begin(),
 					adhPairECM_Cell.begin())),
-				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef));
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase));
 
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (

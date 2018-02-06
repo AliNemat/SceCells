@@ -978,6 +978,7 @@ public:
 	thrust::host_vector<double> nodeAdhMinDist; // Ali
 
 	thrust::device_vector<MembraneType1> memNodeType1; // Ali
+	thrust::host_vector<MembraneType1> memNodeType1Host; // Ali
 
 // in order to represent differential adhesion, we also need an vector
 // for each cell node to identify the cell type.
@@ -1001,10 +1002,10 @@ public:
 	thrust::device_vector<double> membrBendLeftY;
 	thrust::device_vector<double> membrBendRightX;
 	thrust::device_vector<double> membrBendRightY;
-	thrust::device_vector<bool> nodeIsBasalMem;//Ali
-	thrust::device_vector<bool> nodeIsLateralMem;//Ali
+	//thrust::device_vector<bool> nodeIsBasalMem;//Ali
+	//thrust::device_vector<bool> nodeIsLateralMem;//Ali
 	thrust::device_vector<int> nodeIsApicalMem;//Ali it only gets 0 and 1
-	thrust::device_vector<bool> nodeIsLateralMemHost;//Ali
+	//thrust::device_vector<bool> nodeIsLateralMemHost;//Ali
 	thrust::device_vector<int>  nodeCellRankFront;//Ali it is cell size
 	thrust::device_vector<int>  nodeCellRankBehind;//Ali it is cell size
 	thrust::device_vector<int>  nodeCellRankFrontOld;//Ali it is cell size
@@ -1153,6 +1154,7 @@ class SceNodes {
 public:
     
 	bool adhUpdate ; //Ali 
+	bool isInitPhase ; //Ali 
 
 	NodeInfoVecs infoVecs; //Ali 
 	/**

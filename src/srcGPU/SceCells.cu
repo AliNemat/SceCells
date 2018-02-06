@@ -824,6 +824,9 @@ void SceCells::initGrowthAuxData_M() {
 			&(nodes->getInfoVecs().nodeLocY[allocPara_m.bdryNodeCount]));
 	growthAuxData.adhIndxAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeAdhereIndex[allocPara_m.bdryNodeCount]));
+
+	growthAuxData.memNodeType1Address = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().memNodeType1[allocPara_m.bdryNodeCount])); //Ali 
 	growthAuxData.randomGrowthSpeedMin_Ori = globalConfigVars.getConfigValue(
 			"RandomGrowthSpeedMin").toDouble();
 	growthAuxData.randomGrowthSpeedMax_Ori = globalConfigVars.getConfigValue(
@@ -1450,13 +1453,17 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell);
 		cout << " I initialized the ECM module" << endl ;
 		lastPrintNucleus=10000000  ; //just a big number 
-		outputFrameNucleus=0 ; 
+		outputFrameNucleus=0 ;
+		nodes->isInitPhase=true ; 
 	}
 
 	curTime = curTime + dt;
 
-	
-	eCMCellInteraction(cellPolar,subCellPolar); 
+	if (curTime>=300 ){
+		nodes->isInitPhase=false ; 
+	}
+	bool tmpIsInitPhase= nodes->isInitPhase ; 
+	eCMCellInteraction(cellPolar,subCellPolar,tmpIsInitPhase); 
 
     assignMemNodeType();  // Ali
     computeApicalLoc();
@@ -2706,8 +2713,7 @@ void SceCells::assignMemNodeType() {
 	thrust::transform(
 			thrust::make_zip_iterator(
 				     thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
-										nodes->getInfoVecs().nodeIsLateralMem.begin(),
-							            nodes->getInfoVecs().nodeIsBasalMem.begin(),
+										nodes->getInfoVecs().memNodeType1.begin(),
 									    make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
 									    thrust::make_permutation_iterator(
 									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
@@ -2715,8 +2721,7 @@ void SceCells::assignMemNodeType() {
 											                             DivideFunctor(maxAllNodePerCell))))),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeIsActive.begin(),	
-									   nodes->getInfoVecs().nodeIsLateralMem.begin(),
-							           nodes->getInfoVecs().nodeIsBasalMem.begin(),
+									   nodes->getInfoVecs().memNodeType1.begin(),
 									   make_transform_iterator(iBegin2,ModuloFunctor(maxAllNodePerCell)),
 									   thrust::make_permutation_iterator(
 									                                     cellInfoVecs.activeMembrNodeCounts.begin(),
@@ -2961,7 +2966,7 @@ void SceCells::divide2D_M() {
    	
 }
 
-void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar) {
+void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar, bool isInitPhase) {
 
 
 	int totalNodeCountForActiveCellsECM = allocPara_m.currentActiveCellCount
@@ -2975,12 +2980,13 @@ void SceCells::eCMCellInteraction(bool cellPolar,bool subCellPolar) {
     thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeDeviceLocY.begin()) ;
 	//assuming no boundary node exist 
 	thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+ totalNodeCountForActiveCellsECM,eCM.nodeIsActive_Cell.begin()) ; 
-	
-	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM,curTime,dt,Damp_Coef,cellPolar,subCellPolar);
+    thrust:: copy (nodes->getInfoVecs().memNodeType1.begin(),nodes->getInfoVecs().memNodeType1.begin()+ totalNodeCountForActiveCellsECM,eCM.memNodeType.begin()) ;
+
+	eCM.ApplyECMConstrain(totalNodeCountForActiveCellsECM,curTime,dt,Damp_Coef,cellPolar,subCellPolar,isInitPhase);
 
     thrust:: copy (eCM.nodeDeviceLocX.begin(),eCM.nodeDeviceLocX.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocX.begin()) ; 
     thrust:: copy (eCM.nodeDeviceLocY.begin(),eCM.nodeDeviceLocY.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeLocY.begin()) ; 
- 	thrust:: copy (eCM.isBasalMemNode.begin(),eCM.isBasalMemNode.begin()+ totalNodeCountForActiveCellsECM,nodes->getInfoVecs().nodeIsBasalMem.begin()) ;
+ 	thrust:: copy (eCM.memNodeType.begin(),   eCM.memNodeType.begin()+    totalNodeCountForActiveCellsECM,nodes->getInfoVecs().memNodeType1.begin()) ;
 
 
 
@@ -4639,7 +4645,7 @@ void SceCells::addMembrNodes_M() {
 			cellInfoVecs.activeMembrNodeCounts.begin(),
 			AddMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
 					growthAuxData.nodeXPosAddress,
-					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
+					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr, growthAuxData.memNodeType1Address),
 			thrust::identity<bool>());
 }
 
@@ -5100,7 +5106,7 @@ void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 				CVector centerToPosUnit = centerToPosDir.getUnitVector();
 				CVector crossProduct = Cross(centerToPosDir, splitDir);
 				double dotProduct = centerToPosUnit * splitDir;
-				tmpData.val = dotProduct;
+				tmpData.val = dotProduct; // for sorting the membrane nodes
 				tmpData.vec = memPos;
 				if (crossProduct.z >= 0) {
 					// counter-cloce wise

@@ -2222,12 +2222,11 @@ void SceNodes::applySceForcesDisc_M() {
      	thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeCellRankFront.begin() ,infoVecs.nodeCellRankFront.end() ,infoVecs.nodeCellRankFrontHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeCellRankBehind.begin(),infoVecs.nodeCellRankBehind.end(),infoVecs.nodeCellRankBehindHost.begin()) ; // Ali 	
+     	thrust :: copy (infoVecs.memNodeType1.begin(),infoVecs.memNodeType1.end(),infoVecs.memNodeType1Host.begin()) ; // Ali 	
 	 	thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali
-	 	thrust::fill(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), false) ;  //Ali
+	 	//thrust::fill(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), false) ;  //Ali
 	 	thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
-
-
-        	  	int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
+        int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
 	  	int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
 	  	int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
       	double  distMinP2,distP2 ;
@@ -2235,42 +2234,32 @@ void SceNodes::applySceForcesDisc_M() {
 	  	bool findAnyNode ;
 	  	double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
 	  	int cellRankTmp1, cellRankTmp2 ; 
-	  	int deactiveIdMyPair, deactiveIdAdhPair ; 
-     	// It is not one by one finding.
+	  	int deactiveIdMyPair, deactiveIdAdhPair ;
 
-		for (int i=0 ;  i<allocPara_M.currentActiveCellCount ;  i++) {
-			cout << "front cell for rank " <<i << " is " <<infoVecs.nodeCellRankFrontHost[i] << endl ; 
-			cout << "behind cell for rank " <<i << " is " <<infoVecs.nodeCellRankBehindHost[i] << endl ; 
-		}
-
-	 	for (int i=0 ; i<totalActiveNodes ;  i++) {
-			if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
-				cellRankTmp1=i/maxNodePerCell ; 
-		 		distMinP2=10000 ; // large number
-	  			findAnyNode=false ; 
-		 		for (int j=0 ; j<totalActiveNodes ; j++) {
+		if(isInitPhase) {
+	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
+				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+					cellRankTmp1=i/maxNodePerCell ; 
+		 			distMinP2=10000 ; // large number
+	  				findAnyNode=false ; 
+		 			for (int j=0 ; j<totalActiveNodes ; j++) {
 					
-					cellRankTmp2=j/maxNodePerCell ; 
-					if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
-			 			if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
-							distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
-			         	    pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+						cellRankTmp2=j/maxNodePerCell ; 
+						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
+			 				if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
+			         	    	pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
-							if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
-								distMinP2=distP2 ;
-								indexAdhNode=j ; 
-								findAnyNode=true ;
-								 
-							}
-		  				}
-					}
-		 	   }
+								if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+									distMinP2=distP2 ;
+									indexAdhNode=j ; 
+									findAnyNode=true ;
+								}
+		  					}
+						}
+		 	   		}
                 
-				if ( findAnyNode && 
-					sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],
-				                         infoVecs.nodeAdhMinDist[i]))
-				{
-
+			   	 if ( findAnyNode && sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],infoVecs.nodeAdhMinDist[i])){
 	     			deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
 	     			deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
 					if (deactiveIdMyPair != -1){	
@@ -2281,24 +2270,65 @@ void SceNodes::applySceForcesDisc_M() {
 	     				infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
 	     				infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
 					}
-
 	     			infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
 	     			infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
 					infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
 					infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
-
 				}
-				if (findAnyNode) {
-					infoVecs.nodeIsLateralMemHost[i]=true  ;
 
+				if (findAnyNode) {
+					infoVecs.memNodeType1Host[i]=lateral1  ;
 				}
 		 	}
-	 	}
-         
-		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
-		thrust::copy(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), infoVecs.nodeIsLateralMem.begin()) ;  //Ali
-
+	 	  }
+		  thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+		  thrust::copy(infoVecs.memNodeType1Host.begin(),infoVecs.memNodeType1Host.end(), infoVecs.memNodeType1.begin()) ;  //Ali
 	}
+	if (isInitPhase==false) {
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[i]==lateral1 ) { 
+					cellRankTmp1=i/maxNodePerCell ; 
+		 			distMinP2=10000 ; // large number
+	  				findAnyNode=false ; 
+		 			for (int j=0 ; j<totalActiveNodes ; j++) {
+					  
+						cellRankTmp2=j/maxNodePerCell ; 
+						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
+			 				if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[j]==lateral1 ){
+								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
+			         	    	pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+
+								if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+									distMinP2=distP2 ;
+									indexAdhNode=j ; 
+									findAnyNode=true ;
+								}
+		  					}
+						}
+		 	   		}
+                
+			   	 	if ( findAnyNode && sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],infoVecs.nodeAdhMinDist[i])){
+	     				deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
+	     				deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
+						if (deactiveIdMyPair != -1){	
+	     					infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
+	     					infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
+						}
+						if (deactiveIdAdhPair != -1){	
+	     					infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
+	     					infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
+						}
+	     				infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
+	     				infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+						infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
+						infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
+					}
+
+		 		}
+	  }
+      thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+  }
+}
 
 	uint* valueAddress = thrust::raw_pointer_cast(
 			&auxVecs.bucketValuesIncludingNeighbor[0]);
@@ -2572,10 +2602,10 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount,uint maxNumCells, uint 
 	infoVecs.nodeExtForceTangent.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeExtForceNormal.resize(maxTotalNodeCount);//AAMIRI
 	infoVecs.nodeMaxForce.resize(maxTotalNodeCount);
-	infoVecs.nodeIsBasalMem.resize(maxTotalNodeCount,false); //Ali
-	infoVecs.nodeIsLateralMem.resize(maxTotalNodeCount,false); //Ali
+	//infoVecs.nodeIsBasalMem.resize(maxTotalNodeCount,false); //Ali
+	//infoVecs.nodeIsLateralMem.resize(maxTotalNodeCount,false); //Ali
 	infoVecs.nodeIsApicalMem.resize(maxTotalNodeCount,0); //Ali
-	infoVecs.nodeIsLateralMemHost.resize(maxTotalNodeCount,false); //Ali
+	//infoVecs.nodeIsLateralMemHost.resize(maxTotalNodeCount,false); //Ali
 	infoVecs.nodeCellType.resize(maxTotalNodeCount);
 	infoVecs.nodeCellRank.resize(maxTotalNodeCount);
 	infoVecs.nodeIsActive.resize(maxTotalNodeCount);
@@ -2611,6 +2641,7 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount,uint maxNumCells, uint 
 		infoVecs.membrBendRightX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightY.resize(maxTotalNodeCount, 0);
 		infoVecs.memNodeType1.resize(maxTotalNodeCount, notAssigned1); //Ali 
+		infoVecs.memNodeType1Host.resize(maxTotalNodeCount, notAssigned1); //Ali 
 
 		auxVecs.bucketKeys.resize(maxTotalNodeCount);
 		auxVecs.bucketValues.resize(maxTotalNodeCount);

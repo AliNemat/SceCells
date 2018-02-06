@@ -25,8 +25,8 @@ typedef thrust::tuple<double, double, double, bool, double, double, double, doub
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,uint, uint> ActinData; //Ali
-typedef thrust::tuple<MembraneType1,int> MI; //Ali
-typedef thrust::tuple<bool,bool, bool,uint ,uint> BBBUiUi; //Ali
+typedef thrust::tuple<MembraneType1,int> TI; //Ali
+typedef thrust::tuple<bool,MembraneType1,uint ,uint> BTUiUi; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -607,26 +607,25 @@ struct ApicalLocCal: public thrust::unary_function<CVec2Int,CVec2> {
 }; 
 
 
-struct AssignMemNodeType: public thrust::unary_function<BBBUiUi, MI> {
+struct AssignMemNodeType: public thrust::unary_function<BTUiUi, TI> {
 	
 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AssignMemNodeType(){
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__host__  __device__ MI  operator()(const BBBUiUi &bBBUiUi) const {
-		bool  isActive=  thrust::get<0>(bBBUiUi) ; 
-		bool  isLateral= thrust::get<1>(bBBUiUi); 
-		bool  isBasal  = thrust::get<2>(bBBUiUi); 
-		uint   nodeRank = thrust::get<3>(bBBUiUi) ; // node rank in each cell 
-		uint   activeMembrCount = thrust::get<4>(bBBUiUi) ; 
+	__host__  __device__ TI  operator()(const BTUiUi &bTUiUi) const {
+		bool            isActive=  thrust::get<0>(bTUiUi) ; 
+		MembraneType1   nodeType= thrust::get<1>(bTUiUi); 
+		uint            nodeRank = thrust::get<2>(bTUiUi) ; // node rank in each cell 
+		uint            activeMembrCount = thrust::get<3>(bTUiUi) ; 
 
 		if (isActive == false || nodeRank >= activeMembrCount) { 
 			return thrust::make_tuple(notAssigned1,0);
-		} else if(isLateral) { 
+		} else if(nodeType==lateral1) { 
 			return thrust::make_tuple( lateral1,0) ; 
 		}
-			else if (isBasal) {
+			else if (nodeType==basal1) {
 				return thrust::make_tuple(basal1,0) ; 
 			}
 				else {
@@ -2381,11 +2380,12 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 	bool* _isActiveAddr;
 	double* _xPosAddr, *_yPosAddr;
 	int* _adhIndxAddr;
+	MembraneType1* _memNodeType ; 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddMemNode(uint maxNodePerCell, bool* isActiveAddr,
-			double* xPosAddr, double* yPosAddr, int* adhIndxAddr) :
+			double* xPosAddr, double* yPosAddr, int* adhIndxAddr, MembraneType1* memNodeType) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
-					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
+					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr), _memNodeType(memNodeType) {
 	}
 	__device__ uint operator()(const Tuuudd &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
@@ -2401,11 +2401,13 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 			_yPosAddr[i] = _yPosAddr[i - 1];
 			//_adhIndxAddr[i] = _adhIndxAddr[i - 1];
 			_adhIndxAddr[i] = -1;
+			_memNodeType[i]=_memNodeType[i-1] ; //Ali 
 		}
 		_isActiveAddr[globalIndexInsert] = true;
 		_xPosAddr[globalIndexInsert] = insertX;
 		_yPosAddr[globalIndexInsert] = insertY;
 		_adhIndxAddr[globalIndexInsert] = -1;
+		_memNodeType[globalIndexInsert] = _memNodeType[globalIndexInsert-1]; // to have the same type of the membrane node as at least one of its neighbors //Ali 
 		return (curActCount + 1);
 	}
 };
@@ -2719,7 +2721,7 @@ struct CellGrowthAuxData {
 	bool* nodeIsActiveAddress;
 	double* nodeXPosAddress;
 	double* nodeYPosAddress;
-
+	MembraneType1* memNodeType1Address  ; //Ali
 	int* adhIndxAddr;
 };
 
@@ -3143,7 +3145,7 @@ class SceCells {
 
 	void calCellArea();
     void calCellPerim();//AAMIRI
-	void eCMCellInteraction(bool cellPolar, bool subCellPolar) ; 
+	void eCMCellInteraction(bool cellPolar, bool subCellPolar, bool tmpIsInitSetup) ; 
 public:
 	SceCells();
 

@@ -7,11 +7,11 @@
 
 
 typedef thrust ::tuple<int,double,double> IDD ; 
-typedef thrust ::tuple<int,double,double,bool> IDDB ; 
+typedef thrust ::tuple<int,double,double,bool,MembraneType1> IDDBT ; 
 typedef thrust ::tuple<double,double> DD ; 
 typedef thrust ::tuple<double,double,double> DDD ; 
 typedef thrust ::tuple<double,double,bool> DDB ; 
-typedef thrust ::tuple<double,double,bool,int> DDBI ; 
+typedef thrust ::tuple<double,double,MembraneType1,int> DDTI ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 typedef thrust ::tuple<double,double,double,double> DDDD ; 
 
@@ -28,7 +28,7 @@ class SceECM {
 //	SceNodes* nodes;
 
 public:
-        void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar) ; 
+        void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar, bool isInitPhase) ; 
 double restLenECMSpring ;
 double eCMLinSpringStiff ; 
 double restLenECMAdhSpring ; 
@@ -54,7 +54,7 @@ thrust::device_vector<double> nodeDeviceLocX ;
 thrust::device_vector<double> nodeDeviceLocY ; 
 thrust::device_vector<double> nodeDeviceTmpLocX ; 
 thrust::device_vector<double> nodeDeviceTmpLocY ;
-thrust::device_vector<bool>   isBasalMemNode ;
+thrust::device_vector<MembraneType1> memNodeType ;
 thrust::device_vector<int>   adhPairECM_Cell ;
  
 thrust::device_vector<bool> nodeIsActive_Cell ; 
@@ -164,23 +164,25 @@ struct ModuloFunctor2: public thrust::unary_function <int,int>{
 	} ; 
 
 
-struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
+struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	 double  *_locXAddr_ECM; 
          double  *_locYAddr_ECM; 
         uint _maxMembrNodePerCell ; 
 	 int _numNodes_ECM ;
 	 double _dt ; 
-	 double _Damp_Coef ; 
-	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef) :
+	 double _Damp_Coef ;
+	 bool _isInitPhase ; 
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef, bool isInitPhase) :
 				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM),_dt(dt),
-			    _Damp_Coef(Damp_Coef)	{
+			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase)	{
 	}
-	__device__ DDBI  operator()(const IDDB & iDDB) const {
+	__device__ DDTI  operator()(const IDDBT & iDDBT) const {
 	
-	int nodeRankInOneCell=     thrust::get<0>(iDDB) ; 
-	double  locX=     thrust::get<1>(iDDB) ; 
-	double  locY=     thrust::get<2>(iDDB) ; 
-	bool    nodeIsActive= thrust::get<3>(iDDB) ; 
+	int nodeRankInOneCell=          thrust::get<0>(iDDBT) ; 
+	double            locX=         thrust::get<1>(iDDBT) ; 
+	double            locY=         thrust::get<2>(iDDBT) ; 
+	bool              nodeIsActive= thrust::get<3>(iDDBT) ; 
+	MembraneType1     nodeType=     thrust::get<4>(iDDBT) ; 
 	
 	double locX_ECM, locY_ECM ; 
 	double dist ;
@@ -197,27 +199,52 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 	double fAdhMemECMX=0.0 ; 
 	double fAdhMemECMY=0.0  ; 
 	int    adhPairECM=-1 ; //no adhere Pairi
-	int   iPair ; 
+	int   iPair=-1 ; 
 	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
-
-		for (int i=0 ; i<_numNodes_ECM ; i++) {
-			locX_ECM=_locXAddr_ECM[i]; 
-			locY_ECM=_locYAddr_ECM[i];
-			dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
-			if (dist < distMin) {
-				distMin=dist ; 
-				distMinX=(locX_ECM-locX) ;
-				distMinY=(locY_ECM-locY) ; 
-				iPair=i ; 
+        if (_isInitPhase==true) {
+			for (int i=0 ; i<_numNodes_ECM ; i++) {
+				locX_ECM=_locXAddr_ECM[i]; 
+				locY_ECM=_locYAddr_ECM[i];
+				dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
+				if (dist < distMin) {
+					distMin=dist ; 
+					distMinX=(locX_ECM-locX) ;
+					distMinY=(locY_ECM-locY) ; 
+					iPair=i ; 
+				}
+				fMorse=calMorse_ECM(dist);  
+				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
+				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
+				fTotalMorse=fTotalMorse+fMorse ; 
 			}
-			fMorse=calMorse_ECM(dist);  
-			fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
-			fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
-			fTotalMorse=fTotalMorse+fMorse ; 
 		}
+		if (_isInitPhase==false) {
+			for (int i=0 ; i<_numNodes_ECM ; i++) {
+				locX_ECM=_locXAddr_ECM[i]; 
+				locY_ECM=_locYAddr_ECM[i];
+				dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
+				if (dist < distMin && nodeType==basal1) {
+					distMin=dist ; 
+					distMinX=(locX_ECM-locX) ;
+					distMinY=(locY_ECM-locY) ; 
+					iPair=i ; 
+				}
+				fMorse=calMorse_ECM(dist);  
+				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
+				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
+				fTotalMorse=fTotalMorse+fMorse ; 
+			}
+
+		}
+
+
+	 }
+
+	if (fTotalMorse!=0.0 && _isInitPhase==true) {
+		nodeType=basal1 ; 
 	}
 	//if (distMin<distMaxAdh && distMin>distSponAdh) {
-	if (IsValidAdhPair(distMin)) {
+	if (IsValidAdhPair(distMin)&& iPair!=-1) {
 
         fAdhMemECM=CalAdhECM(distMin) ; 
 
@@ -227,16 +254,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDB,DDBI> {
 		//fAdhMemECMY=kStifMemECM*(distMin-distSponAdh)*distMinY/distMin ; 
 		adhPairECM=iPair ; 
 	}
-	
-	if (fTotalMorse!=0.0){	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),true,adhPairECM)  ; 
-	}
 		
-	else {
-	
-                return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),false,adhPairECM)  ; 
- 
-	}
+
+    return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
         	
 		
 }
