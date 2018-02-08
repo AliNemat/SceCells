@@ -661,6 +661,16 @@ struct VecVal {
 	}
 };
 
+struct VecValT {
+	CVector vec;
+	double val;
+	MembraneType1  type ; 
+	bool operator <(const VecValT& other) const {
+		return (val < other.val);
+	}
+};
+
+
 std::vector<CVector> obtainPtsBetween(CVector& pt1, CVector& pt2,
 		double& spacing, uint maxNewMembrNodeCount);
 

@@ -2760,7 +2760,7 @@ struct CellDivAuxData {
 	thrust::device_vector<bool> tmpIsActive_M;
 	thrust::device_vector<double> tmpNodePosX_M;
 	thrust::device_vector<double> tmpNodePosY_M;
-	thrust::device_vector<int> tmpAdhIndx_M ; //Ali 
+	thrust::device_vector<MembraneType1> tmpNodeType ; //Ali 
 
 	thrust::device_vector<bool> tmpIsActiveHost_M;
 	thrust::device_vector<double> tmpNodePosXHost_M;
@@ -2769,17 +2769,20 @@ struct CellDivAuxData {
 	thrust::device_vector<bool> tmpIsActive1_M;
 	thrust::device_vector<double> tmpXPos1_M;
 	thrust::device_vector<double> tmpYPos1_M;
+	thrust::device_vector<MembraneType1> tmpNodeType1 ; //Ali 
 
 	thrust::device_vector<bool> tmpIsActive2_M;
 	thrust::device_vector<double> tmpXPos2_M;
 	thrust::device_vector<double> tmpYPos2_M;
+	thrust::device_vector<MembraneType1> tmpNodeType2 ; //Ali 
 
 	thrust::device_vector<double> tmpHertwigXdir;  //A&A
 	thrust::device_vector<double> tmpHertwigYdir;  //A&A
 	thrust::host_vector<bool> isMotherCellBehind ;  //Ali 
 
 	std::vector<CVector> tmp1IntnlVec, tmp2IntnlVec;
-	std::vector<CVector> tmp1VecMem, tmp2VecMem;
+	std::vector<CVector> tmp1VecMem, tmp2VecMem ; 
+	std::vector<MembraneType1> tmp1VecMemNodeType, tmp2VecMemNodeType; //Ali 
 	std::vector<uint> tmp1MemActiveCounts, tmp1InternalActiveCounts;
 	std::vector<uint> tmp2MemActiveCounts, tmp2InternalActiveCounts;
 };
@@ -3125,23 +3128,23 @@ class SceCells {
 
 	void assembleVecForTwoCells(uint i);
 	void shiftIntnlNodesByCellCenter(CVector cell1Center, CVector cell2Center);
-	void processMemVec(std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
+	void processMemVec(std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2);
 	void obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 			vector<CVector>& intnlNodes);
-	void obtainMembrAndIntnlNodesPlusAdh(uint i, vector<CVector>& membrNodes,
-			vector<CVector>& intnlNodes, vector<int>& adhIndxDiv); //Ali 
+	void obtainMembrAndIntnlNodesPlusNodeType(uint i, vector<CVector>& membrNodes,
+			vector<CVector>& intnlNodes, vector<MembraneType1>& nodeTypeIndxDiv); //Ali 
 	CVector obtainCenter(uint i);
 	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis);
 
 	CVector calDivDir_ApicalBasal(CVector oldCenter, vector<CVector>& membrNodes,
-			double& lenAlongMajorAxis, vector<int> & adhIndxDiv);
+			double& lenAlongMajorAxis, vector<MembraneType1> & nodeTypeIndxDiv);
 	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCenter, vector<CVector>& membrNodes); //A&A
 
 	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 			double lenAlongHertwigAxis, CVector& centerNew1, CVector& centerNew2); //A& A  modified
 	void prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
-			std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2);
+			std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2);
 
 	void calCellArea();
     void calCellPerim();//AAMIRI

@@ -1,3 +1,6 @@
+// to do list  center of the tissue is manually intorduced in the obtainTwoNewCenter function to recognize if the mothe cell is in front or behind
+// if two division occur at the exact same time, there is a chance of error in detecting mother and daughter cells
+
 #include "SceCells.h"
 #include <cmath>
 
@@ -1450,7 +1453,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	}
 
  	if (curTime==InitTimeStage) {
-		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell);
+        uint maxTotalNodes=nodes->getInfoVecs().nodeLocX.size() ; 
+		cout << " in the initial time step the total number of nodes in the domain is equal to " << maxTotalNodes << endl ; 
+		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell,maxTotalNodes);
 		cout << " I initialized the ECM module" << endl ;
 		lastPrintNucleus=10000000  ; //just a big number 
 		outputFrameNucleus=0 ;
@@ -1612,6 +1617,8 @@ void SceCells::copyCellsPreDivision_M() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpNodePosY_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpNodeType = thrust::device_vector<MembraneType1>(
+			divAuxData.nodeStorageCount, notAssigned1); //Ali 
 
 	divAuxData.tmpCellRank_M = thrust::device_vector<uint>(
 			divAuxData.toBeDivideCount, 0);
@@ -1630,6 +1637,8 @@ void SceCells::copyCellsPreDivision_M() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpYPos1_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpNodeType1 = thrust::device_vector<MembraneType1>(
+			divAuxData.nodeStorageCount, notAssigned1); //Ali
 
 	divAuxData.tmpIsActive2_M = thrust::device_vector<bool>(
 			divAuxData.nodeStorageCount, false);
@@ -1637,6 +1646,9 @@ void SceCells::copyCellsPreDivision_M() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpYPos2_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
+	divAuxData.tmpNodeType2 = thrust::device_vector<MembraneType1>(
+			divAuxData.nodeStorageCount, notAssigned1); //Ali
+
         //A&A
         divAuxData.tmpHertwigXdir = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
@@ -1654,6 +1666,8 @@ void SceCells::copyCellsPreDivision_M() {
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().memNodeType1.begin()
 									+ allocPara_m.bdryNodeCount)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1662,7 +1676,9 @@ void SceCells::copyCellsPreDivision_M() {
 							nodes->getInfoVecs().nodeLocX.begin()
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
-									+ allocPara_m.bdryNodeCount))
+									+ allocPara_m.bdryNodeCount,
+							nodes->getInfoVecs().memNodeType1.begin()
+									+ allocPara_m.bdryNodeCount))		
 					+ totalNodeCountForActiveCells,
 			thrust::make_permutation_iterator(cellInfoVecs.isDividing.begin(),
 					make_transform_iterator(iStart,
@@ -1670,7 +1686,8 @@ void SceCells::copyCellsPreDivision_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
-							divAuxData.tmpNodePosY_M.begin())), isTrue());
+							divAuxData.tmpNodePosY_M.begin(),
+							divAuxData.tmpNodeType.begin())), isTrue());
 // step 3 , continued  //copy cell info values ready for division /comment A&A
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::copy_if(
@@ -1713,8 +1730,8 @@ void SceCells::copyCellsEnterMitotic() {
 			divAuxData.nodeStorageCount, 0.0);
 	divAuxData.tmpNodePosY_M = thrust::device_vector<double>(
 			divAuxData.nodeStorageCount, 0.0);
-	divAuxData.tmpAdhIndx_M = thrust::device_vector<int>(
-			divAuxData.nodeStorageCount, -1); //Ali 
+	divAuxData.tmpNodeType = thrust::device_vector<MembraneType1>(
+			divAuxData.nodeStorageCount, notAssigned1); //Ali 
 
 	divAuxData.tmpCellRank_M = thrust::device_vector<uint>(
 			divAuxData.toEnterMitoticCount, 0);
@@ -1752,7 +1769,7 @@ void SceCells::copyCellsEnterMitotic() {
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
 									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeAdhereIndex.begin()
+							nodes->getInfoVecs().memNodeType1.begin()
 									+ allocPara_m.bdryNodeCount)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -1762,7 +1779,7 @@ void SceCells::copyCellsEnterMitotic() {
 									+ allocPara_m.bdryNodeCount,
 							nodes->getInfoVecs().nodeLocY.begin()
 									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeAdhereIndex.begin()
+							nodes->getInfoVecs().memNodeType1.begin()
 									+ allocPara_m.bdryNodeCount))
 					+ totalNodeCountForActiveCells,
 			thrust::make_permutation_iterator(cellInfoVecs.isEnteringMitotic.begin(),
@@ -1772,8 +1789,8 @@ void SceCells::copyCellsEnterMitotic() {
 					thrust::make_tuple(divAuxData.tmpIsActive_M.begin(),
 							divAuxData.tmpNodePosX_M.begin(),
 							divAuxData.tmpNodePosY_M.begin(),
-							divAuxData.tmpAdhIndx_M.begin())), isTrue());
-// step 3 , continued  //copy cell info values ready for division /comment A&A
+							divAuxData.tmpNodeType.begin())), isTrue());
+// step 3 , continued for cell properties //copy cell info values ready for division /comment A&A
 	thrust::counting_iterator<uint> iBegin(0);
 	thrust::copy_if(
 			thrust::make_zip_iterator(
@@ -1814,8 +1831,10 @@ void SceCells::createTwoNewCellArr_M() {
 
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
-		obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
+		vector<MembraneType1> nodeTypeIndxDiv ; 
+		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 
+		obtainMembrAndIntnlNodesPlusNodeType(i, membrNodes, intnlNodes,nodeTypeIndxDiv); // Ali 
 		CVector oldCenter = obtainCenter(i);
 
                 //A&A commented
@@ -1833,7 +1852,7 @@ void SceCells::createTwoNewCellArr_M() {
 		double lenAlongHertwigAxis = calLengthAlongHertwigAxis(divDir, oldCenter, membrNodes);//A&A added
 
  
-		std::vector<VecVal> tmp1Membr, tmp2Membr;
+		std::vector<VecValT> tmp1Membr, tmp2Membr;
 		CVector cell1Center, cell2Center;
         // obtain the center of two cell along the shortest distance between the membrane nodes of mother cell. There is also a tuning factor to shift the centers inside the cell "shiftRatio"
 		obtainTwoNewCenters(oldCenter, divDir, lenAlongHertwigAxis, cell1Center,
@@ -1864,11 +1883,11 @@ void SceCells::findHertwigAxis() {
                 uint cellRank = divAuxData.tmpCellRank_M[i];
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
-		vector<int> adhIndxDiv ; 
+		vector<MembraneType1> nodeTypeIndxDiv ; 
 
 
 		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
-		obtainMembrAndIntnlNodesPlusAdh(i, membrNodes, intnlNodes,adhIndxDiv); // Ali 
+		obtainMembrAndIntnlNodesPlusNodeType(i, membrNodes, intnlNodes,nodeTypeIndxDiv); // Ali 
 
 		CVector oldCenter = obtainCenter(i);
 		double lenAlongMajorAxis;
@@ -1878,7 +1897,7 @@ void SceCells::findHertwigAxis() {
 		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
 		//		lenAlongMajorAxis); //Ali
 		CVector divDir = calDivDir_ApicalBasal(oldCenter, membrNodes,
-				lenAlongMajorAxis,adhIndxDiv); //Ali
+				lenAlongMajorAxis,nodeTypeIndxDiv); //Ali
 
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
                cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
@@ -1921,19 +1940,21 @@ void SceCells::copyFirstCellArr_M() {
 						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
 								divAuxData.tmpYPos1_M.begin(),
 								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
-								noAdhesion2)) + tmpStartIndx,
+								noAdhesion2,divAuxData.tmpNodeType1.begin())) + tmpStartIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos1_M.begin(),
 								divAuxData.tmpYPos1_M.begin(),
 								divAuxData.tmpIsActive1_M.begin(), noAdhesion,
-								noAdhesion2)) + tmpEndIndx,
+								noAdhesion2, divAuxData.tmpNodeType1.begin())) + tmpEndIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(
 								nodes->getInfoVecs().nodeLocX.begin(),
 								nodes->getInfoVecs().nodeLocY.begin(),
 								nodes->getInfoVecs().nodeIsActive.begin(),
 								nodes->getInfoVecs().nodeAdhereIndex.begin(),
-								nodes->getInfoVecs().membrIntnlIndex.begin()))
+								nodes->getInfoVecs().membrIntnlIndex.begin(),
+								nodes->getInfoVecs().memNodeType1.begin()   
+								)) // the 1 in memNodeType1 is not representing cell number 1 but in the rest it represents
 						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp1InternalActiveCounts[i];
@@ -1978,19 +1999,20 @@ void SceCells::copySecondCellArr_M() {
 						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
 								divAuxData.tmpYPos2_M.begin(),
 								divAuxData.tmpIsActive2_M.begin(), noAdhesion,
-								noAdhesion2)) + tmpStartIndx,
+								noAdhesion2,divAuxData.tmpNodeType2.begin() )) + tmpStartIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(divAuxData.tmpXPos2_M.begin(),
 								divAuxData.tmpYPos2_M.begin(),
 								divAuxData.tmpIsActive2_M.begin(), noAdhesion,
-								noAdhesion2)) + tmpEndIndx,
+								noAdhesion2,divAuxData.tmpNodeType2.begin())) + tmpEndIndx,
 				thrust::make_zip_iterator(
 						thrust::make_tuple(
 								nodes->getInfoVecs().nodeLocX.begin(),
 								nodes->getInfoVecs().nodeLocY.begin(),
 								nodes->getInfoVecs().nodeIsActive.begin(),
 								nodes->getInfoVecs().nodeAdhereIndex.begin(),
-								nodes->getInfoVecs().membrIntnlIndex.begin()))
+								nodes->getInfoVecs().membrIntnlIndex.begin(),
+								nodes->getInfoVecs().memNodeType1.begin()))  // 1 is not representing cell 1
 						+ nodeStartIndx);
 		cellInfoVecs.activeIntnlNodeCounts[cellRank] =
 				divAuxData.tmp2InternalActiveCounts[i];
@@ -4748,6 +4770,7 @@ void SceCells::assembleVecForTwoCells(uint i) {
 		if (j < divAuxData.tmp1VecMem.size()) {
 			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1VecMem[j].x;
 			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1VecMem[j].y;
+			divAuxData.tmpNodeType1[index] = divAuxData.tmp1VecMemNodeType[j] ; //Ali 
 			divAuxData.tmpIsActive1_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive1_M[index] = false;
@@ -4758,6 +4781,7 @@ void SceCells::assembleVecForTwoCells(uint i) {
 		if (j < divAuxData.tmp2VecMem.size()) {
 			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2VecMem[j].x;
 			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2VecMem[j].y;
+			divAuxData.tmpNodeType2[index] = divAuxData.tmp2VecMemNodeType[j] ; //Ali 
 			divAuxData.tmpIsActive2_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive2_M[index] = false;
@@ -4773,6 +4797,7 @@ void SceCells::assembleVecForTwoCells(uint i) {
 		if (shift_j < divAuxData.tmp1IntnlVec.size()) {
 			divAuxData.tmpXPos1_M[index] = divAuxData.tmp1IntnlVec[shift_j].x;
 			divAuxData.tmpYPos1_M[index] = divAuxData.tmp1IntnlVec[shift_j].y;
+			divAuxData.tmpNodeType1[index] = notAssigned1 ; //Ali 
 			divAuxData.tmpIsActive1_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive1_M[index] = false;
@@ -4780,6 +4805,7 @@ void SceCells::assembleVecForTwoCells(uint i) {
 		if (shift_j < divAuxData.tmp2IntnlVec.size()) {
 			divAuxData.tmpXPos2_M[index] = divAuxData.tmp2IntnlVec[shift_j].x;
 			divAuxData.tmpYPos2_M[index] = divAuxData.tmp2IntnlVec[shift_j].y;
+			divAuxData.tmpNodeType2[index] = notAssigned1 ; //Ali 
 			divAuxData.tmpIsActive2_M[index] = true;
 		} else {
 			divAuxData.tmpIsActive2_M[index] = false;
@@ -4814,10 +4840,12 @@ void SceCells::shiftIntnlNodesByCellCenter(CVector cell1Center,
 	}
 }
 
-void SceCells::processMemVec(std::vector<VecVal>& tmp1,
-		std::vector<VecVal>& tmp2) {
+void SceCells::processMemVec(std::vector<VecValT>& tmp1,
+		std::vector<VecValT>& tmp2) {
 	divAuxData.tmp1VecMem.clear();
 	divAuxData.tmp2VecMem.clear();
+	divAuxData.tmp1VecMemNodeType.clear(); //Ali
+	divAuxData.tmp2VecMemNodeType.clear(); //Ali
 
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 
@@ -4847,15 +4875,19 @@ void SceCells::processMemVec(std::vector<VecVal>& tmp1,
 
 	for (uint j = 0; j < tmp1.size(); j++) {
 		divAuxData.tmp1VecMem.push_back(tmp1[j].vec);
+		divAuxData.tmp1VecMemNodeType.push_back(tmp1[j].type);
 	}
 	for (uint j = 0; j < tmp2.size(); j++) {
 		divAuxData.tmp2VecMem.push_back(tmp2[j].vec);
+		divAuxData.tmp2VecMemNodeType.push_back(tmp2[j].type);
 	}
 	for (uint j = 0; j < ptsBetween1.size(); j++) {
 		divAuxData.tmp1VecMem.push_back(ptsBetween1[j]);
+		divAuxData.tmp1VecMemNodeType.push_back(lateral1);
 	}
 	for (uint j = 0; j < ptsBetween2.size(); j++) {
 		divAuxData.tmp2VecMem.push_back(ptsBetween2[j]);
+		divAuxData.tmp2VecMemNodeType.push_back(lateral1);
 	}
 
 	assert(divAuxData.tmp1VecMem.size() <= membThreshold);
@@ -4888,11 +4920,11 @@ void SceCells::obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 	}
 }
 //Ali
-void SceCells::obtainMembrAndIntnlNodesPlusAdh(uint i, vector<CVector>& membrNodes,
-		vector<CVector>& intnlNodes, vector<int> & adhIndxDiv) {
+void SceCells::obtainMembrAndIntnlNodesPlusNodeType(uint i, vector<CVector>& membrNodes,
+		vector<CVector>& intnlNodes, vector<MembraneType1> & nodeTypeIndxDiv) {
 	membrNodes.clear();
 	intnlNodes.clear();
-	adhIndxDiv.clear() ; 
+	nodeTypeIndxDiv.clear() ; 
 
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
@@ -4904,12 +4936,12 @@ void SceCells::obtainMembrAndIntnlNodesPlusAdh(uint i, vector<CVector>& membrNod
 		}
 		double posX = divAuxData.tmpNodePosX_M[index];
 		double posY = divAuxData.tmpNodePosY_M[index];
-		int    adhI = divAuxData.tmpAdhIndx_M[index];
+		MembraneType1    nodeTypeI = divAuxData.tmpNodeType[index];
 		if (j < membThreshold) {
 			// means node type is membrane
 			CVector memPos(posX, posY, 0);
 			membrNodes.push_back(memPos);
-			adhIndxDiv.push_back(adhI) ; 
+			nodeTypeIndxDiv.push_back(nodeTypeI) ; 
 		} else {
 			CVector intnlPos(posX, posY, 0);
 			intnlNodes.push_back(intnlPos);
@@ -4987,38 +5019,33 @@ CVector SceCells::calDivDir_MajorAxis(CVector center,
 }
 
 CVector SceCells::calDivDir_ApicalBasal(CVector center,
-		vector<CVector>& membrNodes, double& lenAlongMajorAxis, vector<int> & adhIndxDiv) {
+		vector<CVector>& membrNodes, double& lenAlongMajorAxis, vector<MembraneType1> & nodeTypeIndxDiv) {
 // not the optimal algorithm but easy to code
 	double minDiff = 10000;
-	int adhesionIndexFinal=-1 ; 
 	CVector minorAxisDir;
 	int minPointAdhIndex ; 
 	int maxPointAdhIndex; 
 
-	for (uint i = 0; i < membrNodes.size(); i++) {
-		cout <<"adhesion index for dividing cell node"<<i<<"is" << adhIndxDiv[i] <<endl; 
-	}	
+	//for (uint i = 0; i < membrNodes.size(); i++) {
+	//	cout <<"adhesion index for dividing cell node"<<i<<"is" << adhIndxDiv[i] <<endl; 
+//	}	
 	//return 0 ; 
 	for (uint i = 0; i < membrNodes.size(); i++) {
-		if (adhIndxDiv[i]==-1) {
+		if (nodeTypeIndxDiv[i]!=lateral1) {
 			continue ; 
 		} 
 		CVector tmpDir = membrNodes[i] - center;
 		CVector tmpUnitDir = tmpDir.getUnitVector();
 		double min = 0, max = 0;
-		//minPointAdhIndex=-1 ; 
-		//maxPointAdhIndex=-1 ;
 		//distance finder for node i to the opposite nodes //Ali 
 		for (uint j = 0; j < membrNodes.size(); j++) {
 			CVector tmpDir2 = membrNodes[j] - center;
 			double tmpVecProduct = tmpDir2 * tmpUnitDir;
 			if (tmpVecProduct < min) {
 				min = tmpVecProduct;
-		//		minPointAdhIndex=adhIndxDiv[j] ; 
 			}
 			if (tmpVecProduct > max) {
 				max = tmpVecProduct;
-		//		maxPointAdhIndex=adhIndxDiv[j] ; 
 			}
 		}
 		double diff = max - min;
@@ -5026,10 +5053,9 @@ CVector SceCells::calDivDir_ApicalBasal(CVector center,
 		if (diff < minDiff ) {
 			minDiff = diff;
 			minorAxisDir = tmpUnitDir;
-			adhesionIndexFinal=adhIndxDiv[i]; 
+//			adhesionIndexFinal=adhIndxDiv[i]; 
 		}
 	}
-	cout<< "one of the membrane nodes adhesion index in the direction of cell center shifting is "<<adhesionIndexFinal<<endl ; 
 
 	lenAlongMajorAxis = minDiff;
 	return minorAxisDir;
@@ -5087,13 +5113,13 @@ void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
 }
 
 void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
-		std::vector<VecVal>& tmp1, std::vector<VecVal>& tmp2) {
-	tmp1.clear();
-	tmp2.clear();
+		std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2) {
+	tmp1.clear(); // is for membrane node of first cell
+	tmp2.clear(); // is for membrane node of the second cell
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	uint index;
-	VecVal tmpData;
+	VecValT tmpData;
 	CVector splitDir = divDir.rotateNintyDeg_XY_CC();
 	for (uint j = 0; j < maxAllNodePerCell; j++) {
 		index = i * maxAllNodePerCell + j;
@@ -5108,6 +5134,7 @@ void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 				double dotProduct = centerToPosUnit * splitDir;
 				tmpData.val = dotProduct; // for sorting the membrane nodes
 				tmpData.vec = memPos;
+				tmpData.type=divAuxData.tmpNodeType[index] ; 
 				if (crossProduct.z >= 0) {
 					// counter-cloce wise
 					tmp1.push_back(tmpData);

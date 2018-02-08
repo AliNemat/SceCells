@@ -38,7 +38,8 @@ int outputFrameECM ;
 int lastPrintECM ;
 int numNodesECM ;
 uint maxAllNodePerCell ; 
-uint maxMembrNodePerCell ; 
+uint maxMembrNodePerCell ;
+uint maxTotalNodes ; 
 MechPara_ECM mechPara_ECM ; 
  
 thrust::device_vector<int> indexECM ;
@@ -81,7 +82,7 @@ thrust::device_vector<double> fBendRightY ;
 thrust::device_vector<double> totalForceECMX ; 
 thrust::device_vector<double> totalForceECMY ;
 
-        void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM); 
+        void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
 };
  
 __device__

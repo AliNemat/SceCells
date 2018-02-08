@@ -62,11 +62,11 @@ double  CalAdhECM(const double& dist ) {
 			}
 
 
-void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM) {
+void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM) {
 
 maxAllNodePerCell=maxAllNodePerCellECM ; 
 maxMembrNodePerCell= maxMembrNodePerCellECM ; 
-int maxTotalNodes=52800 ; //Ali 
+maxTotalNodes=maxTotalNodesECM ; //Ali 
 
 
 std::fstream readCoord_ECM ;
