@@ -1819,17 +1819,17 @@ void handleAdhesionForce_M(int& adhereIndex, double& xPos, double& yPos,
 		double& curAdherePosX, double& curAdherePosY, double& xRes,
 		double& yRes, double& alpha) {
 	double curLen = computeDist2D(xPos, yPos, curAdherePosX, curAdherePosY);
-	if (curLen > maxAdhBondLen_M) {
+	//if (curLen > maxAdhBondLen_M) {
 	//	adhereIndex = -1;
-		return;
-	} else {
+	//	return;
+//	} else {
 		if (curLen > minAdhBondLen_M) {
 			double forceValue = (curLen - minAdhBondLen_M) * (bondStiff_M * alpha + bondStiff_Mitotic * (1.0-alpha) );
 			xRes = xRes + forceValue * (curAdherePosX - xPos) / curLen;
 			yRes = yRes + forceValue * (curAdherePosY - yPos) / curLen;
 		}
 
-	}
+//	}
 }
 
 //Ali for reaction force
@@ -2235,7 +2235,78 @@ void SceNodes::applySceForcesDisc_M() {
 	  	double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
 	  	int cellRankTmp1, cellRankTmp2 ; 
 	  	int deactiveIdMyPair, deactiveIdAdhPair ;
+        bool isSubApicalJunction [totalActiveNodes] ;
+		int activeMemCount [ allocPara_M.currentActiveCellCount] ;
+		int firstApiLat ; 
+		int secondApiLat ; 
+		int cellRank ; 
+		int iNext ; 
+		int jJunction ;
 
+        for (int i=0 ; i< allocPara_M.currentActiveCellCount ; i++ ){
+			activeMemCount[i] = 0 ; 
+		}
+
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+			isSubApicalJunction[i]=false ; 
+		}
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+			if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode){
+				cellRank=i/maxNodePerCell ; 
+				activeMemCount [cellRank]=activeMemCount [cellRank]+1 ; 
+			}
+		}
+		
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode){ // check active and membrane
+					cellRank=i/maxNodePerCell ; 
+					iNext=i+1 ; 
+					if ( (i%maxNodePerCell)==(activeMemCount[cellRank]-1)) {
+						iNext=iNext-activeMemCount [cellRank] ; 
+					}
+					if (infoVecs.memNodeType1Host[i]==lateral1 && infoVecs.memNodeType1Host[iNext]==apical1 ) { // find the apical junction
+						firstApiLat=i ; 
+						for (int j=0 ; j<10 ; j++) {   //find junction nodes
+							jJunction=firstApiLat-j ; 
+							if (jJunction <(cellRank*maxNodePerCell)) {
+								jJunction=jJunction + activeMemCount [cellRank] ; 
+							}
+		 					isSubApicalJunction[jJunction]=true ; 
+						}
+
+					}
+				
+				}
+		}
+
+
+		
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode){
+					cellRank=i/maxNodePerCell ; 
+					iNext=i+1 ; 
+					if ( (i%maxNodePerCell)==(activeMemCount [cellRank]-1)) {
+						iNext=iNext-activeMemCount [cellRank]  ; 
+					}
+					if (infoVecs.memNodeType1Host[i]==apical1 && infoVecs.memNodeType1Host[iNext]==lateral1 ) {
+						secondApiLat=iNext ; 
+						for (int j=0 ; j<10 ; j++) {   //find junction nodes
+							jJunction=secondApiLat+j ; 
+							if (jJunction>=(cellRank+1)*maxNodePerCell ) {
+								jJunction=jJunction - activeMemCount [cellRank]; 
+							}
+		 					isSubApicalJunction[jJunction]=true ; 
+						}
+				
+					}
+				}
+		}
+
+		for (int i=0 ; i<totalActiveNodes ;  i++) {
+			if (isSubApicalJunction[i]) {
+				cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
+		 	}
+		}
 		if(isInitPhase) {
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
@@ -2286,7 +2357,7 @@ void SceNodes::applySceForcesDisc_M() {
 	}
 	if (isInitPhase==false) {
 		for (int i=0 ; i<totalActiveNodes ;  i++) {
-				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[i]==lateral1 ) { 
+				if (isSubApicalJunction[i]) { 
 					cellRankTmp1=i/maxNodePerCell ; 
 		 			distMinP2=10000 ; // large number
 	  				findAnyNode=false ; 
@@ -2294,11 +2365,12 @@ void SceNodes::applySceForcesDisc_M() {
 					  
 						cellRankTmp2=j/maxNodePerCell ; 
 						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
-			 				if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[j]==lateral1 ){
+			 				//if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[j]==lateral1 ){
+			 				if (isSubApicalJunction){
 								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
 			         	    	pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
-								if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+								if (distP2<distMinP2) {
 									distMinP2=distP2 ;
 									indexAdhNode=j ; 
 									findAnyNode=true ;
