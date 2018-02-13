@@ -798,7 +798,7 @@ struct ApplyAdh: public thrust::unary_function<BoolIUiDD, CVec2> {
 /**
  * calculate force in epithilum.
  */
-
+/*
 struct ApplyAdhReaction: public thrust::unary_function<BoolUiDD, CVec2> {
 	double* _nodeLocXArrAddr;
 	double* _nodeLocYArrAddr;
@@ -851,6 +851,7 @@ struct ApplyAdhReaction: public thrust::unary_function<BoolUiDD, CVec2> {
 	}
 };
 
+*/
 
 struct AddLinkForces: public thrust::unary_function<uint, CVec3> {
 	double* _nodeLocXLinkBeginAddress;
@@ -961,7 +962,9 @@ public:
 
 //External forces on nodes in y dir
 	thrust::device_vector<double> nodeExtForceNormal;//AAMIRI
-
+// is subApical node , for adhesion purpose
+	thrust::device_vector<bool> isSubApicalJunction;//Ali 
+	thrust::host_vector<bool> isSubApicalJunctionHost;//Ali 
 
 // represents nodes's stress level.
 	thrust::device_vector<double> nodeMaxForce;

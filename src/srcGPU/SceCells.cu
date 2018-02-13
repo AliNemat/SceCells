@@ -73,6 +73,13 @@ double calMembrForce_Actin(double& length, double kAvg) {
 
 }
 
+__device__
+double DefaultMembraneStiff() {
+			return membrStiff;
+		 
+
+}
+
 
 __device__
 double calExtForce(double& curTime) {
@@ -1448,7 +1455,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
 
-	if (curTime>=3 ){
+	if (curTime>=0 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
@@ -1459,12 +1466,12 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 		cout << " I initialized the ECM module" << endl ;
 		lastPrintNucleus=10000000  ; //just a big number 
 		outputFrameNucleus=0 ;
-		nodes->isInitPhase=true ; 
+		nodes->isInitPhase=true ;
 	}
 
 	curTime = curTime + dt;
 
-	if (curTime>=300 ){
+	if (curTime>=5 ){
 		nodes->isInitPhase=false ; 
 	}
 	bool tmpIsInitPhase= nodes->isInitPhase ; 
@@ -1503,7 +1510,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>3) {
+	if (curTime>0) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -2264,6 +2271,7 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
                             nodes->getInfoVecs().memNodeType1.begin(),
+                            nodes->getInfoVecs().isSubApicalJunction.begin(),
 							make_transform_iterator(iBegin2,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin2,
@@ -2285,6 +2293,7 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 									make_transform_iterator(iBegin2,
 											DivideFunctor(maxAllNodePerCell))),
                             nodes->getInfoVecs().memNodeType1.begin(),
+                            nodes->getInfoVecs().isSubApicalJunction.begin(),
 							make_transform_iterator(iBegin2,
 									DivideFunctor(maxAllNodePerCell)),
 							make_transform_iterator(iBegin2,

@@ -24,7 +24,7 @@ typedef thrust::tuple<double, double, double, bool, double, double, double, doub
 //Ali comment
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
-typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,uint, uint> ActinData; //Ali
+typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,bool,uint, uint> ActinData; //Ali
 typedef thrust::tuple<MembraneType1,int> TI; //Ali
 typedef thrust::tuple<bool,MembraneType1,uint ,uint> BTUiUi; //Ali
 //Ali 
@@ -44,6 +44,8 @@ typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 __device__
 double calExtForce(double& curTime);
 
+__host__ __device__
+double DefaultMembraneStiff();
 //Ali comment 
 //__device__
 //double calMembrForce(double& length);
@@ -483,13 +485,15 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 		int activeMembrCount = thrust::get<1>(actinData);
 		double cell_CenterY = thrust::get<2>(actinData);
 		MembraneType1    memType= thrust::get<3>(actinData);
-		int   cellRank = thrust::get<4>(actinData);
-		int   nodeRank = thrust::get<5>(actinData);
+		bool    isSubApical= thrust::get<4>(actinData);
+		int   cellRank = thrust::get<5>(actinData);
+		int   nodeRank = thrust::get<6>(actinData);
 
 		int  index = cellRank * _maxNodePerCell + nodeRank;
-		double actinLevel ; 
+		double actinLevel ;
+		double kStiff ; 
 	   //MembraneType1  membraneType ; 	
-		double kStiff=200 ; 
+		kStiff=DefaultMembraneStiff() ;  
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {  //if #1
 			return 0.0;
 		} else { // It is a membrane node    //if #1 continue
@@ -518,15 +522,15 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=5*kStiff ; 
+					 actinLevel=1.2*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=5*kStiff ;
+					 actinLevel=1.2*kStiff ;
 				}
 
 
 				if  (cellType==peri && memType==lateral1) {
-					  actinLevel=5*kStiff ;
+					  actinLevel=1.2*kStiff ;
 				}
 				if   (cellType==peri && memType == apical1) {
 					  actinLevel=1*kStiff ;
@@ -539,7 +543,12 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
 					actinLevel=1*kStiff ;
 				}
-			} // if #6 end 
+			} // if #6 end
+
+			if (isSubApical) {
+
+					actinLevel=1.1*kStiff ;
+			}
 
 		    return actinLevel;
 
@@ -1391,12 +1400,13 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
-			return thrust::make_tuple(true,progress);
+			return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
 			//return thrust::make_tuple(false, progress); //No growth
 		} 
 		
 		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
-			return thrust::make_tuple(true,progress);
+	//		return thrust::make_tuple(true,progress);
+			return thrust::make_tuple(false,progress); // bypass for now to not loose apical nodes
 		}
 		else {
 			return thrust::make_tuple(false, progress);
@@ -2343,23 +2353,23 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
-			if (cellType==pouch) {
+	//		if (cellType==pouch) {
 				uint cellRank = thrust::get<4>(inputInfo);
 				uint seedNew = _seed + cellRank;
 				rng.discard(seedNew);
 				double distanceY=abs (centerCellY-_minY) ; 
-				double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
-				//double randomNum1 =dist(rng);
+		//		double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
+				double randomNum1 =dist(rng);
 			
 				rng.discard(seedNew);
 				double randomNum2 = dist2(rng);
 				//double xDir = cos(randomNum2);
 				//double yDir = sin(randomNum2);
 				return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);
-			}
-			else {
-				return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
-			}
+	//i		}
+	//		else {
+	//			return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
+	//		}
 		}
 	}
 };

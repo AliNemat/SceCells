@@ -96,6 +96,9 @@ __device__
 bool IsValidAdhPair (const double & dist); 
 
 __device__
+bool IsValidAdhPairForNotInitPhase (const double & dist); 
+
+__device__
 double CalAdhECM (const double & dist);
 
 struct InitECMLoc
@@ -199,7 +202,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	double fAdhMemECM=0.0   ; 
 	double fAdhMemECMX=0.0 ; 
 	double fAdhMemECMY=0.0  ; 
-	int    adhPairECM=-1 ; //no adhere Pairi
+	int    adhPairECM=-1 ; //no adhere Pair
 	int   iPair=-1 ; 
 	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
         if (_isInitPhase==true) {
@@ -218,7 +221,21 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 				fTotalMorse=fTotalMorse+fMorse ; 
 			}
+
+			if (fTotalMorse!=0.0) {
+				nodeType=basal1 ; 
+			}
+			if (IsValidAdhPair(distMin)&& iPair!=-1) {
+
+        		fAdhMemECM=CalAdhECM(distMin) ; 
+
+				fAdhMemECMX=fAdhMemECM*distMinX/distMin ;  
+				fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
+				adhPairECM=iPair ; 
+			}
+
 		}
+
 		if (_isInitPhase==false) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
@@ -235,27 +252,19 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 				fTotalMorse=fTotalMorse+fMorse ; 
 			}
+			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
 
+        		fAdhMemECM=CalAdhECM(distMin) ; 
+
+				fAdhMemECMX=fAdhMemECM*distMinX/distMin ;  
+				fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
+				adhPairECM=iPair ; 
+			}
 		}
 
 
 	 }
 
-	if (fTotalMorse!=0.0 && _isInitPhase==true) {
-		nodeType=basal1 ; 
-	}
-	//if (distMin<distMaxAdh && distMin>distSponAdh) {
-	if (IsValidAdhPair(distMin)&& iPair!=-1) {
-
-        fAdhMemECM=CalAdhECM(distMin) ; 
-
-		fAdhMemECMX=fAdhMemECM*distMinX/distMin ;  
-		fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
-		//fAdhMemECMX=kStifMemECM*(distMin-distSponAdh)*distMinX/distMin ;  
-		//fAdhMemECMY=kStifMemECM*(distMin-distSponAdh)*distMinY/distMin ; 
-		adhPairECM=iPair ; 
-	}
-		
 
     return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
         	

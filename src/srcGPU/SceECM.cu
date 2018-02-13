@@ -54,6 +54,16 @@ bool IsValidAdhPair(const double& dist ) {
 			return false ;
 			}
 	}
+__device__
+bool IsValidAdhPairForNotInitPhase(const double& dist ) {
+		if (dist > restLenECMAdhSpringGPU){ 
+			return true ;
+		}
+		else {
+			return false ;
+			}
+	}
+
 
 __device__
 double  CalAdhECM(const double& dist ) {
