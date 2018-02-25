@@ -100,6 +100,19 @@ typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
 typedef thrust::tuple<uint, uint, uint > Tuuu; // Ali
 typedef thrust::tuple<uint, uint, uint, double, double> Tuuudd;
 
+
+struct SubApicalInfoEachCell{
+
+	int nodeID[20];
+
+	SubApicalInfoEachCell() {
+		for (int i=0 ; i<20 ; i++) {
+			nodeID[i]= 0 ; 
+		}
+	}
+}; 
+
+
 // special datatype required for Thrust minmax element function.
 typedef thrust::pair<thrust::device_vector<int>::iterator,
 		thrust::device_vector<int>::iterator> MinMaxRes;

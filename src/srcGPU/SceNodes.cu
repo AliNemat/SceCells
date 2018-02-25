@@ -2242,6 +2242,9 @@ void SceNodes::applySceForcesDisc_M() {
 		int cellRank ; 
 		int iNext ; 
 		int jJunction ;
+		std::vector <SubApicalInfoEachCell> subApicalInfo ; 
+		
+		
 
         for (int i=0 ; i< allocPara_M.currentActiveCellCount ; i++ ){
 			activeMemCount[i] = 0 ; 
@@ -2256,7 +2259,9 @@ void SceNodes::applySceForcesDisc_M() {
 				activeMemCount [cellRank]=activeMemCount [cellRank]+1 ; 
 			}
 		}
-		
+	
+		subApicalInfo.clear() ; 
+		int cellRankOld=-1 ; 
 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode){ // check active and membrane
 					cellRank=i/maxNodePerCell ; 
@@ -2273,7 +2278,14 @@ void SceNodes::applySceForcesDisc_M() {
 
 								cout << " The subApicalNodes of cell rank " << cellRank << " passed the first node ID" << endl ; 
 							}
-		 					infoVecs.isSubApicalJunctionHost[jJunction]=true ; 
+		 					infoVecs.isSubApicalJunctionHost[jJunction]=true ;
+
+							if (cellRank !=cellRankOld) {
+								subApicalInfo.push_back(SubApicalInfoEachCell()); 
+								cellRankOld=cellRank ; 
+							}
+							subApicalInfo[cellRank].nodeID[j]=jJunction ; 
+
 						}
 
 					}
@@ -2299,7 +2311,8 @@ void SceNodes::applySceForcesDisc_M() {
 
 								cout << " The subApicalNodes of cell rank " << cellRank << " passed the last node ID" << endl ; 
 							}
-		 					infoVecs.isSubApicalJunctionHost[jJunction]=true ; 
+		 					infoVecs.isSubApicalJunctionHost[jJunction]=true ;
+							subApicalInfo[cellRank].nodeID[j+10]=jJunction ; // the vector of structures for active cells has already been generated.
 						}
 				
 					}
@@ -2356,56 +2369,58 @@ void SceNodes::applySceForcesDisc_M() {
 				}
 		 	}
 	 	  }
+		  cout << " I am ready to copy the data in adhision function to the GPU " << endl ; 
 		  thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
 		  thrust::copy(infoVecs.memNodeType1Host.begin(),infoVecs.memNodeType1Host.end(), infoVecs.memNodeType1.begin()) ;  //Ali
 		  thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
 	}
+
+
 	if (isInitPhase==false) {
-		for (int i=0 ; i<totalActiveNodes ;  i++) {
-				if (infoVecs.isSubApicalJunctionHost[i]) { 
-					cellRankTmp1=i/maxNodePerCell ; 
-		 			distMinP2=10000 ; // large number
-	  				findAnyNode=false ; 
-		 			for (int j=0 ; j<totalActiveNodes ; j++) {
-					  
-						cellRankTmp2=j/maxNodePerCell ; 
-						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
-			 				//if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode && infoVecs.memNodeType1Host[j]==lateral1 ){
-			 				if (infoVecs.isSubApicalJunctionHost[j]){
-								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
-			         	    	pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+		cout << " I am in steady state phase" << endl ; 
+		int idPair[4] ; 
+		int id ; 
+		int L ;
+		int cellRankFront,cellRankBehind ;
+		int idPairFinal ; 
+		for ( int i= 0 ; i<allocPara_M.currentActiveCellCount ; i++) {
+			for ( int j=0 ; j<20 ; j++) {
 
-								if (distP2<distMinP2) {
-									distMinP2=distP2 ;
-									indexAdhNode=j ; 
-									findAnyNode=true ;
-								}
-		  					}
-						}
-		 	   		}
-                
-			   	 	if ( findAnyNode && sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],infoVecs.nodeAdhMinDist[i])){
-	     				deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
-	     				deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
-						if (deactiveIdMyPair != -1){	
-	     					infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
-	     					infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
-						}
-						if (deactiveIdAdhPair != -1){	
-	     					infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
-	     					infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
-						}
-	     				infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
-	     				infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
-						infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
-						infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
+				id=subApicalInfo[i].nodeID[j] ;
+				cellRankFront=infoVecs.nodeCellRankFrontHost[i] ; 
+				cellRankBehind=infoVecs.nodeCellRankBehindHost[i] ;
+
+				idPair[0]=subApicalInfo[cellRankFront].nodeID[j] ;
+				idPair[1]=subApicalInfo[cellRankBehind].nodeID[j] ;
+				if (j<10) {
+					idPair[2]=subApicalInfo[cellRankBehind].nodeID[j+10] ;
+					idPair[3]=subApicalInfo[cellRankFront].nodeID[j+10] ;
+				}
+				else{
+					idPair[2]=subApicalInfo[cellRankBehind].nodeID[j-10] ;
+					idPair[3]=subApicalInfo[cellRankFront].nodeID[j-10] ;
+				}
+				double distMin=1000 ;
+				for (int k=0 ; k<4 ; k++) {
+					L=idPair[k] ; 
+					distP2=pow( infoVecs.nodeLocXHost[id]-infoVecs.nodeLocXHost[L],2)+
+			        	   pow( infoVecs.nodeLocYHost[id]-infoVecs.nodeLocYHost[L],2) ;
+					if (distP2<distMin) {
+						distMin=distP2;
+						idPairFinal=idPair[k];
 					}
+					
+				}
 
-		 		}
-	  }
-      thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
-      thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
+	     		infoVecs.nodeAdhereIndexHost[id]=idPairFinal ;
+			}
+		}
+
+		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
+      	thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
   }
+  
+
 }
 
 	uint* valueAddress = thrust::raw_pointer_cast(
