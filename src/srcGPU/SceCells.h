@@ -1400,13 +1400,13 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
-			return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
-			//return thrust::make_tuple(false, progress); //No growth
+	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
+			return thrust::make_tuple(true, progress); 
 		} 
 		
 		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
-	//		return thrust::make_tuple(true,progress);
-			return thrust::make_tuple(false,progress); // bypass for now to not loose apical nodes
+			return thrust::make_tuple(true,progress);
+			//return thrust::make_tuple(false,progress); // bypass for now to not loose apical nodes
 		}
 		else {
 			return thrust::make_tuple(false, progress);
@@ -2399,11 +2399,11 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 	}
 	__device__ uint operator()(const Tuuudd &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
-		uint insertIndx = thrust::get<1>(oriData) + 1;
+		uint insertIndx = thrust::get<1>(oriData) + 1; // newIndex 
 		uint curActCount = thrust::get<2>(oriData);
 		double insertX = thrust::get<3>(oriData);
 		double insertY = thrust::get<4>(oriData);
-		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;  //based on this line, the membrane not is first and then internal nodes.
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount; //membrane nodes are first. End position based on newindex
 		uint globalIndexInsert = cellRank * _maxNodePerCell + insertIndx;
 		for (uint i = globalIndxEnd; i >= globalIndexInsert; i--) {
 			_isActiveAddr[i] = _isActiveAddr[i - 1];
@@ -2427,26 +2427,38 @@ struct DelMemNode: public thrust::unary_function<Tuuu, uint> {
 	bool* _isActiveAddr;
 	double* _xPosAddr, *_yPosAddr;
 	int* _adhIndxAddr;
+	MembraneType1* _memNodeType ; 
+
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ DelMemNode(uint maxNodePerCell, bool* isActiveAddr,
-			double* xPosAddr, double* yPosAddr, int* adhIndxAddr) :
+			double* xPosAddr, double* yPosAddr, int* adhIndxAddr, MembraneType1* memNodeType) :
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
-					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr) {
+					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr),_memNodeType(memNodeType) {
 	}
 	__device__ uint operator()(const Tuuu &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
-		uint insertIndx = thrust::get<1>(oriData) + 1;
+		uint delIndx = thrust::get<1>(oriData) ; //+1
 		uint curActCount = thrust::get<2>(oriData);
-		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount;
-		uint globalIndexDel = cellRank * _maxNodePerCell + insertIndx;
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount-1;
+		uint globalIndexDel = cellRank * _maxNodePerCell + delIndx;
+		int shiftValue ; 
+		shiftValue=1 ; 
+		if (globalIndexDel==globalIndxEnd){
+			shiftValue=-1 ; 
+		}
+		if (_memNodeType[globalIndexDel]==apical1) {
+			globalIndexDel=globalIndexDel+shiftValue ; 
+		}
 		for (uint i =globalIndexDel+1; i<=globalIndxEnd; i++) {
 			_isActiveAddr[i-1] = _isActiveAddr[i];
 			_xPosAddr[i-1] = _xPosAddr[i];
 			_yPosAddr[i-1] = _yPosAddr[i];
 			_adhIndxAddr[i-1] = _adhIndxAddr[i];
+			_memNodeType[i-1]=_memNodeType[i] ; 
 		}
 		 _isActiveAddr[globalIndxEnd]=false ;
 		 _adhIndxAddr[globalIndxEnd] = -1;
+		 _memNodeType[globalIndxEnd]=notAssigned1 ; 
 
 		return (curActCount - 1);
 	}

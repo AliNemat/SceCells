@@ -4698,7 +4698,7 @@ void SceCells::delMembrNodes_M() {
 			cellInfoVecs.activeMembrNodeCounts.begin(),
 			DelMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
 					growthAuxData.nodeXPosAddress,
-					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr),
+					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr,growthAuxData.memNodeType1Address),
 			thrust::identity<bool>());
 }
 
