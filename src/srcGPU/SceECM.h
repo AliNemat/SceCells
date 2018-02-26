@@ -314,9 +314,14 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
         //  	forceRight=calWLC_ECM(distRight) ; 
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
+	if (index !=0 &&  index != (_numNodes-1)) {
+		return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ; 
+		//return thrust::make_tuple(0.0,0.0) ; 
+	}
+	else {
 
-	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ; 
-	//return thrust::make_tuple(0.0,0.0) ; 
+		return thrust::make_tuple(0,0,0) ; 
+	}
         
 
 		}

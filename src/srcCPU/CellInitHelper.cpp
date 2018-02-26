@@ -620,7 +620,9 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 		//std::cout << "rand init growth progress = " << randNum << std::endl;
 //Ali to make the initial progree of all nodes zero
 
- 
+        if (randNum>( progDivStart-0.1)) {
+			randNum=randNum-0.1 ;
+		}
 		rawData.cellGrowProgVec.push_back(randNum);
 		//rawData.cellGrowProgVec.push_back(0.97);
 		ECellType eCellTypeTmp=ForReadingData2.eCellTypeV.at(i);  

@@ -18,7 +18,7 @@ typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
 typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRank;
-typedef thrust::tuple<double, double, double, bool, double, double, double, double> DDDBDDDD;
+typedef thrust::tuple<double, double, double, bool, double, double, double, double,bool> DDDBDDDDB;
 //Ali comment 
 //typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 //Ali comment
@@ -117,6 +117,9 @@ __device__
 void calAndAddNucleusEffect(double &  xPos, double & yPos, double & xPos2, double &yPos2, 
 		double & growPro, double & xRes, double & yRes,double _grthPrgrCriVal_M);
 
+__device__
+void calAndAddSpindleForm(double &  xPos, double & yPos, double & xPos2, double &yPos2, 
+		double & growPro, double & xRes, double & yRes,double _grthPrgrCriVal_M);
 __device__
 double compDist2D(double &xPos, double &yPos, double &xPos2, double &yPos2);
 
@@ -526,7 +529,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 
 				if  (cellType==peri && memType==lateral1) {
-					  actinLevel=5*kStiff ;
+					  actinLevel=20*kStiff ;
 				}
 				if   (cellType==peri && memType == apical1) {
 					  actinLevel=1*kStiff ;
@@ -570,8 +573,8 @@ struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
 			return thrust::make_tuple(centerX,centerY) ; // if there is no apical point put the nucleus on the center. 
 		}
 		else {
-			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.9 ; 
-			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.9 ; 
+			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.5 ; 
+			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.5 ; 
 
 			return thrust::make_tuple( nucleusX,nucleusY) ; 
 		}
@@ -1117,29 +1120,31 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 	}
 };
 
-struct AddNucleusForce: public thrust::unary_function<DDDBDDDD, CVec2> {
+struct AddNucleusForce: public thrust::unary_function<DDDBDDDDB, CVec2> {
 	double _grthPrgrCriVal_M;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ AddNucleusForce(double grthPrgrCriVal_M) :
 			 _grthPrgrCriVal_M(grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec2 operator()(const DDDBDDDD &dDDBDDDD) const {
-		double nucleusX = thrust::get<0>(dDDBDDDD);
-		double nucleusY = thrust::get<1>(dDDBDDDD);
-		double progress = thrust::get<2>(dDDBDDDD);
-		bool   isActive = thrust::get<3>(dDDBDDDD);
-		double nodeX     = thrust::get<4>(dDDBDDDD);
-		double nodeY     = thrust::get<5>(dDDBDDDD);
-		double oriVelX  = thrust::get<6>(dDDBDDDD);
-		double oriVelY  = thrust::get<7>(dDDBDDDD);
+	__device__ CVec2 operator()(const DDDBDDDDB &dDDBDDDDB) const {
+		double nucleusX = thrust::get<0>(dDDBDDDDB);
+		double nucleusY = thrust::get<1>(dDDBDDDDB);
+		double progress = thrust::get<2>(dDDBDDDDB);
+		bool   isActive = thrust::get<3>(dDDBDDDDB);
+		double nodeX     = thrust::get<4>(dDDBDDDDB);
+		double nodeY     = thrust::get<5>(dDDBDDDDB);
+		double oriVelX  = thrust::get<6>(dDDBDDDDB);
+		double oriVelY  = thrust::get<7>(dDDBDDDDB);
+		double isLateralMem  = thrust::get<8>(dDDBDDDDB);
                 
 
-		if (isActive == false) {
+		if (isActive == false || isLateralMem==false) {
 			return thrust::make_tuple(oriVelX, oriVelY); 
 		}
 		else {
 			calAndAddNucleusEffect(nodeX, nodeY, nucleusX, nucleusY, progress,oriVelX, oriVelY,_grthPrgrCriVal_M);
+			//calAndAddSpindleForm(nodeX, nodeY, nucleusX, nucleusY, progress,oriVelX, oriVelY,_grthPrgrCriVal_M);
 			return thrust::make_tuple(oriVelX, oriVelY);
 		}
 	}
@@ -2334,13 +2339,13 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
-			if (cellType==pouch) {
+			if (cellType==peri) {
 				uint cellRank = thrust::get<4>(inputInfo);
 				uint seedNew = _seed + cellRank;
 				rng.discard(seedNew);
 				double distanceY=abs (centerCellY-_minY) ; 
-				double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
-				//double randomNum1 =dist(rng);
+				//double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
+				double randomNum1 =dist(rng);
 			
 				rng.discard(seedNew);
 				double randomNum2 = dist2(rng);

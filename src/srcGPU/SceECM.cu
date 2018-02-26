@@ -73,7 +73,7 @@ int numberNodes_ECM ;
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
  
-readCoord_ECM.open("./resources/coordinate_ECM5.txt") ;
+readCoord_ECM.open("./resources/coordinate_ECM6.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }

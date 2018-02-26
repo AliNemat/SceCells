@@ -1442,7 +1442,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	bool cellPolar=false ; 
 	bool subCellPolar= false  ; 
 
-	if (curTime>=300 ){
+	if (curTime>=3 ){
 		subCellPolar=true ; // to reach to equlibrium mimicking 35 hours AEG 
 	}
 
@@ -1491,7 +1491,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 5 ***" << endl;
 	std::cout.flush();
      //Ali cmment //
-	if (curTime>300) {
+	if (curTime>3) {
 		growAtRandom_M(dt);
 		std::cout << "     *** 6 ***" << endl;
 		std::cout.flush();
@@ -5585,7 +5585,9 @@ void SceCells::applyNucleusEffect() {
 							nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
 							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin())),
+							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().nodeIsLateralMem.begin()
+							)),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
@@ -5604,7 +5606,9 @@ void SceCells::applyNucleusEffect() {
 							nodes->getInfoVecs().nodeLocX.begin(),
 							nodes->getInfoVecs().nodeLocY.begin(),
 							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin()))		
+							nodes->getInfoVecs().nodeVelY.begin(),
+							nodes->getInfoVecs().nodeIsLateralMem.begin()
+							))		
 							+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
@@ -5812,12 +5816,68 @@ void calAndAddNucleusEffect(double& xPos, double& yPos, double& xPos2, double& y
 	}
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
-	
 
 }
 
 
+/*
+__device__
+void calAndAddNucleusEffect(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
 
+	double forceValue = 0;
+	 
+		if (linkLength < sceN_M[4]) {
+			forceValue = -sceN_M[0] / sceN_M[2]
+					* exp(-linkLength / sceN_M[2])
+					+ sceN_M[1] / sceN_M[3] * exp(-linkLength / sceN_M[3]);
+		}
+
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+
+}
+
+
+*/
+
+__device__
+void calAndAddSpindleForm(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+	double forceValue = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceNDiv_M[4]) {
+			forceValue = -sceNDiv_M[0] / sceNDiv_M[2]
+					* exp(-linkLength / sceNDiv_M[2])
+					+ sceNDiv_M[1] / sceNDiv_M[3]
+							* exp(-linkLength / sceNDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceNDiv_M[4])
+				+ (1.0 - percent) * sceN_M[4];
+		if (linkLength < lenLimit) {
+			double intraPara0 = percent * (sceNDiv_M[0])
+					+ (1.0 - percent) * sceN_M[0];
+			double intraPara1 = percent * (sceNDiv_M[1])
+					+ (1.0 - percent) * sceN_M[1];
+			double intraPara2 = percent * (sceNDiv_M[2])
+					+ (1.0 - percent) * sceN_M[2];
+			double intraPara3 = percent * (sceNDiv_M[3])
+					+ (1.0 - percent) * sceN_M[3];
+			forceValue = -intraPara0 / intraPara2
+					* exp(-linkLength / intraPara2)
+					+ intraPara1 / intraPara3 * exp(-linkLength / intraPara3);
+		}
+	}
+	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
+	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
+
+}
 
 
 
