@@ -10,7 +10,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
-typedef thrust::tuple<double, double, double> DDD; //Ali 
+typedef thrust::tuple<double, double, double,double> DDDD; //Ali 
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
 typedef thrust::tuple<uint, uint> UiUi;
 typedef thrust::tuple<bool, SceNodeType> boolType;
@@ -2026,22 +2026,34 @@ struct RandomizeGrow_M: public thrust::unary_function<CVec3BoolInt, CVec3Bool> {
 	}
 };
 
-struct DppGrowRegulator: public thrust::unary_function<DDD, double> {
-	double _dummy ;
+struct DppGrowRegulator: public thrust::unary_function<DDDD, double> {
+	double _dt ;
+	double _mitoticCheckPoint ; 
 
 
-	__host__ __device__ DppGrowRegulator(double dummy) :
-			_dummy(dummy)  {
+	__host__ __device__ DppGrowRegulator(double dt, double mitoticCheckPoint) :
+			_dt(dt),_mitoticCheckPoint(mitoticCheckPoint)  {
 	}
-	__host__ __device__ double  operator()(const DDD &dDD) {
-		double dpp = thrust::get<0>(dDD);
-		double dpp_Old = thrust::get<1>(dDD);
-		double progress = thrust::get<2>(dDD);
-		if (2*(dpp/(dpp_Old+0.0005)-1)>1) {
-			return 1.0 ; 
+	__host__ __device__ double  operator()(const DDDD &dDDD) {
+		double dpp = thrust::get<0>(dDDD);
+		double dpp_Old = thrust::get<1>(dDDD);
+		double progress = thrust::get<2>(dDDD);
+		double speed = thrust::get<3>(dDDD);
+		double progressNew ; 
+
+		progressNew=progress+speed*_dt ; 
+		if (progress <= _mitoticCheckPoint && progressNew>_mitoticCheckPoint) {
+			if (dpp/(dpp_Old+0.0005)>1.5) {
+				return (progressNew) ; 
+			}
+			else{
+				return (progress) ; 
+			}
 		}
 		else {
-			return max(2*(dpp/(dpp_Old+0.0005)-1),progress)   ;
+
+				return (progressNew) ; 
+        
 		}
 	}
 };

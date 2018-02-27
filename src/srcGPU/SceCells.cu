@@ -1387,7 +1387,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	this->dt = dt;
         this->Damp_Coef=Damp_Coef ; //Ali 
         this->InitTimeStage=InitTimeStage   ;  //A & A 
-	growthAuxData.prolifDecay = exp(-curTime * miscPara.prolifDecayCoeff);
+	growthAuxData.prolifDecay =1.0   ;  // no decay for right now     exp(-curTime * miscPara.prolifDecayCoeff);
         cout<< "The important curTime used in simulation is here which is"<<curTime <<endl; 
 	growthAuxData.randomGrowthSpeedMin = growthAuxData.prolifDecay
 			* growthAuxData.randomGrowthSpeedMin_Ori;
@@ -2112,10 +2112,10 @@ void SceCells::applyMemForce_M() {
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; // for now constant  //growthAuxData.grthProgrEndCPU
+		//	- growthAuxData.prolifDecay
+		//			* (growthAuxData.grthProgrEndCPU
+		//					- growthAuxData.grthPrgrCriVal_M_Ori);
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -2690,19 +2690,22 @@ void SceCells::updateGrowthProgress_M() {
 	//		cellInfoVecs.growthProgress.begin(), SaxpyFunctorWithMaxOfOne(dt));
 
 
-	double dummy=0 ; 
+	//double dummy=0 ;
+    double mitoticCheckPoint=growthAuxData.grthPrgrCriVal_M_Ori ; 
 thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.cell_Dpp.begin(),
 						           cellInfoVecs.cell_DppOld.begin(),
-							   cellInfoVecs.growthProgress.begin())),
+							   cellInfoVecs.growthProgress.begin(),
+							   cellInfoVecs.growthSpeed.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.cell_Dpp.begin(),
 							           cellInfoVecs.cell_DppOld.begin(),
-							           cellInfoVecs.growthProgress.begin()))
+							           cellInfoVecs.growthProgress.begin(),
+									   cellInfoVecs.growthSpeed.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			                           cellInfoVecs.growthProgress.begin(),
-			DppGrowRegulator(dummy));  
+			DppGrowRegulator(dt,mitoticCheckPoint));  
 
 
 
@@ -3025,10 +3028,10 @@ bool SceCells::decideIfGoingToDivide_M() {
 //A&A
 bool SceCells::decideIfAnyCellEnteringMitotic() {
 
-        double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+        double grthPrgrCriVal_M =growthAuxData.grthPrgrCriVal_M_Ori ; // for now constant  growthAuxData.grthProgrEndCPU
+		//	- growthAuxData.prolifDecay
+		//			* (growthAuxData.grthProgrEndCPU
+		//					- growthAuxData.grthPrgrCriVal_M_Ori);
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -4835,10 +4838,10 @@ void SceCells::applySceCellDisc_M() {
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	double grthPrgrCriVal_M =growthAuxData.grthPrgrCriVal_M_Ori ; // for now constant  growthAuxData.grthProgrEndCPU
+	//		- growthAuxData.prolifDecay
+	//				* (growthAuxData.grthProgrEndCPU
+	//						- growthAuxData.grthPrgrCriVal_M_Ori);
 
 	thrust::transform(
 			thrust::make_zip_iterator(
