@@ -1401,7 +1401,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout << "     *** 3 ***" << endl;
 	std::cout.flush();
 //Ali        
-	computeCenterPos_M();
+	computeCenterPos_M2();
 
         cellCentersHost=getAllCellCenters();  //Ali
         //getAllCellCenters();  //Ali
@@ -1445,6 +1445,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
         	
 //Ali 
 	applyMemForce_M();
+	applyVolumeConstraint();
 	std::cout << "     *** 4 ***" << endl;
 	std::cout.flush();
 
@@ -2305,6 +2306,180 @@ void SceCells::applyMemForce_M() {
 
 //AAMIRI
 
+
+
+
+void SceCells::applyVolumeConstraint() {
+
+	calCellArea();
+	computeLagrangeForces();
+
+}
+
+
+void SceCells::computeCenterPos_M2() {
+
+totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+	thrust::counting_iterator<uint> countingEnd(totalNodeCountForActiveCells);
+
+	uint totalMembrActiveNodeCount = thrust::reduce(
+			cellInfoVecs.activeMembrNodeCounts.begin(),
+			cellInfoVecs.activeMembrNodeCounts.begin()
+					+ allocPara_m.currentActiveCellCount);
+	//uint totalIntnlActiveNodeCount = thrust::reduce(
+	//		cellInfoVecs.activeIntnlNodeCounts.begin(),
+	//		cellInfoVecs.activeIntnlNodeCounts.begin()
+	//				+ allocPara_m.currentActiveCellCount);
+
+	thrust::copy_if(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+											nodes->getInfoVecs().nodeLocX.begin(),
+											nodes->getInfoVecs().nodeLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							make_transform_iterator(iBegin,
+									DivideFunctor(
+											allocPara_m.maxAllNodePerCell)),
+											nodes->getInfoVecs().nodeLocX.begin(),
+											nodes->getInfoVecs().nodeLocY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeCellType.begin()))
+					+ allocPara_m.bdryNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.cellRanks.begin(),
+							cellNodeInfoVecs.activeXPoss.begin(),
+							cellNodeInfoVecs.activeYPoss.begin())),
+			ActiveAndMembr());
+
+	
+	thrust::reduce_by_key(cellNodeInfoVecs.cellRanks.begin(),
+			cellNodeInfoVecs.cellRanks.begin() + totalMembrActiveNodeCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellNodeInfoVecs.activeXPoss.begin(),
+							           cellNodeInfoVecs.activeYPoss.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+            						   cellInfoVecs.centerCoordY.begin())),
+			thrust::equal_to<uint>(), CVec2Add());
+
+
+	thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+							cellInfoVecs.centerCoordY.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			cellInfoVecs.activeMembrNodeCounts.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
+									   cellInfoVecs.centerCoordY.begin())), CVec2Divide());
+}
+
+
+
+void SceCells::computeLagrangeForces() {
+
+
+	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0) ; 
+	double* nodeLocXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[0]));
+	double* nodeLocYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[0]));
+	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeIsActive[0]));
+
+	double* cellAreaVecAddr= thrust::raw_pointer_cast(
+			&(cellInfoVecs.cellAreaVec[0]));
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
+
+
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                            thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+									   nodes->getInfoVecs().nodeVelY.begin())),
+			AddLagrangeForces(maxAllNodePerCell,nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr,cellAreaVecAddr,grthPrgrCriVal_M));
+
+
+
+
+
+}
+
+
+
+
+
 void SceCells::findTangentAndNormal_M() {
 
 	uint totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
@@ -2404,19 +2579,15 @@ void SceCells::computeCenterPos_M() {
 							make_transform_iterator(iBegin,
 									DivideFunctor(
 											allocPara_m.maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeLocX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeLocY.begin()
-									+ allocPara_m.bdryNodeCount)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							make_transform_iterator(iBegin,
 									DivideFunctor(
 											allocPara_m.maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeLocX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeLocY.begin()
-									+ allocPara_m.bdryNodeCount))
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin()))
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -2439,6 +2610,8 @@ void SceCells::computeCenterPos_M() {
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
 							cellInfoVecs.centerCoordY.begin())),
 			thrust::equal_to<uint>(), CVec2Add());
+
+
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),

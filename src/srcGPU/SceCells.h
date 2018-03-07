@@ -19,7 +19,7 @@ typedef thrust::tuple<double, double, bool, SceNodeType, uint> Vel2DActiveTypeRa
 //typedef thrust::tuple<uint, uint, uint, double, double, double, double> TensionData;
 //Ali comment
 //Ali
-typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> DUiDDUiUiDDDD;
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -433,7 +433,7 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 //Ali comment end
 
 //Ali
-struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
+struct AddMembrForce: public thrust::unary_function<DUiDDUiUiDDDD, CVec10> {
 	uint _bdryCount;
 	uint _maxNodePerCell;
 	double* _locXAddr;
@@ -448,18 +448,18 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr), _mitoticCri(mitoticCri) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec10 operator()(const TensionData &tData) const {
+	__device__ CVec10 operator()(const DUiDDUiUiDDDD &dUiDDUiUiDDDD) const {
 
-		double progress = thrust::get<0>(tData);
-		uint activeMembrCount = thrust::get<1>(tData);
-		double Cell_CenterX = thrust::get<2>(tData);
-		double Cell_Time_F  = thrust::get<3>(tData);
-		uint   cellRank = thrust::get<4>(tData);
-		uint   nodeRank = thrust::get<5>(tData);
-		double locX = thrust::get<6>(tData);
-		double locY = thrust::get<7>(tData);
-		double velX = thrust::get<8>(tData);
-		double velY = thrust::get<9>(tData);
+		double progress = thrust::get<0>(dUiDDUiUiDDDD);
+		uint activeMembrCount = thrust::get<1>(dUiDDUiUiDDDD);
+		double Cell_CenterX = thrust::get<2>(dUiDDUiUiDDDD);
+		double Cell_Time_F  = thrust::get<3>(dUiDDUiUiDDDD);
+		uint   cellRank = thrust::get<4>(dUiDDUiUiDDDD);
+		uint   nodeRank = thrust::get<5>(dUiDDUiUiDDDD);
+		double locX = thrust::get<6>(dUiDDUiUiDDDD);
+		double locY = thrust::get<7>(dUiDDUiUiDDDD);
+		double velX = thrust::get<8>(dUiDDUiUiDDDD);
+		double velY = thrust::get<9>(dUiDDUiUiDDDD);
 
 		uint index = _bdryCount + cellRank * _maxNodePerCell + nodeRank;
 
@@ -635,6 +635,120 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 
 
 //AAMIRI
+struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
+	uint _maxMembrNodePerCell ; 
+	uint _maxNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	double* _cellAreaVecAddr ; 
+	double _mitoticCri;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddLagrangeForces(uint maxNodePerCell,
+			double* locXAddr, double* locYAddr, bool* isActiveAddr, double* cellAreaVecAddr, double mitoticCri) :
+			 _maxNodePerCell(maxNodePerCell), _locXAddr(
+					locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),
+					_cellAreaVecAddr(cellAreaVecAddr), _mitoticCri(mitoticCri) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec2 operator()(const DUiDDUiUiDDDD &dUiDDUiUiDDDD) const {
+
+		double progress = thrust::get<0>(dUiDDUiUiDDDD);
+		uint   activeMembrCount= thrust::get<1>(dUiDDUiUiDDDD);
+		double cellCenterX = thrust::get<2>(dUiDDUiUiDDDD);
+		double cellCenterY = thrust::get<3>(dUiDDUiUiDDDD);
+		uint   cellRank = thrust::get<4>(dUiDDUiUiDDDD);
+		uint   nodeRank = thrust::get<5>(dUiDDUiUiDDDD);
+		double locX = thrust::get<6>(dUiDDUiUiDDDD);
+		double locY = thrust::get<7>(dUiDDUiUiDDDD);
+		double velX = thrust::get<8>(dUiDDUiUiDDDD);
+		double velY = thrust::get<9>(dUiDDUiUiDDDD);
+
+		uint index = cellRank * _maxNodePerCell + nodeRank;
+
+		double kStiffArea=0.01 ;
+		double cellAreaDesire ; 
+		double posX;
+		double posY;
+		double len; 
+
+		double posXL;
+		double posYL;
+		double lenL;
+
+		double posXR;
+		double posYR;
+		double lenR;
+
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(velX, velY);
+		} else {
+
+			posX=locX-cellCenterX ; 
+			posY=locY-cellCenterY ; 
+			len = sqrt(posX * posX + posY * posY);
+
+			int index_left = nodeRank - 1;
+			if (index_left == -1) {
+				index_left = activeMembrCount - 1;
+			}
+			index_left = index_left + cellRank * _maxNodePerCell;
+
+			posXL = _locXAddr[index_left]-cellCenterX;
+			posYL = _locYAddr[index_left]-cellCenterY ; 
+			lenL = sqrt(posXL * posXL + posYL * posYL);
+				
+			
+
+			int index_right = nodeRank + 1;
+			if (index_right == (int) activeMembrCount) {
+				index_right = 0;
+			}
+			index_right = index_right + cellRank * _maxNodePerCell;
+			posXR = _locXAddr[index_right]-cellCenterX;
+			posYR = _locYAddr[index_right]-cellCenterY;
+			lenR = sqrt(posXR * posXR + posYR * posYR);
+				
+				
+			
+			double term1X = lenL*lenL*posX ;
+			double term1Y = lenL*lenL*posY ;
+
+			double term2X=posX*posXL*posXL+posXL*posY*posYL ; 
+			double term2Y=posY*posYL*posYL+posYL*posX*posXL ; 
+
+			double term3X=lenR*lenR*posX ; 
+			double term3Y=lenR*lenR*posY ; 
+
+			double term4X=posX*posXR*posXR+ posXR*posY*posYR ;
+			double term4Y=posY*posYR*posYR+ posYR*posX*posXR ;
+
+			double term5=2*sqrt( pow(len*lenL,2)-pow(posX*posXL+posY*posYL, 2) ); 
+			double term6=2*sqrt( pow(len*lenR,2)-pow(posX*posXR+posY*posYR, 2) ); 
+			if (progress< _mitoticCri){
+				cellAreaDesire=10;
+			}
+				else {
+				cellAreaDesire=10 ;
+				}
+
+			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
+			     ( (term1X+term2X)/term5+ (term3X+term4X)/term6 ) ; 
+			double fY=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
+			     ( (term1Y+term2Y)/term5+ (term3Y+term4Y)/term6 ) ; 
+
+			velX=velX+fX ;
+			velY=velY+fY ;
+
+
+
+			return thrust::make_tuple(velX, velY);
+		}
+	}
+}; 
+
+
 
 struct CalCurvatures: public thrust::unary_function<CurvatureData, CVec6> {
 
@@ -1104,7 +1218,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
 		double progress = thrust::get<1>(uidd); //Ali
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
+		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) { //0.0975
 			return thrust::make_tuple(true, 0);
 		} else {
 			return thrust::make_tuple(false, progress);
@@ -2682,10 +2796,13 @@ class SceCells {
 	void distributeIsActiveInfo();
 
 	void applyMemForce_M();
+	void applyVolumeConstraint(); //Ali 
+	void computeLagrangeForces();
 
 	void applySceCellDisc_M();
 
 	void computeCenterPos_M();
+	void computeCenterPos_M2();
 
 	void growAtRandom_M(double dt);
 
