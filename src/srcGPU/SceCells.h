@@ -667,7 +667,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		double kStiffArea=0.01 ;
+		double kStiffArea=0.015 ;
 		double cellAreaDesire ; 
 		double posX;
 		double posY;
@@ -1219,7 +1219,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDD, BoolD> {
                 double LengthMax=thrust::get<2>(uidd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) { //0.0975
-			return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(false, 0); // by pass this for now
 		} else {
 			return thrust::make_tuple(false, progress);
 		}
