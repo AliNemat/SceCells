@@ -266,8 +266,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	 }
 
 
-    return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
+   // return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
         	
+    return thrust::make_tuple (locX,locY,nodeType,adhPairECM)  ; 
 		
 }
 	
@@ -410,7 +411,6 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	}
 	
 	return thrust::make_tuple(fTotalMorseX+fAdhX,fTotalMorseY+fAdhY) ;
-	//return thrust::make_tuple(5,5) ; 
 
 	}
 
@@ -457,7 +457,8 @@ struct MoveNodeECM: public thrust::unary_function<DDDD,DD> {
 	double fx= 	thrust:: get <2> (dDDD) ;
 	double fy= 	thrust:: get <3> (dDDD) ;
  
-	return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
+	//return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
+	return thrust::make_tuple (locXOld, locYOld) ;
  
 	}
 }; 

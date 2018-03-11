@@ -2787,7 +2787,7 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), thrust::plus<int>());
 int sizeApical=cellInfoVecs.apicalNodeCount.size() ; 
 
-for (int i=0 ; i<25; i++) {
+for (int i=0 ; i<14; i++) {
 	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
 }
 
@@ -2916,7 +2916,7 @@ void SceCells::computeNucleusLoc() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
 							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
-for (int i=0 ; i<25 ; i++) {
+for (int i=0 ; i<14 ; i++) {
 
 	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
 	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 

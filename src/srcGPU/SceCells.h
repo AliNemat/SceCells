@@ -2353,7 +2353,7 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
-	//		if (cellType==pouch) {
+			if (cellType==pouch) {
 				uint cellRank = thrust::get<4>(inputInfo);
 				uint seedNew = _seed + cellRank;
 				rng.discard(seedNew);
@@ -2366,10 +2366,10 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 				//double xDir = cos(randomNum2);
 				//double yDir = sin(randomNum2);
 				return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);
-	//i		}
-	//		else {
-	//			return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
-	//		}
+			}
+			else {
+				return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
+			}
 		}
 	}
 };

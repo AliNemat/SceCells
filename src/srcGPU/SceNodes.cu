@@ -326,7 +326,8 @@ SceNodes::SceNodes(uint maxTotalCellCount, uint maxAllNodePerCell, uint currentA
 	//std::cout << "at the end" << std::endl;
 	//std::cout.flush();
 	adhNotSet=true ; //Ali 
-	adhUpdate=true ; //Ali 
+	adhUpdate=true ; //Ali
+	isInitPhase=true ; 
 	cout << "adhesion not set is initialized as " << adhNotSet << endl ; 
 	cout << "adhesion update is initialized as " << adhUpdate  << endl ; 
 }
@@ -2215,6 +2216,7 @@ void SceNodes::applySceForcesDisc() {
 }
 
 void SceNodes::applySceForcesDisc_M() {
+	
 	if (adhUpdate) {
 		adhUpdate=false ; 
      	thrust :: copy (infoVecs.nodeLocX.begin(),infoVecs.nodeLocX.end(),infoVecs.nodeLocXHost.begin()) ; // Ali	
@@ -2294,7 +2296,7 @@ void SceNodes::applySceForcesDisc_M() {
 		}
 
 
-		
+	cout << " I passed apical-laterla node finding" << endl ; 	
 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode){
 					cellRank=i/maxNodePerCell ; 
@@ -2319,11 +2321,15 @@ void SceNodes::applySceForcesDisc_M() {
 				}
 		}
 
+
+	cout << " I passed subapical junction finding" << endl ; 	
+
 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 			if (infoVecs.isSubApicalJunctionHost[i]) {
 				cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
 		 	}
 		}
+		
 		if(isInitPhase) {
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
@@ -2369,7 +2375,7 @@ void SceNodes::applySceForcesDisc_M() {
 				}
 		 	}
 	 	  }
-		  cout << " I am ready to copy the data in adhision function to the GPU " << endl ; 
+		  cout << " I am ready to copy the data in adhision function to the GPU in init phase " << endl ; 
 		  thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
 		  thrust::copy(infoVecs.memNodeType1Host.begin(),infoVecs.memNodeType1Host.end(), infoVecs.memNodeType1.begin()) ;  //Ali
 		  thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
@@ -2468,7 +2474,6 @@ void SceNodes::applySceForcesDisc_M() {
 
 
 	
-	//adhNotSet= false ; 
 }
 
 const SceDomainPara& SceNodes::getDomainPara() const {
