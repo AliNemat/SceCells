@@ -344,9 +344,13 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
         //  	forceRight=calWLC_ECM(distRight) ; 
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
+	if (index == 0 || index ==_numNodes-1) {
 
-	return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ; 
-	//return thrust::make_tuple(0.0,0.0) ; 
+		return thrust::make_tuple(0.0,0.0,0.0) ; 
+	}
+	else {
+		return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ;
+	}
         
 
 		}
@@ -355,7 +359,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 } ;
 
  
- struct MorseForceECM: public thrust::unary_function<IDD,DD> {
+ struct MorseAndAdhForceECM: public thrust::unary_function<IDD,DD> {
          int  _numActiveNodes_Cell ; 	
          uint  _maxNodePerCell ; 	
          uint  _maxMembrNodePerCell ; 	
@@ -363,7 +367,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
          double  *_locYAddr_Cell; 
 	 bool    *_nodeIsActive_Cell ;  
 	 int     *_adhPairECM_Cell ; 
-	__host__ __device__ MorseForceECM (int numActiveNodes_Cell, uint maxNodePerCell, uint maxMembrNodePerCell, double * locXAddr_Cell, double * locYAddr_Cell, bool * nodeIsActive_Cell, int * adhPairECM_Cell) :
+	__host__ __device__ MorseAndAdhForceECM (int numActiveNodes_Cell, uint maxNodePerCell, uint maxMembrNodePerCell, double * locXAddr_Cell, double * locYAddr_Cell, bool * nodeIsActive_Cell, int * adhPairECM_Cell) :
 	_numActiveNodes_Cell(numActiveNodes_Cell), _maxNodePerCell(maxNodePerCell), _maxMembrNodePerCell(maxMembrNodePerCell),_locXAddr_Cell(locXAddr_Cell),_locYAddr_Cell(locYAddr_Cell),_nodeIsActive_Cell(nodeIsActive_Cell),_adhPairECM_Cell(adhPairECM_Cell) {
 	}
 	 __device__ 
@@ -410,7 +414,6 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	}
 	
 	return thrust::make_tuple(fTotalMorseX+fAdhX,fTotalMorseY+fAdhY) ;
-	//return thrust::make_tuple(5,5) ; 
 
 	}
 

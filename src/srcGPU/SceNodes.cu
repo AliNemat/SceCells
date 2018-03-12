@@ -2324,7 +2324,7 @@ void SceNodes::applySceForcesDisc_M() {
 				cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
 		 	}
 		}
-		if(isInitPhase) {
+//		if(isInitPhase) {
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
 					cellRankTmp1=i/maxNodePerCell ; 
@@ -2373,10 +2373,11 @@ void SceNodes::applySceForcesDisc_M() {
 		  thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
 		  thrust::copy(infoVecs.memNodeType1Host.begin(),infoVecs.memNodeType1Host.end(), infoVecs.memNodeType1.begin()) ;  //Ali
 		  thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
-	}
+//	}
 
 
 	if (isInitPhase==false) {
+		/*
 		cout << " I am in steady state phase" << endl ; 
 		int idPair[4] ; 
 		int id ; 
@@ -2409,16 +2410,15 @@ void SceNodes::applySceForcesDisc_M() {
 						distMin=distP2;
 						idPairFinal=idPair[k];
 					}
-					
 				}
-
 	     		infoVecs.nodeAdhereIndexHost[id]=idPairFinal ;
 			}
 		}
 
 		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
       	thrust::copy(infoVecs.isSubApicalJunctionHost.begin(),infoVecs.isSubApicalJunctionHost.end(), infoVecs.isSubApicalJunction.begin()) ;  //Ali
-  }
+ */
+ 	}
   
 
 }
@@ -2760,8 +2760,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount,uint maxNumCells, uint 
 	thrust:: transform(tmp2.begin(),tmp2.begin()+currentActiveCellCount,
 	                   infoVecs.nodeCellRankBehind.begin(),infoVecs.nodeCellRankBehind.begin(),thrust::plus<int>()) ; //Ali
 					  
-	infoVecs.nodeCellRankBehind[0]=currentActiveCellCount-1 ; 
-	infoVecs.nodeCellRankFront[currentActiveCellCount-1]=0 ;
+	infoVecs.nodeCellRankBehind[0]=-1 ; //currentActiveCellCount-1 ; 
+	infoVecs.nodeCellRankFront[currentActiveCellCount-1]=-1 ; //0 ;
 
 
 }

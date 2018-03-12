@@ -85,7 +85,7 @@ int numberNodes_ECM ;
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
  
-readCoord_ECM.open("./resources/coordinate_ECM5.txt") ;
+readCoord_ECM.open("./resources/coordinate_ECM7.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }
@@ -244,7 +244,7 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 
 
 
-
+// move the nodes of epithelial cells 
 
  thrust:: transform (
 		thrust::make_zip_iterator (
@@ -367,7 +367,7 @@ thrust:: transform (
 				thrust::make_tuple (
 					memMorseForceECMX.begin(),
 					memMorseForceECMY.begin())),
-				MorseForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr,adhPairECM_CellAddr));
+				MorseAndAdhForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr,adhPairECM_CellAddr));
 
 
 double dummy=0.0 ;
@@ -403,7 +403,8 @@ nodeECMTmpLocY.resize(numNodesECM,0.0) ;
 thrust::copy(nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,nodeECMTmpLocX.begin()) ; 
 thrust::copy(nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,nodeECMTmpLocY.begin()) ; 
 
-
+double Damp_CoefECM=100*Damp_Coef ; 
+// move the nodes of ECM 
 thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
@@ -421,7 +422,7 @@ thrust:: transform (
 				thrust::make_tuple (
 					nodeECMLocX.begin(),
 					nodeECMLocY.begin())),
-				MoveNodeECM(dt,Damp_Coef));
+				MoveNodeECM(dt,Damp_CoefECM));
 
 
 
