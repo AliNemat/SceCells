@@ -2259,7 +2259,7 @@ void SceNodes::applySceForcesDisc_M() {
 				activeMemCount [cellRank]=activeMemCount [cellRank]+1 ; 
 			}
 		}
-	
+	/*
 		subApicalInfo.clear() ; 
 		int cellRankOld=-1 ; 
 		for (int i=0 ; i<totalActiveNodes ;  i++) {
@@ -2324,6 +2324,8 @@ void SceNodes::applySceForcesDisc_M() {
 				cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
 		 	}
 		}
+
+		*/
 //		if(isInitPhase) {
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
 				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
