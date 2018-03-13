@@ -526,7 +526,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					 actinLevel=1.2*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.2*kStiff ;
+					 actinLevel=1.0*kStiff ;
 				}
 
 
@@ -904,7 +904,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		double kStiffArea=0 ; // 0.015 ;
+		double kStiffArea=0.015 ;
 		double cellAreaDesire ; 
 		double posX;
 		double posY;
@@ -965,10 +965,10 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 			double term6=2*sqrt( pow(len*lenR,2)-pow(posX*posXR+posY*posYR, 2) );
 			
 			if (progress< _mitoticCri){
-				cellAreaDesire=7.5;
+				cellAreaDesire=10;
 			}
 				else {
-				cellAreaDesire=15 ;
+				cellAreaDesire=20 ;
 				}
 
 			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
@@ -1495,13 +1495,15 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double LengthMax=thrust::get<2>(uiddd); //Ali
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
+		if (curActiveMembrNode < _bound   && LengthMax>0.5 ) {
+		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
+		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
 			return thrust::make_tuple(true, 0);
 		}
-			else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
-			return thrust::make_tuple(true, 0);
-		} else {
+		//	else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
+		//	return thrust::make_tuple(true, 0);
+	//	} 
+		else {
 			return thrust::make_tuple(false, progress);
 		}
 	}
@@ -1523,15 +1525,16 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
+		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.08 ) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
 			return thrust::make_tuple(true, progress); 
 		} 
 		
-		if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
-			return thrust::make_tuple(true,progress);
+		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
+		//	return thrust::make_tuple(true,progress);
 			//return thrust::make_tuple(false,progress); // bypass for now to not loose apical nodes
-		}
+	//	}
 		else {
 			return thrust::make_tuple(false, progress);
 		}
@@ -2567,7 +2570,7 @@ struct DelMemNode: public thrust::unary_function<Tuuu, uint> {
 		uint globalIndexDel = cellRank * _maxNodePerCell + delIndx;
 		int shiftValue ; 
 		shiftValue=1 ; 
-		if (globalIndexDel==globalIndxEnd){
+		if (globalIndexDel==globalIndxEnd){  // to not loose the last apical node
 			shiftValue=-1 ; 
 		}
 		if (_memNodeType[globalIndexDel]==apical1) {
@@ -3250,6 +3253,7 @@ class SceCells {
 	void initCellInfoVecs_M();
 	void initCellNodeInfoVecs_M();
 
+	void updateMembrGrowthProgress_M();
 	void handleMembrGrowth_M();
 
 	void copyToGPUConstMem();

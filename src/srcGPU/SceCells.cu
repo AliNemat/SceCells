@@ -73,7 +73,7 @@ double calMembrForce_Actin(double& length, double kAvg) {
 
 }
 
-__device__
+__host__ __device__
 double DefaultMembraneStiff() {
 			return membrStiff;
 		 
@@ -1534,6 +1534,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	allComponentsMove_M();
    std::cout << "     *** 9 ***" << endl;
 	std::cout.flush();
+	updateMembrGrowthProgress_M();  
 	if (relaxCount==10) { 
 		handleMembrGrowth_M();
 		std::cout << "     *** 10 ***" << endl;
@@ -4615,7 +4616,8 @@ void SceCells::copyToGPUConstMem() {
 
 }
 
-void SceCells::handleMembrGrowth_M() {
+void SceCells::updateMembrGrowthProgress_M() {
+
 	// figure out membr growth speed
 	calMembrGrowSpeed_M();  //Ali: to my understanding it doesn't do anything right now. it will be override by adjustMembrGrowSpeed_M 
 	// figure out which cells will add new point and which cell needs to delete node.
@@ -4623,15 +4625,32 @@ void SceCells::handleMembrGrowth_M() {
 	adjustMembrGrowSpeed_M(); // for now just a constant speed to give some relaxation before adding another node.
 
 	// returning a bool and progress for each cell. if bool is true (a node sould be added) progress will be reset to give relaxation time after adding the node. Otherwise growth prgoress will be incremented
-	decideIfAddMembrNode_M(); 
-	decideIfDelMembrNode_M(); //Ali 
 // add membr nodes  // In each time step either adding mechanism is active or deleting mechanism. It is an unneccessary complication to manage memory for both operations at one time step.
-    if (addNode) { 
+
+	uint curActCellCt = allocPara_m.currentActiveCellCount;
+	
+	thrust::transform(cellInfoVecs.membrGrowSpeed.begin(),
+			cellInfoVecs.membrGrowSpeed.begin() + curActCellCt,
+			cellInfoVecs.membrGrowProgress.begin(),
+			cellInfoVecs.membrGrowProgress.begin(), SaxpyFunctor(dt));
+
+
+
+
+
+}
+void SceCells::handleMembrGrowth_M() {
+	
+if (addNode) {
+
+		decideIfAddMembrNode_M(); 
 		addMembrNodes_M();
 		addNode=false  ; 
 		cout << " I am in add membrane node " << endl ; 
 	}	
-    else  { 
+    else  {
+
+		decideIfDelMembrNode_M(); //Ali 
 		delMembrNodes_M();
 		addNode=true ; 
 		cout << " I am in del membrane node " << endl ; 
@@ -4673,9 +4692,9 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
-//	for (int i=0 ; i<cellInfoVecs.maxDistToRiVec.size() ; i++) {
-//		cout << "the max distance in cell" << i << " is "<<cellInfoVecs.maxDistToRiVec[i] << endl ; 
-//	}
+	for (int i=0 ; i<cellInfoVecs.maxDistToRiVec.size() ; i++) {
+		cout << "the max distance in cell" << i << " is "<<cellInfoVecs.maxDistToRiVec[i] << endl ; 
+	}
 
 	//Ali for min Distance
 
@@ -4699,10 +4718,10 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), MinWInfo());  // how to sort the keys & how to reduce the parameters assigned to based on each key
 // equal_to mean how we set the beans to reduce. For example here we are saying if they are equal in Int we compare them and would peroform the reduction.
 
-	//for (int i=0 ; i<cellInfoVecs.minDistToRiVec.size() ; i++) {
-	//	cout << "the min distance in cell" << i << " is "<<cellInfoVecs.minDistToRiVec[i] << endl ; 
-	//	cout << "the min tension index vec" << i << " is "<<cellInfoVecs.minTenIndxVec[i] << endl ; 
-//	}
+	for (int i=0 ; i<cellInfoVecs.minDistToRiVec.size() ; i++) {
+		cout << "the min distance in cell" << i << " is "<<cellInfoVecs.minDistToRiVec[i] << endl ; 
+		cout << "the min tension index vec" << i << " is "<<cellInfoVecs.minTenIndxVec[i] << endl ; 
+	}
 
 
 	thrust::reduce_by_key(
@@ -4746,15 +4765,18 @@ void SceCells::adjustMembrGrowSpeed_M() {
 
 void SceCells::decideIfAddMembrNode_M() {
 // decide if add membrane node given current active node count and
-// membr growth progress
+// membr growth progresss
 	uint curActCellCt = allocPara_m.currentActiveCellCount;
+	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+	/*
 	thrust::transform(cellInfoVecs.membrGrowSpeed.begin(),
 			cellInfoVecs.membrGrowSpeed.begin() + curActCellCt,
 			cellInfoVecs.membrGrowProgress.begin(),
 			cellInfoVecs.membrGrowProgress.begin(), SaxpyFunctor(dt));
+*/
 
-	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
-/**Ali	thrust::transform(
+/*
+	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.membrGrowProgress.begin(),
 							cellInfoVecs.activeMembrNodeCounts.begin())),

@@ -205,7 +205,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	int    adhPairECM=-1 ; //no adhere Pair
 	int   iPair=-1 ; 
 	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
-        if (_isInitPhase==true) {
+      //  if (_isInitPhase==true) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
 				locY_ECM=_locYAddr_ECM[i];
@@ -234,9 +234,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				adhPairECM=iPair ; 
 			}
 
-		}
+	//	}
 
-		if (_isInitPhase==false) {
+	/*	if (_isInitPhase==false) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
 				locY_ECM=_locYAddr_ECM[i];
@@ -261,7 +261,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				adhPairECM=iPair ; 
 			}
 		}
-
+*/
 
 	 }
 
