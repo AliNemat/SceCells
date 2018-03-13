@@ -82,8 +82,8 @@ double DefaultMembraneStiff() {
 
 
 __device__
-double calExtForce(double& curTime) {
-		return curTime * F_Ext_Incline_M2;
+double calExtForce(double  curTime) {
+		return max(curTime * F_Ext_Incline_M2,15.0);
 }
 //Ali
 __device__
@@ -2232,6 +2232,8 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
                                        cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount ) ;
         double minY_Cell= *MinY_Itr_Cell ; 
         double maxY_Cell= *MaxY_Itr_Cell ;
+
+		double tissueCenterX=0.5*(MinX+MaxX) ; 
 		
 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
@@ -2387,68 +2389,53 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr,nodeActinLevelAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell));
 
-
-
-/**Ali Comment start
-
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
 							thrust::make_permutation_iterator(
-									cellInfoVecs.activeMembrNodeCounts.begin(),
+									cellInfoVecs.eCellTypeV2.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
-							make_transform_iterator(iBegin,
-									DivideFunctor(maxAllNodePerCell)),
-							make_transform_iterator(iBegin,
-									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeLocX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeLocY.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelY.begin()
-									+ allocPara_m.bdryNodeCount)),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(
 							thrust::make_permutation_iterator(
 									cellInfoVecs.activeMembrNodeCounts.begin(),
 									make_transform_iterator(iBegin,
 											DivideFunctor(maxAllNodePerCell))),
-							make_transform_iterator(iBegin,
-									DivideFunctor(maxAllNodePerCell)),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
 							make_transform_iterator(iBegin,
 									ModuloFunctor(maxAllNodePerCell)),
-							nodes->getInfoVecs().nodeLocX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeLocY.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelX.begin()
-									+ allocPara_m.bdryNodeCount,
-							nodes->getInfoVecs().nodeVelY.begin()
-									+ allocPara_m.bdryNodeCount))
+                            nodes->getInfoVecs().memNodeType1.begin(),
+                            nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.eCellTypeV2.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.centerCoordX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                            make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().memNodeType1.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin(),
-							nodes->getInfoVecs().membrTensionMag.begin(),
-							nodes->getInfoVecs().membrTenMagRi.begin(),
-							nodes->getInfoVecs().membrLinkRiMidX.begin(),
-							nodes->getInfoVecs().membrLinkRiMidY.begin(),
-							nodes->getInfoVecs().membrBendLeftX.begin(),
-							nodes->getInfoVecs().membrBendLeftY.begin(),
-							nodes->getInfoVecs().membrBendRightX.begin(),
-							nodes->getInfoVecs().membrBendRightY.begin()))
-					+ allocPara_m.bdryNodeCount,
-			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
-					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr));
+							nodes->getInfoVecs().nodeVelY.begin())),
+			AddExtForce(curTime,tissueCenterX));
 
-**/
-// Ali comment end
-//Ali 
 
-//Ali
+
 
 
 

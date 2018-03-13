@@ -28,6 +28,7 @@ typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, d
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,bool,uint, uint> ActinData; //Ali
 typedef thrust::tuple<MembraneType1,int> TI; //Ali
 typedef thrust::tuple<bool,MembraneType1,uint ,uint> BTUiUi; //Ali
+typedef thrust::tuple<ECellType,uint,double,uint ,MembraneType1, double, double> TUiDUiTDD; //Ali
 //Ali 
 typedef thrust::tuple<uint, uint, uint, double, double> BendData;
 typedef thrust::tuple<uint, uint, uint, double, double, double, double, double, double, double> CurvatureData;//AAMIRI
@@ -43,7 +44,7 @@ typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
  */
 
 __device__
-double calExtForce(double& curTime);
+double calExtForce(double  curTime);
 
 __host__ __device__
 double DefaultMembraneStiff();
@@ -869,7 +870,50 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
 		}
 	}
+};
+
+struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
+
+	double _time ; 
+	double _tissueCenterX ;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddExtForce(double time, double tissueCenterX) :
+			_time(time),_tissueCenterX(tissueCenterX) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec2 operator()(const TUiDUiTDD &tUiDUiTDD) const {
+
+		ECellType  cellType= thrust::get<0>(tUiDUiTDD);
+		uint activeMembrCount = thrust::get<1>(tUiDUiTDD);
+		double cellCenterX = thrust::get<2>(tUiDUiTDD);
+		uint   nodeRank = thrust::get<3>(tUiDUiTDD);
+		MembraneType1 memNodeType = thrust::get<4>(tUiDUiTDD);
+		double velX = thrust::get<5>(tUiDUiTDD);
+		double velY = thrust::get<6>(tUiDUiTDD);
+
+		double fExt=0 ; 
+		
+		if (nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(velX, velY);
+		}else {
+			
+			if (cellType==bc && memNodeType==lateral1 && cellCenterX> _tissueCenterX) {
+				fExt=calExtForce (_time) ;  
+				velX = velX +fExt  ;
+			}
+			if (cellType==bc && memNodeType==lateral1  && cellCenterX< _tissueCenterX) {
+				fExt=calExtForce (_time) ;  
+				velX = velX -fExt  ;
+			}
+
+			return thrust::make_tuple(velX, velY);
+	
+		}
+	}
 }; 
+
+
 
 
 struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
