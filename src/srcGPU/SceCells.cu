@@ -83,7 +83,7 @@ double DefaultMembraneStiff() {
 
 __device__
 double calExtForce(double  curTime) {
-		return max(curTime * F_Ext_Incline_M2,15.0);
+		return max(curTime * F_Ext_Incline_M2,0.15);
 }
 //Ali
 __device__
@@ -1487,7 +1487,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	computeCenterPos_M2();
 	computeInternalAvgPos_M();
 	computeNucleusLoc() ;
-	updateInternalAvgPos_M (); 
+	if (tmpIsInitPhase==false) {
+		updateInternalAvgPos_M ();
+	}
 	PlotNucleus (lastPrintNucleus, outputFrameNucleus) ;  
     BC_Imp_M() ; 
 	std::cout << "     ***3.5 ***" << endl;

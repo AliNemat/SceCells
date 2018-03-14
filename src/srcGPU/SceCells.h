@@ -1059,7 +1059,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 				cellAreaDesire=10;
 			}
 				else {
-				cellAreaDesire=15 ;
+				cellAreaDesire=20 ;
 				}
 
 			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
