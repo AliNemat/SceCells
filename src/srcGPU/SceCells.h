@@ -12,6 +12,7 @@ typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
 typedef thrust::tuple<uint, double, double, double> UiDDD; //Ali
+typedef thrust::tuple<double, double, uint, bool, double,double> DDUiBDD ; 
 typedef thrust::tuple<double, uint> DUi; //Ali 
 typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
@@ -558,6 +559,52 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 }
 }; 
 
+struct CalShiftVec: public thrust::unary_function<CVec4,CVec2> {
+	
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ CalShiftVec() {
+		
+		}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__  __device__ CVec2 operator()(const CVec4 &cVec4) const {
+		double   internalAvgX= thrust::get<0>(cVec4);
+		double   internalAvgY = thrust::get<1>(cVec4);
+		double   nucleusX = thrust::get<2>(cVec4);
+		double   nucleusY=  thrust::get<3>(cVec4) ;
+
+        
+			return thrust::make_tuple(nucleusX-internalAvgX,nucleusY-internalAvgY) ;  
+		}
+}; 
+
+struct AdjustInternalNodesLoc: public thrust::unary_function<DDUiBDD, CVec2> {
+	uint _maxMemNodePerCell;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AdjustInternalNodesLoc(
+			uint maxMemNodePerCell) : _maxMemNodePerCell(
+					maxMemNodePerCell) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec2 operator()(const DDUiBDD &dDUiBDD) const {
+		double shiftX = thrust::get<0>(dDUiBDD);
+		double shiftY = thrust::get<1>(dDUiBDD);
+		uint nodeRank = thrust::get<2>(dDUiBDD);
+		bool isActive =thrust::get<2>(dDUiBDD) ; 
+		double locX = thrust::get<4>(dDUiBDD);
+		double locY = thrust::get<5>(dDUiBDD);
+                
+
+		if (isActive == false || nodeRank<_maxMemNodePerCell) {
+			return thrust::make_tuple(locX,locY); //AliE
+		}
+		else {
+
+			return thrust::make_tuple(locX+shiftX,locY+shiftY); //AliE
+		}
+			
+	}
+};
 
 
 
@@ -588,8 +635,8 @@ struct CalNucleusLoc: public thrust::unary_function<CVec5,CVec2> {
 			return thrust::make_tuple(centerX,centerY) ; // if there is no apical point put the nucleus on the center. 
 		}
 		else {
-			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.8 ; 
-			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.8 ; 
+			nucleusX= centerX+nucleusHPercent*(apicalX-centerX)*0.75 ; 
+			nucleusY= centerY+nucleusHPercent*(apicalY-centerY)*0.75 ; 
 
 			return thrust::make_tuple( nucleusX,nucleusY) ; 
 		}
@@ -1012,7 +1059,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 				cellAreaDesire=10;
 			}
 				else {
-				cellAreaDesire=20 ;
+				cellAreaDesire=15 ;
 				}
 
 			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
@@ -2524,7 +2571,7 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
-	//		if (cellType==pouch) {
+			if (cellType==pouch) {
 				uint cellRank = thrust::get<4>(inputInfo);
 				uint seedNew = _seed + cellRank;
 				rng.discard(seedNew);
@@ -2537,10 +2584,10 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 				//double xDir = cos(randomNum2);
 				//double yDir = sin(randomNum2);
 				return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);
-	//i		}
-	//		else {
-	//			return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
-	//		}
+			}
+			else {
+				return thrust::make_tuple(0.0, centerCellX,centerCellY, true);
+			}
 		}
 	}
 };
@@ -2830,7 +2877,11 @@ struct CellInfoVecs {
 	thrust::device_vector<bool> isScheduledToShrink;//AAMIRI
 	thrust::device_vector<bool> isCellActive;//AAMIRI
 	thrust::device_vector<double> centerCoordX;
+	thrust::device_vector<double> InternalAvgX;
+	thrust::device_vector<double> tmpShiftVecX;
 	thrust::device_vector<double> centerCoordY;
+	thrust::device_vector<double> InternalAvgY;
+	thrust::device_vector<double> tmpShiftVecY;
 	thrust::device_vector<double> centerCoordZ;
 	thrust::device_vector<double> apicalLocX; //Ali 
 	thrust::device_vector<double> apicalLocY; //Ali 
@@ -3228,7 +3279,7 @@ class SceCells {
 
 	void applySceCellDisc_M();
 
-	void computeCenterPos_M();
+	void computeInternalAvgPos_M();
 	void computeCenterPos_M2();
 
 	void growAtRandom_M(double dt);
@@ -3238,6 +3289,7 @@ class SceCells {
 	void computeApicalLoc();  //Ali 
 	void computeNucleusLoc();  //Ali 
 	void applyNucleusEffect();  //Ali 
+	void updateInternalAvgPos_M();  //Ali 
 	void PlotNucleus(int & lastPrintNucleus, int & outputFrameNucleus);  //Ali 
 
 	void enterMitoticCheckForDivAxisCal();

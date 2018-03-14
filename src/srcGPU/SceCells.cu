@@ -743,7 +743,11 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.isScheduledToShrink.resize(allocPara_m.maxCellCount, false);//AAMIRI
 	cellInfoVecs.isCellActive.resize(allocPara_m.maxCellCount, false);//AAMIRI
 	cellInfoVecs.centerCoordX.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.InternalAvgX.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.tmpShiftVecX.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordY.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.InternalAvgY.resize(allocPara_m.maxCellCount);
+	cellInfoVecs.tmpShiftVecY.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.centerCoordZ.resize(allocPara_m.maxCellCount);
 	cellInfoVecs.apicalLocX.resize(allocPara_m.maxCellCount);  //Ali 
 	cellInfoVecs.apicalLocY.resize(allocPara_m.maxCellCount); //Ali 
@@ -1481,8 +1485,9 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
     computeApicalLoc();
 	
 	computeCenterPos_M2();
+	computeInternalAvgPos_M();
 	computeNucleusLoc() ;
-
+	updateInternalAvgPos_M (); 
 	PlotNucleus (lastPrintNucleus, outputFrameNucleus) ;  
     BC_Imp_M() ; 
 	std::cout << "     ***3.5 ***" << endl;
@@ -2562,7 +2567,7 @@ void SceCells::runAblationTest(AblationEvent& ablEvent) {
 	}
 }
 
-void SceCells::computeCenterPos_M() {
+void SceCells::computeInternalAvgPos_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 			* allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0);
@@ -2615,21 +2620,21 @@ void SceCells::computeCenterPos_M() {
 							cellNodeInfoVecs.activeYPoss.begin())),
 			cellInfoVecs.cellRanksTmpStorage.begin(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin())),
+					thrust::make_tuple(cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin())),
 			thrust::equal_to<uint>(), CVec2Add());
 	thrust::transform(
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin())),
+					thrust::make_tuple(cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin())),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin()))
+					thrust::make_tuple(cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.activeIntnlNodeCounts.begin(),
 			thrust::make_zip_iterator(
-					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin())), CVec2Divide());
+					thrust::make_tuple(cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin())), CVec2Divide());
 }
 
 void SceCells::applyVolumeConstraint() {
@@ -3075,6 +3080,74 @@ for (int i=0 ; i<25 ; i++) {
 }
 
 }
+
+void SceCells::updateInternalAvgPos_M () {
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0);
+
+
+		thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+									   cellInfoVecs.InternalAvgX.begin(),
+									   cellInfoVecs.InternalAvgY.begin(),
+									   cellInfoVecs.nucleusLocX.begin(),
+							           cellInfoVecs.nucleusLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+									   cellInfoVecs.InternalAvgX.begin(),
+									   cellInfoVecs.InternalAvgY.begin(),
+									   cellInfoVecs.nucleusLocX.begin(),
+							           cellInfoVecs.nucleusLocY.begin()))
+					+ allocPara_m.currentActiveCellCount,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.tmpShiftVecX.begin(),
+							           cellInfoVecs.tmpShiftVecY.begin())), CalShiftVec());
+
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.tmpShiftVecX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.tmpShiftVecY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.tmpShiftVecX.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.tmpShiftVecY.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+									make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeLocX.begin(), 
+							   		   nodes->getInfoVecs().nodeLocY.begin())),
+			AdjustInternalNodesLoc(maxMemNodePerCell));
+
+}
+
 
 
 
