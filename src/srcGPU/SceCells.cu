@@ -3573,8 +3573,8 @@ void SceCells::addPointIfScheduledToGrow_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isScheduledToGrow.begin(),
 							cellInfoVecs.activeIntnlNodeCounts.begin(),
-							cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin(), iBegin,
+							cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin(), iBegin,
 							cellInfoVecs.lastCheckPoint.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -3582,8 +3582,8 @@ void SceCells::addPointIfScheduledToGrow_M() {
 									+ activeCellCount,
 							cellInfoVecs.activeIntnlNodeCounts.begin()
 									+ activeCellCount,
-							cellInfoVecs.centerCoordX.begin() + activeCellCount,
-							cellInfoVecs.centerCoordY.begin() + activeCellCount,
+							cellInfoVecs.InternalAvgX.begin() + activeCellCount,
+							cellInfoVecs.InternalAvgY.begin() + activeCellCount,
 							iEnd,
 							cellInfoVecs.lastCheckPoint.begin()
 									+ activeCellCount)),
