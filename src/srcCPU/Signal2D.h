@@ -4,10 +4,27 @@
 #include <string>
 #include <fstream> 
 #include "GeoVector.h"
+#include "commonData.h" 
 using namespace std ; 
-
-vector<double> updateSignal(vector<double> & dppLevels, const vector<CVector> & cellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang, int & periodCount) ;
 
 double NormalCDFInverse(double p);
 double RationalApproximation(double t);
+
+class Signal {
+
+	public :
+	uint maxAllNodePerCell ;
+	uint maxMembrNodePerCell ; 
+	uint maxTotalNodes ; 
+	uint maxCellCount ; 
+	int periodCount ; 
+
+	std::vector<bool> nodeIsActiveHost ; 
+	std::vector<double> nodeLocXHost, nodeLocYHost ; 
+
+	vector<double> updateSignal(const vector<CVector> & cellCentersHost, double MinX, double MaxX, double MinY, double MaxY, double curTime, int maxTotalNumActiveNodes) ;
+
+	void Initialize(uint maxAllNodePerCell, uint maxMembrNodePerCellECM, uint maxTotalNodes, uint maxCellCount) ; 
+
+} ; 
 

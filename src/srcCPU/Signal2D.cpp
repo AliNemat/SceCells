@@ -5,6 +5,7 @@
 #include <time.h>  
 #include <stdlib.h>
 #include <stdio.h>
+
 namespace patch
 {
 template  < typename T> std::string to_string (const T & n)
@@ -17,7 +18,22 @@ return stm.str();
 
 
 }
-vector<double> updateSignal(vector<double> & dppLevelsV,const vector<CVector> & CellCentersHost, int cellMax, double MinX, double MaxX, double MinY, double MaxY, double dt, double InitTimeStage, double curTime, int & plotSignal, double & lastTimeExchang, int & periodCount)  {
+
+
+void Signal::Initialize (uint maxAllNodePerCell, uint maxMembrNodePerCell, uint maxTotalNodes, uint maxCellCount) {
+	
+	this->maxAllNodePerCell=maxAllNodePerCell ; 
+	this->maxMembrNodePerCell=maxMembrNodePerCell ;
+	this->maxCellCount=maxCellCount ; 
+	periodCount=0 ; 
+	nodeLocXHost.resize(maxTotalNodes, 0.0) ; 
+	nodeLocYHost.resize(maxTotalNodes, 0.0) ;
+	nodeIsActiveHost.resize(maxTotalNodes,false) ; 
+	cout << "I am at the end of signal initialization function" << endl ; 
+	cout << "size of node is active in signal module initialization is " << nodeIsActiveHost.size() << endl ; 
+	cout << "max of all nodes per cell in signal module initialization is " << maxAllNodePerCell << endl ; 
+}
+vector<double> Signal::updateSignal(const vector<CVector> & CellCentersHost, double MinX, double MaxX, double MinY, double MaxY, double curTime, int maxTotalNumActiveNodes)  {
 
 cout << "I am in update signal started" << std::endl ; 
 
@@ -26,7 +42,8 @@ cout << "I am in update signal started" << std::endl ;
  double R_y=0.5*(MaxY-MinY); 
  double Center_X=MinX+0.5*(MaxX-MinX); 
  double Center_Y=MinY+0.5*(MaxY-MinY);
- bool importData=true ; 
+ int cellRank ; 
+
 
 srand(time(NULL));
 
@@ -36,23 +53,35 @@ vector<double> dppDistV,dppLevelV ;
 //double exchPeriod=2*60*60 ;  
 double minResol=0.1 ; 
 int resol=501 ; 
-if (importData) {
 	dppLevels_Cell.clear(); 
-	cout << "last time data exchanged is" << lastTimeExchang <<endl ;  
-	//lastTimeExchang=lastTimeExchang+dt ;
-	cout << "The iformation is read from "<< periodCount<<" data" <<endl ; 
+	cout << "The information is read from "<< periodCount<<" data" <<endl ; 
 		
-		lastTimeExchang=0 ; 
 		 
 
+		cout << "size of node is active in signal module is " << nodeIsActiveHost.size() << endl ; 
+		cout << "max total number of active nodes in signal module is " << maxTotalNumActiveNodes  << endl ; 
+		cout << "max of all nodes per cell in signal module is " << maxAllNodePerCell << endl ; 
 		//exporting data//
 		std :: string  txtFileName="ExportTisuProp_" + patch::to_string(periodCount)+".txt" ; 
 		ofstream ExportOut ; 
 		ExportOut.open(txtFileName.c_str()); 
 		ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
 		ExportOut<<curTime<<","<<Center_X<<","<<max_Rx<<endl   ;
+		ExportOut << "CellRank,CellCenterX,CellCenterY"<<endl;
+		for (int k=0; k<CellCentersHost.size(); k++){
+			ExportOut<<k<<","<<CellCentersHost[k].x<<","<<CellCentersHost[k].y<<endl   ;
+		}
+ 		ExportOut << "CellRank,MembraneNodeX,MembraneNodeY"<<endl;
+
+		for ( uint i=0 ; i< maxTotalNumActiveNodes ; i++) {
+
+			cellRank= i/maxAllNodePerCell ; 
+			if (nodeIsActiveHost[i] && (i%maxAllNodePerCell)<maxMembrNodePerCell) {
+				ExportOut<<cellRank<<","<<nodeLocXHost[i]<<","<<nodeLocYHost[i]<<endl   ;
+			}
+		}
 		ExportOut.flush() ;
-		cout << "I export the data"<< endl ; 
+		cout << "I exported  the data for signaling model"<< endl ; 
 		ExportOut.close() ;  
 		
 		//Importing data //
@@ -113,11 +142,11 @@ if (importData) {
 				}
        		}  
        		dppLevels_Cell.push_back(dppLevelV[StoredI]);
-       		}
+       	}
 
-       		for (int k=CellCentersHost.size(); k<cellMax ; k++){
-       			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
-       		}
+       	for (int k=CellCentersHost.size(); k<maxCellCount ; k++){
+       		dppLevels_Cell.push_back(0.0) ;   //these cells are not active
+       	}
 
 
 		for (int k=0 ;  k<CellCentersHost.size() ; k++) {
@@ -129,30 +158,7 @@ if (importData) {
 			dppLevels_Cell[k]=dppLevels_Cell[k]+
 					  dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
 		}	
-//		cout <<"second dpp value is"<< dppLevels_Cell.at(0)<< endl ; 	
-		
-
-
-     // }
-    //  else {
-//		for (int k=0; k<cellMax ; k++){
-  //     			dppLevels_Cell.push_back(0.0) ;   //these cells are not active
-    //  		}
-    //  }
-
-  }
-	//std :: string  normFileName="normDistr_" + patch::to_string(periodCount)+".txt" ; 
-	//ofstream ofs(normFileName.c_str());
-
-	//double r, norm;
-
-	//for (int i = 0; i < 1000; i++) {
-	//	r = (static_cast<double>(rand()) / RAND_MAX);
-	//	norm = NormalCDFInverse(r);	
-	//	ofs << norm << endl;
-//	}
-
-return  dppLevels_Cell ; 
+	return  dppLevels_Cell ; 
 }
 
 double NormalCDFInverse(double p) {

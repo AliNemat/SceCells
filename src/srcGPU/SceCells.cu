@@ -634,10 +634,9 @@ SceCells::SceCells(SceNodes* nodesInput,
 //	curTime = 0.0 + 55800.0;//AAMIRIi
         curTime=InitTimeStage ; 
         std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
-	lastTimeExchang=1000000 ; //big number
+	lastTimeExchange=1000000 ; //big number
 	firstTimeReadDpp=true ; 
-	periodCount=0 ; 
-	currentActiveCellCountOld=1 ; // small number 
+	//currentActiveCellCountOld=1 ; // small number 
 	tmpDebug = false;
 	aniDebug = false;
 	membrPara.initFromConfig();
@@ -1381,7 +1380,6 @@ void SceCells::runAllCellLevelLogicsDisc(double dt) {
 void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTimeStage) {   //Ali
         
         
-        vector<CVector> cellCentersHost ; 
 	std::cout << "     *** 1 ***" << endl;
 	std::cout.flush();
 	this->dt = dt;
@@ -1402,48 +1400,15 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout.flush();
 //Ali        
 	computeCenterPos_M();
-
-        cellCentersHost=getAllCellCenters();  //Ali
-        //getAllCellCenters();  //Ali
-	thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(
-				       cellInfoVecs.centerCoordX.begin(),
-                                       cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(cellInfoVecs.centerCoordX.begin(),
-                                                                              cellInfoVecs.centerCoordX.begin()+ allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(cellInfoVecs.centerCoordY.begin(),
-                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
-        thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(cellInfoVecs.centerCoordY.begin(),
-                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
-        Tisu_MinX= *MinX_Itr ; 
-        Tisu_MaxX= *MaxX_Itr ; 
-        Tisu_MinY= *MinY_Itr ; 
-        Tisu_MaxY= *MaxY_Itr ;
-        lastTimeExchang=lastTimeExchang+dt ; 
-	double exchPeriod=200 ; 
-        Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
-	//if (allocPara_m.currentActiveCellCount>currentActiveCellCountOld || lastTimeExchang>exchPeriod) {     
-	if ( lastTimeExchang>exchPeriod) {     
-        	dppLevels_Cell=updateSignal(dppLevels,cellCentersHost,allocPara_m.maxCellCount,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,dt,InitTimeStage,curTime, plotSignal,lastTimeExchang,periodCount) ; //Ali
-        	cout<< " I am right after signal function" << endl; 
-        	cout<< "size of dpp after signal function is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
-        	cout<< "size of dppLevels_Cell is"<< dppLevels_Cell.size() << endl ; 
-        	assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
-        	thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
-		currentActiveCellCountOld=allocPara_m.currentActiveCellCount;
- 
-	}
-	if (firstTimeReadDpp) {	 
-	   thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_DppOld.begin()) ;
-		firstTimeReadDpp=false ; 
-	}
-
-       // cellInfoVecs.cell_Dpp=dppLevels ; 
-        //cout<< "size of dpp after assigning values is "<< cellInfoVecs.cell_Dpp.size() << endl ;          
-        BC_Imp_M() ; 
+    exchSignal();
+    BC_Imp_M() ; 
 	std::cout << "     *** 3.5 ***" << endl;
 	std::cout.flush();
         	
 //Ali 
+
+
+
 	applyMemForce_M();
 	std::cout << "     *** 4 ***" << endl;
 	std::cout.flush();
@@ -1473,6 +1438,59 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	std::cout.flush();
 }
 
+
+
+void SceCells::exchSignal(){
+
+	if (firstTimeReadDpp) {	
+		uint maxTotalNodes=nodes->getInfoVecs().nodeLocX.size() ; 
+    	signal.Initialize(allocPara_m.maxAllNodePerCell,allocPara_m.maxMembrNodePerCell,maxTotalNodes, allocPara_m.maxCellCount) ;
+		cout << " I passed the initializtion for signaling module" << endl ; 
+	}
+
+   	lastTimeExchange=lastTimeExchange+dt ; 
+   	double exchPeriod=200 ; 
+	if ( lastTimeExchange>exchPeriod) {
+		lastTimeExchange=0 ; 
+		vector<CVector> cellCentersHost ; 
+    	cellCentersHost=getAllCellCenters();  //Ali
+
+
+		thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(cellInfoVecs.centerCoordX.begin(),
+                                       									  cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;
+    	thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(cellInfoVecs.centerCoordX.begin(),
+                                                                              cellInfoVecs.centerCoordX.begin()+ allocPara_m.currentActiveCellCount) ;
+    	thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+   		thrust::device_vector<double>::iterator  MaxY_Itr=thrust::max_element(cellInfoVecs.centerCoordY.begin(),
+                                                                              cellInfoVecs.centerCoordY.begin()+ allocPara_m.currentActiveCellCount) ;
+   		Tisu_MinX= *MinX_Itr ; 
+   		Tisu_MaxX= *MaxX_Itr ; 
+   		Tisu_MinY= *MinY_Itr ; 
+   		Tisu_MaxY= *MaxY_Itr ;
+
+   		Tisu_R=0.5*(0.5*(Tisu_MaxX-Tisu_MinX)+0.5*(Tisu_MaxY-Tisu_MinY)) ; 
+
+		totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+
+
+		thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+  totalNodeCountForActiveCells, signal.nodeIsActiveHost.begin()); 
+		thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+  totalNodeCountForActiveCells, signal.nodeLocXHost.begin()); 
+		thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+  totalNodeCountForActiveCells, signal.nodeLocYHost.begin()); 
+		
+        dppLevels_Cell=signal.updateSignal(cellCentersHost,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,curTime,totalNodeCountForActiveCells) ; //Ali
+        assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
+        thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
+		//currentActiveCellCountOld=allocPara_m.currentActiveCellCount;
+ 
+	}
+	if (firstTimeReadDpp) {	 
+	   thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_DppOld.begin()) ;
+		firstTimeReadDpp=false ; 
+	}
+
+}
 void SceCells::runStretchTest(double dt) {
 	this->dt = dt;
 	computeCenterPos();

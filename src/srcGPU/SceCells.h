@@ -2478,6 +2478,8 @@ struct MembrPara {
 class SceCells {
 	SceNodes* nodes;
 
+	Signal  signal;
+
 	NodeAllocPara allocPara;
 	SceMiscPara miscPara;
 	SceBioPara bioPara;
@@ -2496,11 +2498,9 @@ class SceCells {
 	thrust::constant_iterator<double> initGrowthProgress;
 
 	uint totalNodeCountForActiveCells;
-	double lastTimeExchang ; //Ali
-	bool firstTimeReadDpp ;  
+	bool firstTimeReadDpp ; 
+	int lastTimeExchange ; 
 	int currentActiveCellCountOld ;  //Ali  
-        int plotSignal ; //Ali
-		int periodCount ; //Ali 
 	double dt;
         double Damp_Coef ;   //Ali
         double InitTimeStage ;  //A & A 
@@ -2519,7 +2519,7 @@ class SceCells {
 
 	void readMiscPara();
 	void readBioPara();
-
+    void exchSignal() ; 
 	void copyInitActiveNodeCount(
 			std::vector<uint>& numOfInitActiveNodesOfCells);
 	void copyInitActiveNodeCount_M(std::vector<uint>& initMembrActiveNodeCounts,
