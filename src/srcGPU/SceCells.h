@@ -947,11 +947,11 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 			
 			if (cellType==bc && memNodeType==lateral1 && cellCenterX> _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX +fExt  ;
+				velX = velX -fExt  ;
 			}
 			if (cellType==bc && memNodeType==lateral1  && cellCenterX< _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX -fExt  ;
+				velX = velX +fExt  ;
 			}
 
 			return thrust::make_tuple(velX, velY);
