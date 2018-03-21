@@ -1647,6 +1647,11 @@ void SceCells::copyCellsPreDivision_M() {
 	divAuxData.tmpCenterPosY_M = thrust::device_vector<double>(
 			divAuxData.toBeDivideCount, 0);
 
+	divAuxData.tmpIntAvgX_M = thrust::device_vector<double>(   //Ali 
+			divAuxData.toBeDivideCount, 0);
+	divAuxData.tmpIntAvgY_M = thrust::device_vector<double>(   //Ali 
+			divAuxData.toBeDivideCount, 0);
+
 	divAuxData.tmpIsActive1_M = thrust::device_vector<bool>(
 			divAuxData.nodeStorageCount, false);
 	divAuxData.tmpXPos1_M = thrust::device_vector<double>(
@@ -1713,24 +1718,31 @@ void SceCells::copyCellsPreDivision_M() {
 							cellInfoVecs.HertwigXdir.begin(),
 							cellInfoVecs.HertwigYdir.begin(),
 							cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin())),
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(iBegin, cellInfoVecs.growthXDir.begin(),
 							cellInfoVecs.growthYDir.begin(),
 							cellInfoVecs.HertwigXdir.begin(),
 							cellInfoVecs.HertwigYdir.begin(),
 							cellInfoVecs.centerCoordX.begin(),
-							cellInfoVecs.centerCoordY.begin()))
+							cellInfoVecs.centerCoordY.begin(),
+							cellInfoVecs.InternalAvgX.begin(),
+							cellInfoVecs.InternalAvgY.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.isDividing.begin(),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(divAuxData.tmpCellRank_M.begin(),
 							divAuxData.tmpDivDirX_M.begin(),
 							divAuxData.tmpDivDirY_M.begin(),
-                                                        divAuxData.tmpHertwigXdir.begin(),
-                                                        divAuxData.tmpHertwigYdir.begin(),
+                            divAuxData.tmpHertwigXdir.begin(),
+                            divAuxData.tmpHertwigYdir.begin(),
 							divAuxData.tmpCenterPosX_M.begin(),
-							divAuxData.tmpCenterPosY_M.begin())), isTrue());
+							divAuxData.tmpCenterPosY_M.begin(),
+							divAuxData.tmpIntAvgX_M.begin(),
+							divAuxData.tmpIntAvgY_M.begin()
+							)), isTrue());
 }
 
 void SceCells::copyCellsEnterMitotic() {
@@ -1851,7 +1863,8 @@ void SceCells::createTwoNewCellArr_M() {
 		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 
 		obtainMembrAndIntnlNodesPlusNodeType(i, membrNodes, intnlNodes,nodeTypeIndxDiv); // Ali 
-		CVector oldCenter = obtainCenter(i);
+		CVector oldCellCenter = obtainCellCenter(i);
+		CVector oldIntCenter = obtainIntCenter(i);
 
                 //A&A commented
 		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
@@ -1865,22 +1878,22 @@ void SceCells::createTwoNewCellArr_M() {
 		divDir.x = divAuxData.tmpHertwigXdir[i] ; //A&A
 		divDir.y = divAuxData.tmpHertwigYdir[i] ; //A&A 
 		
-		double lenAlongHertwigAxis = calLengthAlongHertwigAxis(divDir, oldCenter, membrNodes);//A&A added
+		double lenAlongHertwigAxis = calLengthAlongHertwigAxis(divDir, oldCellCenter, membrNodes);//A&A added
 
  
 		std::vector<VecValT> tmp1Membr, tmp2Membr;
-		CVector cell1Center, cell2Center;
+		CVector intCell1Center, intCell2Center;
         // obtain the center of two cell along the shortest distance between the membrane nodes of mother cell. There is also a tuning factor to shift the centers inside the cell "shiftRatio"
-		obtainTwoNewCenters(oldCenter, divDir, lenAlongHertwigAxis, cell1Center,
-	  			cell2Center);
+		obtainTwoNewIntCenters(oldIntCenter, divDir, lenAlongHertwigAxis, intCell1Center,
+	  			intCell2Center);
 		
 
 		// decide each membrane nodes and internal nodes of mother cell is going to belongs to daugther cell 1 or 2. Also shrink the internal nod position along the aixs connecting mother cell to the internal nodes by a factor given as an input in the name of "Shrink ratio"
-		prepareTmpVec(i, divDir, oldCenter, tmp1Membr, tmp2Membr);
+		prepareTmpVec(i, divDir, oldCellCenter, oldIntCenter,tmp1Membr, tmp2Membr);
 		//create the two new membrane line based on the specified distance. 
 		processMemVec(tmp1Membr, tmp2Membr);
         // shift the internal to make sure the center of new daugther cell is exactly similar to what have chosen in the function "obtainTwoNewCenters"
-		shiftIntnlNodesByCellCenter(cell1Center, cell2Center);
+		shiftIntnlNodesByCellCenter(intCell1Center, intCell2Center);
 // assemble two new daughter cells information.
 		assembleVecForTwoCells(i);
 	}
@@ -1905,14 +1918,14 @@ void SceCells::findHertwigAxis() {
 		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 		obtainMembrAndIntnlNodesPlusNodeType(i, membrNodes, intnlNodes,nodeTypeIndxDiv); // Ali 
 
-		CVector oldCenter = obtainCenter(i);
+		CVector oldCellCenter = obtainCellCenter(i);// cell center
 		double lenAlongMajorAxis;
 		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
 		//		lenAlongMajorAxis);
 
 		//CVector divDir = calDivDir_MajorAxis(oldCenter, membrNodes,
 		//		lenAlongMajorAxis); //Ali
-		CVector divDir = calDivDir_ApicalBasal(oldCenter, membrNodes,
+		CVector divDir = calDivDir_ApicalBasal(oldCellCenter, membrNodes,
 				lenAlongMajorAxis,nodeTypeIndxDiv); //Ali
 
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
@@ -3689,7 +3702,7 @@ bool SceCells::decideIfAnyCellEnteringMitotic() {
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.isEnteringMitotic.begin(),
 			//CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
-			CompuIsEnteringMitotic_M(0.98)); // Ali for cross ection modeling 
+			CompuIsEnteringMitotic_M(0.98)); // Ali for cross section modeling 
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toEnterMitoticCount = thrust::reduce(cellInfoVecs.isEnteringMitotic.begin(),
@@ -5072,14 +5085,18 @@ void SceCells::assembleVecForTwoCells(uint i) {
 			divAuxData.tmp2IntnlVec.size());
 }
 
-void SceCells::shiftIntnlNodesByCellCenter(CVector cell1Center,
-		CVector cell2Center) {
+
+// we have two new center of internal node positions. 
+// we already shrinked the internal nodes around their old internal nodes center
+// here we shift the internal nodes of each cell around the new internal node position
+void SceCells::shiftIntnlNodesByCellCenter(CVector intCell1Center,
+		CVector intCell2Center) {
 	CVector tmpCell1Center(0, 0, 0);
 	for (uint j = 0; j < divAuxData.tmp1IntnlVec.size(); j++) {
 		tmpCell1Center = tmpCell1Center + divAuxData.tmp1IntnlVec[j];
 	}
 	tmpCell1Center = tmpCell1Center / divAuxData.tmp1IntnlVec.size();
-	CVector shiftVec1 = cell1Center - tmpCell1Center;
+	CVector shiftVec1 = intCell1Center - tmpCell1Center; // it should be new nucleus center for cell1 
 	for (uint j = 0; j < divAuxData.tmp1IntnlVec.size(); j++) {
 		divAuxData.tmp1IntnlVec[j] = divAuxData.tmp1IntnlVec[j] + shiftVec1;
 	}
@@ -5089,7 +5106,7 @@ void SceCells::shiftIntnlNodesByCellCenter(CVector cell1Center,
 		tmpCell2Center = tmpCell2Center + divAuxData.tmp2IntnlVec[j];
 	}
 	tmpCell2Center = tmpCell2Center / divAuxData.tmp2IntnlVec.size();
-	CVector shiftVec2 = cell2Center - tmpCell2Center;
+	CVector shiftVec2 = intCell2Center - tmpCell2Center; // it should be new nucleus center for cell 2 
 	for (uint j = 0; j < divAuxData.tmp2IntnlVec.size(); j++) {
 		divAuxData.tmp2IntnlVec[j] = divAuxData.tmp2IntnlVec[j] + shiftVec2;
 	}
@@ -5206,13 +5223,28 @@ void SceCells::obtainMembrAndIntnlNodesPlusNodeType(uint i, vector<CVector>& mem
 
 
 
-
+/* Ali 
 CVector SceCells::obtainCenter(uint i) {
 	double oldCenterX = divAuxData.tmpCenterPosX_M[i];
 	double oldCenterY = divAuxData.tmpCenterPosY_M[i];
 	CVector centerPos(oldCenterX, oldCenterY, 0);
 	return centerPos;
 }
+*/
+CVector SceCells::obtainCellCenter(uint i) {
+	double oldCenterX = divAuxData.tmpCenterPosX_M[i];
+	double oldCenterY = divAuxData.tmpCenterPosY_M[i];
+	CVector centerPos(oldCenterX, oldCenterY, 0);
+	return centerPos;
+}
+
+CVector SceCells::obtainIntCenter(uint i) {
+	double oldCenterX = divAuxData.tmpCenterPosX_M[i];
+	double oldCenterY = divAuxData.tmpCenterPosY_M[i];
+	CVector centerPos(oldCenterX, oldCenterY, 0);
+	return centerPos;
+}
+
 /*
 CVector SceCells::calDivDir_MajorAxis(CVector center,
 		vector<CVector>& membrNodes, double& lenAlongMajorAxis) {
@@ -5317,7 +5349,7 @@ CVector SceCells::calDivDir_ApicalBasal(CVector center,
 }
 
 //A&A
-double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,
+double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector cellCenter,
 		vector<CVector>& membrNodes) {
 
 	CVector divDirUnit = divDir.getUnitVector();
@@ -5326,7 +5358,7 @@ double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,
 	double minUnit = 0, maxUnit = 0;
 	double minOveral = 0, maxOveral = 0;
 	for (uint i = 0; i < membrNodes.size(); i++) {
-		CVector tmpDir = membrNodes[i] - center;
+		CVector tmpDir = membrNodes[i] - cellCenter; //it is cell center
 		CVector tmpUnitDir = tmpDir.getUnitVector();
 			double tmpVecProductUnit = divDirUnit * tmpUnitDir;
 			double tmpVecProductOveral = divDirUnit * tmpDir;
@@ -5341,21 +5373,21 @@ double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector center,
 	}
 	
 		double lenAlongHertwigAxis = maxOveral - minOveral;
-	return lenAlongHertwigAxis;
+	return lenAlongHertwigAxis; // it is minor axis
 }
 
 
-void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
-		double len_MajorAxis, CVector& centerNew1, CVector& centerNew2) {
+void SceCells::obtainTwoNewIntCenters(CVector& oldIntCenter, CVector& divDir,
+		double len_MajorAxis, CVector& intCenterNew1, CVector& intCenterNew2) {
 
 	CVector divDirUnit = divDir.getUnitVector();
-	double lenChange = len_MajorAxis / 2.0 * centerShiftRatio;
-	centerNew1 = oldCenter + lenChange * divDirUnit;
-	centerNew2 = oldCenter - lenChange * divDirUnit;
+	double lenChange = len_MajorAxis / 2.0 * centerShiftRatio; // this means small axis
+	intCenterNew1 = oldIntCenter + lenChange * divDirUnit;   // it should be nucleus center
+	intCenterNew2 = oldIntCenter - lenChange * divDirUnit;   // it should be nulceus center
 	CVector centerTissue ;  //Ali
-	centerTissue=CVector (25.0, 25.0, 0.0) ; //Ali should be imported
-	CVector tmpVec1=centerNew1-centerTissue ;  //Ali 
-	CVector tmpVec2=centerNew2-centerTissue ;  //Ali 
+	centerTissue=CVector (40.0, 40.0, 0.0) ; //Ali should be imported
+	CVector tmpVec1=intCenterNew1-centerTissue ;  //Ali // assuming New1 is mother cell
+	CVector tmpVec2=intCenterNew2-centerTissue ;  //Ali 
 
 	CVector tmpCross=Cross(tmpVec1,tmpVec2) ; //Ali 
 	bool isMotherCellBehindInt=false ;  //Ali 
@@ -5367,8 +5399,8 @@ void SceCells::obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
    divAuxData.isMotherCellBehind.push_back(isMotherCellBehindInt) ; 
 }
 
-void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
-		std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2) {
+void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCellCenter,CVector oldIntCenter
+		,std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2) {
 	tmp1.clear(); // is for membrane node of first cell
 	tmp2.clear(); // is for membrane node of the second cell
 	uint membThreshold = allocPara_m.maxMembrNodePerCell;
@@ -5383,7 +5415,7 @@ void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 			if (divAuxData.tmpIsActive_M[index] == true) {
 				CVector memPos(divAuxData.tmpNodePosX_M[index],
 						divAuxData.tmpNodePosY_M[index], 0);
-				CVector centerToPosDir = memPos - oldCenter;
+				CVector centerToPosDir = memPos - oldCellCenter;  // Ali it should be center of cells
 				CVector centerToPosUnit = centerToPosDir.getUnitVector();
 				CVector crossProduct = Cross(centerToPosDir, splitDir);
 				double dotProduct = centerToPosUnit * splitDir;
@@ -5398,30 +5430,30 @@ void SceCells::prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
 					tmp2.push_back(tmpData);
 				}
 			}
-		} else {
+		} else {// shrink the internal nodes around the internal node center
 			if (divAuxData.tmpIsActive_M[index] == true) {
 				CVector internalPos(divAuxData.tmpNodePosX_M[index],
 						divAuxData.tmpNodePosY_M[index], 0);
-				CVector centerToPosDir = internalPos - oldCenter;
-				CVector shrinkedPos = centerToPosDir * shrinkRatio + oldCenter;
+				CVector centerToPosDir = internalPos - oldIntCenter;  // center of nucleus is more biological
+				CVector shrinkedPos = centerToPosDir * shrinkRatio + oldIntCenter;
 
-		        CVector unitDivDir = divDir.getUnitVector(); // Ali 
-				double  AmpTanget=centerToPosDir*unitDivDir ;  // Ali dot product of two vectors
-				double  shrinkedAmpTanget=shrinkRatio*AmpTanget; // multiply two doubles //Ali
+		       // CVector unitDivDir = divDir.getUnitVector(); // Ali 
+			//	double  AmpTanget=centerToPosDir*unitDivDir ;  // Ali dot product of two vectors
+			//	double  shrinkedAmpTanget=shrinkRatio*AmpTanget; // multiply two doubles //Ali
 
-				CVector TangetVShrink=unitDivDir*shrinkedAmpTanget; // shrink the tanget component //Ali
-				CVector TangetV=      unitDivDir*        AmpTanget; // get the tanget component to compute the normal vector  //Ali
-				CVector  NormV=centerToPosDir-TangetV ;             // compute the normal vector Ali
+			//	CVector TangetVShrink=unitDivDir*shrinkedAmpTanget; // shrink the tanget component //Ali
+			//	CVector TangetV=      unitDivDir*        AmpTanget; // get the tanget component to compute the normal vector  //Ali
+			//	CVector  NormV=centerToPosDir-TangetV ;             // compute the normal vector Ali
 
-				CVector  polarShrinkedPos=NormV+TangetVShrink ;  // summation of shrinked tanget and as previous vector in the normal direction to division axis//Ali
-				CVector  updatedV=polarShrinkedPos+oldCenter ; //Ali 
+			//	CVector  polarShrinkedPos=NormV+TangetVShrink ;  // summation of shrinked tanget and as previous vector in the normal direction to division axis//Ali
+			//	CVector  updatedV=polarShrinkedPos+oldCenter ; //Ali 
 
-				//double dotProduct = centerToPosDir * divDir; //Ali comment 
-				double dotProduct = polarShrinkedPos   * divDir; //Ali 
+				double dotProduct = centerToPosDir * divDir; 
+				//double dotProduct = polarShrinkedPos   * divDir; //Ali 
 				if (dotProduct > 0) {
-					divAuxData.tmp1IntnlVec.push_back(updatedV);
+					divAuxData.tmp1IntnlVec.push_back(shrinkedPos);
 				} else {
-					divAuxData.tmp2IntnlVec.push_back(updatedV);
+					divAuxData.tmp2IntnlVec.push_back(shrinkedPos);
 				}
 			}
 		}

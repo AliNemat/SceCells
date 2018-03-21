@@ -3000,6 +3000,8 @@ struct CellDivAuxData {
 	thrust::device_vector<double> tmpDivDirY_M;
 	thrust::device_vector<double> tmpCenterPosX_M;
 	thrust::device_vector<double> tmpCenterPosY_M;
+	thrust::device_vector<double> tmpIntAvgX_M; //Ali 
+	thrust::device_vector<double> tmpIntAvgY_M;//Ali 
 
 	thrust::device_vector<bool> tmpIsActive_M;
 	thrust::device_vector<double> tmpNodePosX_M;
@@ -3376,24 +3378,26 @@ class SceCells {
 //	bool decideIfGoingToRemove_M();//AAMIRI
 
 	void assembleVecForTwoCells(uint i);
-	void shiftIntnlNodesByCellCenter(CVector cell1Center, CVector cell2Center);
+	void shiftIntnlNodesByCellCenter(CVector intCell1Center, CVector intCell2Center); //Ali modified
 	void processMemVec(std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2);
 	void obtainMembrAndIntnlNodes(uint i, vector<CVector>& membrNodes,
 			vector<CVector>& intnlNodes);
 	void obtainMembrAndIntnlNodesPlusNodeType(uint i, vector<CVector>& membrNodes,
-			vector<CVector>& intnlNodes, vector<MembraneType1>& nodeTypeIndxDiv); //Ali 
-	CVector obtainCenter(uint i);
+			vector<CVector>& intnlNodes, vector<MembraneType1>& nodeTypeIndxDiv); //Ali modified
+	//CVector obtainCenter(uint i);
+	CVector obtainCellCenter(uint i); //Ali 
+	CVector obtainIntCenter(uint i); //Ali 
 	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis);
 
-	CVector calDivDir_ApicalBasal(CVector oldCenter, vector<CVector>& membrNodes,
+	CVector calDivDir_ApicalBasal(CVector oldCellCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis, vector<MembraneType1> & nodeTypeIndxDiv);
-	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCenter, vector<CVector>& membrNodes); //A&A
+	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCellCenter, vector<CVector>& membrNodes); //A&A
 
-	void obtainTwoNewCenters(CVector& oldCenter, CVector& divDir,
-			double lenAlongHertwigAxis, CVector& centerNew1, CVector& centerNew2); //A& A  modified
-	void prepareTmpVec(uint i, CVector divDir, CVector oldCenter,
-			std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2);
+	void obtainTwoNewIntCenters(CVector& oldIntCenter, CVector& divDir,
+			double lenAlongHertwigAxis, CVector& intCenterNew1, CVector& intCenterNew2); //A& A  modified
+	void prepareTmpVec(uint i, CVector divDir, CVector oldCellCenter,CVector oldIntCenter 
+			,std::vector<VecValT>& tmp1, std::vector<VecValT>& tmp2); //Ali 
 
 	void calCellArea();
     void calCellPerim();//AAMIRI
