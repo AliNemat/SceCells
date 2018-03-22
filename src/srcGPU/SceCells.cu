@@ -1452,8 +1452,8 @@ void SceCells::exchSignal(){
    	double exchPeriod=200 ; 
 	if ( lastTimeExchange>exchPeriod) {
 		lastTimeExchange=0 ; 
-		vector<CVector> cellCentersHost ; 
-    	cellCentersHost=getAllCellCenters();  //Ali
+		//vector<CVector> cellCentersHost ; 
+    	//cellCentersHost=getAllCellCenters();  //Ali
 
 
 		thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(cellInfoVecs.centerCoordX.begin(),
@@ -1478,15 +1478,17 @@ void SceCells::exchSignal(){
 		thrust:: copy (nodes->getInfoVecs().nodeIsActive.begin(),nodes->getInfoVecs().nodeIsActive.begin()+  totalNodeCountForActiveCells, signal.nodeIsActiveHost.begin()); 
 		thrust:: copy (nodes->getInfoVecs().nodeLocX.begin(),nodes->getInfoVecs().nodeLocX.begin()+  totalNodeCountForActiveCells, signal.nodeLocXHost.begin()); 
 		thrust:: copy (nodes->getInfoVecs().nodeLocY.begin(),nodes->getInfoVecs().nodeLocY.begin()+  totalNodeCountForActiveCells, signal.nodeLocYHost.begin()); 
+		thrust:: copy (cellInfoVecs.centerCoordX.begin(),cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount, signal.cellCenterX.begin()); 
+		thrust:: copy (cellInfoVecs.centerCoordY.begin(),cellInfoVecs.centerCoordY.begin()+allocPara_m.currentActiveCellCount, signal.cellCenterY.begin()); 
 		
-        dppLevels_Cell=signal.updateSignal(cellCentersHost,Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,curTime,totalNodeCountForActiveCells) ; //Ali
-        assert(cellInfoVecs.cell_Dpp.size()==dppLevels_Cell.size());
-        thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_Dpp.begin()) ;
+        signal.updateSignal(Tisu_MinX,Tisu_MaxX,Tisu_MinY,Tisu_MaxY,curTime,totalNodeCountForActiveCells,allocPara_m.currentActiveCellCount) ; //Ali
+        assert(cellInfoVecs.cell_Dpp.size()==signal.dppLevel.size());
+        thrust::copy(signal.dppLevel.begin(),signal.dppLevel.end(),cellInfoVecs.cell_Dpp.begin()) ;
 		//currentActiveCellCountOld=allocPara_m.currentActiveCellCount;
  
 	}
 	if (firstTimeReadDpp) {	 
-	   thrust::copy(dppLevels_Cell.begin(),dppLevels_Cell.end(),cellInfoVecs.cell_DppOld.begin()) ;
+	   thrust::copy(signal.dppLevel.begin(),signal.dppLevel.end(),cellInfoVecs.cell_DppOld.begin()) ;
 		firstTimeReadDpp=false ; 
 	}
 
