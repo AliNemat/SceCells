@@ -5388,11 +5388,12 @@ void SceCells::obtainTwoNewIntCenters(CVector& oldIntCenter, CVector& divDir,
 	centerTissue=CVector (40.0, 40.0, 0.0) ; //Ali should be imported
 	CVector tmpVec1=intCenterNew1-centerTissue ;  //Ali // assuming New1 is mother cell
 	CVector tmpVec2=intCenterNew2-centerTissue ;  //Ali 
-
+	CVector tmpDiff=tmpVec2-tmpVec1 ; 
 	CVector tmpCross=Cross(tmpVec1,tmpVec2) ; //Ali 
 	bool isMotherCellBehindInt=false ;  //Ali 
 	// assuming CCW is the initial order of cell ranks
-	if (tmpCross.z>0){
+	//if (tmpCross.z>0){
+	if (tmpDiff.x>0){
 		isMotherCellBehindInt=true  ; 
 	}
 //Ali
