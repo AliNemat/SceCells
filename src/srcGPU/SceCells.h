@@ -11,6 +11,7 @@
 typedef thrust::tuple<double, double, SceNodeType> CVec2Type;
 typedef thrust::tuple<bool, double, double> BoolDD;
 typedef thrust::tuple<uint, double, double> UiDD;
+typedef thrust::tuple<uint, int, int> UiII;
 typedef thrust::tuple<uint, double, double, double> UiDDD; //Ali
 typedef thrust::tuple<double, double, uint, bool, double,double> DDUiBDD ; 
 typedef thrust::tuple<double, uint> DUi; //Ali 
@@ -26,6 +27,7 @@ typedef thrust::tuple<double, double, double, bool, double, double, double, doub
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
 typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> DUiDDUiUiDDDD;
+typedef thrust::tuple<double, int, int ,uint, uint, double, double > DIIUiUiDD;
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,bool,uint, uint> ActinData; //Ali
 typedef thrust::tuple<MembraneType1,int> TI; //Ali
 typedef thrust::tuple<bool,MembraneType1,uint ,uint> BTUiUi; //Ali
@@ -600,7 +602,8 @@ struct AdjustInternalNodesLoc: public thrust::unary_function<DDUiBDD, CVec2> {
 		}
 		else {
 
-			return thrust::make_tuple(locX+shiftX,locY+shiftY); //AliE
+			//return thrust::make_tuple(locX+shiftX,locY+shiftY); //AliE
+			return thrust::make_tuple(locX,locY); //AliE
 		}
 			
 	}
@@ -947,11 +950,11 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 			
 			if (cellType==bc && memNodeType==lateral1 && cellCenterX> _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX -fExt  ;
+				velX = velX +fExt  ;
 			}
 			if (cellType==bc && memNodeType==lateral1  && cellCenterX< _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX +fExt  ;
+				velX = velX -fExt  ;
 			}
 
 			return thrust::make_tuple(velX, velY);
@@ -1054,13 +1057,15 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 
 			double term5=2*sqrt( pow(len*lenL,2)-pow(posX*posXL+posY*posYL, 2) ); 
 			double term6=2*sqrt( pow(len*lenR,2)-pow(posX*posXR+posY*posYR, 2) );
-			
-			if (progress< _mitoticCri){
-				cellAreaDesire=10;
+			double percent ; 
+			if (progress>_mitoticCri) {
+				percent =(progress-_mitoticCri)/(1.0-_mitoticCri) ;  
 			}
-				else {
-				cellAreaDesire=20 ;
-				}
+			else {
+				percent =0 ; // max ((progress-_mitoticCri)/(0.9-_mitoticCri),0.0);  
+			}
+
+			cellAreaDesire=10+ percent*10 ; 
 
 			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
 			     ( (term1X+term2X)/term5+ (term3X+term4X)/term6 ) ; 
@@ -1076,6 +1081,58 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 		}
 	}
 }; 
+
+struct AddContractileRingForces: public thrust::unary_function<DIIUiUiDD, CVec2> {
+	uint _maxNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	double _mitoticCri;
+
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddContractileRingForces(uint maxNodePerCell,
+			double* locXAddr, double* locYAddr, double mitoticCri) :
+			 _maxNodePerCell(maxNodePerCell), _locXAddr(
+					locXAddr), _locYAddr(locYAddr), _mitoticCri(mitoticCri) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec2 operator()(const DIIUiUiDD &dIIUiUiDD) const {
+
+		double progress = thrust::get<0>(dIIUiUiDD);
+		int cellLocalApicalId = thrust::get<1>(dIIUiUiDD);
+		int cellLocalBasalId = thrust::get<2>(dIIUiUiDD);
+		uint   cellRank = thrust::get<3>(dIIUiUiDD);
+		uint   nodeRank = thrust::get<4>(dIIUiUiDD);
+		double velX = thrust::get<5>(dIIUiUiDD);
+		double velY = thrust::get<6>(dIIUiUiDD);
+
+		int index = cellRank * _maxNodePerCell + nodeRank;
+		int cellGlobalApicalId=cellRank * _maxNodePerCell+ cellLocalApicalId ; 
+		int cellGlobalBasalId =cellRank * _maxNodePerCell+ cellLocalBasalId ; 
+		double kContract=10 ;
+		double fX= 0 ; 
+		double fY=0 ; 
+
+		if ( (index != cellGlobalApicalId && index !=cellGlobalBasalId) || progress< _mitoticCri) {
+			return thrust::make_tuple(velX, velY);
+		} else
+		{
+			if ( index==cellGlobalApicalId) {			
+				fX=kContract*( _locXAddr[cellGlobalBasalId]-_locXAddr[index]) ; 
+				fY=kContract*( _locYAddr[cellGlobalBasalId]-_locYAddr[index]) ;
+
+			}
+			else {
+				fX=kContract*(_locXAddr[cellGlobalApicalId]-_locXAddr[index])  ; 
+				fY=kContract*( _locYAddr[cellGlobalApicalId]-_locYAddr[index])  ;
+
+			}
+			return thrust::make_tuple(velX+fX, velY+fY);
+		}
+	}
+}; 
+
+
+
 
 
 
@@ -1589,7 +1646,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 		if (curActiveMembrNode < _bound   && LengthMax>0.5 ) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
-			return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(false, 0);
 		}
 		//	else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
 		//	return thrust::make_tuple(true, 0);
@@ -1619,7 +1676,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.08 ) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
-			return thrust::make_tuple(true, progress); 
+			return thrust::make_tuple(false, progress); 
 		} 
 		
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
@@ -1688,9 +1745,20 @@ struct SaxpyFunctorDim2_Damp: public thrust::binary_function<CVec2, CVec2, CVec2
                         {
 	}
 	__host__ __device__ CVec2 operator()(const CVec2 &vec1, const CVec2 &vec2) {
+		
 		double xRes = thrust::get<0>(vec1) * _dt/_DampCoef + thrust::get<0>(vec2);
 		double yRes = thrust::get<1>(vec1) * _dt/_DampCoef + thrust::get<1>(vec2);
-		return thrust::make_tuple(xRes, yRes);
+		if (yRes>21.5) {
+			return thrust::make_tuple(xRes, 21.5);
+		}
+		else if (yRes<17.11) {
+
+			return thrust::make_tuple(xRes, 17.11);
+		}
+		else {
+
+			return thrust::make_tuple(xRes, yRes);
+		}
 	}
 };
 //Ali 
@@ -1704,7 +1772,21 @@ struct SaxpyFunctorDim2_BC_Damp: public thrust::binary_function<CVec3, CVec2, CV
 	__host__ __device__ CVec2 operator()(const CVec3 &vec1, const CVec2 &vec2) {
 		double xRes = thrust::get<1>(vec1) * _dt/thrust::get<0>(vec1) + thrust::get<0>(vec2);
 		double yRes = thrust::get<2>(vec1) * _dt/thrust::get<0>(vec1) + thrust::get<1>(vec2);
-		return thrust::make_tuple(xRes, yRes);
+
+		if (yRes>21.5) {
+			//return thrust::make_tuple(xRes, 21.5);
+			return thrust::make_tuple(xRes, yRes);
+		}
+		else if (yRes<17.1178) {
+
+		//	return thrust::make_tuple(xRes, 17.1178);
+			return thrust::make_tuple(xRes, yRes);
+		}
+		else {
+
+			return thrust::make_tuple(xRes, yRes);
+		}
+
 	}
 };
 
@@ -2603,7 +2685,7 @@ struct AssignFixedGrowth: public thrust::unary_function<CVec3BoolInt, CVec3> {
 	}
 };
 
-struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
+struct AddMemNode: public thrust::unary_function<TuuuddII, UiII> {
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
 	double* _xPosAddr, *_yPosAddr;
@@ -2615,14 +2697,23 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
 					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr), _memNodeType(memNodeType) {
 	}
-	__device__ uint operator()(const Tuuudd &oriData) {
+	__device__ UiII operator()(const TuuuddII &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
 		uint insertIndx = thrust::get<1>(oriData) + 1; // newIndex 
 		uint curActCount = thrust::get<2>(oriData);
 		double insertX = thrust::get<3>(oriData);
 		double insertY = thrust::get<4>(oriData);
+		int iDApical=	thrust::get<5>(oriData); 
+		int iDBasal=	thrust::get<6>(oriData); 
 		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount; //membrane nodes are first. End position based on newindex
 		uint globalIndexInsert = cellRank * _maxNodePerCell + insertIndx;
+		if (insertIndx<=iDApical) {  //since the current acrive membrane nodes is one more, it can not be the last ID.
+			iDApical=iDApical+1 ;
+		}
+
+		if (insertIndx<=iDBasal) {
+			iDBasal=iDBasal+1 ;
+		}
 		for (uint i = globalIndxEnd; i >= globalIndexInsert; i--) {
 			_isActiveAddr[i] = _isActiveAddr[i - 1];
 			_xPosAddr[i] = _xPosAddr[i - 1];
@@ -2636,11 +2727,12 @@ struct AddMemNode: public thrust::unary_function<Tuuudd, uint> {
 		_yPosAddr[globalIndexInsert] = insertY;
 		_adhIndxAddr[globalIndexInsert] = -1;
 		_memNodeType[globalIndexInsert] = _memNodeType[globalIndexInsert-1]; // to have the same type of the membrane node as at least one of its neighbors //Ali 
-		return (curActCount + 1);
+		//return (curActCount + 1);
+			return thrust::make_tuple(curActCount+1 , iDApical,iDBasal);
 	}
 };
 //Ali
-struct DelMemNode: public thrust::unary_function<Tuuu, uint> {
+struct DelMemNode: public thrust::unary_function<TuuuII, UiII> {
 	uint _maxNodePerCell;
 	bool* _isActiveAddr;
 	double* _xPosAddr, *_yPosAddr;
@@ -2653,32 +2745,54 @@ struct DelMemNode: public thrust::unary_function<Tuuu, uint> {
 			_maxNodePerCell(maxNodePerCell), _isActiveAddr(isActiveAddr), _xPosAddr(
 					xPosAddr), _yPosAddr(yPosAddr), _adhIndxAddr(adhIndxAddr),_memNodeType(memNodeType) {
 	}
-	__device__ uint operator()(const Tuuu &oriData) {
+	__device__ UiII operator()(const TuuuII &oriData) {
 		uint cellRank = thrust::get<0>(oriData);
 		uint delIndx = thrust::get<1>(oriData) ; //+1
 		uint curActCount = thrust::get<2>(oriData);
-		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount-1;
+		int iDApical=	thrust::get<3>(oriData); 
+		int iDBasal=	thrust::get<4>(oriData); 
+
+		uint globalIndxEnd = cellRank * _maxNodePerCell + curActCount-1; // old end
 		uint globalIndexDel = cellRank * _maxNodePerCell + delIndx;
 		int shiftValue ; 
-		shiftValue=1 ; 
-		if (globalIndexDel==globalIndxEnd){  // to not loose the last apical node
-			shiftValue=-1 ; 
-		}
-		if (_memNodeType[globalIndexDel]==apical1) {
-			globalIndexDel=globalIndexDel+shiftValue ; 
-		}
-		for (uint i =globalIndexDel+1; i<=globalIndxEnd; i++) {
-			_isActiveAddr[i-1] = _isActiveAddr[i];
-			_xPosAddr[i-1] = _xPosAddr[i];
-			_yPosAddr[i-1] = _yPosAddr[i];
-			_adhIndxAddr[i-1] = _adhIndxAddr[i];
-			_memNodeType[i-1]=_memNodeType[i] ; 
-		}
-		 _isActiveAddr[globalIndxEnd]=false ;
-		 _adhIndxAddr[globalIndxEnd] = -1;
-		 _memNodeType[globalIndxEnd]=notAssigned1 ; 
+		// we only shift the candidate node for division, if it is an apical node. 
+		//If the apical node is at the end of indexing, the next for loop becomes complicated and we simply delete the node on the other side.
+		//shiftValue=1 ; 
+		//if (globalIndexDel==globalIndxEnd){ 			
+		//	shiftValue=-1 ; 
+	//	}
+	//	if (_memNodeType[globalIndexDel]==apical1) {
+	//		globalIndexDel=globalIndexDel+shiftValue ; 
+	//		delIndx=delIndx+shiftValue ; 
+	//	}
 
-		return (curActCount - 1);
+		if (delIndx<iDApical) {
+			iDApical=iDApical-1 ;
+		}
+
+		if (delIndx<iDBasal) {
+			iDBasal=iDBasal-1 ;
+		}
+
+		if (delIndx==iDApical || delIndx==iDBasal) {
+
+			return thrust::make_tuple(curActCount , iDApical,iDBasal);
+		}
+		else {
+
+			for (uint i =globalIndexDel+1; i<=globalIndxEnd; i++) {
+				_isActiveAddr[i-1] = _isActiveAddr[i];
+				_xPosAddr[i-1] = _xPosAddr[i];
+				_yPosAddr[i-1] = _yPosAddr[i];
+				_adhIndxAddr[i-1] = _adhIndxAddr[i];
+				_memNodeType[i-1]=_memNodeType[i] ; 
+			}
+		 	_isActiveAddr[globalIndxEnd]=false ;
+		 	_adhIndxAddr[globalIndxEnd] = -1;
+		 	_memNodeType[globalIndxEnd]=notAssigned1 ; 
+
+			return thrust::make_tuple(curActCount-1 , iDApical,iDBasal);
+		}
 	}
 };
 
@@ -2888,6 +3002,8 @@ struct CellInfoVecs {
 	thrust::device_vector<double> nucleusLocX; //Ali 
 	thrust::device_vector<double> nucleusLocY; //Ali 
 	thrust::device_vector<int> apicalNodeCount; //Ali 
+	thrust::device_vector<int> ringApicalId; //Ali 
+	thrust::device_vector<int> ringBasalId; //Ali 
 
 	thrust::device_vector<double> HertwigXdir; //A&A
 	thrust::device_vector<double> HertwigYdir; //A&A
@@ -3278,6 +3394,7 @@ class SceCells {
 	void applyMemForce_M(bool cellPolar, bool subCellPolar);
 	void applyVolumeConstraint();
 	void computeLagrangeForces();
+	void computeContractileRingForces();
 
 	void applySceCellDisc_M();
 
@@ -3390,6 +3507,7 @@ class SceCells {
 	CVector calDivDir_MajorAxis(CVector oldCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis);
 
+	std::pair <int, int>  calApicalBasalRingIds (CVector divDir, CVector oldCellCenter, vector<CVector>& membrNodes, vector<MembraneType1> & nodeTypeIndxDiv);
 	CVector calDivDir_ApicalBasal(CVector oldCellCenter, vector<CVector>& membrNodes,
 			double& lenAlongMajorAxis, vector<MembraneType1> & nodeTypeIndxDiv);
 	double calLengthAlongHertwigAxis(CVector divDir, CVector oldCellCenter, vector<CVector>& membrNodes); //A&A

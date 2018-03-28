@@ -345,10 +345,10 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
 		//for open ECM.
-	if (index == 0 ) {
+	if (index == 0 || index==int(_numNodes/2) ) {
 		return thrust::make_tuple(forceRightX,forceRightY,forceRight) ;
    }
-   else if (index ==_numNodes-1) {
+   else if (index ==_numNodes-1 || index==(int(_numNodes/2)-1) ) {
 		return thrust::make_tuple(forceLeftX,forceLeftY,forceLeft) ;
 	}
 	else {
@@ -465,12 +465,12 @@ struct MoveNodeECM: public thrust::unary_function<DDDDI,DD> {
 	double fy= 	thrust:: get <3> (dDDDI) ;
 	int    index=    thrust::get<4>(dDDDI) ; 
 
-	if (index != 0 && index!=_numNodes-1) {
-		return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
+	if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
+		return thrust::make_tuple (locXOld, locYOld) ;
 	}
 	else {
 
-		return thrust::make_tuple (locXOld, locYOld) ;
+		return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
 	}
 	}
 }; 
@@ -574,7 +574,7 @@ struct CalBendECM: public thrust::unary_function<IDD, DDDDDD> {
 							bendMultiplier = -bendMultiplier;
 						}
 						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
-                                                bendCenterX= bendMultiplier* (term2x - term1x + term3x - term4x)/ term0 ;
+                        bendCenterX= bendMultiplier* (term2x - term1x + term3x - term4x)/ term0 ;
 						bendRightX = bendMultiplier * (term4x - term2x) / term0;
 						bendLeftY = bendMultiplier * (term1y - term3y) / term0;
 						bendCenterY=bendMultiplier* (term2y - term1y + term3y - term4y)/ term0;

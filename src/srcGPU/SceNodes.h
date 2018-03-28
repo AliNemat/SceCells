@@ -97,8 +97,9 @@ typedef thrust::tuple<int, int> Int2;
 typedef thrust::tuple<uint, uint> Tuint2;
 typedef thrust::tuple<uint, uint, uint> Tuint3;
 typedef thrust::tuple<uint, uint, uint, double, double, double> Tuuuddd;
-typedef thrust::tuple<uint, uint, uint > Tuuu; // Ali
+typedef thrust::tuple<uint, uint, uint, int, int> TuuuII; // Ali
 typedef thrust::tuple<uint, uint, uint, double, double> Tuuudd;
+typedef thrust::tuple<uint, uint, uint, double, double,int ,int > TuuuddII;
 
 
 struct SubApicalInfoEachCell{

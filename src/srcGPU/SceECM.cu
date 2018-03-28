@@ -85,7 +85,7 @@ int numberNodes_ECM ;
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
  
-readCoord_ECM.open("./resources/coordinate_ECM7.txt") ;
+readCoord_ECM.open("./resources/coordinate_ECM8.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }
@@ -430,7 +430,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=500) { 
+               if (lastPrintECM>=5000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM-1) + ".vtk";

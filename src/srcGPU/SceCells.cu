@@ -83,7 +83,7 @@ double DefaultMembraneStiff() {
 
 __device__
 double calExtForce(double  curTime) {
-		return max(curTime * F_Ext_Incline_M2,0.15);
+		return min(curTime * F_Ext_Incline_M2,0.15);
 }
 //Ali
 __device__
@@ -754,6 +754,8 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.nucleusLocX.resize(allocPara_m.maxCellCount);  //Ali 
 	cellInfoVecs.nucleusLocY.resize(allocPara_m.maxCellCount); //Ali 
 	cellInfoVecs.apicalNodeCount.resize(allocPara_m.maxCellCount,0); //Ali 
+	cellInfoVecs.ringApicalId.resize(allocPara_m.maxCellCount,-1); //Ali 
+	cellInfoVecs.ringBasalId.resize(allocPara_m.maxCellCount,-1); //Ali 
 
         cellInfoVecs.HertwigXdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
 	cellInfoVecs.HertwigYdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
@@ -1510,6 +1512,8 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	applyMemForce_M(cellPolar,subCellPolar);
 	applyVolumeConstraint();
+
+	computeContractileRingForces() ; 
 	std::cout << "     *** 4 ***" << endl;
 	std::cout.flush();
 
@@ -1913,7 +1917,7 @@ void SceCells::findHertwigAxis() {
 		vector<CVector> membrNodes;
 		vector<CVector> intnlNodes;
 		vector<MembraneType1> nodeTypeIndxDiv ; 
-
+		std::pair <int ,int > ringIds ; 
 
 		//obtainMembrAndIntnlNodes(i, membrNodes, intnlNodes);
 		obtainMembrAndIntnlNodesPlusNodeType(i, membrNodes, intnlNodes,nodeTypeIndxDiv); // Ali 
@@ -1930,7 +1934,11 @@ void SceCells::findHertwigAxis() {
 
                cellInfoVecs.HertwigXdir[cellRank]=divDir.x ; 
                cellInfoVecs.HertwigYdir[cellRank]=divDir.y ; 
-               
+       ringIds =calApicalBasalRingIds(divDir, oldCellCenter, membrNodes,nodeTypeIndxDiv); //Ali
+       		   // it is local membrane id ;  
+               cellInfoVecs.ringApicalId[cellRank]=ringIds.first ; 
+               cellInfoVecs.ringBasalId [cellRank]=ringIds.second ;
+
                std::cout<<cellInfoVecs.HertwigXdir[cellRank]<<"HertwigXdir Thrust" <<std::endl;  
                std::cout<<cellInfoVecs.HertwigYdir[cellRank]<<"HertwigYdir Thrust" <<std::endl;  
 
@@ -2273,11 +2281,12 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 //		}
 //		exit (EXIT_FAILURE) ; 
 //	}
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	//double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+	//		- growthAuxData.prolifDecay
+	//				* (growthAuxData.grthProgrEndCPU
+	//						- growthAuxData.grthPrgrCriVal_M_Ori);
 
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
 
 		thrust::transform(
 			thrust::make_zip_iterator(
@@ -2813,6 +2822,75 @@ thrust::transform(
 
 
 }
+void SceCells::computeContractileRingForces() {
+
+
+	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0) ; 
+	double* nodeLocXAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocX[0]));
+	double* nodeLocYAddr = thrust::raw_pointer_cast(
+			&(nodes->getInfoVecs().nodeLocY[0]));
+
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
+
+
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+														thrust::make_permutation_iterator(
+									cellInfoVecs.ringApicalId.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                            thrust::make_permutation_iterator(
+									cellInfoVecs.ringBasalId.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+														thrust::make_permutation_iterator(
+									cellInfoVecs.ringApicalId.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                                                        thrust::make_permutation_iterator(
+									cellInfoVecs.ringBasalId.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+									   nodes->getInfoVecs().nodeVelY.begin())),
+			AddContractileRingForces(maxAllNodePerCell,nodeLocXAddr, nodeLocYAddr, grthPrgrCriVal_M));
+
+
+
+}
+
 
 void SceCells::BC_Imp_M() {
 
@@ -3687,11 +3765,12 @@ bool SceCells::decideIfGoingToDivide_M() {
 //A&A
 bool SceCells::decideIfAnyCellEnteringMitotic() {
 
-        double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+    //    double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+	//		- growthAuxData.prolifDecay
+	//				* (growthAuxData.grthProgrEndCPU
+	//						- growthAuxData.grthPrgrCriVal_M_Ori);
 
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.growthProgress.begin(),
@@ -3701,8 +3780,8 @@ bool SceCells::decideIfAnyCellEnteringMitotic() {
 							cellInfoVecs.growthProgressOld.begin()))
 					+ allocPara_m.currentActiveCellCount,
 			cellInfoVecs.isEnteringMitotic.begin(),
-			//CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
-			CompuIsEnteringMitotic_M(0.98)); // Ali for cross section modeling 
+			CompuIsEnteringMitotic_M(grthPrgrCriVal_M));
+			//CompuIsEnteringMitotic_M(0.98)); // Ali for cross section modeling 
 	// sum all bool values which indicate whether the cell is going to divide.
 	// toBeDivideCount is the total number of cells going to divide.
 	divAuxData.toEnterMitoticCount = thrust::reduce(cellInfoVecs.isEnteringMitotic.begin(),
@@ -4924,15 +5003,23 @@ void SceCells::addMembrNodes_M() {
 							cellInfoVecs.maxTenIndxVec.begin(),
 							cellInfoVecs.activeMembrNodeCounts.begin(),
 							cellInfoVecs.maxTenRiMidXVec.begin(),
-							cellInfoVecs.maxTenRiMidYVec.begin())),
+							cellInfoVecs.maxTenRiMidYVec.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(iBegin,
 							cellInfoVecs.maxTenIndxVec.begin(),
 							cellInfoVecs.activeMembrNodeCounts.begin(),
 							cellInfoVecs.maxTenRiMidXVec.begin(),
-							cellInfoVecs.maxTenRiMidYVec.begin()))
+							cellInfoVecs.maxTenRiMidYVec.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin()))
 					+ curAcCCount, cellInfoVecs.isMembrAddingNode.begin(),
-			cellInfoVecs.activeMembrNodeCounts.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin())),
 			AddMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
 					growthAuxData.nodeXPosAddress,
 					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr, growthAuxData.memNodeType1Address),
@@ -4948,13 +5035,21 @@ void SceCells::delMembrNodes_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(iBegin,
 							cellInfoVecs.minTenIndxVec.begin(),
-							cellInfoVecs.activeMembrNodeCounts.begin())),
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin())),
 			thrust::make_zip_iterator(
 					thrust::make_tuple(iBegin,
 							cellInfoVecs.maxTenIndxVec.begin(),
-							cellInfoVecs.activeMembrNodeCounts.begin()))
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin()))
 					+ curAcCCount, cellInfoVecs.isMembrRemovingNode.begin(),
-			cellInfoVecs.activeMembrNodeCounts.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							cellInfoVecs.activeMembrNodeCounts.begin(),
+							cellInfoVecs.ringApicalId.begin(),
+							cellInfoVecs.ringBasalId.begin())),
 			DelMemNode(maxNodePerCell, growthAuxData.nodeIsActiveAddress,
 					growthAuxData.nodeXPosAddress,
 					growthAuxData.nodeYPosAddress, growthAuxData.adhIndxAddr,growthAuxData.memNodeType1Address),
@@ -5347,6 +5442,37 @@ CVector SceCells::calDivDir_ApicalBasal(CVector center,
 	lenAlongMajorAxis = minDiff;
 	return minorAxisDir;
 }
+
+std::pair <int ,int> SceCells::calApicalBasalRingIds(CVector divDir, CVector center,vector<CVector>& membrNodes, vector<MembraneType1> & nodeTypeIndxDiv) {
+
+	int idMin, idMax ; 
+	CVector splitDir = divDir.rotateNintyDeg_XY_CC();
+
+	double min = 0, max = 0;
+	for (uint j = 0; j < membrNodes.size(); j++) {
+		CVector tmpDir2 = membrNodes[j] - center;
+		CVector tmpUnitDir2 = tmpDir2.getUnitVector();
+		double tmpVecProduct = splitDir * tmpUnitDir2;
+		if (tmpVecProduct < min) {
+			min = tmpVecProduct;
+			idMin=j ; 
+		}
+		if (tmpVecProduct > max) {
+			max = tmpVecProduct;
+			idMax=j ; 
+		}
+	}
+	cout << " contractile node location is " << membrNodes[idMin].x << " ," << membrNodes[idMin].y << endl ; 
+	cout << " contractile node location is " << membrNodes[idMax].x << " ," << membrNodes[idMax].y << endl ; 
+
+	if (nodeTypeIndxDiv[idMin]==apical1) {
+		return make_pair(idMin,idMax) ;
+	} else {
+
+		return make_pair(idMax,idMin) ;
+	}
+}
+
 
 //A&A
 double SceCells::calLengthAlongHertwigAxis(CVector divDir, CVector cellCenter,
@@ -5828,11 +5954,12 @@ void SceCells::applySceCellDisc_M() {
 	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeIsActive[0]));
 
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	//double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+	//		- growthAuxData.prolifDecay
+	//				* (growthAuxData.grthProgrEndCPU
+	//						- growthAuxData.grthPrgrCriVal_M_Ori);
 
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
@@ -5895,11 +6022,12 @@ void SceCells::applyNucleusEffect() {
 	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
 	thrust::counting_iterator<uint> iBegin(0);
 
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	//double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
+	//		- growthAuxData.prolifDecay
+	//				* (growthAuxData.grthProgrEndCPU
+	//						- growthAuxData.grthPrgrCriVal_M_Ori);
 
+	double grthPrgrCriVal_M = growthAuxData.grthPrgrCriVal_M_Ori; 
 	thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(
