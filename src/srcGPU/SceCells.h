@@ -950,11 +950,11 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 			
 			if (cellType==bc && memNodeType==lateral1 && cellCenterX> _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX +fExt  ;
+				velX = velX -fExt  ;
 			}
 			if (cellType==bc && memNodeType==lateral1  && cellCenterX< _tissueCenterX) {
 				fExt=calExtForce (_time) ;  
-				velX = velX -fExt  ;
+				velX = velX +fExt  ;
 			}
 
 			return thrust::make_tuple(velX, velY);
@@ -1646,7 +1646,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 		if (curActiveMembrNode < _bound   && LengthMax>0.5 ) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
-			return thrust::make_tuple(false, 0);
+			return thrust::make_tuple(true, 0);
 		}
 		//	else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
 		//	return thrust::make_tuple(true, 0);
@@ -1676,7 +1676,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.08 ) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
-			return thrust::make_tuple(false, progress); 
+			return thrust::make_tuple(true, progress); 
 		} 
 		
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
