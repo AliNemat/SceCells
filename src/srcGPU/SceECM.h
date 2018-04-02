@@ -81,6 +81,7 @@ thrust::device_vector<double> fBendRightY ;
 
 thrust::device_vector<double> totalForceECMX ; 
 thrust::device_vector<double> totalForceECMY ;
+thrust::device_vector<EType>  peripORexcm ;
 
         void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
 };
@@ -175,10 +176,11 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	 int _numNodes_ECM ;
 	 double _dt ; 
 	 double _Damp_Coef ;
-	 bool _isInitPhase ; 
-	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef, bool isInitPhase) :
+	 bool _isInitPhase ;
+	 EType*  _peripORexcmAddr ; 
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef, bool isInitPhase, EType * peripORexcmAddr) :
 				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM),_dt(dt),
-			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase)	{
+			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase), _peripORexcmAddr(peripORexcmAddr)	{
 	}
 	__device__ DDTI  operator()(const IDDBT & iDDBT) const {
 	
@@ -203,8 +205,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	double fAdhMemECMX=0.0 ; 
 	double fAdhMemECMY=0.0  ; 
 	int    adhPairECM=-1 ; //no adhere Pair
-	int   iPair=-1 ; 
-	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell) {
+	int   iPair=-1 ;
+	double smallNumber=0.000001; 
+	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell && (nodeType==basal1 || nodeType==apical1)) {
       //  if (_isInitPhase==true) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
@@ -216,16 +219,23 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 					distMinY=(locY_ECM-locY) ; 
 					iPair=i ; 
 				}
-				fMorse=calMorse_ECM(dist);  
+				fMorse=calMorse_ECM(dist);
+				//if (abs(fMorse)>smallNumber  && _peripORexcmAddr[i]==excm ){
+				//	nodeType=basal1 ;
+			//	}
+
+			//	if (abs(fMorse)>smallNumber  && _peripORexcmAddr[i]==perip ){
+			//		nodeType=apical1 ;
+			//	}
 				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
 				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 				fTotalMorse=fTotalMorse+fMorse ; 
 			}
 
-			if (fTotalMorse!=0.0) {
-				nodeType=basal1 ; 
-			}
-			if (IsValidAdhPair(distMin)&& iPair!=-1) {
+			//if (fTotalMorse!=0.0) {
+			//	nodeType=basal1 ; 
+		//	}
+			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
 
         		fAdhMemECM=CalAdhECM(distMin) ; 
 

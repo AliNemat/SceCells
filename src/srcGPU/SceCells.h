@@ -189,8 +189,8 @@ struct isActiveNoneBdry {
 struct MaxWInfo: public thrust::binary_function<DUiDDD, DUiDDD, DUiDDD> {
 	__host__ __device__ DUiDDD operator()(const DUiDDD& data1,
 			const DUiDDD& data2) {
-		double num1 = thrust::get<0>(data1);
-		double num2 = thrust::get<0>(data2);
+		double num1 = thrust::get<4>(data1); // choose the max distance not the maximum tension
+		double num2 = thrust::get<4>(data2);
 		if (num1 > num2) {
 			return data1;
 		} else {
@@ -524,13 +524,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_subMembPolar) { // if # 6 s
 				if (cellType==pouch && memType==lateral1 ) { 
-					actinLevel=1*kStiff ;
+					actinLevel=2*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=1.2*kStiff ; 
+					 actinLevel=0.5*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ;
+					 actinLevel=0.5*kStiff ;
 				}
 
 
@@ -685,7 +685,7 @@ struct AssignMemNodeType: public thrust::unary_function<BTUiUi, TI> {
 		MembraneType1   nodeType= thrust::get<1>(bTUiUi); 
 		uint            nodeRank = thrust::get<2>(bTUiUi) ; // node rank in each cell 
 		uint            activeMembrCount = thrust::get<3>(bTUiUi) ; 
-
+/*
 		if (isActive == false || nodeRank >= activeMembrCount) { 
 			return thrust::make_tuple(notAssigned1,0);
 		} else if(nodeType==lateral1) { 
@@ -696,9 +696,30 @@ struct AssignMemNodeType: public thrust::unary_function<BTUiUi, TI> {
 			}
 				else {
 					return thrust::make_tuple(apical1,1) ; 
-			}
+		}
+*/
+
+		if(nodeType==apical1) { 
+			return thrust::make_tuple( nodeType,1) ;
+		}
+		else {
+			return thrust::make_tuple( nodeType,0) ;
 
 		}
+		/*
+		if (isActive == false || nodeRank >= activeMembrCount) { 
+			return thrust::make_tuple(notAssigned1,0);
+		} else if(nodeType==apical1) { 
+			return thrust::make_tuple( apical1,1) ; 
+			}
+			else if (nodeType==basal1) {
+				return thrust::make_tuple(basal1,0) ; 
+				}
+				else {
+					return thrust::make_tuple(lateral1,0) ; 
+		}
+		*/
+	}
 
 }; 
 
@@ -949,11 +970,11 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 		}else {
 			
 			if (cellType==bc && memNodeType==lateral1 && cellCenterX> _tissueCenterX) {
-				fExt=calExtForce (_time) ;  
+				fExt=0 ; // calExtForce (_time) ;  
 				velX = velX -fExt  ;
 			}
 			if (cellType==bc && memNodeType==lateral1  && cellCenterX< _tissueCenterX) {
-				fExt=calExtForce (_time) ;  
+				fExt=0 ; //calExtForce (_time) ;  
 				velX = velX +fExt  ;
 			}
 
@@ -998,7 +1019,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		double kStiffArea=0.015 ;
+		double kStiffArea=0.1 ;       //0.015 ;
 		double cellAreaDesire ; 
 		double posX;
 		double posY;
@@ -1108,7 +1129,7 @@ struct AddContractileRingForces: public thrust::unary_function<DIIUiUiDD, CVec2>
 		int index = cellRank * _maxNodePerCell + nodeRank;
 		int cellGlobalApicalId=cellRank * _maxNodePerCell+ cellLocalApicalId ; 
 		int cellGlobalBasalId =cellRank * _maxNodePerCell+ cellLocalBasalId ; 
-		double kContract=10 ;
+		double kContract=0 ; //10 ;
 		double fX= 0 ; 
 		double fY=0 ; 
 
@@ -1643,7 +1664,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double LengthMax=thrust::get<2>(uiddd); //Ali
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound   && LengthMax>0.5 ) {
+		if (curActiveMembrNode < _bound   && LengthMax>0.4 ) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
 			return thrust::make_tuple(true, 0);
@@ -1674,7 +1695,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.08 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.1 ) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
 			return thrust::make_tuple(true, progress); 
 		} 
@@ -2636,13 +2657,12 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 	double _lowerLimit, _upperLimit;
 	double _minY,_maxY ; 
 	uint _seed;
-	thrust::default_random_engine rng;
+	//thrust::default_random_engine rng;
 	thrust::uniform_real_distribution<double> dist;
-	thrust::uniform_real_distribution<double> dist2;
+//	thrust::uniform_real_distribution<double> dist2;
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
 	__host__ __device__ RandomizeGrow_M(double minY, double maxY, double low, double high, uint seed) :
-			_minY(minY),_maxY(maxY),_lowerLimit(low), _upperLimit(high), _seed(seed), dist(_lowerLimit,
-					_upperLimit), dist2(0, 2 * acos(-1.0)) {
+			_minY(minY),_maxY(maxY),_lowerLimit(low), _upperLimit(high), _seed(seed) {
 	}
 	__host__ __device__ CVec3Bool operator()(const TypeCVec3BoolInt &inputInfo) {
 		ECellType  cellType= thrust::get<0>(inputInfo);
@@ -2650,19 +2670,21 @@ struct RandomizeGrow_M: public thrust::unary_function<TypeCVec3BoolInt, CVec3Boo
 		double centerCellX = thrust::get<2>(inputInfo);
 		double centerCellY = thrust::get<3>(inputInfo);
 		bool isInitBefore = thrust::get<4>(inputInfo);
+		uint cellRank = thrust::get<5>(inputInfo);
 		if (isInitBefore) {
 			return thrust::make_tuple(curSpeed, centerCellX, centerCellY, true);
 		} else {
 			if (cellType==pouch) {
-				uint cellRank = thrust::get<4>(inputInfo);
+				thrust:: minstd_rand rng ; 
+				thrust::uniform_real_distribution<double> dist3(_lowerLimit,_upperLimit);
 				uint seedNew = _seed + cellRank;
 				rng.discard(seedNew);
-				double distanceY=abs (centerCellY-_minY) ; 
+				//double distanceY=abs (centerCellY-_minY) ; 
 		//		double randomNum1 = 1.89*exp(-2*distanceY/(_maxY-_minY))*dist(rng);
-				double randomNum1 =dist(rng);
+				double randomNum1 =dist3(rng);
 			
-				rng.discard(seedNew);
-				double randomNum2 = dist2(rng);
+				//rng.discard(seedNew);
+  	//			double randomNum2 = dist2(rng);
 				//double xDir = cos(randomNum2);
 				//double yDir = sin(randomNum2);
 				return thrust::make_tuple(randomNum1, centerCellX,centerCellY, true);

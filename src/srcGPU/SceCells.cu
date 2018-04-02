@@ -1466,9 +1466,15 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 	}
 
  	if (curTime==InitTimeStage) {
+
+		totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
         uint maxTotalNodes=nodes->getInfoVecs().nodeLocX.size() ; 
 		cout << " in the initial time step the total number of nodes in the domain is equal to " << maxTotalNodes << endl ; 
 		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell,maxTotalNodes);
+
+ 		thrust:: copy (eCM.memNodeType.begin(),   eCM.memNodeType.begin()+    totalNodeCountForActiveCells,nodes->getInfoVecs().memNodeType1.begin()) ;
+
 		cout << " I initialized the ECM module" << endl ;
 		lastPrintNucleus=10000000  ; //just a big number 
 		outputFrameNucleus=0 ;
@@ -3035,7 +3041,7 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), thrust::plus<int>());
 int sizeApical=cellInfoVecs.apicalNodeCount.size() ; 
 
-for (int i=0 ; i<25; i++) {
+for (int i=0 ; i<allocPara_m.currentActiveCellCount; i++) {
 	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
 }
 
@@ -3164,7 +3170,7 @@ void SceCells::computeNucleusLoc() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
 							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
-for (int i=0 ; i<25 ; i++) {
+for (int i=0 ; i<allocPara_m.currentActiveCellCount ; i++) {
 
 	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
 	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
@@ -3409,6 +3415,13 @@ thrust::device_vector<double>::iterator  MinY_Itr=thrust::min_element(nodes->get
 							cellInfoVecs.isRandGrowInited.begin())),
 			RandomizeGrow_M(minY_Tisu,maxY_Tisu,growthAuxData.randomGrowthSpeedMin,
 					growthAuxData.randomGrowthSpeedMax, seed));
+	for (int i=0 ; i<3 ;  i++) {
+	cout << "cell growth speed for rank " <<i << " is " << cellInfoVecs.growthSpeed [i] << endl ; 
+	}
+	cout << "the min growth speed is " << growthAuxData.randomGrowthSpeedMin << endl ; 
+	cout << "the max growth speed is " << growthAuxData.randomGrowthSpeedMax << endl ; 
+
+
 }
 
 void SceCells::updateGrowthProgress_M() {

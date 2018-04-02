@@ -622,8 +622,8 @@ RawDataInput_M CellInitHelper::generateRawInput_M() {
 //Ali to make the initial progree of all nodes zero
 
  
-		rawData.cellGrowProgVec.push_back(randNum);
-//		rawData.cellGrowProgVec.push_back(0.7);
+	//	rawData.cellGrowProgVec.push_back(randNum);
+		rawData.cellGrowProgVec.push_back(0.7);
 		ECellType eCellTypeTmp=ForReadingData2.eCellTypeV.at(i);  
 		rawData.cellsTypeCPU.push_back(eCellTypeTmp);
 	}
@@ -873,7 +873,7 @@ vector<CVector> CellInitHelper::generateInitMembrNodes(CVector& center,
 	for (uint i = 0; i < initMembrNodeCount; i++) {
 		CVector node;
 		node.x = initRadius * cos(unitAngle * i) + center.x;
-		node.y = initRadius * sin(unitAngle * i) + center.y;
+		node.y = initRadius * sin(unitAngle * i) + center.y;  //actual assignment
 		initMembrNodes.push_back(node);
 	}
 	return initMembrNodes;

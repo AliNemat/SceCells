@@ -79,6 +79,7 @@ maxMembrNodePerCell= maxMembrNodePerCellECM ;
 maxTotalNodes=maxTotalNodesECM ; //Ali 
 
 
+
 std::fstream readCoord_ECM ;
 std::fstream readInput_ECM ;  
 int numberNodes_ECM ; 
@@ -175,6 +176,7 @@ numNodesECM= numberNodes_ECM ; //(eCMMaxX-eCMMinX)/eCMMinDist ;
 
 
 indexECM.resize(numNodesECM,0) ;
+peripORexcm.resize(numNodesECM,perip) ;
 
 nodeECMLocX.resize(numNodesECM,0.0) ;
 nodeECMLocY.resize(numNodesECM,0.0) ;
@@ -203,12 +205,39 @@ totalForceECMY.resize(numNodesECM,0.0);
 memNodeType.resize(maxTotalNodes,notAssigned1) ; 
 
 thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
+thrust::fill (peripORexcm.begin(),peripORexcm.begin()+int(numNodesECM/2),excm );
  
 thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ; 
 thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
 for (int i=0;  i<nodeECMLocX.size() ;  i++) {
 	cout<< nodeECMLocX[i]<<endl; 
-} 
+}
+
+for (int i=0 ; i<maxTotalNodes ; i++) {
+	int nodeRankPerCell=i%maxAllNodePerCell ;
+	if (nodeRankPerCell<7) {
+		memNodeType[i]=lateral1 ;
+	}
+	else if (nodeRankPerCell<21) {
+		memNodeType[i]=apical1 ;
+	}
+	else if (nodeRankPerCell<35) {
+		memNodeType[i]=lateral1 ;
+	}
+	else if (nodeRankPerCell<49) {
+		memNodeType[i]=basal1 ;
+	}
+	else if (nodeRankPerCell<56) {
+		memNodeType[i]=lateral1 ;
+	}
+	else {
+		memNodeType[i]=notAssigned1;
+	}
+}
+
+
+
+
 
 
 } //initilaization function finished
@@ -242,7 +271,10 @@ double* nodeECMLocXAddr= thrust::raw_pointer_cast (
 double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 			&nodeECMLocY[0]) ; 
 
+EType* peripORexcmAddr= thrust::raw_pointer_cast (
+			&peripORexcm[0]) ; 
 
+memNodeType.resize(maxTotalNodes,notAssigned1) ; 
 
 // move the nodes of epithelial cells 
 
@@ -271,7 +303,7 @@ double* nodeECMLocYAddr= thrust::raw_pointer_cast (
 					nodeDeviceLocY.begin(),
 					memNodeType.begin(),
 					adhPairECM_Cell.begin())),
-				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase));
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase,peripORexcmAddr));
 
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (

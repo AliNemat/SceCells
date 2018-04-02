@@ -2328,7 +2328,8 @@ void SceNodes::applySceForcesDisc_M() {
 		*/
 //		if(isInitPhase) {
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
-				if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+				//if (infoVecs.nodeIsActiveHost[i]==true && (i%maxNodePerCell)<maxMembNode ) { 
+				  if (infoVecs.memNodeType1Host[i]==lateral1) { 
 					cellRankTmp1=i/maxNodePerCell ; 
 		 			distMinP2=10000 ; // large number
 	  				findAnyNode=false ; 
@@ -2336,7 +2337,8 @@ void SceNodes::applySceForcesDisc_M() {
 					
 						cellRankTmp2=j/maxNodePerCell ; 
 						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
-			 				if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+			 				//if (infoVecs.nodeIsActiveHost[j]==true && (j%maxNodePerCell)<maxMembNode ){
+				  			if (infoVecs.memNodeType1Host[i]==lateral1) { 
 								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
 			         	    	pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 
@@ -2366,9 +2368,9 @@ void SceNodes::applySceForcesDisc_M() {
 					infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
 				}
 
-				if (findAnyNode) {
-					infoVecs.memNodeType1Host[i]=lateral1  ;
-				}
+				//if (findAnyNode) {
+				//	infoVecs.memNodeType1Host[i]=lateral1  ;
+			//	}
 		 	}
 	 	  }
 		  cout << " I am ready to copy the data in adhision function to the GPU " << endl ; 
