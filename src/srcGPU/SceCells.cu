@@ -1996,8 +1996,8 @@ void SceCells::applyMemForce_M() {
  //Ali
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
         
-       //Ali 
-        
+				/* Phillip: remove GPU to host transfer
+       //Ali         
         thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
                                               nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
         thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
@@ -2016,7 +2016,9 @@ void SceCells::applyMemForce_M() {
         cout<<"The minimum location in X is="<<MinX<< endl;  
         cout<<"The maximum location in X is="<<MaxX<< endl;  
         cout<<"The minimum location in Y is="<<MinY<< endl;  
-        cout<<"The maximum location in Y is="<<MaxY<< endl;  
+        cout<<"The maximum location in Y is="<<MaxY<< endl;
+				*/
+  
         //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
