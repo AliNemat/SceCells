@@ -1996,8 +1996,8 @@ void SceCells::applyMemForce_M() {
  //Ali
         thrust::fill(cellInfoVecs.Cell_Time.begin(),cellInfoVecs.Cell_Time.begin() +allocPara_m.currentActiveCellCount,curTime);
         
-       //Ali 
-        
+				/* Phillip: remove GPU to host transfer
+       //Ali         
         thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
                                               nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount+ totalNodeCountForActiveCells) ;
         thrust::device_vector<double>::iterator  MaxX_Itr=thrust::max_element(nodes->getInfoVecs().nodeLocX.begin()+ allocPara_m.bdryNodeCount,
@@ -2016,7 +2016,9 @@ void SceCells::applyMemForce_M() {
         cout<<"The minimum location in X is="<<MinX<< endl;  
         cout<<"The maximum location in X is="<<MaxX<< endl;  
         cout<<"The minimum location in Y is="<<MinY<< endl;  
-        cout<<"The maximum location in Y is="<<MaxY<< endl;  
+        cout<<"The maximum location in Y is="<<MaxY<< endl;
+				*/
+  
         //Ali 
 	double* nodeLocXAddr = thrust::raw_pointer_cast(
 			&(nodes->getInfoVecs().nodeLocX[0]));
@@ -4672,75 +4674,340 @@ __device__ double calBendMulti_Mitotic(double& angle, uint activeMembrCt, double
 	}
 }
 
+
+
+//Phillip 
+__global__
+void _applySceCellDisc_M(double* nodeLocXAddr, double* nodeLocYAddr, bool* nodeIsActiveAddr,
+					uint totalNodeCountForActiveCells, uint maxAllNodePerCell, uint maxMemNodePerCell, double grthPrgrCriVal_M,
+					uint* activeMembrNodeCounts, uint* activeIntnlNodeCounts, double* growthProgress,
+					double* nodeVelX, double* nodeVelY, double* nodeF_MI_M_x, double* nodeF_MI_M_y, 
+					unsigned threadsPerCell) {
+
+	uint threadId     = blockDim.x * blockIdx.x + threadIdx.x;
+	uint warpId       = threadId / 32;
+	uint warpThreadId = threadId % 32;
+	uint cellsPerWarp = 32 / threadsPerCell;
+	uint cellId       = (warpId / 2 * cellsPerWarp) + (warpThreadId / threadsPerCell);
+
+	if (cellId >= totalNodeCountForActiveCells / maxAllNodePerCell)
+		return;
+
+	uint cellMembrStart = cellId * maxAllNodePerCell;
+	uint cellIntnlStart = cellMembrStart + maxMemNodePerCell;
+	uint cellMembrEnd   = cellMembrStart + activeMembrNodeCounts[cellId];
+	uint cellIntnlEnd   = cellIntnlStart + activeIntnlNodeCounts[cellId];
+
+	//thread-specific values
+	uint threadOffset     = warpThreadId % threadsPerCell;
+	uint threadMembrStart = cellMembrStart + threadOffset;
+	uint threadIntnlStart = cellIntnlStart + threadOffset;
+	double progress       = growthProgress[cellId]; 
+
+	//even warps calculate membrane nodes, while odd internal
+	if (warpId % 2 == 0) {			
+		for (uint i = threadMembrStart; i < cellMembrEnd; i += threadsPerCell) {	
+			double F_MI_M_x = 0;
+			double F_MI_M_y = 0;
+			double oriVelX  = nodeVelX[i];
+			double oriVelY  = nodeVelY[i];        
+			double nodeX    = nodeLocXAddr[i];
+			double nodeY    = nodeLocYAddr[i];
+
+			for (uint j = cellIntnlStart; j < cellIntnlEnd; j++) {
+				double nodeXOther = nodeLocXAddr[j];
+				double nodeYOther = nodeLocYAddr[j]; 
+					
+				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, F_MI_M_x, F_MI_M_y, grthPrgrCriVal_M);							
+			}
+		
+			nodeVelX[i]     = oriVelX;
+			nodeVelY[i]     = oriVelY;
+			nodeF_MI_M_x[i] = F_MI_M_x;
+			nodeF_MI_M_y[i] = F_MI_M_y;	
+		}
+	}
+
+	else {
+		for (uint i = threadIntnlStart; i < cellIntnlEnd; i += threadsPerCell) {
+			double F_MI_M_x = 0;
+			double F_MI_M_y = 0;
+			double oriVelX  = nodeVelX[i];
+			double oriVelY  = nodeVelY[i];        
+			double nodeX    = nodeLocXAddr[i];
+			double nodeY    = nodeLocYAddr[i];
+
+			for (uint j = cellMembrStart; j < cellMembrEnd; j++) {
+				double nodeXOther = nodeLocXAddr[j];
+				double nodeYOther = nodeLocYAddr[j];
+
+				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, grthPrgrCriVal_M);
+			}
+
+			for (uint j = cellIntnlStart; j < cellIntnlEnd; j++) {
+				if (j == i) 
+					continue;
+				
+				double nodeXOther = nodeLocXAddr[j];
+				double nodeYOther = nodeLocYAddr[j];
+			
+				calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, grthPrgrCriVal_M);
+			}
+
+			nodeVelX[i]     = oriVelX;
+			nodeVelY[i]     = oriVelY;
+			nodeF_MI_M_x[i] = F_MI_M_x;
+			nodeF_MI_M_y[i] = F_MI_M_y;	
+		}
+	} 
+} 
+
+//Phillip
 void SceCells::applySceCellDisc_M() {
-	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
-			* allocPara_m.maxAllNodePerCell;
-	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
-	uint maxMemNodePerCell = allocPara_m.maxMembrNodePerCell;
-	thrust::counting_iterator<uint> iBegin(0);
+	double* nodeLocXAddr   = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeLocX.data());
+	double* nodeLocYAddr   = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeLocY.data());
+	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeIsActive.data());
 
-	double* nodeLocXAddr = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeLocX[0]));
-	double* nodeLocYAddr = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeLocY[0]));
-	bool* nodeIsActiveAddr = thrust::raw_pointer_cast(
-			&(nodes->getInfoVecs().nodeIsActive[0]));
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount * allocPara_m.maxAllNodePerCell; 
+	uint maxAllNodePerCell       = allocPara_m.maxAllNodePerCell;
+	uint maxMemNodePerCell       = allocPara_m.maxMembrNodePerCell;
+	double grthPrgrCriVal_M      = growthAuxData.grthProgrEndCPU - growthAuxData.prolifDecay * 
+																	(growthAuxData.grthProgrEndCPU - growthAuxData.grthPrgrCriVal_M_Ori);
 
-	double grthPrgrCriVal_M = growthAuxData.grthProgrEndCPU
-			- growthAuxData.prolifDecay
-					* (growthAuxData.grthProgrEndCPU
-							- growthAuxData.grthPrgrCriVal_M_Ori);
+	uint* activeMembrNodeCounts = thrust::raw_pointer_cast(cellInfoVecs.activeMembrNodeCounts.data());
+	uint* activeIntnlNodeCounts = thrust::raw_pointer_cast(cellInfoVecs.activeIntnlNodeCounts.data());
+	double* growthProgress      = thrust::raw_pointer_cast(cellInfoVecs.growthProgress.data());
+	double* nodeVelX            = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeVelX.data());
+	double* nodeVelY            = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeVelY.data());
+	double* nodeF_MI_M_x        = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeF_MI_M_x.data());
+	double* nodeF_MI_M_y        = thrust::raw_pointer_cast(nodes->getInfoVecs().nodeF_MI_M_y.data());
 
-	thrust::transform(
-			thrust::make_zip_iterator(
-					thrust::make_tuple(
-							thrust::make_permutation_iterator(
-									cellInfoVecs.activeMembrNodeCounts.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							thrust::make_permutation_iterator(
-									cellInfoVecs.activeIntnlNodeCounts.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							make_transform_iterator(iBegin,
-									DivideFunctor(maxAllNodePerCell)),
-							make_transform_iterator(iBegin,
-									ModuloFunctor(maxAllNodePerCell)),
-							thrust::make_permutation_iterator(
-									cellInfoVecs.growthProgress.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin())),
-			thrust::make_zip_iterator(
-					thrust::make_tuple(
-							thrust::make_permutation_iterator(
-									cellInfoVecs.activeMembrNodeCounts.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							thrust::make_permutation_iterator(
-									cellInfoVecs.activeIntnlNodeCounts.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							make_transform_iterator(iBegin,
-									DivideFunctor(maxAllNodePerCell)),
-							make_transform_iterator(iBegin,
-									ModuloFunctor(maxAllNodePerCell)),
-							thrust::make_permutation_iterator(
-									cellInfoVecs.growthProgress.begin(),
-									make_transform_iterator(iBegin,
-											DivideFunctor(maxAllNodePerCell))),
-							nodes->getInfoVecs().nodeVelX.begin(),
-							nodes->getInfoVecs().nodeVelY.begin()))
-					+ totalNodeCountForActiveCells,
-			thrust::make_zip_iterator(
-					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
-							   nodes->getInfoVecs().nodeVelY.begin(),
-							   nodes->getInfoVecs().nodeF_MI_M_x.begin(),  //Ali added for cell pressure calculation 
-							   nodes->getInfoVecs().nodeF_MI_M_y.begin())),// ALi added for cell pressure calculation
-			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
-					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+	//these dimensions are based on GTX Titan X architecture (24 streaming multiprocessors)		
+	unsigned grid_dim, block_dim, threadsPerCell;	
+	unsigned active_cell_count = allocPara_M.currentActiveCellCount;
+
+	if (active_cell_count < 24 * 32) {
+		grid_dim       = 192;	
+		block_dim      = 32 * ((2 * active_cell_count) / 192 + 1);
+		threadsPerCell = 32;
+	}
+
+	else if (active_cell_count < 192 * 8) {
+		grid_dim       = 192;
+		block_dim      = 32 * ((active_cell_count) / 192 + 1);
+		threadsPerCell = 16;
+	}
+
+	else {
+		grid_dim       = (active_cell_count / 8) + 1; 
+		block_dim      = 256; 
+		threadsPerCell = 16;
+	}
+
+	_applySceCellDisc_M<<<grid_dim, block_dim>>> (nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr,
+							totalNodeCountForActiveCells, maxAllNodePerCell, maxMemNodePerCell, grthPrgrCriVal_M,
+							activeMembrNodeCounts, activeIntnlNodeCounts, growthProgress,
+							nodeVelX, nodeVelY, nodeF_MI_M_x, nodeF_MI_M_y, threadsPerCell);
 }
+
+/*
+//Phillip: vectorized load version of kernel operating on 4 nodes from global memory at a time 
+//				-doesn't seem to net any performance gain, but perhaps there is an implementation issue
+
+__global__
+void _applySceCellDisc_M(double* nodeLocXAddr, double* nodeLocYAddr, bool* nodeIsActiveAddr,
+					uint totalNodeCountForActiveCells, uint maxAllNodePerCell, uint maxMemNodePerCell, double grthPrgrCriVal_M,
+					uint* activeMembrNodeCounts, uint* activeIntnlNodeCounts, double* growthProgress,
+					double* nodeVelX, double* nodeVelY, double* nodeF_MI_M_x, double* nodeF_MI_M_y, 
+					unsigned threadsPerCell) {
+
+	uint threadId = blockDim.x * blockIdx.x + threadIdx.x;
+	uint warpId = threadId / 32;
+	uint warpThreadId = threadId % 32;
+	uint cellsPerWarp = 32 / threadsPerCell;
+
+	//each warp pair computes the same cells (one for membrane, one for internal)
+	uint cellId = (warpId / 2 * cellsPerWarp) + (warpThreadId / threadsPerCell);
+
+	if (cellId >= totalNodeCountForActiveCells / maxAllNodePerCell)
+		return;
+
+	uint cellMembrStart = cellId * maxAllNodePerCell;
+	uint cellIntnlStart = cellMembrStart + maxMemNodePerCell;
+	uint cellMembrEnd = cellMembrStart + activeMembrNodeCounts[cellId];
+	uint cellIntnlEnd = cellIntnlStart + activeIntnlNodeCounts[cellId];
+
+	uint threadOffset = warpThreadId % threadsPerCell;
+	uint threadMembrStart = cellMembrStart + threadOffset;
+	uint threadIntnlStart = cellIntnlStart + threadOffset;
+
+	uint cellMembrStartVec;
+	uint cellMembrEndVec;
+	uint cellIntnlStartVec;
+	uint cellIntnlEndVec;	
+
+	double progress = growthProgress[cellId]; 
+
+	//vectorized calculations done in groups of 4, loose nodes on either end must be calculated seperately
+	if (cellIntnlStart % 4 != 0)
+		cellIntnlStartVec = cellIntnlStart + (4 - (cellIntnlStart % 4));
+	else
+		cellIntnlStartVec = cellIntnlStart;			
+
+	if (cellIntnlEnd % 4 != 0)
+		cellIntnlEndVec = cellIntnlEnd - (cellIntnlEnd % 4);
+	else
+		cellIntnlEndVec = cellIntnlEnd;			
+	
+	if (cellMembrStart % 4 != 0)
+		cellMembrStartVec = cellMembrStart + (4 - (cellMembrStart % 4));
+	else
+		cellMembrStartVec = cellMembrStart;
+
+	if (cellMembrEnd % 4 != 0)
+		cellMembrEndVec = cellMembrEnd - (cellMembrEnd % 4);
+	else
+		cellMembrEndVec = cellMembrEnd;
+	
+	//even warps calculate membrane nodes, while odd internal
+	if (warpId % 2 == 0) {			
+		for (uint i = threadMembrStart; i < cellMembrEnd; i += threadsPerCell) {	
+			double F_MI_M_x = 0;
+			double F_MI_M_y = 0;
+			double oriVelX = nodeVelX[i];
+			double oriVelY = nodeVelY[i];        
+			double nodeX = nodeLocXAddr[i];
+			double nodeY = nodeLocYAddr[i];
+
+			//loose nodes at beginning of internal range
+			if (cellIntnlStartVec != cellIntnlStart) {
+				for (uint j = cellIntnlStart; j < cellIntnlStartVec; j++) {
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j]; 
+					
+					calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, F_MI_M_x, F_MI_M_y, grthPrgrCriVal_M);							
+				}
+			}
+
+			//vector-loaded nodes			
+			for (uint j = cellIntnlStartVec; j < cellIntnlEnd; j++) {
+				double4 nodeXOther = reinterpret_cast<double4*>(nodeLocXAddr)[j];
+				double4 nodeYOther = reinterpret_cast<double4*>(nodeLocYAddr)[j]; 
+			
+				calAndAddIB_M2_Vec4(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, F_MI_M_x, F_MI_M_y, grthPrgrCriVal_M);		
+			}
+
+			//loose nodes at end of internal range
+			if (cellIntnlEndVec != cellIntnlEnd) {
+				for (uint j = cellIntnlEndVec; j < cellIntnlEnd; j++) {
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j]; 
+					
+					calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, F_MI_M_x, F_MI_M_y, grthPrgrCriVal_M);
+				}
+			}
+
+			nodeVelX[i] = oriVelX;
+			nodeVelY[i] = oriVelY;
+			nodeF_MI_M_x[i] = F_MI_M_x;
+			nodeF_MI_M_y[i] = F_MI_M_y;	
+		}
+	}
+
+	else {
+		for (uint i = threadIntnlStart; i < cellIntnlEnd; i += threadsPerCell) {
+			double oriVelX = nodeVelX[i];
+			double oriVelY = nodeVelY[i];        
+			double F_MI_M_x = 0;
+			double F_MI_M_y = 0;
+			double nodeX = nodeLocXAddr[i];
+			double nodeY = nodeLocYAddr[i];
+
+			//loose nodes at beginning of membrane range
+			if (cellMembrStartVec != cellMembrStart) {
+				for (uint j = cellMembrStart; j < cellMembrStartVec; j++) {
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j];
+
+					calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, grthPrgrCriVal_M);
+				}
+			}
+		
+			//vector-loaded nodes
+			for (uint j = cellMembrStartVec; j < cellMembrEndVec; j++) {
+				double4 nodeXOther = reinterpret_cast<double4*>(nodeLocXAddr)[j];
+				double4 nodeYOther = reinterpret_cast<double4*>(nodeLocYAddr)[j];
+
+				calAndAddIB_M_Vec4(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, grthPrgrCriVal_M);
+			}
+
+			//loose nodes and end of membrane range
+			if (cellMembrEndVec != cellMembrEnd) {
+				for (uint j = cellMembrEndVec; j < cellMembrEnd; j++) {
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j];
+
+					calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, grthPrgrCriVal_M);
+				}
+			}	
+
+			//loose nodes at beginning of internal range
+			if (cellIntnlStartVec != cellIntnlStart) {
+				for (uint j = cellIntnlStart; j < cellIntnlStartVec; j++) {
+					if (j == i) 
+						continue;
+				
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j];
+			
+					calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, grthPrgrCriVal_M);
+				}
+			}
+
+			//vector-loaded nodes
+			for (uint j = cellIntnlStartVec; j < cellIntnlEndVec; j++) {
+				if (j == i) 
+					continue;
+				
+				double4 nodeXOther = reinterpret_cast<double4*>(nodeLocXAddr)[j];
+				double4 nodeYOther = reinterpret_cast<double4*>(nodeLocYAddr)[j];
+			
+				calAndAddII_M_Vec4(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+								oriVelX, oriVelY, grthPrgrCriVal_M);
+			}
+
+			//loose nodes at end of internal range
+			if (cellIntnlEndVec != cellIntnlEnd) {
+				for (uint j = cellIntnlEndVec; j < cellIntnlEnd; j++) {
+					if (j == i) 
+						continue;
+				
+					double nodeXOther = nodeLocXAddr[j];
+					double nodeYOther = nodeLocYAddr[j];
+			
+					calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+							oriVelX, oriVelY, grthPrgrCriVal_M);
+				}
+			}	
+
+			nodeVelX[i] = oriVelX;
+			nodeVelY[i] = oriVelY;
+			nodeF_MI_M_x[i] = F_MI_M_x;
+			nodeF_MI_M_y[i] = F_MI_M_y;	
+		}
+	} 
+}
+*/
 
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
