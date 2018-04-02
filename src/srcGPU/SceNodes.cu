@@ -2188,49 +2188,94 @@ void SceNodes::applySceForcesDisc() {
 					nodeLocZAddress, nodeGrowProAddr));
 }
 
-void SceNodes::applySceForcesDisc_M() {
-	uint* valueAddress = thrust::raw_pointer_cast(
-			&auxVecs.bucketValuesIncludingNeighbor[0]);
-	double* nodeLocXAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocX[0]);
-	double* nodeLocYAddress = thrust::raw_pointer_cast(&infoVecs.nodeLocY[0]);
-	int* nodeAdhIdxAddress = thrust::raw_pointer_cast(
-			&infoVecs.nodeAdhereIndex[0]);
-	int* membrIntnlAddress = thrust::raw_pointer_cast(
-			&infoVecs.membrIntnlIndex[0]);
-	double* nodeGrowProAddr = thrust::raw_pointer_cast(
-			&infoVecs.nodeGrowPro[0]);
+//Phillip
+__global__ void applySceForcesDisc_M_transform(uint* valueAddr, double* nodeLocXAddr, double* nodeLocYAddr,
+						int* nodeAdhIndex, int* membrIntnlAddr, double* nodeGrowProgAddr,
+						uint* bucketVal, uint* bucketKeys, uint* keyStart, uint* keyEnd, 
+						double* nodeVelX, double* nodeVelY, unsigned inputSize) {
 
-	thrust::transform(
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(auxVecs.keyBegin.begin(),
-									auxVecs.bucketKeys.begin()),
-							make_permutation_iterator(auxVecs.keyEnd.begin(),
-									auxVecs.bucketKeys.begin()),
-							auxVecs.bucketValues.begin(),
-							make_permutation_iterator(infoVecs.nodeLocX.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeLocY.begin(),
-									auxVecs.bucketValues.begin()))),
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(auxVecs.keyBegin.begin(),
-									auxVecs.bucketKeys.begin() + endIndx_M),
-							make_permutation_iterator(auxVecs.keyEnd.begin(),
-									auxVecs.bucketKeys.begin() + endIndx_M),
-							auxVecs.bucketValues.end(),
-							make_permutation_iterator(infoVecs.nodeLocX.begin(),
-									auxVecs.bucketValues.begin() + endIndx_M),
-							make_permutation_iterator(infoVecs.nodeLocY.begin(),
-									auxVecs.bucketValues.begin() + endIndx_M))),
-			make_zip_iterator(
-					make_tuple(
-							make_permutation_iterator(infoVecs.nodeVelX.begin(),
-									auxVecs.bucketValues.begin()),
-							make_permutation_iterator(infoVecs.nodeVelY.begin(),
-									auxVecs.bucketValues.begin()))),
-			AddForceDisc_M(valueAddress, nodeLocXAddress, nodeLocYAddress,
-					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr));
+	unsigned i = blockIdx.x * blockDim.x + threadIdx.x;	
+	bool Lennard_Jones = Is_Lennard_Jones(); 
+	
+	double xRes = 0.0;
+	double yRes = 0.0;
+
+	uint keyIndex = bucketKeys[i];
+	uint begin    = keyStart[keyIndex];
+	uint end      = keyEnd[keyIndex];
+
+	uint myValue = bucketVal[i];
+	double xPos  = nodeLocXAddr[myValue];
+	double yPos  = nodeLocYAddr[myValue];
+
+	nodeAdhIndex[myValue] = -1;
+ 	bool isSuccess        = false;
+	uint index;
+	double dist;
+
+	for (uint j = begin; j < end; j++) {
+		uint nodeRankOther = valueAddr[j];
+
+		if (nodeRankOther == myValue) 
+			continue;
+
+		if (bothMembrDiffCell(myValue, nodeRankOther)) {
+			if (Lennard_Jones)
+				calAndAddInter_M2(xPos, yPos, nodeLocXAddr[nodeRankOther], nodeLocYAddr[nodeRankOther], xRes, yRes);
+				
+			else       
+				calAndAddInter_M(xPos, yPos, nodeLocXAddr[nodeRankOther], nodeLocYAddr[nodeRankOther], xRes, yRes);
+
+			attemptToAdhere(isSuccess, index, dist, nodeRankOther, xPos, yPos, nodeLocXAddr[nodeRankOther], nodeLocYAddr[nodeRankOther]);	
+		}
+
+		if (isSuccess)
+			nodeAdhIndex[myValue] = index;
+	
+		nodeVelX[myValue] = xRes;
+		nodeVelY[myValue] = yRes;
+	}
+}
+
+//Phillip
+void SceNodes::applySceForcesDisc_M() {
+	uint* valueAddress      = thrust::raw_pointer_cast(auxVecs.bucketValuesIncludingNeighbor.data());
+	double* nodeLocXAddress = thrust::raw_pointer_cast(infoVecs.nodeLocX.data());
+	double* nodeLocYAddress = thrust::raw_pointer_cast(infoVecs.nodeLocY.data());
+	int* nodeAdhIdxAddress  = thrust::raw_pointer_cast(infoVecs.nodeAdhereIndex.data());
+	int* membrIntnlAddress  = thrust::raw_pointer_cast(infoVecs.membrIntnlIndex.data());
+	double* nodeGrowProAddr = thrust::raw_pointer_cast(infoVecs.nodeGrowPro.data());
+
+	uint* bucketVals = thrust::raw_pointer_cast(auxVecs.bucketValues.data()); 
+	uint* bucketKeys = thrust::raw_pointer_cast(auxVecs.bucketKeys.data());		
+	uint* keyStart   = thrust::raw_pointer_cast(auxVecs.keyBegin.data());
+	uint* keyEnd     = thrust::raw_pointer_cast(auxVecs.keyEnd.data());		
+	double* nodeVelX = thrust::raw_pointer_cast(infoVecs.nodeVelX.data());
+	double* nodeVelY = thrust::raw_pointer_cast(infoVecs.nodeVelY.data());
+	unsigned size    = endIndx_M;	
+
+	//these dimensions are based on GTX Titan X architecture (24 streaming multiprocessors)
+	unsigned grid_dim, block_dim;
+
+	if (size < 192 * 32) {
+		grid_dim  = size / 32; 	
+		block_dim = 32;	
+	}
+
+	else if (size < 192 * 256) {
+		grid_dim  = 192;	
+		block_dim = 32 * (size / (192 * 32) + 1);
+	}
+
+	else {
+		grid_dim  = (size / 256) + 1;
+		block_dim = 256;
+	}
+	
+	applySceForcesDisc_M_transform<<<grid_dim, block_dim>>>(valueAddress, nodeLocXAddress, nodeLocYAddress,
+					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr,
+					bucketVals, bucketKeys, keyStart, keyEnd,
+					nodeVelX, nodeVelY, size);	
 }
 
 const SceDomainPara& SceNodes::getDomainPara() const {
