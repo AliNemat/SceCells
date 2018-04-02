@@ -2189,7 +2189,7 @@ void SceNodes::applySceForcesDisc() {
 }
 
 //Phillip
-__global__ void applySceForcesDisc_M_transform(uint* valueAddr, double* nodeLocXAddr, double* nodeLocYAddr,
+__global__ void _applySceForcesDisc_M(uint* valueAddr, double* nodeLocXAddr, double* nodeLocYAddr,
 						int* nodeAdhIndex, int* membrIntnlAddr, double* nodeGrowProgAddr,
 						uint* bucketVal, uint* bucketKeys, uint* keyStart, uint* keyEnd, 
 						double* nodeVelX, double* nodeVelY, unsigned inputSize) {
@@ -2272,7 +2272,7 @@ void SceNodes::applySceForcesDisc_M() {
 		block_dim = 256;
 	}
 	
-	applySceForcesDisc_M_transform<<<grid_dim, block_dim>>>(valueAddress, nodeLocXAddress, nodeLocYAddress,
+	_applySceForcesDisc_M<<<grid_dim, block_dim>>>(valueAddress, nodeLocXAddress, nodeLocYAddress,
 					nodeAdhIdxAddress, membrIntnlAddress, nodeGrowProAddr,
 					bucketVals, bucketKeys, keyStart, keyEnd,
 					nodeVelX, nodeVelY, size);	
