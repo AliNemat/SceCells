@@ -2499,7 +2499,7 @@ class SceCells {
 
 	uint totalNodeCountForActiveCells;
 	bool firstTimeReadDpp ; 
-	int lastTimeExchange ; 
+	double  lastTimeExchange ; 
 	int currentActiveCellCountOld ;  //Ali  
 	double dt;
         double Damp_Coef ;   //Ali

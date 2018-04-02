@@ -1448,13 +1448,15 @@ void SceCells::exchSignal(){
 		cout << " I passed the initializtion for signaling module" << endl ; 
 	}
 
-   	lastTimeExchange=lastTimeExchange+dt ; 
+   	lastTimeExchange=lastTimeExchange+dt ;
+	cout << "last time exchange is " << lastTimeExchange << endl ; 
+	cout << "dt is " << dt << endl ;  
    	double exchPeriod=200 ; 
 	if ( lastTimeExchange>exchPeriod) {
 		lastTimeExchange=0 ; 
 		//vector<CVector> cellCentersHost ; 
     	//cellCentersHost=getAllCellCenters();  //Ali
-
+		cout << "I entered the function to update dpp" << endl ; 
 
 		thrust::device_vector<double>::iterator  MinX_Itr=thrust::min_element(cellInfoVecs.centerCoordX.begin(),
                                        									  cellInfoVecs.centerCoordX.begin()+allocPara_m.currentActiveCellCount) ;

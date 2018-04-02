@@ -69,16 +69,17 @@ void Signal::exportGeometryInfo() {
 	cout << "size of node is active in signal module is " << nodeIsActiveHost.size() << endl ; 
 	cout << "max total number of active nodes in signal module is " << maxTotalNumActiveNodes  << endl ; 
 	cout << "max of all nodes per cell in signal module is " << maxAllNodePerCell << endl ; 
-	std :: string  txtFileName="ExportTisuProp_" + patch::to_string(periodCount)+".txt" ; 
+	//std :: string  txtFileName="ExportTisuProp_" + patch::to_string(periodCount)+".txt" ; 
+	std :: string  txtFileName="ExportCellProp_" + patch::to_string(periodCount)+".txt" ; 
 	ofstream ExportOut ; 
 	ExportOut.open(txtFileName.c_str()); 
-	ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
-	ExportOut<<curTime<<","<<Center_X<<","<<max_Rx<<endl   ;
-	ExportOut << "CellRank,CellCenterX,CellCenterY"<<endl;
+	//ExportOut << "Time (s), Tissue_CenterX(micro meter),Max_Length_X(micro meter)"<<endl; 
+	//ExportOut<<curTime<<","<<Center_X<<","<<max_Rx<<endl   ;
+	//ExportOut << "CellRank,CellCenterX,CellCenterY"<<endl;
 	for (int k=0; k<numActiveCells; k++){
 		ExportOut<<k<<","<<cellCenterX[k]<<","<<cellCenterY[k]<<endl   ;
 	}
- 	ExportOut << "CellRank,MembraneNodeX,MembraneNodeY"<<endl;
+ 	//ExportOut << "CellRank,MembraneNodeX,MembraneNodeY"<<endl;
 
 	for ( uint i=0 ; i< maxTotalNumActiveNodes ; i++) {
 
@@ -109,7 +110,7 @@ void Signal::importSignalInfoCellLevel() {
 			
 		cout << "The file name I am looking for is " << importDppFileName <<endl ;
 		
-		sleep(200) ; 
+		sleep(300) ; 
 		while (fileIsOpen==false) {
 			inputDpp.open(importDppFileName.c_str()) ;
 			if (inputDpp.is_open()){
@@ -121,7 +122,7 @@ void Signal::importSignalInfoCellLevel() {
 				cout << "I start to sleep. Time is"  <<endl ;
 				sleep(30) ; 
 				 t = clock() - t;
-				cout << "Sleep takes"<< ((float)t)/CLOCKS_PER_SEC  <<endl ;
+				cout << "Sleep takes "<< ((float)t)/CLOCKS_PER_SEC  <<endl ;
 				cout << "the opened file name is " << importDppFileName <<endl ;
 			}
 			else {
@@ -131,10 +132,11 @@ void Signal::importSignalInfoCellLevel() {
 		if (inputDpp.good()) {
 		cout << " I passed opening the file in the while loop"<< endl ;
 		}
+
  		periodCount+= 1 ;// abs(floor((curTime-InitTimeStage)/exchPeriod)) ;
-		for (int i=0; i<resol ; i++) {
+		for (int i=0; i<numActiveCells ; i++) {
 			inputDpp >> dppLevelTmp ;
-			//cout<<"zeroth dpp is"<<dppDist<<dppLevel<< endl ; 
+			cout<<"zeroth dpp is"<<dppLevelTmp<< endl ; 
 			dppLevelV.push_back(dppLevelTmp) ;  
 		}	
 		cout <<"first dpp value is"<< dppLevelV.at(0)<< endl ; 	
