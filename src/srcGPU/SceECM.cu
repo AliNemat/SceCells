@@ -462,7 +462,7 @@ thrust:: transform (
 
 
 lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=5000) { 
+               if (lastPrintECM>=10000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM-1) + ".vtk";

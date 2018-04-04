@@ -543,11 +543,21 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				if   (cellType==peri && memType == basal1) {
 					  actinLevel=1*kStiff ;
 				}
-
-
-			    if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
-					actinLevel=1*kStiff ;
+				if (cellType==bc && memType==lateral1 ) { 
+					actinLevel=2*kStiff ;
 				}
+		        if (cellType==bc &&  memType==apical1) {
+					 actinLevel=0.5*kStiff ; 
+				}
+				if (cellType==bc &&  memType==basal1) {
+					 actinLevel=0.5*kStiff ;
+				}
+
+
+
+			    //if   (cellType==bc) {  // bc cell type either apicalbasal or lateral
+				//	actinLevel=1*kStiff ;
+			//	}
 			} // if #6 end
 
 			if (isSubApical) {
@@ -1664,7 +1674,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double LengthMax=thrust::get<2>(uiddd); //Ali
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound   && LengthMax>0.4 ) {
+		if (curActiveMembrNode < _bound   && LengthMax>0.4 && cellProgress>0.1) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
 			return thrust::make_tuple(true, 0);
@@ -1695,7 +1705,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.1 ) {
+		if (curActiveMembrNode > 0  && LengthMin<0.1 && cellProgress>0.1) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
 			return thrust::make_tuple(true, progress); 
 		} 
