@@ -505,6 +505,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			actinLevel=1*kStiff ;  // default
 
+		/*
 			if (_membPolar) {  // if # 4 start 
 				if (cellType==pouch) {  // if # 5 starts 
                 
@@ -520,7 +521,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=2*kStiff ;
 				}  // if # 5 ends
 			}  // if # 4 ends
-			
+		*/			
 
 			if (_subMembPolar) { // if # 6 s
 				if (cellType==pouch && memType==lateral1 ) { 
@@ -533,7 +534,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					 actinLevel=0.5*kStiff ;
 				}
 
-
+				/*
 				if  (cellType==peri && memType==lateral1) {
 					  actinLevel=1.2*kStiff ;
 				}
@@ -543,6 +544,8 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				if   (cellType==peri && memType == basal1) {
 					  actinLevel=1*kStiff ;
 				}
+				*/
+
 				if (cellType==bc && memType==lateral1 ) { 
 					actinLevel=2*kStiff ;
 				}
@@ -562,7 +565,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (isSubApical) {
 
-					actinLevel=1.1*kStiff ;
+					actinLevel=1.5*kStiff ;
 			}
 
 		    return actinLevel;
