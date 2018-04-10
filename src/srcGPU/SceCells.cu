@@ -1483,7 +1483,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	curTime = curTime + dt;
 
-	if (curTime>=5 ){
+	if (curTime>=50 ){
 		nodes->isInitPhase=false ; 
 	}
 	bool tmpIsInitPhase= nodes->isInitPhase ; 
@@ -4935,6 +4935,7 @@ void SceCells::decideIfAddMembrNode_M() {
 // membr growth progresss
 	uint curActCellCt = allocPara_m.currentActiveCellCount;
 	uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+	bool isInitPhase= nodes->isInitPhase ; 
 	/*
 	thrust::transform(cellInfoVecs.membrGrowSpeed.begin(),
 			cellInfoVecs.membrGrowSpeed.begin() + curActCellCt,
@@ -4973,13 +4974,15 @@ void SceCells::decideIfAddMembrNode_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrAddingNode.begin(),
 							cellInfoVecs.membrGrowProgress.begin())),
-			MemGrowFunc(maxMembrNode));
+			MemGrowFunc(maxMembrNode,isInitPhase));
 
 }
 //Ali
 void SceCells::decideIfDelMembrNode_M() {
 	uint curActCellCt = allocPara_m.currentActiveCellCount;
 		uint maxMembrNode = allocPara_m.maxMembrNodePerCell;
+
+	bool isInitPhase= nodes->isInitPhase ; 
          thrust::transform(
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.activeMembrNodeCounts.begin(),
@@ -4997,7 +5000,7 @@ void SceCells::decideIfDelMembrNode_M() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.isMembrRemovingNode.begin(),
 							cellInfoVecs.membrGrowProgress.begin())),
-			MemDelFunc(maxMembrNode));
+			MemDelFunc(maxMembrNode, isInitPhase));
 
 }
 

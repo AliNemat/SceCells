@@ -435,7 +435,8 @@ nodeECMTmpLocY.resize(numNodesECM,0.0) ;
 thrust::copy(nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,nodeECMTmpLocX.begin()) ; 
 thrust::copy(nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,nodeECMTmpLocY.begin()) ; 
 
-double Damp_CoefECM=Damp_Coef ; 
+double Damp_CoefECM=100000*Damp_Coef ; 
+double Damp_CoefPerip=Damp_Coef ; 
 // move the nodes of ECM 
 thrust:: transform (
 		thrust::make_zip_iterator (
@@ -444,19 +445,21 @@ thrust:: transform (
 					nodeECMTmpLocY.begin(),
 					totalForceECMX.begin(),
 					totalForceECMY.begin(),
-					indexECM.begin())),
+					indexECM.begin(),
+					peripORexcm.begin())),
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
 					nodeECMTmpLocX.begin(),
 					nodeECMTmpLocY.begin(),
 					totalForceECMX.begin(),
 					totalForceECMY.begin(),
-					indexECM.begin()))+numNodesECM,
+					indexECM.begin(),
+					peripORexcm.begin()))+numNodesECM,
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					nodeECMLocX.begin(),
 					nodeECMLocY.begin())),
-				MoveNodeECM(dt,Damp_CoefECM,numNodesECM));
+				MoveNodeECM(dt,Damp_CoefECM,Damp_CoefPerip,numNodesECM));
 
 
 

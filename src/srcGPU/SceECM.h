@@ -13,7 +13,7 @@ typedef thrust ::tuple<double,double,double> DDD ;
 typedef thrust ::tuple<double,double,bool> DDB ; 
 typedef thrust ::tuple<double,double,MembraneType1,int> DDTI ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
-typedef thrust ::tuple<double,double,double,double,int> DDDDI ; 
+typedef thrust ::tuple<double,double,double,double,int,EType> DDDDIT ; 
 
 
 struct MechPara_ECM {
@@ -275,9 +275,12 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 
 	 }
 
-
-    return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
-        	
+	//if (_isInitPhase) {
+    //	return thrust::make_tuple ((locX+(fTotalMorseX)*_dt/_Damp_Coef),(locY+(fTotalMorseY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
+//	}
+//	else {
+    	return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
+  //  }	
 		
 }
 	
@@ -458,29 +461,38 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 
 
 
-struct MoveNodeECM: public thrust::unary_function<DDDDI,DD> {
+struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 
 	double _dt ; 
-	double _damp ; 
+	double _dampECM ; 
+	double _dampPeri ; 
 	int _numNodes ; 
-	__host__ __device__ MoveNodeECM (double dt, double damp, int numNodes): _dt(dt), _damp(damp), _numNodes(numNodes) {
+	__host__ __device__ MoveNodeECM (double dt, double dampECM, double dampPeri, int numNodes): _dt(dt), _dampECM(dampECM),_dampPeri(dampPeri), _numNodes(numNodes) {
 	}
 
-	__host__ __device__ DD operator() (const DDDDI & dDDDI) const  {
+	__host__ __device__ DD operator() (const DDDDIT & dDDDIT) const  {
 
 
-	double locXOld= thrust:: get <0> (dDDDI) ;
-	double locYOld= thrust:: get <1> (dDDDI) ;
-	double fx= 	thrust:: get <2> (dDDDI) ;
-	double fy= 	thrust:: get <3> (dDDDI) ;
-	int    index=    thrust::get<4>(dDDDI) ; 
+	double 			  locXOld= thrust:: get <0> (dDDDIT) ;
+	double 			  locYOld= thrust:: get <1> (dDDDIT) ;
+	double 			  fx= 	   thrust:: get <2> (dDDDIT) ;
+	double 			  fy= 	   thrust:: get <3> (dDDDIT) ;
+	int    			  index=   thrust:: get <4> (dDDDIT) ; 
+	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
 
-	if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
+	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
+	if (index == 0  || index==( int (_numNodes/2)-1) ) {
 		return thrust::make_tuple (locXOld, locYOld) ;
 	}
 	else {
-
-		return thrust::make_tuple (locXOld+fx*_dt/_damp, locYOld+fy*_dt/_damp) ;
+		if (nodeType==excm) {		
+			return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld+fy*_dt/_dampECM) ;
+		}
+		else {
+			//return thrust::make_tuple (locXOld+fx*_dt/_dampPeri, locYOld+fy*_dt/_dampPeri) ;
+			return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
+		//	return thrust::make_tuple (locXOld, locYOld) ;
+		}
 	}
 	}
 }; 

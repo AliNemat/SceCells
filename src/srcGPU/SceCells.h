@@ -525,13 +525,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_subMembPolar) { // if # 6 s
 				if (cellType==pouch && memType==lateral1 ) { 
-					actinLevel=2*kStiff ;
+					actinLevel=0.5*kStiff ;
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=0.5*kStiff ; 
+					 actinLevel=2.0*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=0.5*kStiff ;
+					 actinLevel=0.55*kStiff ;
 				}
 
 				/*
@@ -547,13 +547,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				*/
 
 				if (cellType==bc && memType==lateral1 ) { 
-					actinLevel=2*kStiff ;
+					actinLevel=0.5*kStiff ;
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=0.5*kStiff ; 
+					 actinLevel=2.0*kStiff ; 
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=0.5*kStiff ;
+					 actinLevel=0.55*kStiff ;
 				}
 
 
@@ -1665,9 +1665,10 @@ struct AdjustMembrGrow: public thrust::unary_function<UiDD, double> {
 //Ali struct MemGrowFunc: public thrust::unary_function<DUi, BoolD> {
 struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 	uint _bound;
+	bool _isInitPhase ; 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__ MemGrowFunc(uint bound) :
-			_bound(bound) {
+	__host__ __device__ MemGrowFunc(uint bound, bool isInitPhase) :
+			_bound(bound), _isInitPhase(isInitPhase) {
 	}
 	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
 	__host__ __device__ BoolD operator()(const UiDDD& uiddd) {
@@ -1677,7 +1678,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
         double LengthMax=thrust::get<2>(uiddd); //Ali
         double cellProgress=thrust::get<3>(uiddd); //Ali
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
-		if (curActiveMembrNode < _bound   && LengthMax>0.4 && cellProgress>0.1) {
+		if (curActiveMembrNode < _bound   && LengthMax>0.4 && cellProgress>0.1 && _isInitPhase==false) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
 			return thrust::make_tuple(true, 0);
@@ -1694,9 +1695,10 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 //Ali
 struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 	uint _bound;
+	bool _isInitPhase ; 
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight__host__ __device__
-	__host__ __device__ MemDelFunc(uint bound) :
-			_bound(bound) {
+	__host__ __device__ MemDelFunc(uint bound, bool isInitPhase) :
+			_bound(bound), _isInitPhase(isInitPhase)  {
 	}
 	//Ali __host__ __device__ BoolD operator()(const DUi& dui) {
 	__host__ __device__ BoolD operator()(const UiDDD& uiddd) {
@@ -1708,7 +1710,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//Ali uint curActiveMembrNode = thrust::get<1>(dui);
 		//if (curActiveMembrNode < _bound && progress >= 1.0 && LengthMax>0.0975 ) {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
-		if (curActiveMembrNode > 0  && LengthMin<0.1 && cellProgress>0.1) {
+		if (curActiveMembrNode > 0  && LengthMin<0.1 && cellProgress>0.1 &&  _isInitPhase==true) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
 			return thrust::make_tuple(true, progress); 
 		} 
