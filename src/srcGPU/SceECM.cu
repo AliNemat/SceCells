@@ -303,7 +303,7 @@ memNodeType.resize(maxTotalNodes,notAssigned1) ;
 					nodeDeviceLocY.begin(),
 					memNodeType.begin(),
 					adhPairECM_Cell.begin())),
-				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase,peripORexcmAddr));
+				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase,peripORexcmAddr,curTime));
 
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
@@ -459,7 +459,7 @@ thrust:: transform (
 				thrust::make_tuple (
 					nodeECMLocX.begin(),
 					nodeECMLocY.begin())),
-				MoveNodeECM(dt,Damp_CoefECM,Damp_CoefPerip,numNodesECM));
+				MoveNodeECM(dt,Damp_CoefECM,Damp_CoefPerip,numNodesECM,curTime));
 
 
 

@@ -177,10 +177,11 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	 double _dt ; 
 	 double _Damp_Coef ;
 	 bool _isInitPhase ;
-	 EType*  _peripORexcmAddr ; 
-	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef, bool isInitPhase, EType * peripORexcmAddr) :
+	 EType*  _peripORexcmAddr ;
+	 double _curTime ; 
+	__host__ __device__ MoveNodes2_Cell (double * locXAddr_ECM, double * locYAddr_ECM, uint maxMembrNodePerCell, int numNodes_ECM, double dt, double Damp_Coef, bool isInitPhase, EType * peripORexcmAddr, double curTime) :
 				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM),_dt(dt),
-			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase), _peripORexcmAddr(peripORexcmAddr)	{
+			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase), _peripORexcmAddr(peripORexcmAddr),_curTime (curTime)	{
 	}
 	__device__ DDTI  operator()(const IDDBT & iDDBT) const {
 	
@@ -208,7 +209,6 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	int   iPair=-1 ;
 	double smallNumber=0.000001; 
 	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell && (nodeType==basal1 || nodeType==apical1)) {
-      //  if (_isInitPhase==true) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
 				locY_ECM=_locYAddr_ECM[i];
@@ -220,21 +220,11 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 					iPair=i ; 
 				}
 				fMorse=calMorse_ECM(dist);
-				//if (abs(fMorse)>smallNumber  && _peripORexcmAddr[i]==excm ){
-				//	nodeType=basal1 ;
-			//	}
-
-			//	if (abs(fMorse)>smallNumber  && _peripORexcmAddr[i]==perip ){
-			//		nodeType=apical1 ;
-			//	}
 				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
 				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 				fTotalMorse=fTotalMorse+fMorse ; 
 			}
 
-			//if (fTotalMorse!=0.0) {
-			//	nodeType=basal1 ; 
-		//	}
 			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
 
         		fAdhMemECM=CalAdhECM(distMin) ; 
@@ -244,43 +234,16 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				adhPairECM=iPair ; 
 			}
 
-	//	}
 
-	/*	if (_isInitPhase==false) {
-			for (int i=0 ; i<_numNodes_ECM ; i++) {
-				locX_ECM=_locXAddr_ECM[i]; 
-				locY_ECM=_locYAddr_ECM[i];
-				dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
-				if (dist < distMin && nodeType==basal1) {
-					distMin=dist ; 
-					distMinX=(locX_ECM-locX) ;
-					distMinY=(locY_ECM-locY) ; 
-					iPair=i ; 
-				}
-				fMorse=calMorse_ECM(dist);  
-				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
-				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
-				fTotalMorse=fTotalMorse+fMorse ; 
-			}
-			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
-
-        		fAdhMemECM=CalAdhECM(distMin) ; 
-
-				fAdhMemECMX=fAdhMemECM*distMinX/distMin ;  
-				fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
-				adhPairECM=iPair ; 
-			}
-		}
-*/
 
 	 }
+	if (nodeType==basal1 && _curTime>200) {
 
-	//if (_isInitPhase) {
-    //	return thrust::make_tuple ((locX+(fTotalMorseX)*_dt/_Damp_Coef),(locY+(fTotalMorseY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
-//	}
-//	else {
-    	return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
-  //  }	
+	 return thrust::make_tuple (locX,locY,nodeType,-1)  ; 
+	}
+	else {
+	 return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
+   }	
 		
 }
 	
@@ -466,20 +429,17 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 	double _dt ; 
 	double _dampECM ; 
 	double _dampPeri ; 
-	int _numNodes ; 
-	__host__ __device__ MoveNodeECM (double dt, double dampECM, double dampPeri, int numNodes): _dt(dt), _dampECM(dampECM),_dampPeri(dampPeri), _numNodes(numNodes) {
+	int _numNodes ;
+	double _curTime ; 
+	__host__ __device__ MoveNodeECM (double dt, double dampECM, double dampPeri, int numNodes, double curTime): _dt(dt), _dampECM(dampECM),_dampPeri(dampPeri), _numNodes(numNodes),_curTime(curTime) {
 	}
-
 	__host__ __device__ DD operator() (const DDDDIT & dDDDIT) const  {
-
-
 	double 			  locXOld= thrust:: get <0> (dDDDIT) ;
 	double 			  locYOld= thrust:: get <1> (dDDDIT) ;
 	double 			  fx= 	   thrust:: get <2> (dDDDIT) ;
 	double 			  fy= 	   thrust:: get <3> (dDDDIT) ;
 	int    			  index=   thrust:: get <4> (dDDDIT) ; 
 	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
-
 	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
 	if (index == 0  || index==( int (_numNodes/2)-1) ) {
 		return thrust::make_tuple (locXOld, locYOld) ;
@@ -489,12 +449,17 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 			return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld+fy*_dt/_dampECM) ;
 		}
 		else {
+			if (_curTime>200) {
 			//return thrust::make_tuple (locXOld+fx*_dt/_dampPeri, locYOld+fy*_dt/_dampPeri) ;
-			return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
-		//	return thrust::make_tuple (locXOld, locYOld) ;
+				return thrust::make_tuple (locXOld, locYOld) ;
+			} 
+			else {
+				return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
+
+			}
 		}
 	}
-	}
+}
 }; 
 
 
