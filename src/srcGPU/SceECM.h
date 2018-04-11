@@ -237,7 +237,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 
 
 	 }
-	if (nodeType==basal1 && _curTime>200) {
+	if (nodeType==basal1 && _curTime>300) {
 
 	 return thrust::make_tuple (locX,locY,nodeType,-1)  ; 
 	}

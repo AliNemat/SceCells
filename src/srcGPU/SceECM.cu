@@ -435,7 +435,7 @@ nodeECMTmpLocY.resize(numNodesECM,0.0) ;
 thrust::copy(nodeECMLocX.begin(),nodeECMLocX.begin()+numNodesECM,nodeECMTmpLocX.begin()) ; 
 thrust::copy(nodeECMLocY.begin(),nodeECMLocY.begin()+numNodesECM,nodeECMTmpLocY.begin()) ; 
 
-double Damp_CoefECM=100000*Damp_Coef ; 
+double Damp_CoefECM=Damp_Coef ; 
 double Damp_CoefPerip=Damp_Coef ; 
 // move the nodes of ECM 
 thrust:: transform (
