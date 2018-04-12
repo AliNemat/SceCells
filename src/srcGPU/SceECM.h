@@ -237,13 +237,13 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 
 
 	 }
-	if (nodeType==basal1 && _curTime>300) {
+	//if (nodeType==basal1 && _curTime>300) {
 
-	 return thrust::make_tuple (locX,locY,nodeType,-1)  ; 
-	}
-	else {
+//	 return thrust::make_tuple (locX,locY,nodeType,-1)  ; 
+//	}
+//	else {
 	 return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
-   }	
+  // }	
 		
 }
 	
@@ -442,7 +442,7 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
 	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
 	if (index == 0  || index==( int (_numNodes/2)-1) ) {
-		return thrust::make_tuple (locXOld, locYOld) ;
+		return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld) ;
 	}
 	else {
 		if (nodeType==excm) {		
