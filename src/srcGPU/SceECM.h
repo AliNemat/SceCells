@@ -441,7 +441,7 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 	int    			  index=   thrust:: get <4> (dDDDIT) ; 
 	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
 	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
-	if (index == 0  || index==( int (_numNodes/2)-1) ) {
+	if (( index == 0  || index==( int (_numNodes/2)-1) ) && (_curTime<=200 ) ) {
 		return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld) ;
 	}
 	else {
@@ -449,13 +449,11 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 			return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld+fy*_dt/_dampECM) ;
 		}
 		else {
-			if (_curTime>200) {
-			//return thrust::make_tuple (locXOld+fx*_dt/_dampPeri, locYOld+fy*_dt/_dampPeri) ;
-				return thrust::make_tuple (locXOld, locYOld) ;
+			if (_curTime<=200) {
+				return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
 			} 
 			else {
-				return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
-
+				return thrust::make_tuple (locXOld+fx*_dt/_dampPeri, locYOld+fy*_dt/_dampPeri) ;
 			}
 		}
 	}
