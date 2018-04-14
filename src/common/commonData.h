@@ -41,7 +41,7 @@ enum SceExceptionType {
 };
 enum MembraneType1 {lateral1, apical1, basal1,notAssigned1} ; //Ali  
 enum ECellType {notActive, pouch, peri, bc} ; 
-enum EType {perip, excm} ; 
+enum EType {perip, excm, bc2 } ; 
 std::string toString(SceExceptionType type);
 double compuDistHost(double &xPos, double &yPos, double &zPos, double &xPos2,
 		double &yPos2, double &zPos2);

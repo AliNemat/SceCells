@@ -83,7 +83,8 @@ thrust::device_vector<double> totalForceECMX ;
 thrust::device_vector<double> totalForceECMY ;
 thrust::device_vector<EType>  peripORexcm ;
 
-        void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
+	void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
+	EType ConvertStringToEType (string eNodeRead) ; 
 };
  
 __device__
@@ -321,15 +322,15 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 		forceRightX=forceRight*(locXRight-locX) /distRight ; 
 		forceRightY=forceRight*(locYRight-locY) /distRight ; 
 		//for open ECM.
-	if (index == 0 || index==int(_numNodes/2) ) {
-		return thrust::make_tuple(forceRightX,forceRightY,forceRight) ;
-   }
-   else if (index ==_numNodes-1 || index==(int(_numNodes/2)-1) ) {
-		return thrust::make_tuple(forceLeftX,forceLeftY,forceLeft) ;
-	}
-	else {
+//	if (index == 0 || index==int(_numNodes/2) ) {
+//		return thrust::make_tuple(forceRightX,forceRightY,forceRight) ;
+  // }
+ //  else if (index ==_numNodes-1 || index==(int(_numNodes/2)-1) ) {
+//		return thrust::make_tuple(forceLeftX,forceLeftY,forceLeft) ;
+//	}
+//	else {
 		return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ;
-	}
+//	}
         
 
 }
@@ -441,7 +442,8 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 	int    			  index=   thrust:: get <4> (dDDDIT) ; 
 	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
 	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
-	if (( index == 0  || index==( int (_numNodes/2)-1) ) && (_curTime<=200 ) ) {
+	//if (( index == 0  || index==( int (_numNodes/2)-1) ) && (_curTime<=200 ) ) {
+	if (( index == 0  || index==560 ) && (_curTime<=200 ) ) {
 		return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld) ;
 	}
 	else {

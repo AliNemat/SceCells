@@ -71,6 +71,21 @@ double  CalAdhECM(const double& dist ) {
 	// in the function IsValid pair, distance already checked to be greater than neutral length
 			}
 
+EType SceECM:: ConvertStringToEType(string eNodeRead) {
+	if (eNodeRead=="perip")  {
+		return perip ; 
+	}
+	else if (eNodeRead=="bc") {
+		return bc2 ; 
+	}
+	else if (eNodeRead=="excm") {
+		return excm ; 
+	}
+	else {
+		cout << "Error in defining type of external nodes" << endl ; 
+	}
+} 
+
 
 void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM) {
 
@@ -85,8 +100,8 @@ std::fstream readInput_ECM ;
 int numberNodes_ECM ; 
 double tmpPosX_ECM,tmpPosY_ECM ; 
 vector<double> posXIni_ECM,posYIni_ECM ;
- 
-readCoord_ECM.open("./resources/coordinate_ECM9.txt") ;
+vector <EType> eNodeVec ;  
+readCoord_ECM.open("./resources/coordinate_ECM11.txt") ;
 if (readCoord_ECM.is_open()) {
 	cout << "ECM coordinates file opened successfully" <<endl ; 
 }
@@ -96,15 +111,15 @@ else {
 
 
 
-
+string eNodeRead ; 
 readCoord_ECM>>numberNodes_ECM ;
 for (int i=0 ; i<numberNodes_ECM ; i++){
-	readCoord_ECM>>tmpPosX_ECM>>tmpPosY_ECM ; 
+	readCoord_ECM>>tmpPosX_ECM>>tmpPosY_ECM>>eNodeRead  ; 
 	posXIni_ECM.push_back(tmpPosX_ECM) ; 
 	posYIni_ECM.push_back(tmpPosY_ECM) ; 
+	EType eNode=ConvertStringToEType(eNodeRead) ; 
+	eNodeVec.push_back(eNode) ; 
 }
-
-
 
 readInput_ECM.open("./resources/input_ECM.txt") ;
 if (readInput_ECM.is_open()) {
@@ -204,11 +219,15 @@ totalForceECMY.resize(numNodesECM,0.0);
 
 memNodeType.resize(maxTotalNodes,notAssigned1) ; 
 
-thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
-thrust::fill (peripORexcm.begin(),peripORexcm.begin()+int(numNodesECM/2),excm );
+//thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
+//thrust::fill (peripORexcm.begin(),peripORexcm.begin()+604,excm );
+//thrust::fill (peripORexcm.begin()+1166,peripORexcm.end(),excm );
+//thrust::fill (peripORexcm.begin(),peripORexcm.begin()+int(numNodesECM/2),excm );
+//thrust::fill (peripORexcm.begin(),peripORexcm.begin()+int(numNodesECM/2),excm );
  
 thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ; 
 thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
+thrust::copy(eNodeVec.begin(),eNodeVec.end(),peripORexcm.begin()) ; 
 for (int i=0;  i<nodeECMLocX.size() ;  i++) {
 	cout<< nodeECMLocX[i]<<endl; 
 }
@@ -499,6 +518,13 @@ lastPrintECM=lastPrintECM+1 ;
 			for (uint i = 0; i < nodeECMLocX.size(); i++) {
 				ECMOut<<linSpringAvgTension[i] <<endl ; 
 			}
+			ECMOut << "POINT_DATA "<<nodeECMLocX.size() <<endl ; 
+			ECMOut << "Node_Type " << "float"<< endl;
+			ECMOut << "LOOKUP_TABLE " << "default"<< endl;
+			for (uint i = 0; i < nodeECMLocX.size(); i++) {
+				ECMOut<<peripORexcm[i] <<endl ; 
+			}
+
 			ECMOut.close(); 
 			}
 
