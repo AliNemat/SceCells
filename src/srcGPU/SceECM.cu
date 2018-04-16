@@ -83,6 +83,7 @@ EType SceECM:: ConvertStringToEType(string eNodeRead) {
 	}
 	else {
 		cout << "Error in defining type of external nodes" << endl ; 
+		return excm ;// To just return something to avoid compiler complain 
 	}
 } 
 
@@ -146,10 +147,10 @@ else {
 
 
 
-cout<< "numer of ECM nodes is"<< numberNodes_ECM <<endl ; 
+cout<< "number of ECM nodes is"<< numberNodes_ECM <<endl ; 
 for (int i=0 ; i<posXIni_ECM.size() ; i++){
 	cout << "ECM nodes read in cpu"<<endl; 
-	cout << posXIni_ECM[i] <<posYIni_ECM[i]<<endl;  ; 
+	cout << posXIni_ECM[i] <<", "<<posYIni_ECM[i]<<", " << eNodeVec[i] <<endl;  ; 
 }
 
 
@@ -219,7 +220,7 @@ totalForceECMY.resize(numNodesECM,0.0);
 
 memNodeType.resize(maxTotalNodes,notAssigned1) ; 
 
-//thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
+thrust::sequence (indexECM.begin(),indexECM.begin()+numNodesECM);
 //thrust::fill (peripORexcm.begin(),peripORexcm.begin()+604,excm );
 //thrust::fill (peripORexcm.begin()+1166,peripORexcm.end(),excm );
 //thrust::fill (peripORexcm.begin(),peripORexcm.begin()+int(numNodesECM/2),excm );
@@ -227,11 +228,14 @@ memNodeType.resize(maxTotalNodes,notAssigned1) ;
  
 thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ; 
 thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
-thrust::copy(eNodeVec.begin(),eNodeVec.end(),peripORexcm.begin()) ; 
+thrust::copy(eNodeVec.begin(),eNodeVec.end(),peripORexcm.begin()) ;
+
+cout << "GPU level initial coordinates and type of external nodes are: " << endl ; 
 for (int i=0;  i<nodeECMLocX.size() ;  i++) {
-	cout<< nodeECMLocX[i]<<endl; 
+	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
 }
 
+PrintECM() ; 
 for (int i=0 ; i<maxTotalNodes ; i++) {
 	int nodeRankPerCell=i%maxAllNodePerCell ;
 	if (nodeRankPerCell<7) {
@@ -480,11 +484,18 @@ thrust:: transform (
 					nodeECMLocY.begin())),
 				MoveNodeECM(dt,Damp_CoefECM,Damp_CoefPerip,numNodesECM,curTime));
 
+cout << "GPU level first updated coordinates and type of external nodes are: " << endl ; 
+for (int i=0;  i<nodeECMLocX.size() ;  i++) {
+	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
+}
 
+PrintECM(); 
 
+}
 
-lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=5000) { 
+void  SceECM:: PrintECM() {
+		lastPrintECM=lastPrintECM+1 ; 
+               if (lastPrintECM>=10000) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM-1) + ".vtk";
@@ -518,8 +529,15 @@ lastPrintECM=lastPrintECM+1 ;
 			for (uint i = 0; i < nodeECMLocX.size(); i++) {
 				ECMOut<<linSpringAvgTension[i] <<endl ; 
 			}
-			ECMOut << "POINT_DATA "<<nodeECMLocX.size() <<endl ; 
-			ECMOut << "Node_Type " << "float"<< endl;
+//			ECMOut << "POINT_DATA "<<nodeECMLocX.size() <<endl ; 
+///			ECMOut << "SCALARS Avg_Tension2 " << "float"<< endl;
+//			ECMOut << "LOOKUP_TABLE " << "default"<< endl;
+//			for (uint i = 0; i < nodeECMLocX.size(); i++) {
+//				ECMOut<<linSpringAvgTension[i] <<endl ; 
+//			}
+
+//			ECMOut << "POINT_DATA "<<nodeECMLocX.size() <<endl ; 
+			ECMOut << "SCALARS Node_Type " << "float"<< endl;
 			ECMOut << "LOOKUP_TABLE " << "default"<< endl;
 			for (uint i = 0; i < nodeECMLocX.size(); i++) {
 				ECMOut<<peripORexcm[i] <<endl ; 
@@ -529,7 +547,6 @@ lastPrintECM=lastPrintECM+1 ;
 			}
 
 }
-
 
 
 

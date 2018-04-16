@@ -29,6 +29,9 @@ class SceECM {
 
 public:
         void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar, bool isInitPhase) ; 
+		void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
+		EType ConvertStringToEType (string eNodeRead) ;
+		void PrintECM(); 
 double restLenECMSpring ;
 double eCMLinSpringStiff ; 
 double restLenECMAdhSpring ; 
@@ -83,8 +86,6 @@ thrust::device_vector<double> totalForceECMX ;
 thrust::device_vector<double> totalForceECMY ;
 thrust::device_vector<EType>  peripORexcm ;
 
-	void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
-	EType ConvertStringToEType (string eNodeRead) ; 
 };
  
 __device__
@@ -319,8 +320,8 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	distRight=sqrt( ( locX-locXRight )*(locX-locXRight) +( locY-locYRight )*(locY-locYRight) ) ; 
    	    	forceRight=_linSpringStiff*(distRight-_restLen) ; 
         //  	forceRight=calWLC_ECM(distRight) ; 
-		forceRightX=forceRight*(locXRight-locX) /distRight ; 
-		forceRightY=forceRight*(locYRight-locY) /distRight ; 
+		forceRightX=forceRight*(locXRight-locX)/distRight ; 
+		forceRightY=forceRight*(locYRight-locY)/distRight ; 
 		//for open ECM.
 //	if (index == 0 || index==int(_numNodes/2) ) {
 //		return thrust::make_tuple(forceRightX,forceRightY,forceRight) ;
@@ -420,6 +421,7 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 
 
 	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
+	//return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
 	}
 }; 
 
@@ -443,22 +445,23 @@ struct MoveNodeECM: public thrust::unary_function<DDDDIT,DD> {
 	EType             nodeType=thrust:: get <5> (dDDDIT) ; 
 	//if (index == 0 || index==_numNodes-1 || index==( int (_numNodes/2)-1) || index == int (_numNodes/2) ) {
 	//if (( index == 0  || index==( int (_numNodes/2)-1) ) && (_curTime<=200 ) ) {
-	if (( index == 0  || index==560 ) && (_curTime<=200 ) ) {
-		return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld) ;
-	}
-	else {
+		
+//	if (( index == 0  || index==560 ) && (_curTime<=200 ) ) {
+//		return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld) ;
+//	}
+//	else {
 		if (nodeType==excm) {		
 			return thrust::make_tuple (locXOld+fx*_dt/_dampECM, locYOld+fy*_dt/_dampECM) ;
 		}
 		else {
-			if (_curTime<=200) {
-				return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
-			} 
-			else {
+//			if (_curTime<=200) {
+//				return thrust::make_tuple (locXOld, locYOld+0.36*_dt/_dampPeri) ;
+//			} 
+//			else {
 				return thrust::make_tuple (locXOld+fx*_dt/_dampPeri, locYOld+fy*_dt/_dampPeri) ;
-			}
+		//	}
 		}
-	}
+//	}
 }
 }; 
 
@@ -571,6 +574,7 @@ struct CalBendECM: public thrust::unary_function<IDD, DDDDDD> {
 			}
 			return thrust::make_tuple(bendCenterX,bendCenterY,
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
+
 	}
 }; 
 
