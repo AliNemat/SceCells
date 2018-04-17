@@ -197,6 +197,9 @@ peripORexcm.resize(numNodesECM,perip) ;
 nodeECMLocX.resize(numNodesECM,0.0) ;
 nodeECMLocY.resize(numNodesECM,0.0) ;
 
+stiffLevel.resize(numNodesECM,eCMLinSpringStiff) ;
+sponLen.resize(numNodesECM,restLenECMSpring) ;
+
 linSpringForceECMX.resize(numNodesECM,0.0); 
 linSpringForceECMY.resize(numNodesECM,0.0); 
 linSpringAvgTension.resize(numNodesECM,0.0); 
@@ -230,10 +233,10 @@ thrust::copy(posXIni_ECM.begin(),posXIni_ECM.end(),nodeECMLocX.begin()) ;
 thrust::copy(posYIni_ECM.begin(),posYIni_ECM.end(),nodeECMLocY.begin()) ; 
 thrust::copy(eNodeVec.begin(),eNodeVec.end(),peripORexcm.begin()) ;
 
-cout << "GPU level initial coordinates and type of external nodes are: " << endl ; 
-for (int i=0;  i<nodeECMLocX.size() ;  i++) {
-	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
-}
+//cout << "GPU level initial coordinates and type of external nodes are: " << endl ; 
+//for (int i=0;  i<nodeECMLocX.size() ;  i++) {
+//	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
+//}
 
 PrintECM() ; 
 for (int i=0 ; i<maxTotalNodes ; i++) {
@@ -340,6 +343,18 @@ bool* nodeIsActive_CellAddr= thrust::raw_pointer_cast (
 int * adhPairECM_CellAddr= thrust::raw_pointer_cast (
 			&adhPairECM_Cell[0]) ; 
 
+
+thrust:: transform (peripORexcm.begin(), peripORexcm.begin()+numNodesECM,thrust::make_zip_iterator (thrust::make_tuple (
+											stiffLevel.begin(),sponLen.begin())),MechProp(isInitPhase,eCMLinSpringStiff,restLenECMSpring));
+
+
+double* stiffLevelAddr=thrust::raw_pointer_cast (
+			&stiffLevel[0]) ; 
+
+double*  sponLenAddr =thrust::raw_pointer_cast (
+			&sponLen[0]) ; 
+
+
 thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
@@ -356,7 +371,7 @@ thrust:: transform (
 					linSpringForceECMX.begin(),
 					linSpringForceECMY.begin(),
 					linSpringAvgTension.begin())),
-				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr));
+				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr,stiffLevelAddr,sponLenAddr));
 
 thrust:: transform (
 		thrust::make_zip_iterator (
@@ -484,10 +499,10 @@ thrust:: transform (
 					nodeECMLocY.begin())),
 				MoveNodeECM(dt,Damp_CoefECM,Damp_CoefPerip,numNodesECM,curTime));
 
-cout << "GPU level first updated coordinates and type of external nodes are: " << endl ; 
-for (int i=0;  i<nodeECMLocX.size() ;  i++) {
-	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
-}
+//cout << "GPU level first updated coordinates and type of external nodes are: " << endl ; 
+//for (int i=0;  i<nodeECMLocX.size() ;  i++) {
+//	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
+//}
 
 PrintECM(); 
 

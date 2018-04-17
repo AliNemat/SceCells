@@ -86,6 +86,8 @@ thrust::device_vector<double> totalForceECMX ;
 thrust::device_vector<double> totalForceECMY ;
 thrust::device_vector<EType>  peripORexcm ;
 
+thrust::device_vector<double> stiffLevel ;
+thrust::device_vector<double> sponLen ;
 };
  
 __device__
@@ -262,11 +264,14 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	 double  _restLen ; 
 	 double  _linSpringStiff ;
          double  *_locXAddr; 
-         double  *_locYAddr; 
-	  
+         double  *_locYAddr;
+		 double *_stiffAddr; 
+		 double * _sponLenAddr ; 
 
-	__host__ __device__ LinSpringForceECM (double numNodes, double restLen, double linSpringStiff , double * locXAddr, double * locYAddr) :
-	 _numNodes(numNodes),_restLen(restLen),_linSpringStiff(linSpringStiff),_locXAddr(locXAddr),_locYAddr(locYAddr) {
+
+	__host__ __device__ LinSpringForceECM (double numNodes, double restLen, double linSpringStiff , double * locXAddr, double * locYAddr, 
+										   double * stiffAddr, double * sponLenAddr ) :
+	 _numNodes(numNodes),_restLen(restLen),_linSpringStiff(linSpringStiff),_locXAddr(locXAddr),_locYAddr(locYAddr),_stiffAddr (stiffAddr), _sponLenAddr (sponLenAddr) {
 	}
 	 __device__ DDD operator()(const IDD & iDD) const {
 	
@@ -288,21 +293,27 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double distRight ; 
 	double forceRight ; 
 	double forceRightX ; 
-	double forceRightY ; 
+	double forceRightY ;
+	int indexLeft, indexRight ; 
 
         if (index != 0) {
 
 		locXLeft=_locXAddr[index-1] ; 
 		locYLeft=_locYAddr[index-1] ;
+		indexLeft=index-1 ; 
 		}
 	else {
 		locXLeft=_locXAddr[_numNodes-1] ;
 		locYLeft=_locYAddr[_numNodes-1] ;
+		indexLeft=_numNodes-1 ; 
 	}
 
 	distLeft=sqrt( ( locX-locXLeft )*(locX-locXLeft) +( locY-locYLeft )*(locY-locYLeft) ) ;
+	double kStiffLeft =0.5*(  _stiffAddr[indexLeft]  +  _stiffAddr[index]  ) ; 
+	double sponLenLeft=0.5*(_sponLenAddr[indexLeft]  +_sponLenAddr[index]  ) ; 
 	//	forceLeft=calWLC_ECM(distLeft) ; 
-		forceLeft=_linSpringStiff*(distLeft-_restLen) ; 
+		//forceLeft=_linSpringStiff*(distLeft-_restLen) ; 
+		forceLeft=kStiffLeft*(distLeft-sponLenLeft) ; 
 		forceLeftX=forceLeft*(locXLeft-locX)/distLeft ; 
 		forceLeftY=forceLeft*(locYLeft-locY)/distLeft ; 
 
@@ -311,14 +322,19 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 		
 		locXRight=_locXAddr[index+1] ; 
 		locYRight=_locYAddr[index+1] ;
+		indexRight=index+1 ; 
 		}
 	else {
 
 		locXRight=_locXAddr[0] ; 
 		locYRight=_locYAddr[0] ;
+		indexRight=0  ; 
 	}
 	distRight=sqrt( ( locX-locXRight )*(locX-locXRight) +( locY-locYRight )*(locY-locYRight) ) ; 
-   	    	forceRight=_linSpringStiff*(distRight-_restLen) ; 
+	double kStiffRight =0.5*(_stiffAddr  [indexRight]  +  _stiffAddr[index]  ) ; 
+	double sponLenRight=0.5*(_sponLenAddr[indexRight]  +_sponLenAddr[index]  ) ; 
+   	    	//forceRight=_linSpringStiff*(distRight-_restLen) ; 
+   	    	forceRight=kStiffRight*(distRight-sponLenRight) ; 
         //  	forceRight=calWLC_ECM(distRight) ; 
 		forceRightX=forceRight*(locXRight-locX)/distRight ; 
 		forceRightY=forceRight*(locYRight-locY)/distRight ; 
@@ -422,6 +438,38 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 
 	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
 	//return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
+	}
+}; 
+
+struct MechProp: public thrust::unary_function<EType,DD> {
+
+	bool _isInitPhase ;
+	double _stiffness ; 
+	double _sponLen ; 
+
+	__host__ __device__ MechProp(bool isInitPhase, double stiffness, double sponLen): _isInitPhase(isInitPhase), _stiffness(stiffness),_sponLen (sponLen) {
+	}
+
+	__host__ __device__ DD operator() (const EType  & nodeType) const {
+
+	double stiffness  ;
+	double sponLen  ; 
+	if (nodeType==excm) {
+		stiffness=_stiffness ; 
+		sponLen=0 ; //-0.1 ; 
+	}
+	if (nodeType==perip) {
+		stiffness=_stiffness ; 
+		sponLen=0 ; // 0.1 ; 
+	}
+
+	if (nodeType==bc2) {
+		stiffness=_stiffness ; 
+		sponLen=_sponLen ; 
+	}
+
+
+	return thrust::make_tuple(stiffness,sponLen); 
 	}
 }; 
 
