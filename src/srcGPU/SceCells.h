@@ -3254,7 +3254,8 @@ class SceCells {
         double MinX ;  
         double MaxX ;  
         double MinY ;  
-        double MaxY ;  
+        double MaxY ; 
+		int freqPlotData ;
 	double centerShiftRatio;
 	double shrinkRatio;
 	double memNewSpacing;

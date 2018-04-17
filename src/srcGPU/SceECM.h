@@ -29,7 +29,7 @@ class SceECM {
 
 public:
         void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar, bool isInitPhase) ; 
-		void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM); 
+		void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM, int freqPlotData); 
 		EType ConvertStringToEType (string eNodeRead) ;
 		void PrintECM(); 
 double restLenECMSpring ;
@@ -40,6 +40,7 @@ double kAdhECM ;
 int outputFrameECM ;  
 int lastPrintECM ;
 int numNodesECM ;
+int freqPlotData ; 
 uint maxAllNodePerCell ; 
 uint maxMembrNodePerCell ;
 uint maxTotalNodes ; 
@@ -452,22 +453,23 @@ struct MechProp: public thrust::unary_function<EType,DD> {
 
 	__host__ __device__ DD operator() (const EType  & nodeType) const {
 
-	double stiffness  ;
-	double sponLen  ; 
-	if (nodeType==excm) {
-		stiffness=_stiffness ; 
-		sponLen=0 ; //-0.1 ; 
-	}
-	if (nodeType==perip) {
-		stiffness=_stiffness ; 
-		sponLen=0 ; // 0.1 ; 
-	}
+	double stiffness= _stiffness  ;
+	double sponLen=0 ;   ; 
+	if (_isInitPhase == false ) {
+		if (nodeType==excm) {
+			stiffness=2* _stiffness ; 
+			sponLen=0  ; 
+		}
+		if (nodeType==perip) {
+			stiffness=_stiffness ; 
+			sponLen=0 ; // 0.1 ; 
+		}
 
-	if (nodeType==bc2) {
-		stiffness=_stiffness ; 
-		sponLen=_sponLen ; 
+		if (nodeType==bc2) {
+			stiffness=_stiffness ; 
+			sponLen=_sponLen ; 
+		}
 	}
-
 
 	return thrust::make_tuple(stiffness,sponLen); 
 	}

@@ -88,12 +88,12 @@ EType SceECM:: ConvertStringToEType(string eNodeRead) {
 } 
 
 
-void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM) {
+void SceECM::Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM, int freqPlotData) {
 
 maxAllNodePerCell=maxAllNodePerCellECM ; 
 maxMembrNodePerCell= maxMembrNodePerCellECM ; 
 maxTotalNodes=maxTotalNodesECM ; //Ali 
-
+this->freqPlotData=freqPlotData ; 
 
 
 std::fstream readCoord_ECM ;
@@ -510,7 +510,7 @@ PrintECM();
 
 void  SceECM:: PrintECM() {
 		lastPrintECM=lastPrintECM+1 ; 
-               if (lastPrintECM>=10000) { 
+               if (lastPrintECM>=freqPlotData) { 
 			outputFrameECM++ ; 
 			lastPrintECM=0 ; 
 			std::string vtkFileName = "ECM_" + patch::to_string(outputFrameECM-1) + ".vtk";

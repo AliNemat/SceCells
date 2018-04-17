@@ -690,9 +690,17 @@ SceCells::SceCells(SceNodes* nodesInput,
 	shrinkRatio = globalConfigVars.getConfigValue("ShrinkRatio").toDouble();
 	centerShiftRatio =
 			globalConfigVars.getConfigValue("CenterShiftRatio").toDouble();
+	double simulationTotalTime =
+			globalConfigVars.getConfigValue("SimulationTotalTime").toDouble();
+
+	double simulationTimeStep =
+			globalConfigVars.getConfigValue("SimulationTimeStep").toDouble();
+	int TotalNumOfOutputFrames =
+			globalConfigVars.getConfigValue("TotalNumOfOutputFrames").toInt();
+	relaxCount=0 ;
+	freqPlotData=int ( (simulationTotalTime-InitTimeStage)/(simulationTimeStep*TotalNumOfOutputFrames) ) ; 
 
 	memNewSpacing = globalConfigVars.getConfigValue("MembrLenDiv").toDouble();
-    relaxCount=0 ;
 	cout << "relax count is initialized as" << relaxCount << endl ; 
 	initialize_M(nodesInput);
 	copyToGPUConstMem();
@@ -1471,7 +1479,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 			* allocPara_m.maxAllNodePerCell;
         uint maxTotalNodes=nodes->getInfoVecs().nodeLocX.size() ; 
 		cout << " in the initial time step the total number of nodes in the domain is equal to " << maxTotalNodes << endl ; 
-		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell,maxTotalNodes);
+		eCM.Initialize(allocPara_m.maxAllNodePerCell, allocPara_m.maxMembrNodePerCell,maxTotalNodes, freqPlotData);
 
  		thrust:: copy (eCM.memNodeType.begin(),   eCM.memNodeType.begin()+    totalNodeCountForActiveCells,nodes->getInfoVecs().memNodeType1.begin()) ;
 
@@ -1483,7 +1491,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	curTime = curTime + dt;
 
-	if (curTime>=50 ){
+	if (curTime>=30 ){
 		nodes->isInitPhase=false ; 
 	}
 	bool tmpIsInitPhase= nodes->isInitPhase ; 
