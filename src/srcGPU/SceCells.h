@@ -1681,7 +1681,7 @@ struct MemGrowFunc: public thrust::unary_function<UiDDD, BoolD> {
 		if (curActiveMembrNode < _bound   && LengthMax>0.4 && cellProgress>0.1 && _isInitPhase==false) {
 		//if (curActiveMembrNode < _bound && LengthMax>0.15 ) {
 		//if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress<-0.001)  {   // to add node if in the initial condition negative progress is introduced.
-			return thrust::make_tuple(true, 0);
+			return thrust::make_tuple(false, 0);
 		}
 		//	else if (curActiveMembrNode < _bound  && LengthMax>0.15 && cellProgress>0.05)  {   // to not add new node for recently divided cells.
 		//	return thrust::make_tuple(true, 0);
