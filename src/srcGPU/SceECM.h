@@ -202,7 +202,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
-	double distMin=10000 ; 
+	double distMin=10000 ; // large number
 	double distMinX, distMinY ; 
 	//double kStifMemECM=3.0 ; // need to take out 
 	//double distMaxAdh=0.78125; // need to take out
@@ -212,22 +212,25 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	double fAdhMemECMY=0.0  ; 
 	int    adhPairECM=-1 ; //no adhere Pair
 	int   iPair=-1 ;
-	double smallNumber=0.000001; 
-	 if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell && (nodeType==basal1 || nodeType==apical1)) {
+	double smallNumber=0.000001;
+
+		if ( nodeIsActive && nodeRankInOneCell<_maxMembrNodePerCell ) {
 			for (int i=0 ; i<_numNodes_ECM ; i++) {
 				locX_ECM=_locXAddr_ECM[i]; 
 				locY_ECM=_locYAddr_ECM[i];
 				dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
-				if (dist < distMin) {
+				fMorse=calMorse_ECM(dist);
+				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
+				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
+				fTotalMorse=fTotalMorse+fMorse ; 
+				
+				if ( dist < distMin && (nodeType==basal1 || nodeType==apical1) ) {  //adhesion only for basal and apical nodes
 					distMin=dist ; 
 					distMinX=(locX_ECM-locX) ;
 					distMinY=(locY_ECM-locY) ; 
 					iPair=i ; 
 				}
-				fMorse=calMorse_ECM(dist);
-				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
-				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
-				fTotalMorse=fTotalMorse+fMorse ; 
+
 			}
 
 			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
@@ -238,17 +241,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
 				adhPairECM=iPair ; 
 			}
-
-
-
 	 }
-	//if (nodeType==basal1 && _curTime>300) {
 
-//	 return thrust::make_tuple (locX,locY,nodeType,-1)  ; 
-//	}
-//	else {
 	 return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
-  // }	
 		
 }
 	
@@ -457,7 +452,7 @@ struct MechProp: public thrust::unary_function<EType,DD> {
 	double sponLen=0 ;   ; 
 	if (_isInitPhase == false ) {
 		if (nodeType==excm) {
-			stiffness=2* _stiffness ; 
+			stiffness=1.3* _stiffness ; 
 			sponLen=0  ; 
 		}
 		if (nodeType==perip) {
