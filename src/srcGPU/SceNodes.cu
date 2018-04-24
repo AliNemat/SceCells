@@ -2219,18 +2219,18 @@ void SceNodes::applySceForcesDisc_M() {
 	if (adhUpdate) {
 		adhUpdate=false ; 
      	thrust :: copy (infoVecs.nodeLocX.begin(),infoVecs.nodeLocX.end(),infoVecs.nodeLocXHost.begin()) ; // Ali	
-   //  	thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
+     	thrust :: copy (infoVecs.nodeLocY.begin(),infoVecs.nodeLocY.end(),infoVecs.nodeLocYHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeIsActive.begin(),infoVecs.nodeIsActive.end(),infoVecs.nodeIsActiveHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeCellRankFront.begin() ,infoVecs.nodeCellRankFront.end() ,infoVecs.nodeCellRankFrontHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.nodeCellRankBehind.begin(),infoVecs.nodeCellRankBehind.end(),infoVecs.nodeCellRankBehindHost.begin()) ; // Ali 	
      	thrust :: copy (infoVecs.memNodeType1.begin(),infoVecs.memNodeType1.end(),infoVecs.memNodeType1Host.begin()) ; // Ali 	
 	 	thrust::fill(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), -1) ;  //Ali it is important to reset the values
 	 	//thrust::fill(infoVecs.nodeIsLateralMemHost.begin(),infoVecs.nodeIsLateralMemHost.end(), false) ;  //Ali
-	 	//thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
+	 	thrust::fill(infoVecs.nodeAdhMinDist.begin(),infoVecs.nodeAdhMinDist.end(), 10000) ;  //Ali
         int totalActiveNodes = allocPara_M.currentActiveCellCount* allocPara_M.maxAllNodePerCell; // Ali
 	  	int maxMembNode=    allocPara_M.maxMembrNodePerCell ; 
 	  	int maxNodePerCell= allocPara_M.maxAllNodePerCell ; 
-      	//double  distMinP2,distP2 ;
+      	double  distMinP2,distP2 ;
 	  	int indexAdhNode ; 
 		bool findAnyNode ;
 	  	double maxAdhLen= mechPara_M.bondAdhCriLenCPU_M; 
@@ -2329,7 +2329,7 @@ void SceNodes::applySceForcesDisc_M() {
 
 	cout << " size of vector storing information of apical junctions is " << subApicalInfo.size() << endl ; 
 	if (subApicalInfo.size() != 0 ) {  // to pass the first time step in which the membrane node type is not defined.
-		// Switched the behind and front subapical nodes if the assumption is not correct
+		// Switched the behind and front subapical nodes if the assumption is not correct. none of two models of adhsion will be active
 		for ( int i= 0 ; i<allocPara_M.currentActiveCellCount ; i++) {
 			int idFirst=firstApiLat[i]; 
 			int idSecond=secondApiLat[i]; 
@@ -2362,6 +2362,54 @@ void SceNodes::applySceForcesDisc_M() {
 	
 			}
 		}
+
+
+/////////////////////////////////// start adhesion for other lateral cells which are not subapical
+	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
+				  if (infoVecs.memNodeType1Host[i]==lateral1 && infoVecs.isSubApicalJunctionHost[i]==false) { 
+					cellRankTmp1=i/maxNodePerCell ; 
+		 			distMinP2=10000 ; // large number
+	  				findAnyNode=false ; 
+		 			for (int j=0 ; j<totalActiveNodes ; j++) {
+					
+						cellRankTmp2=j/maxNodePerCell ; 
+						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
+				  			if (infoVecs.memNodeType1Host[j]==lateral1 && infoVecs.isSubApicalJunctionHost[j]==false) { 
+								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
+			         	    	       pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
+
+								if (distP2<distMinP2   && distP2<maxAdhLen*maxAdhLen) {
+									distMinP2=distP2 ;
+									indexAdhNode=j ; 
+									findAnyNode=true ;
+								}
+		  					}
+						}
+		 	   		}
+                
+			   	 if ( findAnyNode && sqrt(distMinP2)<min (infoVecs.nodeAdhMinDist[indexAdhNode],infoVecs.nodeAdhMinDist[i])){
+	     			deactiveIdMyPair=infoVecs.nodeAdhereIndexHost[i] ;
+	     			deactiveIdAdhPair=infoVecs.nodeAdhereIndexHost[indexAdhNode] ;
+					if (deactiveIdMyPair != -1){	
+	     				infoVecs.nodeAdhereIndexHost[deactiveIdMyPair]=-1 ;
+	     				infoVecs.nodeAdhMinDist[deactiveIdMyPair]=10000 ;
+					}
+					if (deactiveIdAdhPair != -1){	
+	     				infoVecs.nodeAdhereIndexHost[deactiveIdAdhPair]=-1 ;
+	     				infoVecs.nodeAdhMinDist[deactiveIdAdhPair]=10000 ;
+					}
+	     			infoVecs.nodeAdhereIndexHost[i]=indexAdhNode ;
+	     			infoVecs.nodeAdhereIndexHost[indexAdhNode]=i ; 
+					infoVecs.nodeAdhMinDist[indexAdhNode]=sqrt(distMinP2) ; 
+					infoVecs.nodeAdhMinDist[i]=sqrt(distMinP2) ;
+				}
+
+		 	}
+	 	  }
+		  cout << " I am ready to copy the data in adhision function to the GPU " << endl ; 
+	
+/////////////////////////////////// end adhesion for other lateral cells which are not subapical
+		
 	
 		// copy back to GPU 
 		thrust::copy(infoVecs.nodeAdhereIndexHost.begin(),infoVecs.nodeAdhereIndexHost.end(), infoVecs.nodeAdhereIndex.begin()) ;  //Ali
