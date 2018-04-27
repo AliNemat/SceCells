@@ -7,6 +7,7 @@ thres_nodes = 0.64;
 
 % load cell configuration from mechanical submodel
 epi_nodes = load(['ExportCellProp_' num2str(index_couple) '.txt']);
+epi_nodes(end,:) = [];
 
 total_cell = max(epi_nodes(:,1))+1;
 cell_nodes = epi_nodes(total_cell+1:end,:);
@@ -37,8 +38,9 @@ for i = 0:total_cell-1
     end
 end
 
-figure(1); hold on;
-plot(cell_nodes(:,1),cell_nodes(:,2),'r.');
+%figure(1); hold on;
+%plot(cell_nodes(:,1),cell_nodes(:,2),'r.');
+
 % plot(intf_0_1(:,1),intf_0_1(:,2),'o-');
 % plot(intf_0_4(:,1),intf_0_4(:,2),'o-');
 % plot(intf_0_5(:,1),intf_0_5(:,2),'o-');
@@ -92,9 +94,9 @@ for i = 0:total_cell-1
     
 end
 
-for i = 0:total_cell-1
-    eval(['plot(vt_' num2str(i) '(:,1),vt_' num2str(i) '(:,2),''o'');']); 
-end
+% for i = 0:total_cell-1
+%     eval(['plot(vt_' num2str(i) '(:,1),vt_' num2str(i) '(:,2),''o'');']); 
+% end
 
 
 %replace points too close by the middle point on common edge
@@ -156,19 +158,19 @@ for i = 0:total_cell-1
 end
         
 % visualize the triangular mesh
-for i = 0:total_cell-1
-    eval(['plot(vt_' num2str(i) '(:,1),vt_' num2str(i) '(:,2),''*'');']); 
-end
-saveas(figure(1),'vertices.fig'); 
+%for i = 0:total_cell-1
+%    eval(['plot(vt_' num2str(i) '(:,1),vt_' num2str(i) '(:,2),''*'');']); 
+%end
+%saveas(figure(1),'vertices.fig'); 
 
 for i = 0:total_cell-1
     eval(['temp = vt_' num2str(i) ';']);
-    plot([temp(:,1); temp(1,1)],[temp(:,2); temp(1,2)],'b')
-    for j = 1:size(temp,1)
-        eval(['plot([centroid_' num2str(i) '(1) temp(' num2str(j) ',1)],[centroid_' num2str(i) '(2) temp(' num2str(j) ',2)],''b'');']);
-    end
+%    plot([temp(:,1); temp(1,1)],[temp(:,2); temp(1,2)],'b')
+%    for j = 1:size(temp,1)
+%        eval(['plot([centroid_' num2str(i) '(1) temp(' num2str(j) ',1)],[centroid_' num2str(i) '(2) temp(' num2str(j) ',2)],''b'');']);
+%    end
 end
-saveas(figure(1),'triangle_mesh.fig'); 
+%saveas(figure(1),'triangle_mesh.fig'); 
 
 
 % solve u_t = D(u_xx+u_yy)-du+source on the triangular mesh by
@@ -285,7 +287,7 @@ end
 Dpp_mat = zeros(mesh_size,4);
 dt = 0.002;
 
-for iter = 1:10000
+for iter = 1:1000
     [frhs] = Dpp_signaling(Dpp_mat,A_mat,L_mat,NI_mat,u_source);
     temp = Dpp_mat + dt * frhs;
     
@@ -303,68 +305,68 @@ pMad = Dpp_mat(:,4);
 pMad_cell = zeros(total_cell,1);
 %figure(2); 
 %subplot(2,2,1); hold on;
-%num_tri_pre=0;
-%for i = 0:total_cell-1
-%    eval(['num_tri = num_tri_' num2str(i) ';']);
-%    for j = 1:num_tri
-%        if j == num_tri
-%            jnext = 1;
-%        else
-%             jnext = j+1;
-%         end
+num_tri_pre=0;
+for i = 0:total_cell-1
+    eval(['num_tri = num_tri_' num2str(i) ';']);
+    for j = 1:num_tri
+        if j == num_tri
+            jnext = 1;
+        else
+             jnext = j+1;
+         end
 %         eval(['fill([vt_' num2str(i) '(j,1) vt_' num2str(i) '(jnext,1) centroid_' num2str(i) '(1)],[vt_' num2str(i) '(j,2) vt_' num2str(i) '(jnext,2) centroid_' num2str(i) '(2)],Dpp(num_tri_pre+j));']);
-%     end
-%     Dpp_cell(i+1) = sum(Dpp(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
-%     num_tri_pre = num_tri_pre + num_tri;
-% end
+     end
+     Dpp_cell(i+1) = sum(Dpp(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+     num_tri_pre = num_tri_pre + num_tri;
+ end
 % colorbar;
 % subplot(2,2,2); hold on;
-% num_tri_pre=0;
-% for i = 0:total_cell-1
-%     eval(['num_tri = num_tri_' num2str(i) ';']);
-%     for j = 1:num_tri
-%         if j == num_tri
-%             jnext = 1;
-%         else
-%             jnext = j+1;
-%         end
+ num_tri_pre=0;
+ for i = 0:total_cell-1
+     eval(['num_tri = num_tri_' num2str(i) ';']);
+     for j = 1:num_tri
+         if j == num_tri
+             jnext = 1;
+         else
+             jnext = j+1;
+         end
 %         eval(['fill([vt_' num2str(i) '(j,1) vt_' num2str(i) '(jnext,1) centroid_' num2str(i) '(1)],[vt_' num2str(i) '(j,2) vt_' num2str(i) '(jnext,2) centroid_' num2str(i) '(2)],Tkv(num_tri_pre+j));']);
-%     end
-%     Tkv_cell(i+1) = sum(Tkv(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
-%     num_tri_pre = num_tri_pre + num_tri;
-% end
+     end
+     Tkv_cell(i+1) = sum(Tkv(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+     num_tri_pre = num_tri_pre + num_tri;
+ end
 % colorbar;
 % subplot(2,2,3); hold on;
-% num_tri_pre=0;
-% for i = 0:total_cell-1
-%     eval(['num_tri = num_tri_' num2str(i) ';']);
-%     for j = 1:num_tri
-%         if j == num_tri
-%             jnext = 1;
-%         else
-%             jnext = j+1;
-%         end
+ num_tri_pre=0;
+ for i = 0:total_cell-1
+     eval(['num_tri = num_tri_' num2str(i) ';']);
+     for j = 1:num_tri
+         if j == num_tri
+             jnext = 1;
+         else
+             jnext = j+1;
+         end
 %         eval(['fill([vt_' num2str(i) '(j,1) vt_' num2str(i) '(jnext,1) centroid_' num2str(i) '(1)],[vt_' num2str(i) '(j,2) vt_' num2str(i) '(jnext,2) centroid_' num2str(i) '(2)],DT(num_tri_pre+j));']);
-%     end
-%     DT_cell(i+1) = sum(DT(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
-%     num_tri_pre = num_tri_pre + num_tri;
-% end
+     end
+     DT_cell(i+1) = sum(DT(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+     num_tri_pre = num_tri_pre + num_tri;
+ end
 % colorbar;
 % subplot(2,2,4); hold on;
-% num_tri_pre=0;
-% for i = 0:total_cell-1
-%     eval(['num_tri = num_tri_' num2str(i) ';']);
-%     for j = 1:num_tri
-%         if j == num_tri
-%             jnext = 1;
-%         else
-%             jnext = j+1;
-%         end
+ num_tri_pre=0;
+ for i = 0:total_cell-1
+     eval(['num_tri = num_tri_' num2str(i) ';']);
+     for j = 1:num_tri
+         if j == num_tri
+             jnext = 1;
+         else
+             jnext = j+1;
+         end
 %         eval(['fill([vt_' num2str(i) '(j,1) vt_' num2str(i) '(jnext,1) centroid_' num2str(i) '(1)],[vt_' num2str(i) '(j,2) vt_' num2str(i) '(jnext,2) centroid_' num2str(i) '(2)],pMad(num_tri_pre+j));']);
-%     end
-%     pMad_cell(i+1) = sum(pMad(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
-%     num_tri_pre = num_tri_pre + num_tri;
-% end
+     end
+     pMad_cell(i+1) = sum(pMad(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+     num_tri_pre = num_tri_pre + num_tri;
+ end
 % colorbar;
 % saveas(figure(2),'Dpp_signaling.fig');
 

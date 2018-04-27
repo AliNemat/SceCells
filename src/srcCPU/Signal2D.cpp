@@ -88,6 +88,8 @@ void Signal::exportGeometryInfo() {
 			ExportOut<<cellRank<<","<<nodeLocXHost[i]<<","<<nodeLocYHost[i]<<endl   ;
 		}
 	}
+	int lastLineIndicator=123456789 ; 
+	ExportOut<<lastLineIndicator<<","<<lastLineIndicator<<","<<lastLineIndicator<<endl   ;
 	ExportOut.flush() ;
 	cout << "I exported  the data for signaling model"<< endl ; 
 	ExportOut.close() ;  
@@ -126,7 +128,7 @@ void Signal::importSignalInfoCellLevel() {
 				cout << "the opened file name is " << importDppFileName <<endl ;
 			}
 			else {
-				cout << "failed openining dpp file"<<endl ;
+		//		cout << "failed openining dpp file"<<endl ;
 			}	
 		}
 		if (inputDpp.good()) {
@@ -177,7 +179,7 @@ void Signal::importSignalInfoTissueLevel() {
 				cout << "the opened file name is " << importDppFileName <<endl ;
 			}
 			else {
-				cout << "failed openining dpp file"<<endl ;
+				//cout << "failed openining dpp file"<<endl ;
 			}	
 		}
 		if (inputDpp.good()) {
@@ -232,8 +234,8 @@ void Signal::processSignalInfoTissueLevel() {
 			double dummy = (static_cast<double>(rand()) / RAND_MAX);
 			double ranNum = NormalCDFInverse(dummy);	
 
-			dppLevel[k]=dppLevels_Cell[k]+
-					  dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
+			dppLevel[k]=dppLevels_Cell[k]; //+
+					  //dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
 		}	
 }
 
@@ -261,8 +263,7 @@ void Signal::processSignalInfoCellLevel() {
 			double dummy = (static_cast<double>(rand()) / RAND_MAX);
 			double ranNum = NormalCDFInverse(dummy);	
 
-			dppLevel[k]=dppLevels_Cell[k] ; //+
-					//  dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
+			dppLevel[k]=dppLevels_Cell[k] ;  //+ dppLevels_Cell[k]*(0.1*sin(0.2*3.141592*distYAbs)+0.12*ranNum); 
 		}	
 }
 
