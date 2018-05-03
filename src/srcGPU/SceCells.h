@@ -525,13 +525,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (_subMembPolar) { // if # 6 s
 				if (cellType==pouch && memType==lateral1 ) { 
-					actinLevel=1.25*kStiff ;  //0.5
+					actinLevel=1.5*kStiff ;  //0.5
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; 
+					 actinLevel=1.5*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ; // 0.55
+					 actinLevel=1.5*kStiff ; // 0.55
 				}
 
 				/*
@@ -547,13 +547,13 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 				*/
 
 				if (cellType==bc && memType==lateral1 ) { 
-					actinLevel=1.25*kStiff ;
+					actinLevel=1.5*kStiff ;
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; 
+					 actinLevel=1.5*kStiff ; 
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ;
+					 actinLevel=1.5*kStiff ;
 				}
 
 
@@ -1712,7 +1712,7 @@ struct MemDelFunc: public thrust::unary_function<UiDDD, BoolD> {
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress>0.05 ) {
 		if (curActiveMembrNode > 0  && LengthMin<0.1 && cellProgress>0.1 &&  _isInitPhase==true) {
 	//		return thrust::make_tuple(false,progress); // by pass for now to not loose apical nodes
-			return thrust::make_tuple(true, progress); 
+			return thrust::make_tuple(false, progress); 
 		} 
 		
 		//if (curActiveMembrNode > 0  && LengthMin<0.06 && cellProgress<-0.001 ) {
