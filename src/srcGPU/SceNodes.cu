@@ -2321,11 +2321,11 @@ void SceNodes::applySceForcesDisc_M() {
 		}
 
 		cout << "Second set of adhesion joints are found" << endl ; 
-		for (int i=0 ; i<totalActiveNodes ;  i++) {
-			if (infoVecs.isSubApicalJunctionHost[i]) {
-				cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
-		 	}
-		}
+		//for (int i=0 ; i<totalActiveNodes ;  i++) {
+		//	if (infoVecs.isSubApicalJunctionHost[i]) {
+		//		cout << "for cell with rank  "	<<int(i/maxNodePerCell) << "node rank of subApical junction is " << i << endl ;  
+		 //	}
+	//	}
 
 	cout << " size of vector storing information of apical junctions is " << subApicalInfo.size() << endl ; 
 	if (subApicalInfo.size() != 0 ) {  // to pass the first time step in which the membrane node type is not defined.
@@ -2354,10 +2354,10 @@ void SceNodes::applySceForcesDisc_M() {
 				int cellRankBehind=infoVecs.nodeCellRankBehindHost[i] ;
 				
 				if (cellRankFront  != -1) {
-					infoVecs.nodeAdhereIndexHost[idFront]=subApicalInfo[cellRankFront].nodeIdBehind[j] ;
+					infoVecs.nodeAdhereIndexHost[idFront]=-1 ; // subApicalInfo[cellRankFront].nodeIdBehind[j] ;
 				}
 				if (cellRankBehind != -1) {
-					infoVecs.nodeAdhereIndexHost[idBehind]=subApicalInfo[cellRankBehind].nodeIdFront[j] ;
+					infoVecs.nodeAdhereIndexHost[idBehind]=-1 ; //subApicalInfo[cellRankBehind].nodeIdFront[j] ;
 				}
 	
 			}
@@ -2366,7 +2366,8 @@ void SceNodes::applySceForcesDisc_M() {
 
 /////////////////////////////////// start adhesion for other lateral cells which are not subapical
 	 		for (int i=0 ; i<totalActiveNodes ;  i++) {
-				  if (infoVecs.memNodeType1Host[i]==lateral1 && infoVecs.isSubApicalJunctionHost[i]==false) { 
+				  //if (infoVecs.memNodeType1Host[i]==lateral1 && infoVecs.isSubApicalJunctionHost[i]==false) { 
+				  if (infoVecs.memNodeType1Host[i]==lateral1 ) { 
 					cellRankTmp1=i/maxNodePerCell ; 
 		 			distMinP2=10000 ; // large number
 	  				findAnyNode=false ; 
@@ -2374,7 +2375,8 @@ void SceNodes::applySceForcesDisc_M() {
 					
 						cellRankTmp2=j/maxNodePerCell ; 
 						if (cellRankTmp2==infoVecs.nodeCellRankFrontHost[cellRankTmp1] || cellRankTmp2==infoVecs.nodeCellRankBehindHost[cellRankTmp1]) {
-				  			if (infoVecs.memNodeType1Host[j]==lateral1 && infoVecs.isSubApicalJunctionHost[j]==false) { 
+				  			//if (infoVecs.memNodeType1Host[j]==lateral1 && infoVecs.isSubApicalJunctionHost[j]==false) { 
+				  			if (infoVecs.memNodeType1Host[j]==lateral1 ) { 
 								distP2=pow( infoVecs.nodeLocXHost[i]-infoVecs.nodeLocXHost[j],2)+
 			         	    	       pow( infoVecs.nodeLocYHost[i]-infoVecs.nodeLocYHost[j],2) ;
 

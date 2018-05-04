@@ -432,8 +432,8 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 	double fMembY       = thrust:: get<5>(dDDDDD); 
 
 
-	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
-	//return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
+//	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
+	return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
 	}
 }; 
 

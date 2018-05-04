@@ -3049,9 +3049,9 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), thrust::plus<int>());
 int sizeApical=cellInfoVecs.apicalNodeCount.size() ; 
 
-for (int i=0 ; i<allocPara_m.currentActiveCellCount; i++) {
-	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
-}
+//for (int i=0 ; i<allocPara_m.currentActiveCellCount; i++) {
+//	cout << " the number of apical nodes for cell " << i << " is "<<cellInfoVecs.apicalNodeCount[i] << endl ;   
+//}
 
 
 
@@ -3128,16 +3128,16 @@ for (int i=0 ; i<allocPara_m.currentActiveCellCount; i++) {
 					thrust::make_tuple(cellInfoVecs.apicalLocX.begin(),
 							           cellInfoVecs.apicalLocY.begin())), ApicalLocCal(apicalNodeCountAddr));
 
-	for (int i= 0 ; i<NumCellsWithApicalNode ; i++) {
+	//for (int i= 0 ; i<NumCellsWithApicalNode ; i++) {
 
-		cout << "apical location in x for modified id " << i << " is " << cellInfoVecs.apicalLocX[i] << endl ; 
-		cout << "apical location in y for modified id " << i << " is " << cellInfoVecs.apicalLocY[i] << endl ; 
+	//	cout << "apical location in x for modified id " << i << " is " << cellInfoVecs.apicalLocX[i] << endl ; 
+	//	cout << "apical location in y for modified id " << i << " is " << cellInfoVecs.apicalLocY[i] << endl ; 
 
-	}
+//	}
 
-	for (int i= 0 ; i<allocPara_m.currentActiveCellCount ; i++) {
-		cout <<"num of apical nodes for cell " <<i << " is " << cellInfoVecs.apicalNodeCount[i] << endl ;  
-	}
+//	for (int i= 0 ; i<allocPara_m.currentActiveCellCount ; i++) {
+//		cout <<"num of apical nodes for cell " <<i << " is " << cellInfoVecs.apicalNodeCount[i] << endl ;  
+//	}
 
 		for (int i=0 ; i<allocPara_m.currentActiveCellCount-1 ; i++) {  // if the cell with 0 apical node is at the end, we are fine.
 			if (cellInfoVecs.apicalNodeCount[i]==0) {
@@ -3178,13 +3178,13 @@ void SceCells::computeNucleusLoc() {
 			thrust::make_zip_iterator(
 					thrust::make_tuple(cellInfoVecs.nucleusLocX.begin(),
 							           cellInfoVecs.nucleusLocY.begin())), CalNucleusLoc());
-for (int i=0 ; i<allocPara_m.currentActiveCellCount ; i++) {
+//for (int i=0 ; i<allocPara_m.currentActiveCellCount ; i++) {
 
-	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
-	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
-	cout << "for cell rank "<< i << " apical  location in X direction is " << cellInfoVecs.apicalLocX[i] <<" in Y direction is " << cellInfoVecs.apicalLocY[i] << endl ; 
-	cout << "for cell rank "<< i << " center  location in X direction is " << cellInfoVecs.centerCoordX[i] <<" in Y direction is " << cellInfoVecs.centerCoordY[i] << endl ; 
-}
+//	cout << "for cell rank "<< i << " Cell progress is " << cellInfoVecs.growthProgress[i] << endl ; 
+//	cout << "for cell rank "<< i << " Nucleus location in X direction is " << cellInfoVecs.nucleusLocX[i] <<" in Y direction is " << cellInfoVecs.nucleusLocY[i] << endl ; 
+//	cout << "for cell rank "<< i << " apical  location in X direction is " << cellInfoVecs.apicalLocX[i] <<" in Y direction is " << cellInfoVecs.apicalLocY[i] << endl ; 
+//	cout << "for cell rank "<< i << " center  location in X direction is " << cellInfoVecs.centerCoordX[i] <<" in Y direction is " << cellInfoVecs.centerCoordY[i] << endl ; 
+//}
 
 }
 
@@ -4867,9 +4867,9 @@ void SceCells::calMembrGrowSpeed_M() {
 							cellInfoVecs.maxDistToRiVec.begin())),
 			thrust::equal_to<uint>(), MaxWInfo());
 
-	for (int i=0 ; i<cellInfoVecs.maxDistToRiVec.size() ; i++) {
-		cout << "the max distance in cell" << i << " is "<<cellInfoVecs.maxDistToRiVec[i] << endl ; 
-	}
+//	for (int i=0 ; i<cellInfoVecs.maxDistToRiVec.size() ; i++) {
+//		cout << "the max distance in cell" << i << " is "<<cellInfoVecs.maxDistToRiVec[i] << endl ; 
+//	}
 
 	//Ali for min Distance
 
@@ -4893,10 +4893,10 @@ thrust::reduce_by_key(
 			thrust::equal_to<uint>(), MinWInfo());  // how to sort the keys & how to reduce the parameters assigned to based on each key
 // equal_to mean how we set the beans to reduce. For example here we are saying if they are equal in Int we compare them and would peroform the reduction.
 
-	for (int i=0 ; i<cellInfoVecs.minDistToRiVec.size() ; i++) {
-		cout << "the min distance in cell" << i << " is "<<cellInfoVecs.minDistToRiVec[i] << endl ; 
-		cout << "the min tension index vec" << i << " is "<<cellInfoVecs.minTenIndxVec[i] << endl ; 
-	}
+//	for (int i=0 ; i<cellInfoVecs.minDistToRiVec.size() ; i++) {
+//		cout << "the min distance in cell" << i << " is "<<cellInfoVecs.minDistToRiVec[i] << endl ; 
+//		cout << "the min tension index vec" << i << " is "<<cellInfoVecs.minTenIndxVec[i] << endl ; 
+//	}
 
 
 	thrust::reduce_by_key(
