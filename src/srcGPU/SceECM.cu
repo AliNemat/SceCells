@@ -38,6 +38,21 @@ double calMorse_ECM(const double& linkLength ) {
 }
 
 __device__
+double calMorseEnergy_ECM(const double& linkLength ) {
+
+	double energyValue=0.0 ; 
+	if (linkLength > sceInterCell_ECM[4]) {
+		energyValue = 0;
+	} else {
+		energyValue = sceInterCell_ECM[0]* exp(-linkLength / sceInterCell_ECM[2])
+				    - sceInterCell_ECM[1]* exp(-linkLength / sceInterCell_ECM[3]);
+	}
+
+	return (energyValue) ; 
+}
+
+
+__device__
 double calWLC_ECM(const double& linkLength ) {
 
 	double x=linkLength/wLCPara_ECM[0] ;
@@ -70,6 +85,13 @@ double  CalAdhECM(const double& dist ) {
 	return (kAdhECMGPU*(dist-restLenECMAdhSpringGPU)); 
 	// in the function IsValid pair, distance already checked to be greater than neutral length
 			}
+
+__device__
+double  CalAdhEnergy(const double& dist ) {
+	return (0.5*kAdhECMGPU*(dist-restLenECMAdhSpringGPU)*(dist-restLenECMAdhSpringGPU)); 
+	// in the function IsValid pair, distance already checked to be greater than neutral length
+			}
+
 
 EType SceECM:: ConvertStringToEType(string eNodeRead) {
 	if (eNodeRead=="perip")  {
@@ -203,6 +225,9 @@ sponLen.resize(numNodesECM,restLenECMSpring) ;
 linSpringForceECMX.resize(numNodesECM,0.0); 
 linSpringForceECMY.resize(numNodesECM,0.0); 
 linSpringAvgTension.resize(numNodesECM,0.0); 
+linSpringEnergy.resize(numNodesECM,0.0); 
+morseEnergy.resize(numNodesECM,0.0); 
+adhEnergy.resize(numNodesECM,0.0); 
 
 
 bendSpringForceECMX.resize(numNodesECM,0.0); 
@@ -238,7 +263,7 @@ thrust::copy(eNodeVec.begin(),eNodeVec.end(),peripORexcm.begin()) ;
 //	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
 //}
 
-PrintECM() ; 
+PrintECM(0.0) ; 
 for (int i=0 ; i<maxTotalNodes ; i++) {
 	int nodeRankPerCell=i%maxAllNodePerCell ;
 	if (nodeRankPerCell<7) {
@@ -261,6 +286,11 @@ for (int i=0 ; i<maxTotalNodes ; i++) {
 	}
 }
 
+std::string cSVFileName = "EnergyExport.CSV";
+			ofstream EnergyExport ;
+			EnergyExport.open(cSVFileName.c_str());
+
+			EnergyExport <<"Time,"<<"TotalMorseEnergyCell," << "TotalAdhEnergyCell,"<<  "TotalMorseEnergy,"<<"TotalAdhEnergy,"<< "TotalLinSpringEnergy" <<" TotalEnergy"<< std::endl;
 
 
 
@@ -281,6 +311,8 @@ nodeDeviceTmpLocY.resize(totalNodeCountForActiveCellsECM,0.0) ;
 //isBasalMemNode.resize(totalNodeCountForActiveCellsECM,false) ;
 adhPairECM_Cell.resize(totalNodeCountForActiveCellsECM,-1) ;
  
+morseEnergyCell.resize(totalNodeCountForActiveCellsECM,0.0); 
+adhEnergyCell.resize(totalNodeCountForActiveCellsECM,0.0); 
 thrust::copy(nodeDeviceLocX.begin(),nodeDeviceLocX.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocX.begin()) ; 
 thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActiveCellsECM,nodeDeviceTmpLocY.begin()) ; 
 cout << " max all node per cell in ECM module is " << maxAllNodePerCell << endl ; 
@@ -328,9 +360,13 @@ memNodeType.resize(maxTotalNodes,notAssigned1) ;
 					nodeDeviceLocX.begin(),
 					nodeDeviceLocY.begin(),
 					memNodeType.begin(),
-					adhPairECM_Cell.begin())),
+					adhPairECM_Cell.begin(),
+					morseEnergyCell.begin(),
+					adhEnergyCell.begin())),
 				MoveNodes2_Cell(nodeECMLocXAddr,nodeECMLocYAddr,maxMembrNodePerCell,numNodesECM,dt,Damp_Coef,isInitPhase,peripORexcmAddr,curTime));
 
+totalMorseEnergyCell = thrust::reduce( morseEnergyCell.begin(),morseEnergyCell.begin()+totalNodeCountForActiveCellsECM,(double) 0.0, thrust::plus<double>() ); 
+totalAdhEnergyCell   = thrust::reduce( adhEnergyCell.begin()  ,adhEnergyCell.begin()  +totalNodeCountForActiveCellsECM,(double) 0.0, thrust::plus<double>() );
 
 double* nodeCellLocXAddr= thrust::raw_pointer_cast (
 			&nodeDeviceTmpLocX[0]) ; 
@@ -370,9 +406,12 @@ thrust:: transform (
 				thrust::make_tuple (
 					linSpringForceECMX.begin(),
 					linSpringForceECMY.begin(),
-					linSpringAvgTension.begin())),
+					linSpringAvgTension.begin(),
+					linSpringEnergy.begin())),
 				LinSpringForceECM(numNodesECM,restLenECMSpring,eCMLinSpringStiff,nodeECMLocXAddr,nodeECMLocYAddr,stiffLevelAddr,sponLenAddr));
 
+
+totalLinSpringEnergy = thrust::reduce( linSpringEnergy.begin(),linSpringEnergy.begin()+numNodesECM,(double) 0.0, thrust::plus<double>() ); 
 thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust:: make_tuple (
@@ -436,8 +475,13 @@ thrust:: transform (
 		thrust::make_zip_iterator (
 				thrust::make_tuple (
 					memMorseForceECMX.begin(),
-					memMorseForceECMY.begin())),
+					memMorseForceECMY.begin(),
+					morseEnergy.begin(),
+					adhEnergy.begin())),
 				MorseAndAdhForceECM(totalNodeCountForActiveCellsECM,maxAllNodePerCell,maxMembrNodePerCell,nodeCellLocXAddr,nodeCellLocYAddr,nodeIsActive_CellAddr,adhPairECM_CellAddr));
+
+totalMorseEnergy = thrust::reduce( morseEnergy.begin(),morseEnergy.begin()+numNodesECM,(double) 0.0, thrust::plus<double>() ); 
+totalAdhEnergy   = thrust::reduce( adhEnergy.begin()  ,adhEnergy.begin()  +numNodesECM,(double) 0.0, thrust::plus<double>() );
 
 
 double dummy=0.0 ;
@@ -504,11 +548,11 @@ thrust:: transform (
 //	cout<< nodeECMLocX[i]<<", "<<nodeECMLocY[i]<<", "<<peripORexcm[i] << endl; 
 //}
 
-PrintECM(); 
+PrintECM(curTime); 
 
 }
 
-void  SceECM:: PrintECM() {
+void  SceECM:: PrintECM(double curTime) {
 		lastPrintECM=lastPrintECM+1 ; 
                if (lastPrintECM>=freqPlotData) { 
 			outputFrameECM++ ; 
@@ -581,7 +625,16 @@ void  SceECM:: PrintECM() {
 			}
 
 			ECMExport.close();
+			
+			double totalEnergyECM=0.5*(totalMorseEnergyCell+totalMorseEnergy)+ 0.5*(totalAdhEnergyCell+totalAdhEnergy)+ 0.5*totalLinSpringEnergy ;
 
+
+			std::string cSVFileName = "EnergyExport.CSV";
+			ofstream EnergyExport ;
+			EnergyExport.open(cSVFileName.c_str(),ofstream::app);
+			
+			//EnergyExport <<"totalMorseEnergyCell " << "totalAdhEnergyCell "<<  "totalMorseEnergy "<<"totalAdhEnergy "<< "totalLinSpringEnergy " << std::endl;
+			EnergyExport <<curTime<<","<<totalMorseEnergyCell << "," << totalAdhEnergyCell<< "," << totalMorseEnergy<< "," << totalAdhEnergy<< "," << totalLinSpringEnergy <<"," << totalEnergyECM << std::endl;
 
 
 			}

@@ -9,9 +9,9 @@
 typedef thrust ::tuple<int,double,double> IDD ; 
 typedef thrust ::tuple<int,double,double,bool,MembraneType1> IDDBT ; 
 typedef thrust ::tuple<double,double> DD ; 
-typedef thrust ::tuple<double,double,double> DDD ; 
+typedef thrust ::tuple<double,double,double,double> DDDD ; 
 typedef thrust ::tuple<double,double,bool> DDB ; 
-typedef thrust ::tuple<double,double,MembraneType1,int> DDTI ; 
+typedef thrust ::tuple<double,double,MembraneType1,int,double,double> DDTIDD ; 
 typedef thrust ::tuple<double,double,double,double,double,double> DDDDDD ;
 typedef thrust ::tuple<double,double,double,double,int,EType> DDDDIT ; 
 
@@ -31,12 +31,14 @@ public:
         void ApplyECMConstrain(int totalNodeCountForActiveCellsECM, double curTime, double dt, double Damp_Coef, bool cellPolar, bool subCellPolar, bool isInitPhase) ; 
 		void Initialize(uint maxAllNodePerCellECM, uint maxMembrNodePerCellECM, uint maxTotalNodesECM, int freqPlotData); 
 		EType ConvertStringToEType (string eNodeRead) ;
-		void PrintECM(); 
+		void PrintECM(double curTime); 
 double restLenECMSpring ;
 double eCMLinSpringStiff ; 
 double restLenECMAdhSpring ; 
 double maxLenECMAdhSpring ; 
-double kAdhECM ; 
+double kAdhECM ;
+double totalLinSpringEnergy,totalMorseEnergy, totalAdhEnergy, totalMorseEnergyCell, totalAdhEnergyCell ; 
+
 int outputFrameECM ;  
 int lastPrintECM ;
 int numNodesECM ;
@@ -67,6 +69,12 @@ thrust::device_vector<bool> nodeIsActive_Cell ;
 thrust::device_vector<double> linSpringForceECMX ; 
 thrust::device_vector<double> linSpringForceECMY ; 
 thrust::device_vector<double> linSpringAvgTension  ; 
+thrust::device_vector<double> linSpringEnergy  ; 
+thrust::device_vector<double> morseEnergy  ; 
+thrust::device_vector<double> adhEnergy  ;
+
+thrust::device_vector<double> morseEnergyCell ; //it should be cell size 
+thrust::device_vector<double> adhEnergyCell  ; // it should be cell size
  
  
 thrust::device_vector<double> bendSpringForceECMX ; 
@@ -95,6 +103,8 @@ __device__
 double calMorse_ECM (const double & linkLength); 
 
 __device__
+double calMorseEnergy_ECM (const double & linkLength); 
+__device__
 double calWLC_ECM (const double & linkLength); 
 
 
@@ -106,6 +116,9 @@ bool IsValidAdhPairForNotInitPhase (const double & dist);
 
 __device__
 double CalAdhECM (const double & dist);
+
+__device__
+double CalAdhEnergy (const double & dist);
 
 struct InitECMLoc
 {
@@ -174,7 +187,7 @@ struct ModuloFunctor2: public thrust::unary_function <int,int>{
 	} ; 
 
 
-struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
+struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTIDD> {
 	 double  *_locXAddr_ECM; 
          double  *_locYAddr_ECM; 
         uint _maxMembrNodePerCell ; 
@@ -188,7 +201,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				_locXAddr_ECM(locXAddr_ECM),_locYAddr_ECM(locYAddr_ECM),_maxMembrNodePerCell(maxMembrNodePerCell),_numNodes_ECM(numNodes_ECM),_dt(dt),
 			    _Damp_Coef(Damp_Coef), _isInitPhase (isInitPhase), _peripORexcmAddr(peripORexcmAddr),_curTime (curTime)	{
 	}
-	__device__ DDTI  operator()(const IDDBT & iDDBT) const {
+	__device__ DDTIDD  operator()(const IDDBT & iDDBT) const {
 	
 	int nodeRankInOneCell=          thrust::get<0>(iDDBT) ; 
 	double            locX=         thrust::get<1>(iDDBT) ; 
@@ -202,6 +215,8 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
+	double eMorseCell=0 ; 
+	double eAdhCell= 0 ; 
 	double distMin=10000 ; // large number
 	double distMinX, distMinY ; 
 	//double kStifMemECM=3.0 ; // need to take out 
@@ -220,6 +235,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 				locY_ECM=_locYAddr_ECM[i];
 				dist=sqrt((locX-locX_ECM)*(locX-locX_ECM)+(locY-locY_ECM)*(locY-locY_ECM)) ;
 				fMorse=calMorse_ECM(dist);
+				eMorseCell=eMorseCell + calMorseEnergy_ECM(dist);  
 				fTotalMorseX=fTotalMorseX+fMorse*(locX_ECM-locX)/dist ; 
 				fTotalMorseY=fTotalMorseY+fMorse*(locY_ECM-locY)/dist ; 
 				fTotalMorse=fTotalMorse+fMorse ; 
@@ -236,6 +252,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 			if (IsValidAdhPairForNotInitPhase(distMin)&& iPair!=-1) {
 
         		fAdhMemECM=CalAdhECM(distMin) ; 
+				eAdhCell=CalAdhEnergy(distMin) ; 
 
 				fAdhMemECMX=fAdhMemECM*distMinX/distMin ;  
 				fAdhMemECMY=fAdhMemECM*distMinY/distMin ; 
@@ -243,7 +260,9 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 			}
 	 }
 
-	 return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),nodeType,adhPairECM)  ; 
+	 return thrust::make_tuple ((locX+(fTotalMorseX+fAdhMemECMX)*_dt/_Damp_Coef),
+	 							(locY+(fTotalMorseY+fAdhMemECMY)*_dt/_Damp_Coef),
+								 nodeType,adhPairECM,eMorseCell,eAdhCell )  ; 
 		
 }
 	
@@ -255,7 +274,7 @@ struct MoveNodes2_Cell: public thrust::unary_function<IDDBT,DDTI> {
 
 
 
-struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
+struct LinSpringForceECM: public thrust::unary_function<IDD,DDDD> {
          int   _numNodes ; 	
 	 double  _restLen ; 
 	 double  _linSpringStiff ;
@@ -269,7 +288,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 										   double * stiffAddr, double * sponLenAddr ) :
 	 _numNodes(numNodes),_restLen(restLen),_linSpringStiff(linSpringStiff),_locXAddr(locXAddr),_locYAddr(locYAddr),_stiffAddr (stiffAddr), _sponLenAddr (sponLenAddr) {
 	}
-	 __device__ DDD operator()(const IDD & iDD) const {
+	 __device__ DDDD operator()(const IDD & iDD) const {
 	
 	int     index=    thrust::get<0>(iDD) ; 
 	double  locX=     thrust::get<1>(iDD) ; 
@@ -290,6 +309,8 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double forceRight ; 
 	double forceRightX ; 
 	double forceRightY ;
+
+	double energyLeft, energyRight ; 
 	int indexLeft, indexRight ; 
 
         if (index != 0) {
@@ -310,6 +331,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	//	forceLeft=calWLC_ECM(distLeft) ; 
 		//forceLeft=_linSpringStiff*(distLeft-_restLen) ; 
 		forceLeft=kStiffLeft*(distLeft-sponLenLeft) ; 
+		energyLeft=0.5*kStiffLeft*(distLeft-sponLenLeft)*(distLeft-sponLenLeft) ; 
 		forceLeftX=forceLeft*(locXLeft-locX)/distLeft ; 
 		forceLeftY=forceLeft*(locYLeft-locY)/distLeft ; 
 
@@ -330,7 +352,9 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double kStiffRight =0.5*(_stiffAddr  [indexRight]  +  _stiffAddr[index]  ) ; 
 	double sponLenRight=0.5*(_sponLenAddr[indexRight]  +_sponLenAddr[index]  ) ; 
    	    	//forceRight=_linSpringStiff*(distRight-_restLen) ; 
-   	    	forceRight=kStiffRight*(distRight-sponLenRight) ; 
+   	    	forceRight=kStiffRight*(distRight-sponLenRight) ;
+			energyRight=0.5*kStiffRight*(distRight-sponLenRight)*(distRight-sponLenRight)  ;
+
         //  	forceRight=calWLC_ECM(distRight) ; 
 		forceRightX=forceRight*(locXRight-locX)/distRight ; 
 		forceRightY=forceRight*(locYRight-locY)/distRight ; 
@@ -342,7 +366,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 //		return thrust::make_tuple(forceLeftX,forceLeftY,forceLeft) ;
 //	}
 //	else {
-		return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight)) ;
+		return thrust::make_tuple(forceLeftX+forceRightX,forceLeftY+forceRightY,0.5*(forceLeft+forceRight), energyLeft+energyRight) ;
 //	}
         
 
@@ -352,7 +376,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 } ;
 
  
- struct MorseAndAdhForceECM: public thrust::unary_function<IDD,DD> {
+ struct MorseAndAdhForceECM: public thrust::unary_function<IDD,DDDD> {
          int  _numActiveNodes_Cell ; 	
          uint  _maxNodePerCell ; 	
          uint  _maxMembrNodePerCell ; 	
@@ -364,7 +388,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	_numActiveNodes_Cell(numActiveNodes_Cell), _maxNodePerCell(maxNodePerCell), _maxMembrNodePerCell(maxMembrNodePerCell),_locXAddr_Cell(locXAddr_Cell),_locYAddr_Cell(locYAddr_Cell),_nodeIsActive_Cell(nodeIsActive_Cell),_adhPairECM_Cell(adhPairECM_Cell) {
 	}
 	 __device__ 
-	DD operator()(const IDD & iDD) const {
+	DDDD operator()(const IDD & iDD) const {
 	
 	int     index=    thrust::get<0>(iDD) ; 
 	double  locX=     thrust::get<1>(iDD) ; 
@@ -376,7 +400,9 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 	double distMin=100000 ; //large number
 	double distMinX,distMinY ; 
 	double fAdhX=0 ; 
-	double fAdhY=0 ;  
+	double fAdhY=0 ; 
+	double eAdh=0 ; 
+	double eMorse=0 ; 
 	double fTotalMorseX=0.0 ; 
 	double fTotalMorseY=0.0 ;
 	double fTotalMorse=0.0 ;
@@ -394,11 +420,13 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 			locY_C=_locYAddr_Cell[i];
 			dist=sqrt((locX-locX_C)*(locX-locX_C)+(locY-locY_C)*(locY-locY_C)) ;
 			fMorse=calMorse_ECM(dist);  
+			eMorse=eMorse + calMorseEnergy_ECM(dist);  
 			fTotalMorseX=fTotalMorseX+fMorse*(locX_C-locX)/dist ; 
 			fTotalMorseY=fTotalMorseY+fMorse*(locY_C-locY)/dist ; 
 			fTotalMorse=fTotalMorse+fMorse ;
 			if (_adhPairECM_Cell[i]==index) {
 				fAdh=CalAdhECM(dist) ; 
+				eAdh=eAdh+CalAdhEnergy(dist) ; 
 				fAdhX=fAdhX+fAdh*(locX_C-locX)/dist ; 
 				fAdhY=fAdhY+fAdh*(locY_C-locY)/dist ; 
 
@@ -406,7 +434,7 @@ struct LinSpringForceECM: public thrust::unary_function<IDD,DDD> {
 		}
 	}
 	
-	return thrust::make_tuple(fTotalMorseX+fAdhX,fTotalMorseY+fAdhY) ;
+	return thrust::make_tuple(fTotalMorseX+fAdhX,fTotalMorseY+fAdhY,eMorse,eAdh) ;
 
 	}
 
