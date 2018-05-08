@@ -290,7 +290,7 @@ std::string cSVFileName = "EnergyExport.CSV";
 			ofstream EnergyExport ;
 			EnergyExport.open(cSVFileName.c_str());
 
-			EnergyExport <<"Time,"<<"TotalMorseEnergyCell," << "TotalAdhEnergyCell,"<<  "TotalMorseEnergy,"<<"TotalAdhEnergy,"<< "TotalLinSpringEnergy" <<" TotalEnergy"<< std::endl;
+			EnergyExport <<"Time,"<<"TotalMorseEnergyCell," << "TotalAdhEnergyCell,"<<  "TotalMorseEnergy,"<<"TotalAdhEnergy,"<< "TotalLinSpringEnergy," <<"TotalEnergy"<< std::endl;
 
 
 
