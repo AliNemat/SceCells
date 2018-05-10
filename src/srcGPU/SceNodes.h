@@ -1017,6 +1017,8 @@ public:
 	thrust::device_vector<double> membrLinkRiMidX;
 	thrust::device_vector<double> membrLinkRiMidY;
 
+	thrust::device_vector<double> membrBendSpringEnergy;// Ali 
+	thrust::device_vector<double> membrLinSpringEnergy; //Ali 
 	thrust::device_vector<double> membrBendLeftX;
 	thrust::device_vector<double> membrBendLeftY;
 	thrust::device_vector<double> membrBendRightX;

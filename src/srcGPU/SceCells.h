@@ -26,6 +26,7 @@ typedef thrust::tuple<double, double, double, bool, double, double, double, doub
 //Ali comment
 //Ali
 typedef thrust::tuple<double, uint, double, int ,uint, uint, double, double, double, double> TensionData;
+typedef thrust::tuple<double, uint, uint, uint, double, double> DUiUiUiDD;
 typedef thrust::tuple<double, uint, double, double,uint, uint, double, double, double, double> DUiDDUiUiDDDD;
 typedef thrust::tuple<double, int, int ,uint, uint, double, double > DIIUiUiDD;
 typedef thrust::tuple<ECellType,uint, double, MembraneType1 ,bool,uint, uint> ActinData; //Ali
@@ -61,12 +62,22 @@ double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri
 //Ali Oc 17th 2017
 __device__
 double calMembrForce_Actin(double& length, double kAvg);
+
+
+__device__
+double CalMembrLinSpringEnergy(double& length, double kAvg);
+
+
 __device__
 double calBendMulti(double& angle, uint activeMembrCt);
 
 //AAMIRI
 __device__
 double calBendMulti_Mitotic(double& angle, uint activeMembrCt, double& progress, double mitoticCri);
+
+__device__
+double CalMembrBendSpringEnergy  (double& angle, uint activeMembrCt, double& progress, double mitoticCri);
+
 
 __device__
 double obtainRandAngle(uint& cellRank, uint& seed);
@@ -528,10 +539,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ;  //0.5
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; 
+					 actinLevel=1.5*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ; // 0.55
+					 actinLevel=1.5*kStiff ; // 0.55
 				}
 
 				/*
@@ -550,10 +561,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ; //1.5
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; // 1.5
+					 actinLevel=1.5*kStiff ; // 1.5
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ;
+					 actinLevel=1.5*kStiff ;
 				}
 
 
@@ -565,7 +576,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (isSubApical) {
 
-					actinLevel=2.0*kStiff ;
+					actinLevel=1.5*kStiff ;
 			}
 
 		    return actinLevel;
@@ -955,6 +966,85 @@ struct AddMembrForce: public thrust::unary_function<TensionData, CVec10> {
 		}
 	}
 };
+
+struct CalMembrEnergy: public thrust::unary_function<DUiUiUiDD, CVec2> {
+	uint _maxNodePerCell;
+	double* _locXAddr;
+	double* _locYAddr;
+	bool* _isActiveAddr;
+	double* _actinLevelAddr;
+	double _mitoticCri;
+
+	__host__ __device__ CalMembrEnergy (uint maxNodePerCell,double* locXAddr, double* locYAddr, bool* isActiveAddr, double *actinLevelAddr, double mitoticCri ) :
+			 _maxNodePerCell(maxNodePerCell), _locXAddr(locXAddr), _locYAddr(locYAddr), _isActiveAddr(isActiveAddr),
+			 _actinLevelAddr(actinLevelAddr), _mitoticCri(mitoticCri) {
+	}
+	__device__ CVec2 operator()(const DUiUiUiDD & dUiUiUiDD) const {
+
+		double progress = thrust::get<0>(dUiUiUiDD);
+		uint activeMembrCount = thrust::get<1>(dUiUiUiDD);
+		uint   cellRank = thrust::get<2>(dUiUiUiDD);
+		uint   nodeRank = thrust::get<3>(dUiUiUiDD);
+		double locX = thrust::get<4>(dUiUiUiDD);
+		double locY = thrust::get<5>(dUiUiUiDD);
+
+		uint index =  cellRank * _maxNodePerCell + nodeRank;
+		double lenLeft,lenRight;
+        double kAvgRight,kAvgLeft ; 		
+		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
+			return thrust::make_tuple(0.0,0.0);
+		} else {
+			int index_left = nodeRank - 1;
+			if (index_left == -1) {
+				index_left = activeMembrCount - 1;
+			}
+			index_left = index_left + cellRank * _maxNodePerCell;
+
+			kAvgLeft=0.5*(_actinLevelAddr[index_left]+_actinLevelAddr[index]); 
+			lenLeft = sqrt( ( _locXAddr[index_left] - locX) *( _locXAddr[index_left] - locX) +
+			                ( _locYAddr[index_left] - locY) *(_locYAddr[index_left]  - locY)  );
+			double energyLinSpringLeft = CalMembrLinSpringEnergy(lenLeft,kAvgLeft);
+
+			int index_right = nodeRank + 1;
+			if (index_right == (int) activeMembrCount) {
+				index_right = 0;
+			}
+			index_right = index_right+ cellRank * _maxNodePerCell;
+
+			kAvgRight=0.5*(_actinLevelAddr[index_right]+_actinLevelAddr[index]); 
+			lenRight = sqrt( (_locXAddr[index_right] - locX)*(_locXAddr[index_right] - locX)+
+					 		 (_locYAddr[index_right] - locY)*(_locYAddr[index_right] - locY) );
+			double energyLinSpringRight = CalMembrLinSpringEnergy (lenRight,kAvgRight); // Ali & June 30th
+			
+			double leftDiffX  = _locXAddr[index_left]   -  locX;
+			double leftDiffY  = _locYAddr[index_left]  -   locY;
+			double rightDiffX = _locXAddr[index_right]  -  locX;
+			double rightDiffY = _locYAddr[index_right]  -  locY;
+			double dotP = -leftDiffX * rightDiffX -leftDiffY * rightDiffY;
+			double vecP = dotP / (lenLeft * lenRight);
+			double angle;
+						// value of cross product in z direction: vecA_X * vecB_Y - vecA_Y * vecB_X
+			double crossZ = leftDiffY * rightDiffX - leftDiffX * rightDiffY;
+						if (crossZ > 0) {
+							// means angle > PI (concave)
+							angle = PI + acos(vecP);
+						} else {
+							// means angle < PI (convex)
+							angle = PI - acos(vecP);
+						}
+						
+			double energyBendSpring = CalMembrBendSpringEnergy(angle,activeMembrCount, progress, _mitoticCri);
+					
+			return thrust::make_tuple(energyLinSpringRight+energyLinSpringLeft, energyBendSpring);
+		}
+   }
+};
+
+
+
+
+
+
 
 struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 

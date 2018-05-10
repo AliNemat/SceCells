@@ -68,10 +68,15 @@ double calMembrForce_Mitotic(double& length, double& progress, double mitoticCri
 //Ali
 __device__
 double calMembrForce_Actin(double& length, double kAvg) {
-			return (length - membrEquLen) * kAvg;
-		 
-
+			return ((length - membrEquLen) * kAvg);
 }
+
+__device__
+double CalMembrLinSpringEnergy(double& length, double kAvg) {
+			return  (0.5*kAvg *(length - membrEquLen)*(length - membrEquLen)) ;
+}
+
+
 
 __host__ __device__
 double DefaultMembraneStiff() {
@@ -2431,6 +2436,76 @@ void SceCells::applyMemForce_M(bool cellPolar,bool subCellPolar) {
 					+ allocPara_m.bdryNodeCount,
 			AddMembrForce(allocPara_m.bdryNodeCount, maxAllNodePerCell,
 					nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr, nodeAdhereIndexAddr,nodeActinLevelAddr, grthPrgrCriVal_M,minY_Cell,maxY_Cell));
+
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin())),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.growthProgress.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							thrust::make_permutation_iterator(
+									cellInfoVecs.activeMembrNodeCounts.begin(),
+							make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+                            make_transform_iterator(iBegin,
+									DivideFunctor(maxAllNodePerCell)),
+							make_transform_iterator(iBegin,
+									ModuloFunctor(maxAllNodePerCell)),
+							nodes->getInfoVecs().nodeLocX.begin(),
+							nodes->getInfoVecs().nodeLocY.begin()))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							nodes->getInfoVecs().membrLinSpringEnergy.begin(),
+							nodes->getInfoVecs().membrBendSpringEnergy.begin())),
+			CalMembrEnergy(maxAllNodePerCell,nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr,nodeActinLevelAddr, grthPrgrCriVal_M));
+
+double totalMembrLinSpringEnergyCell=thrust::reduce
+ ( nodes->getInfoVecs().membrLinSpringEnergy.begin(),
+   nodes->getInfoVecs().membrLinSpringEnergy.begin()+totalNodeCountForActiveCells,
+  (double)0.0, thrust::plus<double>() ); 
+
+double totalMembrBendSpringEnergyCell=thrust::reduce
+ ( nodes->getInfoVecs().membrBendSpringEnergy.begin(),
+   nodes->getInfoVecs().membrBendSpringEnergy.begin()+totalNodeCountForActiveCells,
+  (double)0.0, thrust::plus<double>() ); 
+
+int timeStep=curTime/dt ; 
+if ( (timeStep % 10000)==0 ) {
+	std::string cSVFileName = "EnergyExportCell.CSV";
+	ofstream EnergyExportCell ;
+	EnergyExportCell.open(cSVFileName.c_str(),ofstream::app);
+
+	EnergyExportCell <<curTime<<","<<0.5*totalMembrLinSpringEnergyCell << "," <<totalMembrBendSpringEnergyCell << std::endl;
+}
+
+
+
+
+
+
+
+
+
+
 
 	thrust::transform(
 			thrust::make_zip_iterator(
@@ -5963,6 +6038,22 @@ __device__ double calBendMulti_Mitotic(double& angle, uint activeMembrCt, double
 		return (angle - equAngle)*(bendCoeff + (bendCoeff_Mitotic - bendCoeff) * (progress - mitoticCri)/(1.0 - mitoticCri));
 	}
 }
+
+__device__ double CalMembrBendSpringEnergy(double& angle, uint activeMembrCt, double& progress, double mitoticCri) {
+
+	double equAngle = PI - PI / activeMembrCt;
+	
+	if (progress <= mitoticCri){
+		return ( 0.5*bendCoeff * (angle - equAngle)*(angle - equAngle) );
+		}
+	else{
+		return ( 0.5*bendCoeff *  (angle - equAngle)*(angle - equAngle)*
+		                         (bendCoeff + (bendCoeff_Mitotic - bendCoeff) * (progress - mitoticCri)/(1.0 - mitoticCri)) );
+	}
+}
+
+
+
 
 void SceCells::applySceCellDisc_M() {
 	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount

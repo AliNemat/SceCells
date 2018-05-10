@@ -2725,6 +2725,8 @@ void SceNodes::allocSpaceForNodes(uint maxTotalNodeCount,uint maxNumCells, uint 
 		infoVecs.membrLinkRiMidX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrLinkRiMidY.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendLeftX.resize(maxTotalNodeCount, 0);
+		infoVecs.membrBendSpringEnergy.resize(maxTotalNodeCount, 0.0);
+		infoVecs.membrLinSpringEnergy.resize(maxTotalNodeCount, 0.0);
 		infoVecs.membrBendLeftY.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightX.resize(maxTotalNodeCount, 0);
 		infoVecs.membrBendRightY.resize(maxTotalNodeCount, 0);
