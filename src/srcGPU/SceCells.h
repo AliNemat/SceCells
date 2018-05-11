@@ -1520,8 +1520,6 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec6> {
 				nodeYOther = _locYAddr[index_other];
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
-				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
-						oriVelX, oriVelY, _grthPrgrCriVal_M);
 				CalAndAddIMEnergy(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						IMEnergyT, _grthPrgrCriVal_M);
 
