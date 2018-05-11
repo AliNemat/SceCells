@@ -607,7 +607,7 @@ void  SceECM:: PrintECM(double curTime) {
 			std::string txtFileName = "ECMExport_" + patch::to_string(outputFrameECM-1) + ".txt";
 			ofstream ECMExport ;
 			ECMExport.open(txtFileName.c_str());
-			ECMExport << "ECM pouch coordinates" << std::endl;
+			//ECMExport << "ECM pouch coordinates" << std::endl;
 
 			for (uint i = 0; i < nodeECMLocX.size(); i++) {
 				if (peripORexcm[i]==excm) {
@@ -616,7 +616,7 @@ void  SceECM:: PrintECM(double curTime) {
 				}
 			}
 
-			ECMExport << "ECM lumen side coordinates" << std::endl;
+			//ECMExport << "ECM lumen side coordinates" << std::endl;
 			for (uint i = 0; i < nodeECMLocX.size(); i++) {
 				if (peripORexcm[i]==perip) {
 					ECMExport << nodeECMLocX[i] << " " << nodeECMLocY[i] << " "

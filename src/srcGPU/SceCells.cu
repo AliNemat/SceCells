@@ -1492,6 +1492,13 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 		lastPrintNucleus=10000000  ; //just a big number 
 		outputFrameNucleus=0 ;
 		nodes->isInitPhase=true ;
+		std::string cSVFileName = "EnergyExport_Cell.CSV";
+		ofstream EnergyExportCell ;
+		
+		EnergyExportCell.open(cSVFileName.c_str() );
+		EnergyExportCell <<"curTime"<<","<<"totalMembrLinSpringEnergyCell" << "," <<"totalMembrBendSpringEnergyCell" <<"," <<
+		"totalNodeIIEnergyCell"<<"," <<"totalNodeIMEnergyCell"<< std::endl;
+
 	}
 
 	curTime = curTime + dt;
@@ -2486,15 +2493,30 @@ double totalMembrLinSpringEnergyCell=thrust::reduce
 double totalMembrBendSpringEnergyCell=thrust::reduce
  ( nodes->getInfoVecs().membrBendSpringEnergy.begin(),
    nodes->getInfoVecs().membrBendSpringEnergy.begin()+totalNodeCountForActiveCells,
+  (double)0.0, thrust::plus<double>() );
+
+double totalNodeIIEnergyCell=thrust::reduce
+ ( nodes->getInfoVecs().nodeIIEnergy.begin(),
+   nodes->getInfoVecs().nodeIIEnergy.begin()+totalNodeCountForActiveCells,
   (double)0.0, thrust::plus<double>() ); 
+
+double totalNodeIMEnergyCell=thrust::reduce
+ ( nodes->getInfoVecs().nodeIMEnergy.begin(),
+   nodes->getInfoVecs().nodeIMEnergy.begin()+totalNodeCountForActiveCells,
+  (double)0.0, thrust::plus<double>() ); 
+
+
+
+
 
 int timeStep=curTime/dt ; 
 if ( (timeStep % 10000)==0 ) {
-	std::string cSVFileName = "EnergyExportCell.CSV";
+	std::string cSVFileName = "EnergyExport_Cell.CSV";
 	ofstream EnergyExportCell ;
 	EnergyExportCell.open(cSVFileName.c_str(),ofstream::app);
 
-	EnergyExportCell <<curTime<<","<<0.5*totalMembrLinSpringEnergyCell << "," <<totalMembrBendSpringEnergyCell << std::endl;
+	EnergyExportCell <<curTime<<","<<0.5*totalMembrLinSpringEnergyCell << "," <<totalMembrBendSpringEnergyCell <<
+	"," <<0.5*totalNodeIIEnergyCell<<"," <<0.5*totalNodeIMEnergyCell<< std::endl;
 }
 
 
@@ -6121,9 +6143,13 @@ void SceCells::applySceCellDisc_M() {
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
 							   nodes->getInfoVecs().nodeVelY.begin(),
 							   nodes->getInfoVecs().nodeF_MI_M_x.begin(),  //Ali added for cell pressure calculation 
-							   nodes->getInfoVecs().nodeF_MI_M_y.begin())),// ALi added for cell pressure calculation
+							   nodes->getInfoVecs().nodeF_MI_M_y.begin(),// ALi added for cell pressure calculation
+							   nodes->getInfoVecs().nodeIIEnergy.begin(),// ALi added for cell pressure calculation
+							   nodes->getInfoVecs().nodeIMEnergy.begin())),// ALi added for cell pressure calculation
 			AddSceCellForce(maxAllNodePerCell, maxMemNodePerCell, nodeLocXAddr,
 					nodeLocYAddr, nodeIsActiveAddr, grthPrgrCriVal_M));
+
+
 }
 
 
@@ -6259,6 +6285,52 @@ void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+
+__device__
+void CalAndAddIMEnergy(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& IMEnergyT, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+	double IMEnergy = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceIBDiv_M[4]) {
+			IMEnergy = sceIBDiv_M[0] 
+					* exp(-linkLength / sceIBDiv_M[2])
+					-sceIBDiv_M[1] 
+							* exp(-linkLength / sceIBDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIBDiv_M[4])
+				+ (1.0 - percent) * sceIB_M[4];
+		if (linkLength < lenLimit) {
+			double intnlBPara0 = percent * (sceIBDiv_M[0])
+					+ (1.0 - percent) * sceIB_M[0];
+			double intnlBPara1 = percent * (sceIBDiv_M[1])
+					+ (1.0 - percent) * sceIB_M[1];
+			double intnlBPara2 = percent * (sceIBDiv_M[2])
+					+ (1.0 - percent) * sceIB_M[2];
+			double intnlBPara3 = percent * (sceIBDiv_M[3])
+					+ (1.0 - percent) * sceIB_M[3];
+			IMEnergy = intnlBPara0 
+					* exp(-linkLength / intnlBPara2)
+					- intnlBPara1 
+							* exp(-linkLength / intnlBPara3);
+		}
+	} else {
+		if (linkLength < sceIB_M[4]) {
+			IMEnergy = sceIB_M[0] 
+					* exp(-linkLength / sceIB_M[2])
+					- sceIB_M[1] * exp(-linkLength / sceIB_M[3]);
+		}
+	}
+	IMEnergyT=IMEnergyT+IMEnergy ; 
+}
+
+
+
+
 //Ali function added for eventually computing pressure for each cells
 __device__
 void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
@@ -6347,6 +6419,44 @@ void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 	xRes = xRes + forceValue * (xPos2 - xPos) / linkLength;
 	yRes = yRes + forceValue * (yPos2 - yPos) / linkLength;
 }
+
+__device__
+void CalAndAddIIEnergy(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& IIEnergyT, double grthPrgrCriVal_M) {
+	double linkLength = compDist2D(xPos, yPos, xPos2, yPos2);
+
+	double IIEnergy = 0;
+	if (growPro > grthPrgrCriEnd_M) {
+		if (linkLength < sceIIDiv_M[4]) {
+			IIEnergy= sceIIDiv_M[0]* exp(-linkLength / sceIIDiv_M[2])
+					- sceIIDiv_M[1]* exp(-linkLength / sceIIDiv_M[3]);
+		}
+	} else if (growPro > grthPrgrCriVal_M) {
+		double percent = (growPro - grthPrgrCriVal_M)
+				/ (grthPrgrCriEnd_M - grthPrgrCriVal_M);
+		double lenLimit = percent * (sceIIDiv_M[4])
+				+ (1.0 - percent) * sceII_M[4];
+		if (linkLength < lenLimit) {
+			double intraPara0 = percent * (sceIIDiv_M[0])
+					+ (1.0 - percent) * sceII_M[0];
+			double intraPara1 = percent * (sceIIDiv_M[1])
+					+ (1.0 - percent) * sceII_M[1];
+			double intraPara2 = percent * (sceIIDiv_M[2])
+					+ (1.0 - percent) * sceII_M[2];
+			double intraPara3 = percent * (sceIIDiv_M[3])
+					+ (1.0 - percent) * sceII_M[3];
+			IIEnergy = intraPara0  * exp(-linkLength / intraPara2)
+					  -intraPara1  * exp(-linkLength / intraPara3);
+		}
+	} else {
+		if (linkLength < sceII_M[4]) {
+			IIEnergy = sceII_M[0] * exp(-linkLength / sceII_M[2])
+					  -sceII_M[1] * exp(-linkLength / sceII_M[3]);
+		}
+	}
+	IIEnergyT=IIEnergyT+IIEnergy ; 
+}
+
 
 
 __device__

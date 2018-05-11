@@ -122,6 +122,11 @@ double cross_Z(double vecA_X, double vecA_Y, double vecB_X, double vecB_Y);
 __device__
 void calAndAddIB_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
+__device__
+void CalAndAddIMEnergy(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& IMEnergyT, double grthPrgrCriVal_M);
+
+
 //AliA 
 __device__
 void calAndAddIB_M2(double& xPos, double& yPos, double& xPos2, double& yPos2,
@@ -131,6 +136,9 @@ __device__
 void calAndAddII_M(double& xPos, double& yPos, double& xPos2, double& yPos2,
 		double& growPro, double& xRes, double& yRes, double grthPrgrCriVal_M);
 
+__device__
+void CalAndAddIIEnergy(double& xPos, double& yPos, double& xPos2, double& yPos2,
+		double& growPro, double& IIEnergyT, double grthPrgrCriVal_M);
 __device__
 void calAndAddNucleusEffect(double &  xPos, double & yPos, double & xPos2, double &yPos2, 
 		double & growPro, double & xRes, double & yRes,double _grthPrgrCriVal_M);
@@ -539,10 +547,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ;  //0.5
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=1.5*kStiff ; 
+					 actinLevel=2.0*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.5*kStiff ; // 0.55
+					 actinLevel=1.0*kStiff ; // 0.55
 				}
 
 				/*
@@ -561,10 +569,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ; //1.5
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=1.5*kStiff ; // 1.5
+					 actinLevel=2.0*kStiff ; // 1.5
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=1.5*kStiff ;
+					 actinLevel=1.0*kStiff ;
 				}
 
 
@@ -576,7 +584,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (isSubApical) {
 
-					actinLevel=1.5*kStiff ;
+					actinLevel=1.75*kStiff ;
 			}
 
 		    return actinLevel;
@@ -1443,7 +1451,7 @@ struct AddMembrBend: public thrust::unary_function<BendData, CVec2> {
 };
 
 //Ali modidfied for cell pressure calculation
-struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
+struct AddSceCellForce: public thrust::unary_function<CellData, CVec6> {
 	uint _maxNodePerCell;
 	uint _maxMemNodePerCell;
 	double* _locXAddr;
@@ -1460,7 +1468,7 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 					grthPrgrCriVal_M) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec4 operator()(const CellData &cData) const {
+	__device__ CVec6 operator()(const CellData &cData) const {
 		uint activeMembrCount = thrust::get<0>(cData);
 		uint activeIntnlCount = thrust::get<1>(cData);
 		uint cellRank = thrust::get<2>(cData);
@@ -1472,9 +1480,11 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
                 
 		double F_MI_M_x=0 ; //AliA
 		double F_MI_M_y=0 ; //AliA
+		double IIEnergyT=0.0 ; 
+		double IMEnergyT=0.0 ; 
 
 		if (_isActiveAddr[index] == false) {
-			return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y); //AliE
+			return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y,IIEnergyT,IMEnergyT); //AliE
 		}
 		uint intnlIndxMemBegin = cellRank * _maxNodePerCell;
 		uint intnlIndxBegin = cellRank * _maxNodePerCell + _maxMemNodePerCell;
@@ -1496,6 +1506,9 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
                                  */ 
 				calAndAddIB_M2(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY,F_MI_M_x,F_MI_M_y, _grthPrgrCriVal_M);
+				CalAndAddIMEnergy(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						IMEnergyT, _grthPrgrCriVal_M);
+
 
 			}
 		} else {
@@ -1507,6 +1520,12 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 				nodeYOther = _locYAddr[index_other];
 				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
+				calAndAddIB_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						oriVelX, oriVelY, _grthPrgrCriVal_M);
+				CalAndAddIMEnergy(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						IMEnergyT, _grthPrgrCriVal_M);
+
+
 			}
 			for (index_other = intnlIndxBegin; index_other < intnlIndxEnd;
 					index_other++) {
@@ -1517,9 +1536,11 @@ struct AddSceCellForce: public thrust::unary_function<CellData, CVec4> {
 				nodeYOther = _locYAddr[index_other];
 				calAndAddII_M(nodeX, nodeY, nodeXOther, nodeYOther, progress,
 						oriVelX, oriVelY, _grthPrgrCriVal_M);
+				CalAndAddIIEnergy(nodeX, nodeY, nodeXOther, nodeYOther, progress,
+						IIEnergyT, _grthPrgrCriVal_M);
 			}
 		}
-		return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y);
+		return thrust::make_tuple(oriVelX, oriVelY,F_MI_M_x,F_MI_M_y,IIEnergyT,IMEnergyT);
 	}
 };
 

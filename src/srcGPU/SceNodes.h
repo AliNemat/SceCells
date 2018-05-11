@@ -104,11 +104,11 @@ typedef thrust::tuple<uint, uint, uint, double, double,int ,int > TuuuddII;
 
 struct SubApicalInfoEachCell{
 
-	int nodeIdFront[10];
-	int nodeIdBehind[10] ; 
+	int nodeIdFront[14];
+	int nodeIdBehind[14] ; 
 
 	SubApicalInfoEachCell() {
-		for (int i=0 ; i<10 ; i++) {
+		for (int i=0 ; i<14 ; i++) {
 			nodeIdFront[i]= 0 ; 
 			nodeIdBehind[i]= 0 ; 
 		}
@@ -658,7 +658,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 	}
 	__device__
 	CVec2 operator()(const Tuuudd &u3d2) const {
-		double xRes = 0.0;
+		double xRes = 0.0; // reset the velocities for the new time step
 		double yRes = 0.0;
 
 		uint begin = thrust::get<0>(u3d2);
@@ -670,7 +670,7 @@ struct AddForceDisc_M: public thrust::unary_function<Tuuudd, CVec2> {
 		bool isSuccess = false;
 		uint index;
 		double dist;
-                bool  Lennard_Jones =Is_Lennard_Jones() ;
+                bool  Lennard_Jones = false ;// Is_Lennard_Jones() ;
 //		if (_adhNotSet){
 	//	_nodeAdhereIndex[myValue] = -1 ;  Ali commented to deactive this part of the code
 //		}
@@ -1019,6 +1019,8 @@ public:
 
 	thrust::device_vector<double> membrBendSpringEnergy;// Ali 
 	thrust::device_vector<double> membrLinSpringEnergy; //Ali 
+	thrust::device_vector<double> nodeIIEnergy; //Ali 
+	thrust::device_vector<double> nodeIMEnergy; //Ali 
 	thrust::device_vector<double> membrBendLeftX;
 	thrust::device_vector<double> membrBendLeftY;
 	thrust::device_vector<double> membrBendRightX;
