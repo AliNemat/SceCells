@@ -318,7 +318,7 @@ thrust::copy(nodeDeviceLocY.begin(),nodeDeviceLocY.begin()+totalNodeCountForActi
 cout << " max all node per cell in ECM module is " << maxAllNodePerCell << endl ; 
 cout<< "max membrane node per cell in ECM module is " << maxMembrNodePerCell<< endl ; 
 
-double eCMBendStiff=0.0 ; // need to be an input
+double eCMBendStiff=6.0 ; // need to be an input
 
 //if (cellPolar) {eCMLinSpringStiff=100 ; }
 //if (subCellPolar) {eCMLinSpringStiff=100 ; }

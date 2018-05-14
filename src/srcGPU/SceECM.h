@@ -460,8 +460,8 @@ struct TotalECMForceCompute: public thrust::unary_function<DDDDDD,DD> {
 	double fMembY       = thrust:: get<5>(dDDDDD); 
 
 
-//	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
-	return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
+	return thrust::make_tuple(fLinSpringX+fBendSpringX+fMembX,fLinSpringY+fBendSpringY+fMembY); 
+//	return thrust::make_tuple(fLinSpringX+fMembX,fLinSpringY+fMembY); 
 	}
 }; 
 
@@ -555,19 +555,11 @@ struct CalBendECM: public thrust::unary_function<IDD, DDDDDD> {
 		double locX = thrust::get<1>(iDD);
 		double locY = thrust::get<2>(iDD);
 
-		double bendCenterX = 0;
-		double bendCenterY = 0;
-		double bendLeftX = 0;
-		double bendLeftY = 0;
-		double bendRightX = 0;
-		double bendRightY = 0;
-		double PI=3.141592 ;
+		double kb=_eCMBendStiff ; 
 		double leftPosX,leftPosY;
-		double leftDiffX,leftDiffY;
 		double lenLeft;
 
 		double rightPosX,rightPosY;
-		double rightDiffX,rightDiffY;
 		double lenRight;
 			
 			int index_left = nodeRank - 1;
@@ -577,9 +569,7 @@ struct CalBendECM: public thrust::unary_function<IDD, DDDDDD> {
 		
 				leftPosX = _locXAddr[index_left];
 				leftPosY = _locYAddr[index_left];
-				leftDiffX = leftPosX - locX;
-				leftDiffY = leftPosY - locY;
-				lenLeft = sqrt(leftDiffX * leftDiffX + leftDiffY * leftDiffY);
+				lenLeft = sqrt((leftPosX - locX) * (leftPosX - locX) + (leftPosY - locY) * (leftPosY - locY) );
 
 
 			int index_right = nodeRank + 1;
@@ -588,63 +578,25 @@ struct CalBendECM: public thrust::unary_function<IDD, DDDDDD> {
 			}
 				rightPosX = _locXAddr[index_right];
 				rightPosY = _locYAddr[index_right];
-				rightDiffX = rightPosX - locX;
-				rightDiffY = rightPosY - locY;
-				lenRight = sqrt(rightDiffX * rightDiffX + rightDiffY * rightDiffY);
-				// if two nodes are extremely close no bending force is applied 
-				if (lenLeft>1.0e-8 && lenRight>1.0e-8) {
-					double dotP = -leftDiffX * rightDiffX -leftDiffY * rightDiffY;
-					double vecP = dotP / (lenLeft * lenRight); //It is cose theta
+				lenRight = sqrt((rightPosX - locX) * (rightPosX - locX) + (rightPosY - locY) * (rightPosY - locY) );
 
-					// because of numerical error, 1 - vecP*vecP could be less than 0, although it is not possible in mathematics.
-					// sqrt(negative number) would cause term0 to be nan.
-					// if an nan number is produced, it will not be accepted by bigEnough function.
-					// this is OK, because we know at that time bending energy should be 0.
-					double term0 = sqrt(1 - vecP * vecP);
-					// this if statement is required for numerical purpose only.
-					// Whole term would go to zero when term 0 close to zero, but the computation
-					// would cause numerical errors, so need to make sure term0 is big enough.
-					if (term0>1.0e-7) {
-						double angle;
-						// value of cross product in z direction: vecA_X * vecB_Y - vecA_Y * vecB_X
-						double crossZ = leftDiffY * rightDiffX
-								- leftDiffX * rightDiffY;
-						if (crossZ > 0) {
-							// means angle > PI (concave)
-							angle = PI + acos(vecP);
-						} else {
-							// means angle < PI (convex)
-							angle = PI - acos(vecP);
-						}
-						
-						double term1x = -rightDiffX / (lenLeft * lenRight);
-						double term2x = leftDiffX / (lenLeft * lenRight);
-						double term3x = (dotP * leftDiffX)
-								/ (lenLeft * lenLeft * lenLeft * lenRight);
-						double term4x = (-dotP * rightDiffX)
-								/ (lenLeft * lenRight * lenRight * lenRight);
-						double term1y = -rightDiffY / (lenLeft * lenRight);
-						double term2y = leftDiffY / (lenLeft * lenRight);
-						double term3y = (dotP * leftDiffY)
-								/ (lenLeft * lenLeft * lenLeft * lenRight);
-						double term4y = (-dotP * rightDiffY)
-								/ (lenLeft * lenRight * lenRight * lenRight);
+			double cosTheta=( (leftPosX-locX)*(rightPosX-locX)+(leftPosY-locY)*(rightPosY-locY) )/(lenRight*lenLeft) ; 
 
-						double bendMultiplier=_eCMBendStiff*(angle-(PI-PI/_numECMNodes)) ; // -calBendMulti_Mitotic(angle,
-								//activeMembrCount, progress, _mitoticCri);//AAMIRI modified the arguments
-						// because sign of angle formula would change if crossZ < 0
-						if (crossZ > 0) {
-							bendMultiplier = -bendMultiplier;
-						}
-						bendLeftX = bendMultiplier * (term1x - term3x) / term0;
-                        bendCenterX= bendMultiplier* (term2x - term1x + term3x - term4x)/ term0 ;
-						bendRightX = bendMultiplier * (term4x - term2x) / term0;
-						bendLeftY = bendMultiplier * (term1y - term3y) / term0;
-						bendCenterY=bendMultiplier* (term2y - term1y + term3y - term4y)/ term0;
-						bendRightY = bendMultiplier * (term4y - term2y) / term0;
+			
+			double 	bendLeftX= -kb*(rightPosX-locX)/(lenRight*lenLeft)+
+						            kb*cosTheta/(lenLeft*lenLeft)*(leftPosX-locX) ; 
 
-				}
-			}
+			double 	bendRightX=-kb*(leftPosX-locX)/(lenRight*lenLeft)+
+						            kb*cosTheta/(lenRight*lenRight)*(rightPosX-locX) ; 
+
+			double  bendLeftY =-kb*(rightPosY-locY)/(lenRight*lenLeft)+
+						            kb* cosTheta/(lenLeft*lenLeft)*(leftPosY-locY) ; 
+
+		    double 	bendRightY=-kb*(leftPosY-locY)/(lenRight*lenLeft)+
+						            kb* cosTheta/(lenRight*lenRight)*(rightPosY-locY) ;
+
+			double bendCenterX=-(bendLeftX+bendRightX) ; 
+			double bendCenterY=-(bendLeftY+bendRightY) ; 
 			return thrust::make_tuple(bendCenterX,bendCenterY,
 					bendLeftX, bendLeftY, bendRightX, bendRightY);
 
