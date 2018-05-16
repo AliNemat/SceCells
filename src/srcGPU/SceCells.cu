@@ -769,7 +769,8 @@ void SceCells::initCellInfoVecs_M() {
 	cellInfoVecs.apicalNodeCount.resize(allocPara_m.maxCellCount,0); //Ali 
 	cellInfoVecs.ringApicalId.resize(allocPara_m.maxCellCount,-1); //Ali 
 	cellInfoVecs.ringBasalId.resize(allocPara_m.maxCellCount,-1); //Ali 
-
+	cellInfoVecs.sumLagrangeFPerCellX.resize(allocPara_m.maxCellCount,0.0); //Ali 
+	cellInfoVecs.sumLagrangeFPerCellY.resize(allocPara_m.maxCellCount,0.0); //Ali 
         cellInfoVecs.HertwigXdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
 	cellInfoVecs.HertwigYdir.resize(allocPara_m.maxCellCount,0.0); //A&A 
 
@@ -2928,8 +2929,34 @@ thrust::transform(
 					+ totalNodeCountForActiveCells,
 			thrust::make_zip_iterator(
 					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
-									   nodes->getInfoVecs().nodeVelY.begin())),
+									   nodes->getInfoVecs().nodeVelY.begin(),
+									   nodes->getInfoVecs().lagrangeFX.begin(),
+									   nodes->getInfoVecs().lagrangeFY.begin())),
 			AddLagrangeForces(maxAllNodePerCell,nodeLocXAddr, nodeLocYAddr, nodeIsActiveAddr,cellAreaVecAddr,grthPrgrCriVal_M));
+			
+			uint maxNPerCell = allocPara_m.maxAllNodePerCell;
+			totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+			thrust::counting_iterator<uint> iBegin2(0);
+
+
+			thrust::reduce_by_key(
+									make_transform_iterator(iBegin2, DivideFunctor(maxNPerCell)),
+									make_transform_iterator(iBegin2, DivideFunctor(maxNPerCell))+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().lagrangeFX.begin(),
+							           nodes->getInfoVecs().lagrangeFY.begin())),
+			cellInfoVecs.cellRanksTmpStorage.begin(),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(cellInfoVecs.sumLagrangeFPerCellX.begin(),
+							           cellInfoVecs.sumLagrangeFPerCellY.begin())),
+			thrust::equal_to<uint>(), CVec2Add());
+
+			for (int i=0 ; i<allocPara_m.currentActiveCellCount ; i++) {
+				cout << "for cell rank "<<i<< " the summation of lagrangian force in X direction is " << cellInfoVecs.sumLagrangeFPerCellX[i] << endl ; 
+				cout << "for cell rank "<<i<< " the summation of lagrangian force in Y direction is " << cellInfoVecs.sumLagrangeFPerCellY[i] << endl ; 
+
+			}
 
 
 }

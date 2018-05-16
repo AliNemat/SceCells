@@ -1098,7 +1098,7 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 
 
 
-struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
+struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec4> {
 	uint _maxMembrNodePerCell ; 
 	uint _maxNodePerCell;
 	double* _locXAddr;
@@ -1115,7 +1115,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 					_cellAreaVecAddr(cellAreaVecAddr), _mitoticCri(mitoticCri) {
 	}
 	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
-	__device__ CVec2 operator()(const DUiDDUiUiDDDD &dUiDDUiUiDDDD) const {
+	__device__ CVec4 operator()(const DUiDDUiUiDDDD &dUiDDUiUiDDDD) const {
 
 		double progress = thrust::get<0>(dUiDDUiUiDDDD);
 		uint   activeMembrCount= thrust::get<1>(dUiDDUiUiDDDD);
@@ -1143,9 +1143,12 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 		double posXR;
 		double posYR;
 		double lenR;
+		double fX=0 ; 
+		double fY=0 ; 
+
 
 		if (_isActiveAddr[index] == false || nodeRank >= activeMembrCount) {
-			return thrust::make_tuple(velX, velY);
+			return thrust::make_tuple(velX, velY,fX,fY);
 		} else {
 
 			posX=locX-cellCenterX ; 
@@ -1199,17 +1202,17 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec2> {
 
 			cellAreaDesire=10+ percent*10 ; 
 
-			double fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
-			     ( (term1X+term2X)/term5+ (term3X+term4X)/term6 ) ; 
-			double fY=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
-			     ( (term1Y+term2Y)/term5+ (term3Y+term4Y)/term6 ) ; 
+			 fX=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
+			     ( (term1X-term2X)/term5+ (term3X-term4X)/term6 ) ; 
+			 fY=-2*kStiffArea*(_cellAreaVecAddr[cellRank]-cellAreaDesire)*
+			     ( (term1Y-term2Y)/term5+ (term3Y-term4Y)/term6 ) ; 
 
 			velX=velX+fX ;
 			velY=velY+fY ;
 
 
 
-			return thrust::make_tuple(velX, velY);
+			return thrust::make_tuple(velX, velY,fX,fY);
 		}
 	}
 }; 
@@ -3147,6 +3150,8 @@ struct CellInfoVecs {
 	thrust::device_vector<double> apicalLocY; //Ali 
 	thrust::device_vector<double> nucleusLocX; //Ali 
 	thrust::device_vector<double> nucleusLocY; //Ali 
+	thrust::device_vector<double> sumLagrangeFPerCellX; //Ali 
+	thrust::device_vector<double> sumLagrangeFPerCellY; //Ali 
 	thrust::device_vector<int> apicalNodeCount; //Ali 
 	thrust::device_vector<int> ringApicalId; //Ali 
 	thrust::device_vector<int> ringBasalId; //Ali 
