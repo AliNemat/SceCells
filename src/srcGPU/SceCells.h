@@ -547,10 +547,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ;  //0.5
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; 
+					 actinLevel=1.8*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ; // 0.55
+					 actinLevel=1.2*kStiff ; // 0.55
 				}
 
 				/*
@@ -569,10 +569,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ; //1.5
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=2.0*kStiff ; // 1.5
+					 actinLevel=1.8*kStiff ; // 1.5
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=1.0*kStiff ;
+					 actinLevel=1.2*kStiff ;
 				}
 
 
@@ -584,7 +584,7 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 
 			if (isSubApical) {
 
-					actinLevel=1.75*kStiff ;
+					actinLevel=1.5*kStiff ;
 			}
 
 		    return actinLevel;
@@ -1130,7 +1130,7 @@ struct AddLagrangeForces: public thrust::unary_function<DUiDDUiUiDDDD, CVec4> {
 
 		uint index = cellRank * _maxNodePerCell + nodeRank;
 
-		double kStiffArea=0.1 ;       //0.015 ;
+		double kStiffArea=30 ;       //0.015 ;
 		double cellAreaDesire ; 
 		double posX;
 		double posY;
