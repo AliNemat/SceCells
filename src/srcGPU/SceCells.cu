@@ -1560,7 +1560,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	applyMemForce_M(cellPolar,subCellPolar);
 	applyVolumeConstraint();
-	computeRandomForces(); 
+	//computeRandomForces(); 
 
 	computeContractileRingForces() ; 
 	std::cout << "     *** 4 ***" << endl;
