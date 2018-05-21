@@ -950,6 +950,8 @@ public:
 	thrust::device_vector<double> nodeVelZ;
 	thrust::device_vector<double> lagrangeFX;
 	thrust::device_vector<double> lagrangeFY;
+	thrust::device_vector<double> randomFX;
+	thrust::device_vector<double> randomFY;
 // For from internal ndoes to each membrane node in x direction
 	thrust::device_vector<double> nodeF_MI_M_x; //Ali
 // For from internal ndoes to each membrane node in y  direction

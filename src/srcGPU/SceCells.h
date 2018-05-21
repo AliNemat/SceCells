@@ -14,6 +14,7 @@ typedef thrust::tuple<uint, double, double> UiDD;
 typedef thrust::tuple<uint, int, int> UiII;
 typedef thrust::tuple<uint, double, double, double> UiDDD; //Ali
 typedef thrust::tuple<double, double, uint, bool, double,double> DDUiBDD ; 
+typedef thrust::tuple<double, bool, double,double,uint> DBDDUi ; 
 typedef thrust::tuple<double, uint> DUi; //Ali 
 typedef thrust::tuple<double, double, uint> DDUi;
 typedef thrust::tuple<uint, double, double, bool> UiDDBool;//AAMIRI
@@ -46,6 +47,11 @@ typedef thrust::tuple<uint, uint, uint, uint, double, double, double> CellData;
 
  SceNodeType indxToType(uint& indx);
  */
+
+__device__
+double NormalCFDInverse(double  p);
+
+
 
 __device__
 double calExtForce(double  curTime);
@@ -1091,6 +1097,52 @@ struct AddExtForce: public thrust::unary_function<TUiDUiTDD, CVec2> {
 
 			return thrust::make_tuple(velX, velY);
 	
+		}
+	}
+}; 
+
+struct AddRandomForces: public thrust::unary_function<DBDDUi, CVec4> {
+		double _dt ; 
+		uint _seed;
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__host__ __device__ AddRandomForces(double dt, uint seed) :
+			 _dt(dt),_seed(seed) {
+	}
+	// comment prevents bad formatting issues of __host__ and __device__ in Nsight
+	__device__ CVec4 operator()(const DBDDUi  & dBDDUi) const {
+
+		double damp = thrust::get<0>(dBDDUi);
+		bool   isActive = thrust::get<1>(dBDDUi);
+		double velX = thrust::get<2>(dBDDUi);
+		double velY = thrust::get<3>(dBDDUi);
+		uint   nodeRank=thrust::get<4>(dBDDUi);
+
+		thrust:: minstd_rand rng1 ; 
+		thrust:: minstd_rand rng2 ; 
+		thrust::uniform_real_distribution<double> dist1(0,1);
+		thrust::uniform_real_distribution<double> dist2(0,1);
+		uint seedNew1 = _seed + nodeRank;
+		uint seedNew2 = _seed + nodeRank+20000;  //number needs to be larger than max number of nodes
+		rng1.discard(seedNew1);
+		rng2.discard(seedNew2);
+		double randomNum1 =dist1(rng1);
+		double randomNum2 =dist2(rng2);
+	
+
+		double randFX=0 ; 
+		double randFY=0 ; 
+		double kB=1 ; 
+		double temprature=1 ; 
+		double diffusion=kB*temprature/damp ; 
+
+		if (isActive== false ) {
+			return thrust::make_tuple(velX, velY,randFX,randFY);
+		} else {
+			randFX=sqrt (2.0*diffusion*_dt)*NormalCFDInverse(randomNum1); 
+			randFY=sqrt (2.0*diffusion*_dt)*NormalCFDInverse(randomNum2); 
+			velX=velX+randFX ;
+			velY=velY+randFY ;
+			return thrust::make_tuple(velX, velY,randFX,randFY);
 		}
 	}
 }; 
@@ -3546,6 +3598,7 @@ class SceCells {
 	void applyMemForce_M(bool cellPolar, bool subCellPolar);
 	void applyVolumeConstraint();
 	void computeLagrangeForces();
+	void computeRandomForces();
 	void computeContractileRingForces();
 
 	void applySceCellDisc_M();

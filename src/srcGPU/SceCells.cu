@@ -38,6 +38,27 @@ namespace patch{
 	}
 }
 
+__device__
+double NormalCDFInverse(double p) {
+	
+	double c[] = {2.515517, 0.802853, 0.010328};
+	double d[] = {1.432788, 0.189269, 0.001308};
+	double t ; 
+	if (p < 0.5) {
+		t=sqrt(-2.0*log(p));
+		double RationalApprox=(t - ((c[2]*t + c[1])*t + c[0]) / (((d[2]*t + d[1])*t + d[0])*t + 1.0)); 
+		return -RationalApprox;
+	}
+	else {
+		t=sqrt(-2.0*log(1-p)) ; 
+		double RationalApprox=(t - ((c[2]*t + c[1])*t + c[0]) / (((d[2]*t + d[1])*t + d[0])*t + 1.0)); 
+		return RationalApprox ;
+	}
+}
+
+
+
+
 
 //Ali &  Abu June 30th
 __device__
@@ -1539,6 +1560,7 @@ void SceCells::runAllCellLogicsDisc_M(double dt, double Damp_Coef, double InitTi
 
 	applyMemForce_M(cellPolar,subCellPolar);
 	applyVolumeConstraint();
+	computeRandomForces(); 
 
 	computeContractileRingForces() ; 
 	std::cout << "     *** 4 ***" << endl;
@@ -2850,6 +2872,50 @@ totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
 					thrust::make_tuple(cellInfoVecs.centerCoordX.begin(),
 									   cellInfoVecs.centerCoordY.begin())), CVec2Divide());
 }
+
+void SceCells::computeRandomForces() {
+
+
+	totalNodeCountForActiveCells = allocPara_m.currentActiveCellCount
+			* allocPara_m.maxAllNodePerCell;
+	uint maxAllNodePerCell = allocPara_m.maxAllNodePerCell;
+	thrust::counting_iterator<uint> iBegin(0) ; 
+
+	uint seed = time(NULL);
+	thrust::counting_iterator<uint> iBegin2(0);
+
+thrust::transform(
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Damp.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin(),iBegin2)),
+			thrust::make_zip_iterator(
+					thrust::make_tuple(
+							thrust::make_permutation_iterator(
+									cellInfoVecs.Cell_Damp.begin(),
+									make_transform_iterator(iBegin,
+											DivideFunctor(maxAllNodePerCell))),
+							nodes->getInfoVecs().nodeIsActive.begin(),
+							nodes->getInfoVecs().nodeVelX.begin(),
+							nodes->getInfoVecs().nodeVelY.begin(),iBegin2))
+					+ totalNodeCountForActiveCells,
+			thrust::make_zip_iterator(
+					thrust::make_tuple(nodes->getInfoVecs().nodeVelX.begin(),
+									   nodes->getInfoVecs().nodeVelY.begin(),
+									   nodes->getInfoVecs().randomFX.begin(),
+									   nodes->getInfoVecs().randomFY.begin())),
+			AddRandomForces(dt,seed));
+			
+}
+
+
+
+
 
 void SceCells::computeLagrangeForces() {
 
