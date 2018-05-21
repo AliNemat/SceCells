@@ -1451,7 +1451,7 @@ void SceCells::exchSignal(){
    	lastTimeExchange=lastTimeExchange+dt ;
 	cout << "last time exchange is " << lastTimeExchange << endl ; 
 	cout << "dt is " << dt << endl ;  
-   	double exchPeriod=20 ; 
+   	double exchPeriod=360 ; 
 	if ( lastTimeExchange>exchPeriod) {
 		lastTimeExchange=0 ; 
 		//vector<CVector> cellCentersHost ; 

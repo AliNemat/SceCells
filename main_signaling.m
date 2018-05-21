@@ -111,9 +111,9 @@ for i = 0:total_cell-1
             eval(['[vt_contact_' num2str(i) '_' num2str(neighbor_i(j)) '] = combine_nodes(vt_contact);']);
              
             eval(['vt_' num2str(i) '(ia,:) = [];']); 
-            eval(['vt_' num2str(i) ' = [vt_' num2str(i) ';vt_contact];']);
+            eval(['vt_' num2str(i) ' = [vt_' num2str(i) ';vt_contact_' num2str(i) '_' num2str(neighbor_i(j)) '];']);
             eval(['vt_' num2str(neighbor_i(j)) '(ib,:) = [];']);
-            eval(['vt_' num2str(neighbor_i(j)) '= [vt_' num2str(neighbor_i(j)) ';vt_contact];']);
+            eval(['vt_' num2str(neighbor_i(j)) '= [vt_' num2str(neighbor_i(j)) ';vt_contact_' num2str(i) '_' num2str(neighbor_i(j)) '];']);
             eval(['[vt_' num2str(i) '] = sort_counterclock(vt_' num2str(i) ',centroid_' num2str(i) ');']);
             eval(['[vt_' num2str(neighbor_i(j)) '] = sort_counterclock(vt_' num2str(neighbor_i(j)) ',centroid_' num2str(neighbor_i(j)) ');']);
         end
@@ -156,7 +156,12 @@ for i = 0:total_cell-1
         [val,ind] = min(vt_dist);
     end
 end
-        
+
+for i = 0:total_cell-1
+    eval(['[vt_' num2str(i) '] = unique(vt_' num2str(i) ',''rows'');']);
+    eval(['[vt_' num2str(i) '] = sort_counterclock(vt_' num2str(i) ',centroid_' num2str(i) ');']);
+end
+       
 % visualize the triangular mesh
 %for i = 0:total_cell-1
 %    eval(['plot(vt_' num2str(i) '(:,1),vt_' num2str(i) '(:,2),''*'');']); 
