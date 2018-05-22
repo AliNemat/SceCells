@@ -547,10 +547,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ;  //0.5
 				}
 		        if (cellType==pouch &&  memType==apical1) {
-					 actinLevel=1.8*kStiff ; 
+					 actinLevel=1.5*kStiff ; 
 				}
 				if (cellType==pouch &&  memType==basal1) {
-					 actinLevel=1.2*kStiff ; // 0.55
+					 actinLevel=1.5*kStiff ; // 0.55
 				}
 
 				/*
@@ -569,10 +569,10 @@ struct ActinLevelCal: public thrust::unary_function<ActinData, double> {
 					actinLevel=1.5*kStiff ; //1.5
 				}
 		        if (cellType==bc &&  memType==apical1) {
-					 actinLevel=1.8*kStiff ; // 1.5
+					 actinLevel=1.5*kStiff ; // 1.5
 				}
 				if (cellType==bc &&  memType==basal1) {
-					 actinLevel=1.2*kStiff ;
+					 actinLevel=1.5*kStiff ;
 				}
 
 
