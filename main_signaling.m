@@ -189,6 +189,23 @@ for i = 0:total_cell-1
     eval(['mesh_size = mesh_size + num_tri_' num2str(i) ';']);
 end
 u = zeros(mesh_size,1);
+Area_vec = zeros(mesh_size,1);
+index_area = 1;
+for i = 0:total_cell-1
+    eval(['jend=num_tri_' num2str(i) ';']);
+    for j = 1:jend
+        eval(['pt1 = vt_' num2str(i) '(j,:);']);
+        if j<jend
+            eval(['pt2 = vt_' num2str(i) '(j+1,:);']);
+        else
+            eval(['pt2 = vt_' num2str(i) '(1,:);']);
+        end
+        eval(['vt1 = pt1-centroid_' num2str(i) ';']);
+        eval(['vt2 = pt2-centroid_' num2str(i) ';']);
+        Area_vec(index_area) = vt1(1)*vt2(2)-vt1(2)*vt2(1);
+        index_area = index_area + 1;
+    end
+end
 % construct a matrix to denote neighboring triangles
 NI_mat = [];
 % construct a matrix to store contact length
@@ -321,7 +338,8 @@ for i = 0:total_cell-1
          end
 %         eval(['fill([vt_' num2str(i) '(j,1) vt_' num2str(i) '(jnext,1) centroid_' num2str(i) '(1)],[vt_' num2str(i) '(j,2) vt_' num2str(i) '(jnext,2) centroid_' num2str(i) '(2)],Dpp(num_tri_pre+j));']);
      end
-     Dpp_cell(i+1) = sum(Dpp(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+%     Dpp_cell(i+1) = sum(Dpp(num_tri_pre+1:num_tri_pre+num_tri))/num_tri;
+     Dpp_cell(i+1) = sum(Dpp(num_tri_pre+1:num_tri_pre+num_tri).*Area_vec(num_tri_pre+1:num_tri_pre+num_tri))/sum(Area_vec(num_tri_pre+1:num_tri_pre+num_tri));
      num_tri_pre = num_tri_pre + num_tri;
  end
 % colorbar;
