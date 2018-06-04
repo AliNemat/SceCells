@@ -634,7 +634,7 @@ SceCells::SceCells(SceNodes* nodesInput,
 //	curTime = 0.0 + 55800.0;//AAMIRIi
         curTime=InitTimeStage ; 
         std ::cout << "I am in SceCells constructor with number of inputs "<<InitTimeStage<<std::endl ; 
-	lastTimeExchange=1000000 ; //big number
+	lastTimeExchange=0  ;
 	firstTimeReadDpp=true ; 
 	//currentActiveCellCountOld=1 ; // small number 
 	tmpDebug = false;

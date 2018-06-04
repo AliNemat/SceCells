@@ -279,19 +279,24 @@ L_mat = L_mat + 10000*eye(mesh_size); %avoid singularities
 
 % source cells: located within 12% of the total tissue size around the
 % midline
-tissue_centroid = zeros(1,2);
-for i = 1:total_cell
-    eval(['tissue_centroid = tissue_centroid + centroid_' num2str(i-1) ';']);
-end
-tissue_centroid = tissue_centroid/total_cell;
-tissue_r = sqrt( sum((tissue_centroid-centroid_0).^2) );
-for i = 2:total_cell
-    eval(['temp = sqrt( sum((tissue_centroid-centroid_' num2str(i-1) ').^2) );']);
-    if temp > tissue_r
-        tissue_r = temp;
+if index_couple == 0
+    tissue_centroid = zeros(1,2);
+    for i = 1:total_cell
+        eval(['tissue_centroid = tissue_centroid + centroid_' num2str(i-1) ';']);
     end
+    tissue_centroid = tissue_centroid/total_cell;
+    tissue_r = sqrt( sum((tissue_centroid-centroid_0).^2) );
+    for i = 2:total_cell
+        eval(['temp = sqrt( sum((tissue_centroid-centroid_' num2str(i-1) ').^2) );']);
+        if temp > tissue_r
+            tissue_r = temp;
+        end
+    end
+    save('tissue_inf.mat','tissue_centroid','tissue_r');
+else
+    load tissue_inf.mat;
 end
-    
+
 [ind] = find(abs(cell_nodes(:,1)-tissue_centroid(1))<0.12*tissue_r);
 source_cellid = unique(cell_nodes(ind,3));
 source_cellid = sort(source_cellid,'ascend');
